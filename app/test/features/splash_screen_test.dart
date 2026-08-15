@@ -1,4 +1,4 @@
-import 'package:ambysmath_app/design/brand/amby.dart';
+import 'package:ambysmath_app/design/brand/aki.dart';
 import 'package:ambysmath_app/design/brand/wordmark.dart';
 import 'package:ambysmath_app/design/theme.dart';
 import 'package:ambysmath_app/design/tokens/tokens.dart';
@@ -11,19 +11,19 @@ void main() {
   Future<void> pump(WidgetTester tester, SplashVariant variant) {
     return tester.pumpWidget(
       MaterialApp(
-        theme: AmbysMathTheme.build(),
+        theme: AkiMathTheme.build(),
         home: SplashScreen(variant: variant),
       ),
     );
   }
 
-  testWidgets('the cream splash stands Amby over the wordmark',
+  testWidgets('the cream splash stands Aki over the wordmark',
       (WidgetTester tester) async {
     await pump(tester, SplashVariant.cream);
 
-    expect(find.byType(Amby), findsOneWidget);
-    expect(find.byType(AmbyFace), findsNothing);
-    expect(find.byType(AmbysMathWordmark), findsOneWidget);
+    expect(find.byType(Aki), findsOneWidget);
+    expect(find.byType(AkiFace), findsNothing);
+    expect(find.byType(AkiMathWordmark), findsOneWidget);
     expect(find.byType(BrandDescriptor), findsOneWidget);
     expect(find.byType(LoadingDots), findsOneWidget);
 
@@ -35,14 +35,14 @@ void main() {
       (WidgetTester tester) async {
     await pump(tester, SplashVariant.brandGreen);
 
-    expect(find.byType(Amby), findsNothing);
-    expect(find.byType(AmbyFace), findsOneWidget);
+    expect(find.byType(Aki), findsNothing);
+    expect(find.byType(AkiFace), findsOneWidget);
 
     final Scaffold scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
     expect(scaffold.backgroundColor, BrandColors.green);
 
-    final AmbysMathWordmark wordmark =
-        tester.widget<AmbysMathWordmark>(find.byType(AmbysMathWordmark));
+    final AkiMathWordmark wordmark =
+        tester.widget<AkiMathWordmark>(find.byType(AkiMathWordmark));
     expect(wordmark.tone, WordmarkTone.onBrandGreen);
   });
 

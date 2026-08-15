@@ -7,7 +7,7 @@ import 'tokens/tokens.dart';
 /// There is no dark theme and no second palette. The visual system is fixed:
 /// cream canvas, ink outlines, hard shadows. Material's own elevation shadows
 /// are switched off everywhere, because a blurred shadow is a brand defect.
-abstract final class AmbysMathTheme {
+abstract final class AkiMathTheme {
   static ThemeData build() {
     const ColorScheme scheme = ColorScheme(
       brightness: Brightness.light,

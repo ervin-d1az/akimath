@@ -19,13 +19,13 @@ enum WordmarkTone {
   final Color accent;
 }
 
-/// The AmbysMath wordmark.
+/// The AkiMath wordmark.
 ///
 /// One word, no apostrophe, no space. The capital M is what separates the two
 /// halves. The wordmark carries no outline and no shadow — the hard shadow
 /// belongs to objects with a body: cards, buttons, the icon tile.
-class AmbysMathWordmark extends StatelessWidget {
-  const AmbysMathWordmark({
+class AkiMathWordmark extends StatelessWidget {
+  const AkiMathWordmark({
     super.key,
     this.fontSize = 44,
     this.tone = WordmarkTone.onLight,
@@ -42,7 +42,7 @@ class AmbysMathWordmark extends StatelessWidget {
   final WordmarkTone tone;
 
   /// The first half, set in ink.
-  static const String stem = 'Ambys';
+  static const String stem = 'Aki';
 
   /// The second half, set in the accent.
   static const String accentedHalf = 'Math';

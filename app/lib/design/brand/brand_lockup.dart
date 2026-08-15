@@ -2,29 +2,29 @@ import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
 import '../widgets/candy_surface.dart';
-import 'amby.dart';
+import 'aki.dart';
 import 'wordmark.dart';
 
 /// The four approved ways to place the mark.
 ///
-/// Anything outside this set is not the brand. In particular, Amby is only
-/// allowed in [fullWithAmby] and [compactWithAmby] — splash, store listing, and
+/// Anything outside this set is not the brand. In particular, Aki is only
+/// allowed in [fullWithAki] and [compactWithAki] — splash, store listing, and
 /// the app header — and never repeats next to the wordmark elsewhere.
 enum BrandLockupVariant {
-  /// Amby large, centered over the wordmark. Splash and stores.
-  fullWithAmby,
+  /// Aki large, centered over the wordmark. Splash and stores.
+  fullWithAki,
 
   /// Wordmark plus descriptor. Documents and page footers.
-  fullWithoutAmby,
+  fullWithoutAki,
 
   /// Face tile plus wordmark, laid out horizontally. App headers.
-  compactWithAmby,
+  compactWithAki,
 
   /// Wordmark alone. Bars and email.
-  compactWithoutAmby,
+  compactWithoutAki,
 }
 
-/// The AmbysMath lockups.
+/// The AkiMath lockups.
 class BrandLockup extends StatelessWidget {
   const BrandLockup({
     super.key,
@@ -43,12 +43,12 @@ class BrandLockup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (variant) {
-      BrandLockupVariant.fullWithAmby => _FullWithAmby(tone: tone, scale: scale),
-      BrandLockupVariant.fullWithoutAmby =>
-        _FullWithoutAmby(tone: tone, scale: scale),
-      BrandLockupVariant.compactWithAmby =>
-        _CompactWithAmby(tone: tone, scale: scale),
-      BrandLockupVariant.compactWithoutAmby => AmbysMathWordmark(
+      BrandLockupVariant.fullWithAki => _FullWithAki(tone: tone, scale: scale),
+      BrandLockupVariant.fullWithoutAki =>
+        _FullWithoutAki(tone: tone, scale: scale),
+      BrandLockupVariant.compactWithAki =>
+        _CompactWithAki(tone: tone, scale: scale),
+      BrandLockupVariant.compactWithoutAki => AkiMathWordmark(
           fontSize: 44 * scale,
           tone: tone,
         ),
@@ -56,8 +56,8 @@ class BrandLockup extends StatelessWidget {
   }
 }
 
-class _FullWithAmby extends StatelessWidget {
-  const _FullWithAmby({required this.tone, required this.scale});
+class _FullWithAki extends StatelessWidget {
+  const _FullWithAki({required this.tone, required this.scale});
 
   final WordmarkTone tone;
   final double scale;
@@ -67,16 +67,16 @@ class _FullWithAmby extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Amby(width: 230 * scale),
+        Aki(width: 230 * scale),
         SizedBox(height: BrandShape.space3 * scale),
-        AmbysMathWordmark(fontSize: 76 * scale, tone: tone),
+        AkiMathWordmark(fontSize: 76 * scale, tone: tone),
       ],
     );
   }
 }
 
-class _FullWithoutAmby extends StatelessWidget {
-  const _FullWithoutAmby({required this.tone, required this.scale});
+class _FullWithoutAki extends StatelessWidget {
+  const _FullWithoutAki({required this.tone, required this.scale});
 
   final WordmarkTone tone;
   final double scale;
@@ -86,7 +86,7 @@ class _FullWithoutAmby extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        AmbysMathWordmark(fontSize: 82 * scale, tone: tone),
+        AkiMathWordmark(fontSize: 82 * scale, tone: tone),
         SizedBox(height: BrandShape.space2 * scale),
         BrandDescriptor(
           fontSize: 15 * scale,
@@ -99,8 +99,8 @@ class _FullWithoutAmby extends StatelessWidget {
   }
 }
 
-class _CompactWithAmby extends StatelessWidget {
-  const _CompactWithAmby({required this.tone, required this.scale});
+class _CompactWithAki extends StatelessWidget {
+  const _CompactWithAki({required this.tone, required this.scale});
 
   final WordmarkTone tone;
   final double scale;
@@ -114,10 +114,10 @@ class _CompactWithAmby extends StatelessWidget {
       children: <Widget>[
         CandySurface.tile(
           size: tile,
-          child: AmbyFace(width: tile * 58 / 64),
+          child: AkiFace(width: tile * 58 / 64),
         ),
         SizedBox(width: BrandShape.space3 * scale),
-        AmbysMathWordmark(fontSize: 40 * scale, tone: tone),
+        AkiMathWordmark(fontSize: 40 * scale, tone: tone),
       ],
     );
   }

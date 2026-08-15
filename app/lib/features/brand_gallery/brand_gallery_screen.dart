@@ -6,7 +6,7 @@ import '../../design/tokens/tokens.dart';
 import '../../design/widgets/candy_surface.dart';
 import '../splash/splash_screen.dart';
 
-/// A live rendering of `AmbysMath Marca.dc.html`.
+/// A live rendering of `AkiMath Marca.dc.html`.
 ///
 /// It exists so the implemented brand can be compared against the design doc by
 /// eye, and so the golden tests have a single screen that exercises every piece
@@ -22,7 +22,7 @@ class BrandGalleryScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 64),
           children: <Widget>[
-            Text('AMBYSMATH · MARCA', style: BrandText.sectionTitle(size: 40)),
+            Text('AKIMATH · MARCA', style: BrandText.sectionTitle(size: 40)),
             const SizedBox(height: BrandShape.space2),
             Text(
               'Logotipo, ícono y splash · el sistema visual no cambia',
@@ -31,14 +31,14 @@ class BrandGalleryScreen extends StatelessWidget {
             const SizedBox(height: BrandShape.space7),
             const _Section(
               title: 'LOGOTIPO',
-              note: 'Darumadrop One · “Math” en rosa para que se lea el posesivo',
+              note: 'Darumadrop One · “Math” en rosa · Darumadrop One',
               noteBackground: BrandColors.surface,
               child: _Lockups(),
             ),
             const SizedBox(height: BrandShape.space7),
             const _Section(
               title: 'ÍCONO DE APP',
-              note: 'Sin texto · la cara y las branquias',
+              note: 'Sin texto · la cara y el hocico oscuro',
               noteBackground: BrandColors.yellow,
               child: _IconOptions(),
             ),
@@ -105,36 +105,36 @@ class _Lockups extends StatelessWidget {
       runSpacing: BrandShape.space6,
       children: <Widget>[
         _Sample(
-          eyebrow: 'COMPLETA CON AMBY · SPLASH Y TIENDAS',
+          eyebrow: 'COMPLETA CON AKI · SPLASH Y TIENDAS',
           background: BrandColors.cream,
-          caption: 'Amby centrado sobre el wordmark. Es la única versión donde '
+          caption: 'Aki centrado sobre el wordmark. Es la única versión donde '
               'el personaje va grande.',
           child: BrandLockup(
-            variant: BrandLockupVariant.fullWithAmby,
+            variant: BrandLockupVariant.fullWithAki,
             scale: 0.62,
           ),
         ),
         _Sample(
-          eyebrow: 'COMPLETA SIN AMBY · DOCUMENTOS Y PIE DE PÁGINA',
+          eyebrow: 'COMPLETA SIN AKI · DOCUMENTOS Y PIE DE PÁGINA',
           background: BrandColors.cream,
           caption: 'El descriptor va en Plus Jakarta con mucho tracking, nunca '
               'en Darumadrop.',
           child: BrandLockup(
-            variant: BrandLockupVariant.fullWithoutAmby,
+            variant: BrandLockupVariant.fullWithoutAki,
             scale: 0.62,
           ),
         ),
         _Sample(
-          eyebrow: 'COMPACTA CON AMBY · ENCABEZADOS DE APP',
+          eyebrow: 'COMPACTA CON AKI · ENCABEZADOS DE APP',
           caption: 'La cara entra en la tarjeta verde de 64 px; sirve como '
               'avatar y como marca.',
-          child: BrandLockup(variant: BrandLockupVariant.compactWithAmby),
+          child: BrandLockup(variant: BrandLockupVariant.compactWithAki),
         ),
         _Sample(
-          eyebrow: 'COMPACTA SIN AMBY · BARRAS Y CORREOS',
+          eyebrow: 'COMPACTA SIN AKI · BARRAS Y CORREOS',
           caption: 'Mínimo 28 px de alto de letra: abajo de eso la Darumadrop '
               'pierde su remate redondo.',
-          child: BrandLockup(variant: BrandLockupVariant.compactWithoutAmby),
+          child: BrandLockup(variant: BrandLockupVariant.compactWithoutAki),
         ),
       ],
     );
@@ -153,14 +153,14 @@ class _IconOptions extends StatelessWidget {
       children: <Widget>[
         const _Sample(
           eyebrow: 'OPCIÓN A · FONDO CREMA',
-          caption: 'Rosa sobre crema son dos claros: a 40 px la cara se '
-              'disuelve en el cuadro y solo quedan los ojos.',
+          caption: 'Crema sobre crema no separa nada: a 40 px la cabeza se '
+              'disuelve en el cuadro.',
           child: _IconRow(background: AppIconBackground.cream),
         ),
         const _Sample(
           eyebrow: 'OPCIÓN B · FONDO VERDE',
-          caption: 'El rosa contra el verde separa la silueta. A 40 px todavía '
-              'se leen las seis branquias.',
+          caption: 'El verde recorta la silueta y el hocico oscuro da contraste '
+              'dentro de la propia cara.',
           child: _IconRow(background: AppIconBackground.brandGreen),
         ),
         CandySurface.card(
@@ -201,7 +201,7 @@ class _IconRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        AmbyAppIcon(size: 200, background: background),
+        AkiAppIcon(size: 200, background: background),
         const SizedBox(height: BrandShape.space5),
         Text('TAMAÑO REAL EN PANTALLA', style: BrandText.eyebrow()),
         const SizedBox(height: BrandShape.space3),
@@ -213,7 +213,7 @@ class _IconRow extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  AmbyAppIcon(
+                  AkiAppIcon(
                     size: size,
                     background: background,
                     withShadow: false,
@@ -286,7 +286,7 @@ class _LogoRules extends StatelessWidget {
   static const List<(Color, String)> _rules = <(Color, String)>[
     (
       BrandColors.pink,
-      'Una sola palabra, sin apóstrofo y sin espacio: AmbysMath. La “M” en '
+      'Una sola palabra, sin apóstrofo y sin espacio: AkiMath. La “M” en '
           'mayúscula es lo que separa las dos mitades.',
     ),
     (
@@ -301,7 +301,7 @@ class _LogoRules extends StatelessWidget {
     ),
     (
       BrandColors.ink,
-      'Amby acompaña solo en splash, tiendas y encabezado. Dentro de la app no '
+      'Aki acompaña solo en splash, tiendas y encabezado. Dentro de la app no '
           'se repite junto al wordmark.',
     ),
   ];

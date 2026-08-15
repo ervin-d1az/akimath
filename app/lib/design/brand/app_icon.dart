@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
-import 'amby.dart';
+import 'aki.dart';
 
 /// The two backgrounds the icon was explored on.
 ///
@@ -32,8 +32,8 @@ enum AppIconBackground {
 /// edge and gets shaved. For the iOS export, either inset the whole composition
 /// or drop the outline; on Android the adaptive-icon safe zone is tighter still.
 /// Rendering inside the app is unaffected.
-class AmbyAppIcon extends StatelessWidget {
-  const AmbyAppIcon({
+class AkiAppIcon extends StatelessWidget {
+  const AkiAppIcon({
     super.key,
     required this.size,
     this.background = AppIconBackground.brandGreen,
@@ -77,9 +77,9 @@ class AmbyAppIcon extends StatelessWidget {
               ]
             : null,
       ),
-      child: AmbyFace(
+      child: AkiFace(
         width: size * _faceRatio,
-        semanticLabel: 'AmbysMath',
+        semanticLabel: 'AkiMath',
       ),
     );
   }

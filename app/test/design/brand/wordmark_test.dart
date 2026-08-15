@@ -10,11 +10,11 @@ void main() {
     await tester.pumpWidget(
       const Directionality(
         textDirection: TextDirection.ltr,
-        child: AmbysMathWordmark(),
+        child: AkiMathWordmark(),
       ),
     );
 
-    expect(find.bySemanticsLabel('AmbysMath'), findsOneWidget);
+    expect(find.bySemanticsLabel('AkiMath'), findsOneWidget);
     handle.dispose();
   });
 
@@ -22,7 +22,7 @@ void main() {
     await tester.pumpWidget(
       const Directionality(
         textDirection: TextDirection.ltr,
-        child: AmbysMathWordmark(),
+        child: AkiMathWordmark(),
       ),
     );
 
@@ -30,7 +30,7 @@ void main() {
     final TextSpan span = text.textSpan! as TextSpan;
     final List<InlineSpan> halves = span.children!;
 
-    expect((halves[0] as TextSpan).text, 'Ambys');
+    expect((halves[0] as TextSpan).text, 'Aki');
     expect((halves[0] as TextSpan).style!.color, BrandColors.ink);
     expect((halves[1] as TextSpan).text, 'Math');
     expect((halves[1] as TextSpan).style!.color, BrandColors.pink);
@@ -40,7 +40,7 @@ void main() {
     await tester.pumpWidget(
       const Directionality(
         textDirection: TextDirection.ltr,
-        child: AmbysMathWordmark(tone: WordmarkTone.onBrandGreen),
+        child: AkiMathWordmark(tone: WordmarkTone.onBrandGreen),
       ),
     );
 
@@ -56,20 +56,20 @@ void main() {
 
   test('refuses to render below the legibility floor', () {
     expect(
-      () => AmbysMathWordmark(
+      () => AkiMathWordmark(
         fontSize: BrandShape.minWordmarkFontSize - 1,
       ),
       throwsA(isA<AssertionError>()),
     );
     expect(
-      () => AmbysMathWordmark(fontSize: BrandShape.minWordmarkFontSize),
+      () => AkiMathWordmark(fontSize: BrandShape.minWordmarkFontSize),
       returnsNormally,
     );
   });
 
   test('is written one way, everywhere', () {
-    expect(AmbysMathWordmark.plainText, 'AmbysMath');
-    expect(AmbysMathWordmark.plainText, isNot(contains("'")));
-    expect(AmbysMathWordmark.plainText, isNot(contains(' ')));
+    expect(AkiMathWordmark.plainText, 'AkiMath');
+    expect(AkiMathWordmark.plainText, isNot(contains("'")));
+    expect(AkiMathWordmark.plainText, isNot(contains(' ')));
   });
 }

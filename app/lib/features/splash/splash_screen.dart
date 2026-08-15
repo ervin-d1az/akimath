@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../design/brand/amby.dart';
+import '../../design/brand/aki.dart';
 import '../../design/brand/wordmark.dart';
 import '../../design/tokens/tokens.dart';
 import '../../design/widgets/loading_dots.dart';
 
 /// The two approved splash treatments.
 enum SplashVariant {
-  /// Cream canvas with Amby standing over the wordmark.
+  /// Cream canvas with Aki standing over the wordmark.
   cream,
 
   /// Brand green with the face in a cream tile. "Math" turns white here,
@@ -36,9 +36,9 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            if (onGreen) const _FaceTile() else const Amby(width: 222),
+            if (onGreen) const _FaceTile() else const Aki(width: 222),
             const SizedBox(height: BrandShape.space6 - BrandShape.space1),
-            AmbysMathWordmark(
+            AkiMathWordmark(
               fontSize: 62,
               tone: onGreen ? WordmarkTone.onBrandGreen : WordmarkTone.onLight,
             ),
@@ -81,7 +81,7 @@ class _FaceTile extends StatelessWidget {
           ),
         ],
       ),
-      child: const AmbyFace(width: 232),
+      child: const AkiFace(width: 232),
     );
   }
 }
