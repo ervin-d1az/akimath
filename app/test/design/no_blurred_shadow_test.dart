@@ -1,5 +1,4 @@
 import 'package:akimath_app/design/theme.dart';
-import 'package:akimath_app/features/brand_gallery/brand_gallery_screen.dart';
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 /// get added to [_screens] and inherit the check.
 void main() {
   final Map<String, Widget> screens = <String, Widget>{
-    'brand gallery': const BrandGalleryScreen(),
     'character sheet': const CharacterSheetScreen(),
     'splash · cream': const SplashScreen(),
     'splash · green': const SplashScreen(variant: SplashVariant.brandGreen),
@@ -62,8 +60,8 @@ void main() {
   }
 }
 
-/// The gallery lays out full phone frames side by side, so it needs a surface
-/// big enough to render without overflowing into an unrelated failure.
+/// The character sheet lays out full-width cards side by side, so it needs a
+/// surface big enough to render without overflowing into an unrelated failure.
 Future<void> _pumpLarge(WidgetTester tester, Widget screen) async {
   tester.view
     ..physicalSize = const Size(2400, 4000)
