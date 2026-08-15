@@ -1,4 +1,4 @@
-# AmbysMath — architecture proposal
+# AkiMath — architecture proposal
 
 Status: **proposal**, not yet accepted. One decision (§1) gates most of the rest.
 
@@ -17,7 +17,7 @@ judgment on the open questions in §11.
 
 ## 1 · The decision that gates the rest: one repo, not two
 
-**Recommendation: a single `ambysmath` repository.** This reverses the two-repo
+**Recommendation: a single `akimath` repository.** This reverses the two-repo
 choice, and the reason is narrow enough to state precisely.
 
 The cross-stack contract is not one file. Three independent critics enumerated
@@ -54,24 +54,24 @@ but whose paths are not rewritten, so `git log --follow` and `git blame` break a
 the seam.
 
 ```bash
-# 0. On GitHub: ARCHIVE ambysmath-app and ambysmath-api. Do not delete —
+# 0. On GitHub: ARCHIVE akimath-app and akimath-api. Do not delete —
 #    both have pushed branches, and an old clone pushing to a live remote
 #    is how you lose a day.
 brew install git-filter-repo
 cd /tmp && rm -rf mig && mkdir mig && cd mig
 
-git clone https://github.com/ervin-d1az/ambysmath-app.git app-src
-git clone https://github.com/ervin-d1az/ambysmath-api.git api-src
+git clone https://github.com/ervin-d1az/akimath-app.git app-src
+git clone https://github.com/ervin-d1az/akimath-api.git api-src
 # confirm dev holds everything first: git log main..dev  and  dev..main
 
 (cd app-src && git checkout dev && git filter-repo --to-subdirectory-filter app)
 (cd api-src && git checkout dev && git filter-repo --to-subdirectory-filter packages/server)
 
-mkdir ambysmath && cd ambysmath && git init -b main
+mkdir akimath && cd akimath && git init -b main
 git remote add appsrc ../app-src && git remote add apisrc ../api-src
 git fetch appsrc dev && git fetch apisrc dev
-git merge --allow-unrelated-histories -m "chore: absorb ambysmath-app history under app/" appsrc/dev
-git merge --allow-unrelated-histories -m "chore: absorb ambysmath-api history under packages/server/" apisrc/dev
+git merge --allow-unrelated-histories -m "chore: absorb akimath-app history under app/" appsrc/dev
+git merge --allow-unrelated-histories -m "chore: absorb akimath-api history under packages/server/" apisrc/dev
 
 # VERIFY CONTINUITY before going further — each must return more than one commit:
 git log --follow --oneline app/lib/design/tokens/brand_colors.dart
@@ -84,18 +84,21 @@ the TS stack bump in isolation; `flutter clean && flutter pub get` in `app/`
 (`ios/Flutter/Generated.xcconfig` carries **absolute** paths to the old directory);
 and a hand-merged root `.gitignore`.
 
-**Do not rename the Dart package.** `ambysmath_app` appears in `Info.plist`,
-`build.gradle.kts`, `AndroidManifest.xml`, and in the *path*
-`android/app/src/main/kotlin/com/ambysmath/ambysmath_app/MainActivity.kt`.
-Cosmetics in exchange for a broken build on day one.
+**Rename the Dart package and bundle id in the same pass — but as its own
+commit.** They still say `ambysmath_app` and `com.ambysmath.ambysmathApp`, which
+appear in `Info.plist`, `build.gradle.kts`, `AndroidManifest.xml`, and in the
+*path* `android/app/src/main/kotlin/com/ambysmath/ambysmath_app/MainActivity.kt`.
+Normally this is cosmetics traded for a broken build — here it is not, because a
+bundle id cannot change after the first store submission and nothing is
+submitted yet. Do it now or carry the old mascot's name forever.
 
 ### Tree
 
 ```
-ambysmath/
+akimath/
 ├── contract/openapi.json         COMMITTED ARTIFACT — generated, never hand-edited
 ├── packages/
-│   ├── core/                     @ambys/core — pure, zero dependencies
+│   ├── core/                     @aki/core — pure, zero dependencies
 │   ├── contract/                 Zod + route defs + the OpenAPI emitter
 │   └── server/                   Hono, Drizzle, Better Auth, batch jobs
 ├── app/                          the only Dart package
@@ -143,7 +146,7 @@ must reconstruct the exact problem years later, on a different Node, from
 `(template_id, template_version, seed)`.
 
 - **Zero `dependencies`.** Enforced by a CI check that reads `package.json`, not
-  by pnpm's strictness — an agent runs `pnpm add drizzle-orm --filter @ambys/core`
+  by pnpm's strictness — an agent runs `pnpm add drizzle-orm --filter @aki/core`
   and a resolution-based invariant dies in a one-line diff.
 - The check nobody proposed and that actually protects determinism:
   `no-restricted-globals` over `packages/core/**` for `Math.random`, `Date`,
@@ -328,7 +331,7 @@ coding swarm. That pattern is cheap, repeatable, and has no runtime state.
 | 4 | `contract` — emit + `git diff --exit-code` + `oasdiff` breaking-change check | `ts`∨`contract` | yes |
 | 5 | `dart` — `flutter analyze --fatal-infos`, `dart_code_linter`, `flutter test`, generated-client diff | `dart`∨`contract` | yes |
 | 6 | `compliance` — lockfile allowlist, SDK denylist, merged manifest has no `AD_ID`, `PrivacyInfo.xcprivacy` | `dart` | yes |
-| 7 | `integration` — ephemeral Neon branch (**a separate `ambysmath-ci` project**) | `ts` | yes |
+| 7 | `integration` — ephemeral Neon branch (**a separate `akimath-ci` project**) | `ts` | yes |
 | 8 | `gate` — `if: always()`, needs 1–7 | always | **the only required check** |
 | 9 | `mutation` — Stryker over `packages/core`, fast-check 1000 runs | nightly | no |
 
@@ -447,7 +450,7 @@ non-disableable 5-minute autosuspend, mere reachability during waking hours is
 multi-day outage. CI with branch-per-PR plus a four-agent swarm is plausibly the
 dominant consumer before the first user exists.
 *Default:* Free throughout development with a **separate Neon project for CI**;
-`ambysmath-prod` on Launch (~$5–19/mo) at public launch. `attempts` retained 400
+`akimath-prod` on Launch (~$5–19/mo) at public launch. `attempts` retained 400
 days, `diag_events` 30.
 
 **4 · Free entry for all item families, or does some family need multiple choice?**

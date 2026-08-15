@@ -1,8 +1,8 @@
-# AmbysMath — app
+# AkiMath — app
 
-Flutter client for AmbysMath, a math-challenge app in Mexican Spanish.
+Flutter client for AkiMath, a math-challenge app in Mexican Spanish.
 
-The backend lives in a separate repository: [`ambysmath-api`](https://github.com/ervin-d1az/ambysmath-api).
+The backend lives in a separate repository: [`akimath-api`](https://github.com/ervin-d1az/akimath-api).
 
 ## Layout
 
