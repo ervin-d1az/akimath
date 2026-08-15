@@ -18,6 +18,7 @@ class CandySurface extends StatelessWidget {
     this.padding = EdgeInsets.zero,
     this.width,
     this.height,
+    this.minHeight,
     this.alignment,
     this.clip = false,
   });
@@ -41,19 +42,23 @@ class CandySurface extends StatelessWidget {
         );
 
   /// A pill: the small labelled chips used for annotations and tags.
+  ///
+  /// Its 32px height is a floor, not a fixed size. On a narrow screen the label
+  /// wraps, and a fixed height would clip the second line.
   const CandySurface.pill({
     Key? key,
     required Widget child,
     Color background = BrandColors.surface,
-    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(horizontal: 14),
-    double height = 32,
+    EdgeInsetsGeometry padding =
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+    double minHeight = 32,
   }) : this(
           key: key,
           background: background,
           borderRadius: BrandShape.radiusPill,
           shadowOffset: BrandShape.shadowPill,
           padding: padding,
-          height: height,
+          minHeight: minHeight,
           alignment: Alignment.center,
           child: child,
         );
@@ -88,6 +93,10 @@ class CandySurface extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double? width;
   final double? height;
+
+  /// A floor on the height, for surfaces whose content may wrap.
+  final double? minHeight;
+
   final AlignmentGeometry? alignment;
 
   /// Clips the child to the rounded rect. Needed when artwork would otherwise
@@ -114,6 +123,8 @@ class CandySurface extends StatelessWidget {
     return Container(
       width: width,
       height: height,
+      constraints:
+          minHeight == null ? null : BoxConstraints(minHeight: minHeight!),
       padding: padding,
       clipBehavior: clip ? Clip.antiAlias : Clip.none,
       decoration: BoxDecoration(
