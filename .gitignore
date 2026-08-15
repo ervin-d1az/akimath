@@ -1,0 +1,26 @@
+# Node
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Dart / Flutter
+app/.dart_tool/
+app/build/
+app/.flutter-plugins-deps
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/flutter_export_environment.sh
+app/android/.gradle/
+app/android/local.properties
+
+# Scratch
+tmp/
+.DS_Store
+.env
+.env.*
+
+# Multi-agent runtime state
+.swarmforge/
+.worktrees/
