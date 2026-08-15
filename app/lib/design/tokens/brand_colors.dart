@@ -1,8 +1,8 @@
 import 'dart:ui' show Color;
 
-/// The AmbysMath palette.
+/// The AkiMath palette.
 ///
-/// Source of truth: `AmbysMath Marca.dc.html` in the design project.
+/// Source of truth: `AkiMath Marca.dc.html` and `Aki Hoja de Personaje.dc.html` in the design project.
 /// No color literal is written anywhere outside this file.
 ///
 /// Brand invariants (see [BrandColorRole]):
@@ -22,14 +22,21 @@ abstract final class BrandColors {
   /// Raised surface: cards and sheets.
   static const Color surface = Color(0xFFFFFFFF);
 
-  /// Brand accent: the "Math" half of the wordmark and Amby's gills.
+  /// Brand accent: the "Math" half of the wordmark and Aki's collar.
   static const Color pink = Color(0xFFE85E92);
 
-  /// Amby's face.
-  static const Color pinkFace = Color(0xFFFFC9DC);
+  /// The bead and facets on Aki's collar tag.
+  static const Color pinkSoft = Color(0xFFFFC2D8);
 
-  /// Amby's body and tail.
-  static const Color pinkBody = Color(0xFFFF9EC1);
+  /// Aki's coat. Also the color her mouth is cut into the dark muzzle with.
+  static const Color akiCoat = Color(0xFFF7DFB6);
+
+  /// Aki's muzzle. Dark enough to give the face contrast with itself, which is
+  /// what keeps the app icon readable at 40px.
+  static const Color akiMuzzle = Color(0xFF4A4060);
+
+  /// Aki's ears, a shade darker than the muzzle.
+  static const Color akiEars = Color(0xFF332B44);
 
   /// Action and success. Also the app icon background.
   static const Color green = Color(0xFF5ED6A4);
@@ -42,6 +49,9 @@ abstract final class BrandColors {
 
   /// Secondary text and descriptors.
   static const Color muted = Color(0xFF8A7FA8);
+
+  /// A hairline divider inside a card. Ink at 16%, never a separate grey.
+  static const Color rule = Color(0x291C1A2E);
 }
 
 /// The semantic role of a color, which is what the rest of the app asks for.
