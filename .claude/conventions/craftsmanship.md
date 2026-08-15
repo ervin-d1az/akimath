@@ -1,0 +1,282 @@
+# AkiMath — Clean Code & Project Conventions
+
+The reviewable rulebook for this repository. Every rule has a stable ID so a review can cite it
+against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
+and to TypeScript under `packages/` unless the rule says otherwise.
+
+This book starts small on purpose. Eighteen rules, every one of them describing code that is
+already on disk today — not a pattern we hope to have. It grows by **PROC-6** and no other way.
+
+`CLAUDE.md` at the repo root is the entry point for *how to work here*; this file is the *contract
+the code must satisfy*. Where both cover the same ground this file is the detailed version — and if
+they ever conflict, **CLAUDE.md wins and this file must be corrected in the same session** (PROC-6).
+`ARCHITECTURE.md` holds the design decisions the rules point at.
+
+Legend: **MUST** = a violation blocks the merge · **SHOULD** = raise it, the author decides ·
+**NEVER** = hard prohibition.
+
+---
+
+## PURE — Pure policy, separated from the IO adapter
+
+The one structural pattern the repo already commits to, on both sides of the stack:
+`app/lib/design/brand/spec/` vs `app/lib/design/brand/brand_drawing_painter.dart`, and
+`packages/server/src/routing.ts` vs `packages/server/src/adapters/http-server.ts`.
+
+- **PURE-1** MUST: every decision — routing, grading, layout geometry, rating, canonicalization,
+  what a drawing *is* — lives in a module that performs no IO: no `Canvas`, no `CustomPainter`, no
+  widget, no `package:flutter/rendering.dart` or `/material.dart`, no socket, no filesystem, no
+  `process.env`, no clock and no randomness. Value types that carry no IO are fine — outside its own
+  pure siblings, `app/lib/design/brand/spec/` imports only `dart:ui show Offset, Radius, Rect, Color`
+  and `package:meta`, and `routing.ts` imports only `./health.js`. The test
+  that decides it: **if proving the decision correct requires faking a canvas, a socket, a clock or
+  a seed, the decision is on the wrong side of the boundary.** `app/test/design/brand/aki_spec_test.dart`
+  and `packages/server/test/routing.test.ts` both run with zero mocks; that is the bar.
+
+- **PURE-2** MUST: the adapter that performs the IO holds no decisions — it translates and nothing
+  else, and stays thin enough that nothing worth testing lives in it.
+
+  ```dart
+  // wrong — the adapter now owns a coordinate, so the artwork lives in two places
+  void paint(Canvas canvas, Size size) {
+    canvas.drawCircle(const Offset(68, 96), 16, _inkPaint());  // Aki's left eye
+  }
+
+  // right — the adapter walks the spec and knows no geometry of its own
+  for (final BrandMark mark in drawing.marks) {
+    switch (mark) { case InkDot(): _paintDot(canvas, mark); /* … */ }
+  }
+  ```
+
+  Same shape on the server: `http-server.ts` owns the socket and knows no route; `routing.ts` owns
+  every route and opens no socket.
+
+## FUN — Functions
+
+- **FUN-1** MUST: at most three **positional** parameters on a function or method; past three, use
+  Dart named parameters or a TypeScript options object, so every argument is readable at the call
+  site. `AkiSpec._face` takes eleven named parameters and complies — the rule is about unreadable
+  call sites, not about arity.
+  **Carve-out (FUN-1a):** a small private value type may take its fields positionally
+  (`_Mouth` in `aki_spec.dart`) when a named constructor would be pure noise; a *function* may not.
+
+- **FUN-2** NEVER take a boolean parameter that selects between two behaviors — a boolean means the
+  function does two things. Use a closed enum, or write one function per alternative.
+
+  ```dart
+  // wrong
+  const SplashScreen({this.onGreen = false});
+
+  // right — the variants are named, and a third one is a compile error away from being handled
+  enum SplashVariant { cream, brandGreen }
+  const SplashScreen({this.variant = SplashVariant.cream});
+  ```
+
+## TYP — Types
+
+- **TYP-1** MUST: in Dart, annotate every declaration explicitly and type every collection literal —
+  `final Rect box`, `final double scale`, `<BrandMark>[...]`, not `var` and not a bare `[]`. Nothing
+  enforces this: `flutter_lints` does not enable `always_specify_types`, so it is a review rule, and
+  the whole `app/lib/` tree already reads this way. On the TypeScript side `strict` and
+  `verbatimModuleSyntax` are on in `packages/server/tsconfig.json`, so implicit `any` and a missing
+  `import type` are compiler errors already — what the reviewer still checks there is an explicit
+  return type on every exported function and `unknown` rather than `any` when a payload is genuinely
+  untyped.
+
+## NAM — Naming
+
+- **NAM-1** MUST: identifiers are self-descriptive without their surrounding context, and carry no
+  data-type prefix (`strCode`, `blnOk`, `arrMarks`) — the type annotation already says that. Name by
+  role. Length scales inversely with scope: a public entry point is short and abstract (`route`,
+  `body(pose)`), a private one-job function is long and precise (`_buildFace`, `_paintStroke`,
+  `buildHealthReport`). If a comment is needed to say what a function does, rename the function.
+
+## CMT — Comments & documentation
+
+- **CMT-1** MUST: before writing a comment inside a function body, extract the code it would explain
+  into a function whose name says what the comment would have said. A comment that survives that
+  test states the non-obvious **why** in one or two lines and never restates the code; three lines
+  inside a body is the ceiling, and longer rationale belongs in the plan, `ARCHITECTURE.md`, or an
+  ADR under `docs/adr/`.
+
+## LANG — Language
+
+- **LANG-1** MUST: code, identifiers, file names, comments, doc comments, test names, commit
+  messages and documentation are in **English**. Only strings the player reads are in **Mexican
+  Spanish**, and they read as a person talking to a child, not as a system reporting
+  (`'Se me desenroscó la cola. Ya vuelve.'`). There is no i18n layer yet, so player-facing Spanish
+  sits inline in the widget that shows it; when a layer arrives this rule gains a clause under
+  PROC-6.
+
+## DEP — Dependencies & the audience
+
+- **DEP-1** NEVER add a dependency that sends data off the device — analytics, ads, attribution,
+  crash reporting, remote config, remote fonts, any SDK that "phones home". The audience includes
+  children under 13 and the compliance posture in `ARCHITECTURE.md` §11 is minimization by
+  construction. Before adding *any* dependency, state in the PR what network calls it makes and what
+  it collects; "it's only a util" is not an audit. Assets ship bundled for the same reason — the
+  brand typefaces live in `app/assets/fonts/` precisely so that first launch makes no third-party
+  request.
+
+## BRD — Brand invariants
+
+These are not taste. Most of them are enforced by committed tests
+(`app/test/design/no_blurred_shadow_test.dart`, `app/test/design/tokens/brand_colors_test.dart`,
+`app/test/design/brand/aki_spec_test.dart`), and a change that breaks one of those breaks the build.
+Where a clause below is **not** test-backed it says so — an invariant a reviewer must read for is
+still an invariant, but claiming a test behind it that does not exist is how a rulebook loses its
+credit.
+
+- **BRD-1** MUST: success and error are distinguishable by **shape**, never by hue alone — `AkiPose.correct`
+  and `AkiPose.slip` differ in the tail, the ears and the mouth curve, not only in color. Coral means
+  error and nothing else; green means action and success and nothing else; pink is the accent and
+  never carries state. Ask `BrandColorRole` for a role, not `BrandColors` for a hue, in anything that
+  communicates state.
+
+- **BRD-2a** NEVER draw a blurred shadow, a gradient, a backdrop filter, or anything with Material
+  elevation — shadows are hard, `blurRadius: 0` and `spreadRadius: 0`, offset from `BrandShape`.
+  `no_blurred_shadow_test.dart` walks every screen and asserts four of those: no gradient,
+  `blurRadius == 0`, `spreadRadius == 0`, and elevation 0 on `PhysicalModel` and `PhysicalShape`.
+  It does **not** look for `BackdropFilter`, and none exists in `app/lib/` — that clause is a
+  reviewer's read, not a red build, until someone adds
+  `expect(find.byType(BackdropFilter), findsNothing)` to that test.
+
+- **BRD-2b** NEVER write a color literal outside `app/lib/design/tokens/` — `brand_colors.dart` says
+  so itself and is the single source of the palette; ask `BrandColorRole` for a role rather than
+  `BrandColors` for a hue in anything that communicates state. **Carve-out, matching CLAUDE.md
+  verbatim:** `Colors.transparent`, used to switch Material's surface tinting off, is the one
+  exception on disk (`app/lib/design/theme.dart:37,42,48,53`). Nothing else loosens —
+  `grep -rn "Color(0x" app/lib` returns only `brand_colors.dart`.
+
+- **BRD-2c** SHOULD: take geometry from `BrandShape` — radii, stroke widths, spacing — and give any
+  deliberate departure a one-line reason next to it. The existing case is the 260px face tile in
+  `splash_screen.dart`, whose doc comment justifies its 60px radius; its `width: 4` border is
+  *not* justified and is not pre-blessed.
+
+- **BRD-2d** MUST: any interactive target is at least `BrandShape.minTouchTarget` (48 logical
+  pixels) in both dimensions — keypad keys and puzzle-board cells alike.
+
+## GIT — Commits & branches
+
+- **GIT-1** MUST: `git config user.email` is `geineryodan@gmail.com` — verify before committing —
+  and **NEVER** add a `Co-Authored-By` trailer or any other tool-attribution line to a commit
+  message.
+
+- **GIT-2** MUST: one coherent change per commit, small and logical; subject is a conventional prefix
+  plus a short lowercase description with no ticket id and no scope in parentheses
+  (`chore: name the server package @akimath/server for the workspace`). Never bundle an unrelated
+  edit — a `.gitignore` tweak, a formatting sweep, a refactor the change did not need — into a
+  commit that describes something else.
+
+- **GIT-3** MUST: **`dev` is the working branch and pushing to it is authorized.** `main` is
+  protected by a GitHub ruleset: no direct push, no force-push, no deletion — it is reached only by
+  a pull request from `dev`. Feature branches are optional here and are cut from `dev`, never from
+  another feature branch. The diff base for any review or audit is **`origin/dev`**, stated
+  explicitly: `origin/HEAD` resolves to `origin/main`, which lags `dev`, so a default base blames
+  commits already on `dev` on the change under review.
+
+## PROC — Process
+
+- **PROC-1** MUST: **TDD.** The test is written first and lands in the same commit as the behavior it
+  describes — tests are committed here, they are the deliverable, and a behavior change with no test
+  in its commit is incomplete. `app/test/` and `packages/server/test/` are the two homes; a test
+  that needs a mock to describe a decision is a PURE-1 finding, not a test problem.
+
+- **PROC-5** MUST: a change is proven by **evidence**, and the tier reached is stated in words. The
+  tier names here are the same three CLAUDE.md uses; an agent file that numbers them differently is
+  wrong and gets corrected under PROC-6.
+  - **Tier 1 — the committed suite, always.** Run these, verbatim, per package:
+
+    ```sh
+    cd app             && flutter analyze --fatal-infos
+    cd app             && flutter test
+    cd packages/server && npm run verify        # tsc --noEmit && vitest run
+    ```
+
+    `--fatal-infos` is not decoration: these are the commands `.claude/hooks/verify-gate.sh` runs
+    as a `PreToolUse` hook on every `git commit` and `git push`, exiting **2** (blocking) on a
+    failure, and the same commands `.github/workflows/ci.yml` runs in its `dart` and `ts` jobs.
+    (The hook and CI spell the TypeScript half as `npm run typecheck` then `npm test`, which is
+    exactly what `npm run verify` chains — same two checks, one script.)
+    The rulebook, the hook and CI must name one set of commands; if they ever diverge, reconcile
+    them in the same session (PROC-6). The baseline is **zero**: 34 Flutter tests and 3 TypeScript
+    tests pass and both analyzers report clean today, so there is no pre-existing noise to hide a
+    new failure in. Green before, green after, stated with the counts.
+  - **Tier 1b — SHOULD, when the change is in the pure core: show the tests bite.** A green suite
+    that would stay green with the logic inverted is not evidence.
+    - TypeScript: `cd packages/server && npm run mutation` (Stryker, `break: 70`, scoring 100.00
+      today) and `cd packages/server && npm run dry` (jscpd, 0 clones today).
+    - Dart: there is **no configured mutation harness** — `mutation_test` is a dev dependency but
+      the rules XML that would define its test commands does not exist, so do not write that
+      command as if it ran. The substitute is a **falsification step**, and because it edits
+      versioned production code its mechanism is part of the rule, not a detail:
+      1. `git stash push -- <file>` is the safe form; otherwise edit in place and be ready to
+         `git checkout -- <file>`.
+      2. Invert one assertion or return value, run `cd app && flutter test`, and record the
+         **named** test that went red.
+      3. Restore: `git checkout -- <file>` (or `git stash pop`), then prove it with
+         `git diff --quiet -- <file>` **and** a `flutter test` run back to the count you recorded
+         before the mutation. Paste both into the ledger.
+
+      A falsification step without that closing proof is not evidence, it is an uncommitted
+      mutation waiting to be staged by the next `git add`.
+    - **Never report a score you did not produce in this session.**
+  - **Tier 2 — exercise the real thing.** The app run on a device or simulator when the change
+    surfaces on screen — the 48px touch area, shape-not-hue, the absence of blur are judged there
+    and not in a widget test — or the endpoint called for real once endpoints and an environment
+    exist. There is no endpoint, dev environment, deploy or database today, so on the server side
+    tier 2 is currently unreachable and saying so is the correct outcome. "It should work" and "it
+    compiles" are not evidence; neither is a passing suite that was never executed.
+  - `dart run dart_code_linter:metrics analyze lib` is **not evidence** at any tier.
+    `app/analysis_options.yaml` carries no `dart_code_linter:` block, so the tool has no rules and
+    no metrics enabled and exits 0 even on a file written to be awful — a check that can only ever
+    be green. It becomes evidence the day that block exists; note when adding it that at the tool's
+    documented defaults it flags four pre-existing files (`brand_drawing_painter.dart`,
+    `brand_typography.dart`, `theme.dart`, `character_sheet_screen.dart`), so turning it on means
+    clearing or explicitly accepting that baseline. `.github/workflows/ci.yml` omits the step for
+    this reason.
+  - The root `package.json` `verify`/`typecheck` scripts delegate to `pnpm -r`; **pnpm is not
+    installed on this machine**, so they do not run. Use the per-package commands above until the
+    pnpm migration lands.
+
+  *(The IDs `PROC-5` and `PROC-6` are preserved verbatim from the parent workflow, gaps and all —
+  `PROC-5` is the evidence rule there too — so cross-project references keep resolving. Do not
+  renumber either.)*
+
+- **PROC-6** MUST: **this rulebook and the agent instructions are living documents.** Whenever a
+  correction lands — the user overrules a decision, a review finding turns out to be wrong, a
+  carve-out is discovered, or a failure mode bites twice — write it down in the same session: as a
+  new or edited rule here (with an ID), and in the affected `.claude/agents/*.md` when it changes how
+  an agent should behave. A lesson that lives only in a chat reply will be relearned the hard way.
+  **Corollary:** a review finding's **proposed fix** is a claim to verify against this rulebook, not
+  an instruction to apply — findings have suggested rule-violating fixes before.
+  A rulebook that did not grow this month is not stable; it means nobody wrote down what they
+  learned.
+
+- **PROC-7** MUST: a convention that has to reach **planning** lives in `openspec/config.yaml`, not
+  only here. Its `context:` block is what every `/opsx:propose` run reads, and its per-artifact
+  `rules:` are what shape `proposal.md`, the delta specs and `tasks.md`. A rule added here and not
+  there is invisible at the moment it would have done the most good — before the code exists. Edit
+  both in the same commit, or neither.
+  Keep `config.yaml` pointing at files rather than restating them: a paraphrase of this rulebook
+  copied into it goes stale silently, and nothing will ever fail to warn you.
+
+
+---
+
+## What is deliberately not here
+
+Rules must describe code that exists, or a reviewer will fire them at innocent code. These wait for
+their subject:
+
+| Not yet a rule | Because |
+|---|---|
+| Layering (`handler → controller → model`) | there are no handlers, controllers or models — PURE-1/PURE-2 is the layering this repo actually has |
+| Data access, ORM, migrations, SQL | Neon and Drizzle are planned in `ARCHITECTURE.md` §5, not built |
+| i18n mechanics | no i18n layer; LANG-1 covers the language split until there is one |
+| Static-auditor gate (`fallow`) | the binary resolves (`fallow 3.15.0`, homebrew) but is a **global, not a project devDependency** — adapting.md §5's named silent-fail mode, where the terminal finds it and a fresh clone does not. It also analyzes TS/JS only: at this root it discovers 7 files and **0 of the 18 Dart files**. `.claude/hooks/verify-gate.sh` replaced it with the toolchains this repo owns. The self-ignoring `.fallow/` cache directory is a by-product of running it, not a tool. |
+| Deploy, environments, release train | none exist |
+| Ticket ids in branches, commits or PRs | there is no tracker; the backlog is `ARCHITECTURE.md` §9, phases F0–F8 |
+| Compliance CI, protected-paths job, `Verdict` without `.color` | designed in `ARCHITECTURE.md` §6–§8, not written |
+
+Each of these becomes a rule the day it becomes code — by PROC-6, in the session where it lands.
