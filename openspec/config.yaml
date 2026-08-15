@@ -1,0 +1,61 @@
+schema: spec-driven
+
+# Shown to the AI whenever it creates a planning artifact. Keep it pointing at
+# files rather than restating them — a copy here goes stale silently.
+context: |
+  AkiMath — math challenges in Mexican Spanish. Flutter client under `app/`,
+  TypeScript backend under `packages/server/`, one repository.
+
+  READ BEFORE PLANNING ANYTHING:
+  - `CLAUDE.md` — how to work here. It wins over every other document.
+  - `.claude/conventions/craftsmanship.md` — the rulebook the code must satisfy.
+    Cite its rule IDs (PURE-1, FUN-2, BRD-2a, …) instead of paraphrasing them.
+  - `ARCHITECTURE.md` — the accepted design decisions and the phase plan in §9.
+    A proposal names which phase it belongs to.
+
+  Audience includes children under 13. That is an architectural constraint, not
+  a footnote: no third-party SDK that collects data, no ads, no external
+  analytics. Any new dependency has to be checked for whether it phones home
+  before it is proposed (DEP-1).
+
+  Code, identifiers, comments and documents are written in English. Only the
+  copy the end user reads is Mexican Spanish.
+
+  The structural commitment is PURE: every decision lives in a module that does
+  no IO, and the adapter that does the IO holds no decisions. The test is
+  whether proving the decision correct needs a fake canvas, socket, clock or
+  seed. Two precedents already on disk: `app/lib/design/brand/spec/` and
+  `packages/server/src/routing.ts`.
+
+  What exists today: the brand layer and Aki's character sheet, tested and
+  green. What does not: `packages/core`, `packages/contract`, any database,
+  any auth, any real endpoint, any deployment. Do not write a proposal that
+  assumes otherwise.
+
+rules:
+  proposal:
+    - Name which phase of ARCHITECTURE.md §9 this belongs to, or say plainly that it is outside the plan and why.
+    - Include a Non-goals section. Scope that is not excluded gets built.
+    - State what already exists that this builds on, with file paths — this is a brownfield repo, not a blank page.
+  specs:
+    - Every scenario must be verifiable by a test that will be committed. If you cannot name the test, the scenario is not a requirement yet.
+    - Write scenarios against observable behaviour, never against implementation detail.
+  design:
+    - Only write this when a decision has real alternatives worth recording. Cite ARCHITECTURE.md rather than restating it.
+    - Say which side of the PURE boundary each new module sits on, and why.
+  tasks:
+    - Order tasks so a failing test comes before the code that makes it pass. TDD is a hard requirement here, not a preference.
+    - Each task names the check that proves it: a test file, `flutter analyze`, or a command with its expected output.
+    - Keep tasks to one coherent change each — they map one-to-one onto commits.
+
+operations:
+  apply:
+    guidance:
+      - Write the failing test first and see it fail. "It compiles" is not evidence.
+      - Run the full suite for the stack you touched before marking a task done.
+      - Commit in small logical pieces, never with a Co-Authored-By trailer.
+      - Push to `dev`. Never to `main` — it is protected and takes pull requests only.
+  archive:
+    guidance:
+      - Archive only after the pull request has merged, not when the code is written.
+      - If the change taught the project something — a rule overruled, a failure that bit twice — write it into the rulebook with an ID in the same session (PROC-6).
