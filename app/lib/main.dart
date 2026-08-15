@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
 
 import 'design/theme.dart';
-import 'features/brand_gallery/brand_gallery_screen.dart';
+import 'features/character_sheet/character_sheet_screen.dart';
 
 void main() {
-  runApp(const AmbysMathApp());
+  runApp(const AkiMathApp());
 }
 
 /// The application root.
 ///
-/// The only thing built so far is the brand layer, so the home screen is the
-/// brand gallery. It gets replaced by the real navigation the moment there is
+/// The only thing built so far is the brand layer, so the home screen is Aki's
+/// character sheet. It gets replaced by the real navigation the moment there is
 /// something to navigate to.
-class AmbysMathApp extends StatelessWidget {
-  const AmbysMathApp({super.key});
+class AkiMathApp extends StatelessWidget {
+  const AkiMathApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AmbysMath',
+      title: 'AkiMath',
       debugShowCheckedModeBanner: false,
-      theme: AmbysMathTheme.build(),
-      home: const BrandGalleryScreen(),
+      theme: AkiMathTheme.build(),
+      home: const CharacterSheetScreen(),
     );
   }
 }

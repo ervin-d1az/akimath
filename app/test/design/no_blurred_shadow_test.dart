@@ -1,5 +1,6 @@
 import 'package:ambysmath_app/design/theme.dart';
 import 'package:ambysmath_app/features/brand_gallery/brand_gallery_screen.dart';
+import 'package:ambysmath_app/features/character_sheet/character_sheet_screen.dart';
 import 'package:ambysmath_app/features/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final Map<String, Widget> screens = <String, Widget>{
     'brand gallery': const BrandGalleryScreen(),
+    'character sheet': const CharacterSheetScreen(),
     'splash · cream': const SplashScreen(),
     'splash · green': const SplashScreen(variant: SplashVariant.brandGreen),
   };
@@ -69,6 +71,6 @@ Future<void> _pumpLarge(WidgetTester tester, Widget screen) async {
   addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
-    MaterialApp(theme: AmbysMathTheme.build(), home: screen),
+    MaterialApp(theme: AkiMathTheme.build(), home: screen),
   );
 }
