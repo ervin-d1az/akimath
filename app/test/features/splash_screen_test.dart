@@ -1,9 +1,9 @@
-import 'package:ambysmath_app/design/brand/aki.dart';
-import 'package:ambysmath_app/design/brand/wordmark.dart';
-import 'package:ambysmath_app/design/theme.dart';
-import 'package:ambysmath_app/design/tokens/tokens.dart';
-import 'package:ambysmath_app/design/widgets/loading_dots.dart';
-import 'package:ambysmath_app/features/splash/splash_screen.dart';
+import 'package:akimath_app/design/brand/aki.dart';
+import 'package:akimath_app/design/brand/wordmark.dart';
+import 'package:akimath_app/design/theme.dart';
+import 'package:akimath_app/design/tokens/tokens.dart';
+import 'package:akimath_app/design/widgets/loading_dots.dart';
+import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

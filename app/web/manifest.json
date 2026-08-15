@@ -1,6 +1,6 @@
 {
-    "name": "ambysmath_app",
-    "short_name": "ambysmath_app",
+    "name": "AkiMath",
+    "short_name": "AkiMath",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

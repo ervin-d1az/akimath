@@ -1,4 +1,4 @@
-package com.ambysmath.ambysmath_app
+package com.akimath.akimath_app
 
 import io.flutter.embedding.android.FlutterActivity
 

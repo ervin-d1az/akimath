@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:ambysmath_app/design/tokens/brand_colors.dart';
+import 'package:akimath_app/design/tokens/brand_colors.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

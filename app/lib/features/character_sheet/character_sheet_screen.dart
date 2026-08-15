@@ -339,9 +339,9 @@ class _StillToDecide extends StatelessWidget {
           Text('LO QUE FALTA DECIDIR', style: BrandText.sectionTitle(size: 26)),
           const SizedBox(height: BrandShape.space3),
           Text(
-            'El nombre AmbysMath venía de Ambystoma mexicanum, el ajolote. Con '
-            'la perrita esa parte se rehace: el código ya quedó en AkiMath, '
-            'falta confirmarlo en tiendas y en los repos.',
+            'El nombre anterior venía de Ambystoma mexicanum, el ajolote. Con la '
+            'perrita ya se rehizo entero: código, repos, paquete y bundle id '
+            'dicen AkiMath. Falta reservarlo en tiendas.',
             style: BrandText.body(),
           ),
           const SizedBox(height: BrandShape.space3),

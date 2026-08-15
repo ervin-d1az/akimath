@@ -1,8 +1,8 @@
 import 'dart:ui';
 
-import 'package:ambysmath_app/design/brand/spec/aki_spec.dart';
-import 'package:ambysmath_app/design/brand/spec/brand_shapes.dart';
-import 'package:ambysmath_app/design/tokens/brand_colors.dart';
+import 'package:akimath_app/design/brand/spec/aki_spec.dart';
+import 'package:akimath_app/design/brand/spec/brand_shapes.dart';
+import 'package:akimath_app/design/tokens/brand_colors.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// These run without a canvas, without a widget tree, and without mocks,

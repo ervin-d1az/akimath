@@ -1,5 +1,5 @@
-import 'package:ambysmath_app/design/brand/wordmark.dart';
-import 'package:ambysmath_app/design/tokens/tokens.dart';
+import 'package:akimath_app/design/brand/wordmark.dart';
+import 'package:akimath_app/design/tokens/tokens.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 

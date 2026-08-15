@@ -84,13 +84,11 @@ the TS stack bump in isolation; `flutter clean && flutter pub get` in `app/`
 (`ios/Flutter/Generated.xcconfig` carries **absolute** paths to the old directory);
 and a hand-merged root `.gitignore`.
 
-**Rename the Dart package and bundle id in the same pass — but as its own
-commit.** They still say `ambysmath_app` and `com.ambysmath.ambysmathApp`, which
-appear in `Info.plist`, `build.gradle.kts`, `AndroidManifest.xml`, and in the
-*path* `android/app/src/main/kotlin/com/ambysmath/ambysmath_app/MainActivity.kt`.
-Normally this is cosmetics traded for a broken build — here it is not, because a
-bundle id cannot change after the first store submission and nothing is
-submitted yet. Do it now or carry the old mascot's name forever.
+**The Dart package and bundle id are already renamed** to `akimath_app` and
+`com.akimath.akimathApp`, along with the Kotlin package path, both store display
+names, and the web manifest. This was worth doing eagerly rather than as
+cosmetics: a bundle id cannot change after the first store submission, and
+nothing is submitted yet.
 
 ### Tree
 
