@@ -1,9 +1,9 @@
 {
-  "name": "akimath-api",
+  "name": "@akimath/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AkiMath backend API",
+  "description": "AkiMath backend",
   "engines": {
     "node": ">=22"
   },
