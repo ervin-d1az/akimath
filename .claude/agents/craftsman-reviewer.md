@@ -53,9 +53,10 @@ findings go back to `craftsman-engineer`, which is the only agent that writes co
    the diff: a widget that now imports the spec layer's opposite number, a doc comment that stopped
    being true two lines up, a token added without its role, a public API that gained a member with
    no test.
-4. Review the **commit messages** too, against the project's git rules: English, conventional
-   subject with a short paragraph body, no bullet lists, **no `Co-Authored-By`**, commit email
-   `geineryodan@gmail.com`, one coherent change per commit, and no unrelated files bundled in.
+4. Review the **commit messages** too, and cite the rule rather than paraphrasing it: **GIT-1**
+   covers the commit identity and the trailer ban, **GIT-2** the one-coherent-change subject and
+   the unrelated-edit ban, **GIT-3** the branch model. Read them at runtime — a rule you quote from
+   memory is a rule that drifted.
 
 ## Phase 2b — Run the static analysis over the change
 
