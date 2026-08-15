@@ -14,7 +14,7 @@ const NOT_FOUND: Response = { status: 404, body: { error: "not_found" } };
  */
 export function route(method: string, path: string, version: string): Response {
   if (method === "GET" && path === "/health") {
-    return { status: 200, body: buildHealthReport("ambysmath-api", version) };
+    return { status: 200, body: buildHealthReport("akimath-api", version) };
   }
   return NOT_FOUND;
 }

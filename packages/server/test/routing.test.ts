@@ -6,7 +6,7 @@ describe("route", () => {
   it("reports health for GET /health", () => {
     expect(route("GET", "/health", "1.2.3")).toEqual({
       status: 200,
-      body: { status: "ok", service: "ambysmath-api", version: "1.2.3" },
+      body: { status: "ok", service: "akimath-api", version: "1.2.3" },
     });
   });
 
