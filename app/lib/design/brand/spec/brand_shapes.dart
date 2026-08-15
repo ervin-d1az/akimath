@@ -1,6 +1,8 @@
-import 'dart:ui' show Color, Offset, Rect;
+import 'dart:ui' show Color, Offset, Radius, Rect;
 
 import 'package:meta/meta.dart';
+
+import '../../tokens/brand_colors.dart';
 
 /// The primitives a brand drawing is described with.
 ///
@@ -12,7 +14,7 @@ sealed class BrandMark {
   const BrandMark();
 }
 
-/// One segment of a stroked path.
+/// One segment of a path.
 @immutable
 sealed class PathStep {
   const PathStep();
@@ -53,17 +55,19 @@ final class CubicTo extends PathStep {
   final Offset end;
 }
 
-/// A stroke drawn in ink and, optionally, overdrawn with a colored core.
+/// An open stroke, optionally overdrawn with a colored core.
 ///
-/// This is the system's central gesture: gills and tail are drawn twice, first
-/// thick in ink and then thin in color, which produces the outline without a
-/// separate stroke pass.
+/// Drawing a line twice — thick in ink, then thinner in color — is how the
+/// system produces an outlined stroke without a second pass. Aki's tail is the
+/// main user; when the tail uncoils on a wrong answer, the new curl grows back
+/// as a second [InkStroke] whose core is green.
 @immutable
 final class InkStroke extends BrandMark {
   const InkStroke({
     required this.start,
     required this.steps,
-    required this.inkWidth,
+    required this.width,
+    this.color = BrandColors.ink,
     this.coreColor,
     this.coreWidth,
   }) : assert(
@@ -75,33 +79,71 @@ final class InkStroke extends BrandMark {
   factory InkStroke.line(
     Offset from,
     Offset to, {
-    required double inkWidth,
-    Color? coreColor,
-    double? coreWidth,
+    required double width,
+    Color color = BrandColors.ink,
   }) {
     return InkStroke(
       start: from,
       steps: <PathStep>[LineTo(to)],
-      inkWidth: inkWidth,
-      coreColor: coreColor,
-      coreWidth: coreWidth,
+      width: width,
+      color: color,
     );
   }
 
   final Offset start;
   final List<PathStep> steps;
-  final double inkWidth;
+
+  /// Width of the outer pass.
+  final double width;
+
+  /// Color of the outer pass. Ink for outlines; the body color for the mouth,
+  /// which is a highlight cut into the dark muzzle rather than an outline.
+  final Color color;
+
   final Color? coreColor;
   final double? coreWidth;
 
-  /// Where the stroke ends. Gill tips anchor here.
+  /// Where the stroke ends.
   Offset get end => steps.isEmpty ? start : steps.last.end;
 
-  /// A stroke has a core when a color is drawn over the ink.
+  /// A stroke has a core when a second color is drawn over the first.
   bool get hasCore => coreColor != null;
 }
 
-/// A filled oval with an ink outline.
+/// A closed, filled path with an ink outline. Ears and collar-tag facets.
+@immutable
+final class InkShape extends BrandMark {
+  const InkShape({
+    required this.start,
+    required this.steps,
+    required this.fill,
+    required this.inkWidth,
+  });
+
+  final Offset start;
+  final List<PathStep> steps;
+  final Color fill;
+  final double inkWidth;
+}
+
+/// A rounded rectangle with a fill and an ink outline. Muzzle, legs, collar.
+@immutable
+final class InkRect extends BrandMark {
+  const InkRect({
+    required this.rect,
+    required this.radius,
+    required this.fill,
+    required this.inkWidth,
+  });
+
+  final Rect rect;
+  final Radius radius;
+  final Color fill;
+  final double inkWidth;
+}
+
+/// A filled oval. With [inkWidth] at zero it carries no outline, which is how
+/// the nose is drawn.
 @immutable
 final class InkOval extends BrandMark {
   const InkOval({
@@ -109,7 +151,7 @@ final class InkOval extends BrandMark {
     required this.radiusX,
     required this.radiusY,
     required this.fill,
-    required this.inkWidth,
+    this.inkWidth = 0,
   });
 
   final Offset center;
@@ -123,10 +165,12 @@ final class InkOval extends BrandMark {
         width: radiusX * 2,
         height: radiusY * 2,
       );
+
+  bool get hasOutline => inkWidth > 0;
 }
 
-/// A filled circle. With [inkWidth] at zero it carries no outline, which is how
-/// cheeks and eyes are drawn.
+/// A filled circle. Eyes, catchlights, the collar tag's bead, and the dust the
+/// old tail curl leaves behind.
 @immutable
 final class InkDot extends BrandMark {
   const InkDot({
@@ -149,8 +193,8 @@ final class InkDot extends BrandMark {
 /// A complete drawing: its primitives in paint order, plus the logical box they
 /// are defined on.
 ///
-/// Order matters: the head is painted after the gills because it covers their
-/// inner ends.
+/// Order matters: the ears are painted before the head so the head covers
+/// their bases, and the catchlights after the eyes so they sit on top.
 @immutable
 final class BrandDrawing {
   const BrandDrawing({

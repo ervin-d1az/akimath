@@ -22,7 +22,8 @@ class BrandDrawingPainter extends CustomPainter {
       return;
     }
 
-    final double scale = math.min(size.width / box.width, size.height / box.height);
+    final double scale =
+        math.min(size.width / box.width, size.height / box.height);
     final double dx = (size.width - box.width * scale) / 2 - box.left * scale;
     final double dy = (size.height - box.height * scale) / 2 - box.top * scale;
 
@@ -34,6 +35,10 @@ class BrandDrawingPainter extends CustomPainter {
       switch (mark) {
         case InkStroke():
           _paintStroke(canvas, mark);
+        case InkShape():
+          _paintShape(canvas, mark);
+        case InkRect():
+          _paintRect(canvas, mark);
         case InkOval():
           _paintOval(canvas, mark);
         case InkDot():
@@ -45,8 +50,58 @@ class BrandDrawingPainter extends CustomPainter {
   }
 
   void _paintStroke(Canvas canvas, InkStroke stroke) {
-    final Path path = Path()..moveTo(stroke.start.dx, stroke.start.dy);
-    for (final PathStep step in stroke.steps) {
+    final Path path = _pathFrom(stroke.start, stroke.steps);
+
+    canvas.drawPath(path, _strokePaint(stroke.color, stroke.width));
+
+    final Color? coreColor = stroke.coreColor;
+    final double? coreWidth = stroke.coreWidth;
+    if (coreColor != null && coreWidth != null) {
+      canvas.drawPath(path, _strokePaint(coreColor, coreWidth));
+    }
+  }
+
+  void _paintShape(Canvas canvas, InkShape shape) {
+    final Path path = _pathFrom(shape.start, shape.steps)..close();
+    canvas.drawPath(path, Paint()..color = shape.fill);
+    if (shape.inkWidth > 0) {
+      canvas.drawPath(path, _strokePaint(BrandColors.ink, shape.inkWidth));
+    }
+  }
+
+  void _paintRect(Canvas canvas, InkRect rect) {
+    final RRect rrect = RRect.fromRectAndRadius(rect.rect, rect.radius);
+    canvas.drawRRect(rrect, Paint()..color = rect.fill);
+    if (rect.inkWidth > 0) {
+      canvas.drawRRect(rrect, _strokePaint(BrandColors.ink, rect.inkWidth));
+    }
+  }
+
+  void _paintOval(Canvas canvas, InkOval oval) {
+    canvas.drawOval(oval.bounds, Paint()..color = oval.fill);
+    if (oval.hasOutline) {
+      canvas.drawOval(oval.bounds, _strokePaint(BrandColors.ink, oval.inkWidth));
+    }
+  }
+
+  void _paintDot(Canvas canvas, InkDot dot) {
+    canvas.drawCircle(
+      dot.center,
+      dot.radius,
+      Paint()..color = dot.fill.withValues(alpha: dot.opacity),
+    );
+    if (dot.hasOutline) {
+      canvas.drawCircle(
+        dot.center,
+        dot.radius,
+        _strokePaint(BrandColors.ink, dot.inkWidth),
+      );
+    }
+  }
+
+  Path _pathFrom(Offset start, List<PathStep> steps) {
+    final Path path = Path()..moveTo(start.dx, start.dy);
+    for (final PathStep step in steps) {
       switch (step) {
         case LineTo():
           path.lineTo(step.end.dx, step.end.dy);
@@ -68,39 +123,7 @@ class BrandDrawingPainter extends CustomPainter {
           );
       }
     }
-
-    canvas.drawPath(path, _strokePaint(BrandColors.ink, stroke.inkWidth));
-
-    final Color? coreColor = stroke.coreColor;
-    final double? coreWidth = stroke.coreWidth;
-    if (coreColor != null && coreWidth != null) {
-      canvas.drawPath(path, _strokePaint(coreColor, coreWidth));
-    }
-  }
-
-  void _paintOval(Canvas canvas, InkOval oval) {
-    canvas.drawOval(oval.bounds, Paint()..color = oval.fill);
-    if (oval.inkWidth > 0) {
-      canvas.drawOval(
-        oval.bounds,
-        _strokePaint(BrandColors.ink, oval.inkWidth),
-      );
-    }
-  }
-
-  void _paintDot(Canvas canvas, InkDot dot) {
-    canvas.drawCircle(
-      dot.center,
-      dot.radius,
-      Paint()..color = dot.fill.withValues(alpha: dot.opacity),
-    );
-    if (dot.hasOutline) {
-      canvas.drawCircle(
-        dot.center,
-        dot.radius,
-        _strokePaint(BrandColors.ink, dot.inkWidth),
-      );
-    }
+    return path;
   }
 
   /// Every stroke in the system is round-capped and round-joined. There is no
