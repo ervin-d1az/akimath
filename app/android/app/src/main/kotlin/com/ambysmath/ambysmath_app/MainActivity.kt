@@ -1,0 +1,5 @@
+package com.ambysmath.ambysmath_app
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
