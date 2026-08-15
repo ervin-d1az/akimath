@@ -1,9 +1,9 @@
-# AmbysMath — API
+# AkiMath — API
 
-TypeScript backend for AmbysMath.
+TypeScript backend for AkiMath.
 
 The Flutter client lives in a separate repository:
-[`ambysmath-app`](https://github.com/ervin-d1az/ambysmath-app).
+[`akimath-app`](https://github.com/ervin-d1az/akimath-app).
 
 ## Layout
 

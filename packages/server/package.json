@@ -1,9 +1,9 @@
 {
-  "name": "ambysmath-api",
+  "name": "akimath-api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Ambysmath backend API",
+  "description": "AkiMath backend API",
   "engines": {
     "node": ">=22"
   },
