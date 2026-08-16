@@ -1,0 +1,49 @@
+{
+  "_comment": [
+    "Template for .claude/settings.local.json — the per-machine layer.",
+    "This file is intentionally NOT the real one: settings.local.json accumulates",
+    "absolute paths and one-off allow entries and must never be committed.",
+    "It is already in .gitignore.",
+    "",
+    "The two env vars below only matter when the commit gate cannot resolve a",
+    "toolchain from PATH. .claude/hooks/verify-gate.sh fails OPEN in that case —",
+    "it prints one stderr notice and lets the commit through — so a machine that",
+    "needs these and does not set them has no gate at all. Check for the notice.",
+    "",
+    "Prefer broad permission patterns over the literal command Claude Code",
+    "proposes: an entry like Bash(sed -n '419,420p' app/lib/main.dart) will never",
+    "match again and is pure noise."
+  ],
+  "env": {
+    "AKIMATH_FLUTTER_BIN": "/absolute/path/to/flutter/bin/flutter",
+    "AKIMATH_NPM_BIN": "/absolute/path/to/npm"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh api:*)",
+      "Bash(gh repo:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(flutter pub:*)",
+      "Bash(dart run:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npm ci:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest:*)",
+      "Bash(node:*)"
+    ],
+    "deny": [
+      "Bash(psql:*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*.pem)"
+    ]
+  }
+}

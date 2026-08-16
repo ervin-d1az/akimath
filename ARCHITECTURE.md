@@ -1,6 +1,7 @@
 # AkiMath — architecture proposal
 
-Status: **proposal**, not yet accepted. One decision (§1) gates most of the rest.
+Status: **accepted**. Every open question in §11 has been answered, and the
+topology decision in §1 has been executed.
 
 Produced by fanning six architectural dimensions out to independent agents, giving
 each one an adversarial critic that had to verify every library claim against a
@@ -15,10 +16,12 @@ judgment on the open questions in §11.
 
 ---
 
-## 1 · The decision that gates the rest: one repo, not two
+## 1 · The decision that gated the rest: one repo, not two
 
-**Recommendation: a single `akimath` repository.** This reverses the two-repo
-choice, and the reason is narrow enough to state precisely.
+**Decided and done: a single `akimath` repository.** This reversed an earlier
+two-repo split. `akimath-app` and `akimath-api` are archived; their histories
+live under `app/` and `packages/server/` with `git log --follow` and `git blame`
+crossing the seam intact. The reason is narrow enough to state precisely.
 
 The cross-stack contract is not one file. Three independent critics enumerated
 **six** things that must stay in lockstep between TypeScript and Dart:
@@ -422,53 +425,24 @@ the web page, and without a retention figure written down.
 
 ---
 
-## 11 · Open questions — only you can answer these
+## 11 · Decisions taken
 
-**1 · Which countries ship in v1: Mexico only, or the US too?** Blocks the schema,
-and the schema freezes in F1. Mexico only: the LFPDPPP in force contains no article
-specific to minors — what bites is LGDNNA arts. 76–77 plus a pending regulation.
-Add the US and COPPA brings verifiable parental consent, **and Texas SB2420 has
-been in force since 2026-01-01**, imposing obligations on the *developer* (Declared
-Age Range API, Significant Change API via PermissionKit), not just the store. That
-turns "publish in the US" from an email flow into integrating two iOS frameworks
-with real iOS/Android divergence.
-*Default if unanswered:* Mexico and Spanish-speaking LatAm, technically ready for
-COPPA (minimization, no third parties, deletion) without building verifiable consent.
+Answered 2026-08-14. Each one closes a branch the earlier sections left open.
 
-**2 · Do you accept that the first playable build has no account and no sync?**
-It is the premise of the entire critical path. If you need early TestFlight with
-persistent progress, the server returns to the critical path and playable slips a
-full phase. *Default:* yes.
+| # | Question | Decision |
+|---|---|---|
+| 1 | Countries for v1 | **Mexico + Spanish-speaking LatAm.** COPPA-ready by construction (minimization, no third parties, deletion) without building verifiable parental consent. No US launch, so Texas SB2420's developer obligations — Declared Age Range and Significant Change APIs — stay out of scope. |
+| 2 | Account in the first playable build | **No.** The app plays against a JSON pack in `assets/`: no network, no account, no Neon. The server later replaces the pack source without changing the client model. |
+| 3 | Infrastructure spend | **Neon Free, with a separate `akimath-ci` project.** Free is 100 CU-hours per project per month and reachability alone during waking hours is ~105, so CI and a dev swarm must not share prod's meter. `attempts` retained 400 days, `diag_events` 30. |
+| 4 | Answer input | **Free entry in every family.** Keeps "the answer never travels to the client" true online. Labelled distractors exist server-side only, as a lookup against what the user actually typed — that is what feeds the error screen. `options` stays out of the response type. |
+| 5 | Leaderboard | **No.** Own percentile against your cohort (`GET /v1/me/standing`), a batch-recomputed `rating_distribution`, hard k-anonymity — cohort under 100 returns `percentile: null`. No minor ever writes a display name, so there is no moderation, reporting, or retention surface. |
+| 6 | Open source | **No.** Everything private, `publish_to: none`. This was the only condition that would have reversed §1, and the only one under which melos regains value. |
 
-**3 · What monthly infrastructure spend are you willing to carry?** This changes
-schema decisions, not just ops. Neon Free is 0.5 GB and **100 CU-hours per project
-per month** — at 0.25 CU that is 400 h against the month's 720, and with a
-non-disableable 5-minute autosuspend, mere reachability during waking hours is
-~105 CU-h. Exhausting it **suspends the project until the next billing period**: a
-multi-day outage. CI with branch-per-PR plus a four-agent swarm is plausibly the
-dominant consumer before the first user exists.
-*Default:* Free throughout development with a **separate Neon project for CI**;
-`akimath-prod` on Launch (~$5–19/mo) at public launch. `attempts` retained 400
-days, `diag_events` 30.
-
-**4 · Free entry for all item families, or does some family need multiple choice?**
-With multiple choice the answer travels in the payload by construction, so the
-"answer never travels" invariant is false online and the protection becomes
-server-side regrading, not cryptography. It also decides the per-template keypad,
-the `AnswerSpec`, and whether distractors are on-screen options or a server-side
-diagnostic table. *Default:* free entry everywhere; labelled distractors used
-server-side only.
-
-**5 · Will there be a leaderboard?** It decides whether a `display_name` written by
-a minor exists — free text traveling to a server and shown to others, with its own
-moderation, reporting, and retention. *Default:* no. Own percentile against your
-cohort, a batch-recomputed `rating_distribution`, hard k-anonymity (cohort < 100 →
-`percentile: null`), zero new columns on `players`.
-
-**6 · Will anything ever be open-sourced, or the backend handed to a third party?**
-The only question whose answer reverses §1, and the only condition under which
-melos regains value. *Default:* no. If it ever applies, `git filter-repo` splits it
-in an afternoon.
+Two consequences worth carrying forward. Because of #4, the keypad is declared
+per template and `AnswerSpec` never carries an options list — a template that
+wants multiple choice is a schema change, not a flag. Because of #5, `players`
+gains no name column, which removes an entire class of compliance obligation
+before it exists.
 
 ---
 

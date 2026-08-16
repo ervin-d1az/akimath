@@ -24,3 +24,7 @@ tmp/
 # Multi-agent runtime state
 .swarmforge/
 .worktrees/
+
+# Claude Code. .claude/ itself is versioned on purpose — the agents, the hooks
+# and settings.json are part of the project. Only the per-machine layer is not.
+.claude/settings.local.json

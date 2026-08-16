@@ -1,0 +1,200 @@
+# AkiMath CI — ARCHITECTURE.md §8, narrowed to the code that exists today.
+#
+# Only `gate` is meant to be a required status check. Jobs 3 and 5 are filtered
+# by path, and a job skipped by an `if:` reports no status at all — registering
+# `dart` or `ts` as required would leave every documentation-only pull request
+# waiting forever for a check that will never report. `gate` runs on every event
+# (`if: always()`) and reads the results of everything it needs, so it is the one
+# check that always reports and always tells the truth.
+#
+# It is not registered yet. The `protect-main` ruleset (id 20882493) currently
+# carries only `deletion`, `non_fast_forward` and `pull_request` (re-verified
+# 2026-08-15), so `gate` is advisory: a red CI does not stop a merge into main
+# today. Registering it is a two-step change and THE ORDER MATTERS.
+#
+#   1. Commit and push this file to `dev` first, so the workflow runs at least
+#      once and `gate` becomes a context GitHub knows about.
+#   2. Then Settings › Rules › protect-main, or
+#      `PUT /repos/ervin-d1az/akimath/rulesets/20882493` with the existing rules
+#      plus:
+#        {"type":"required_status_checks","parameters":{
+#           "strict_required_status_checks_policy":false,
+#           "required_status_checks":[{"context":"gate"}]}}
+#      The rules array is replace-all, so send the existing three back with it.
+#
+# Doing step 2 without step 1 leaves every pull request into `main` waiting on a
+# check that has never reported. This is a human decision — it changes what can
+# merge — so it is left to Ervin rather than made by an agent.
+#
+# Not implemented yet, deliberately, because the code they guard does not exist:
+#   protected-paths  — no contract/ and no generated app/lib/api/ to protect
+#   contract         — no packages/contract, no OpenAPI emitter
+#   compliance       — no PrivacyInfo.xcprivacy, no merged manifest to grep
+#   integration      — no Neon project, no database
+#   mutation         — Stryker is scoped to packages/core, which does not exist
+
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+  # dorny/paths-filter reads the changed-file list from the pull request API on
+  # pull_request events. Without this scope the `changes` job fails on every PR
+  # and `gate` goes permanently red — the exact failure this design avoids.
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      dart: ${{ steps.filter.outputs.dart }}
+      ts: ${{ steps.filter.outputs.ts }}
+      spec: ${{ steps.filter.outputs.spec }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # paths-filter compares against github.event.before on push events,
+          # which needs history. Pull requests use the API and need none.
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            dart:
+              - 'app/**'
+              - '.github/workflows/ci.yml'
+            ts:
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yml'
+            spec:
+              - 'openspec/**'
+              - '.github/workflows/ci.yml'
+
+  # Unfiltered on purpose: a secret can land in any file, including the ones no
+  # language job looks at. gitleaks-action scopes its scan to the commits in the
+  # push or the pull request, so history the repository inherited cannot block a
+  # change that did not introduce it. Verified clean before wiring it in:
+  # `gitleaks git` over the whole repository reported "27 commits scanned",
+  # no leaks, gitleaks 8.30.1, 2026-08-15.
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No license needed: ervin-d1az is a personal account, not an org.
+          # Comments are off so the workflow keeps `contents: read` and never
+          # needs `pull-requests: write`. The job summary carries the findings.
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  dart:
+    name: dart
+    needs: changes
+    if: needs.changes.outputs.dart == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          # Pinned to the toolchain the repository is developed on. Dart 3.11.5
+          # ships inside it, which is what app/pubspec.yaml's sdk constraint wants.
+          flutter-version: 3.41.8
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --fatal-infos
+      # No dart_code_linter step, and the reason is measured, not assumed.
+      # `dart run dart_code_linter:metrics analyze lib` exits 0 on a file written
+      # to be awful, because analysis_options.yaml carries no `dart_code_linter:`
+      # block and the tool has no rules or metrics enabled — a step that can only
+      # ever be green. Forcing thresholds on the command line makes it real and
+      # immediately red: at the tool's own documented defaults it flags four
+      # pre-existing files (brand_drawing_painter.dart, brand_typography.dart,
+      # theme.dart, character_sheet_screen.dart) for parameter count and method
+      # length. Blocking on those is blocking on inherited findings. The step
+      # returns once someone configures the linter and clears or accepts that
+      # baseline; until then it is honestly absent rather than dishonestly green.
+      - run: flutter test
+
+  ts:
+    name: ts
+    needs: changes
+    if: needs.changes.outputs.ts == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          # package.json declares engines.node >= 22; 22 is the floor the code
+          # must keep working on, so that is what CI proves.
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/server/package-lock.json
+      # npm, not pnpm: pnpm-workspace.yaml is declared but the migration has not
+      # happened, and packages/server still carries its own package-lock.json.
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  # The planning artifacts are code here: they are committed, and a malformed
+  # change is a plan nobody can gate on. `validate --strict` is the same check
+  # craftsman-lead runs before it lets BUILD start, so CI and the agent agree.
+  spec:
+    name: spec
+    needs: changes
+    if: needs.changes.outputs.spec == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: npm install -g @fission-ai/openspec@1.9.0
+      - name: Validate specs and changes
+        env:
+          OPENSPEC_TELEMETRY: '0'
+        run: openspec validate --all --strict --no-interactive
+
+  gate:
+    name: gate
+    if: always()
+    needs: [changes, secrets, dart, ts, spec]
+    runs-on: ubuntu-latest
+    steps:
+      # `contains(needs.*.result, ...)` rather than a chain of
+      # `needs.x.result == 'success'`: a path-filtered job reports 'skipped',
+      # and an equality chain would read that as a failure — which is the exact
+      # thing this job exists to avoid.
+      - name: Fail when a needed job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "changes=${{ needs.changes.result }}"
+          echo "secrets=${{ needs.secrets.result }}"
+          echo "dart=${{ needs.dart.result }}"
+          echo "ts=${{ needs.ts.result }}"
+          echo "spec=${{ needs.spec.result }}"
+          exit 1
+      - name: Report
+        run: echo "All required jobs succeeded or were skipped by path filter."
