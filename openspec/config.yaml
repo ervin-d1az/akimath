@@ -28,7 +28,8 @@ context: |
   `packages/server/src/routing.ts`.
 
   What exists today: the brand layer and Aki's character sheet, tested and
-  green. What does not: `packages/core`, `packages/contract`, any database,
+  green, and `packages/contract` — the frozen offline pack format, with its
+  artifacts committed under `contract/`. What does not: `packages/core`, any database,
   any auth, any real endpoint, any deployment. Do not write a proposal that
   assumes otherwise.
 
@@ -45,7 +46,10 @@ rules:
     - Say which side of the PURE boundary each new module sits on, and why.
   tasks:
     - Order tasks so a failing test comes before the code that makes it pass. TDD is a hard requirement here, not a preference.
-    - Each task names the check that proves it: a test file, `flutter analyze`, or a command with its expected output.
+    # Quoted because the colon-space would otherwise make YAML read this bullet as a mapping,
+    # which invalidates the whole list and makes openspec drop every rule under `tasks` — the
+    # TDD ordering rule included — with only a one-line warning.
+    - "Each task names the check that proves it: a test file, `flutter analyze`, or a command with its expected output."
     - Keep tasks to one coherent change each — they map one-to-one onto commits.
 
 operations:
