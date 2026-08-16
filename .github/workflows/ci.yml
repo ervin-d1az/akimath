@@ -27,8 +27,9 @@
 # merge — so it is left to Ervin rather than made by an agent.
 #
 # Not implemented yet, deliberately, because the code they guard does not exist:
-#   protected-paths  — no contract/ and no generated app/lib/api/ to protect
-#   contract         — no packages/contract, no OpenAPI emitter
+#   protected-paths  — contract/ now exists and is exactly the kind of path this
+#                      job should guard, but there is still no generated
+#                      app/lib/api/; adding it belongs with f3-store-artifacts
 #   compliance       — no PrivacyInfo.xcprivacy, no merged manifest to grep
 #   integration      — no Neon project, no database
 #   mutation         — Stryker is scoped to packages/core, which does not exist
@@ -52,13 +53,20 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Every job below carries `timeout-minutes`, and the reason is not tidiness.
+# GitHub's default is **six hours** per job, so one non-terminating loop in the
+# code under test burns a runner for a working day and reports nothing. The
+# numbers here are generous — an order of magnitude above what these jobs take
+# today — because their job is to bound a hang, not to police a slow runner.
 jobs:
   changes:
     name: changes
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       dart: ${{ steps.filter.outputs.dart }}
       ts: ${{ steps.filter.outputs.ts }}
+      contract: ${{ steps.filter.outputs.contract }}
       spec: ${{ steps.filter.outputs.spec }}
     steps:
       - uses: actions/checkout@v7
@@ -73,10 +81,18 @@ jobs:
             dart:
               - 'app/**'
               - '.github/workflows/ci.yml'
+            # Narrowed from 'packages/**' when packages/contract landed: the ts
+            # job has working-directory packages/server, so a contract-only
+            # change used to run the wrong package's suite and report it as
+            # coverage of the change.
             ts:
-              - 'packages/**'
+              - 'packages/server/**'
               - 'package.json'
               - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yml'
+            contract:
+              - 'packages/contract/**'
+              - 'contract/**'
               - '.github/workflows/ci.yml'
             spec:
               - 'openspec/**'
@@ -91,6 +107,8 @@ jobs:
   secrets:
     name: secrets
     runs-on: ubuntu-latest
+    # gitleaks walks the commits in the push or pull request.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -108,6 +126,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.dart == 'true'
     runs-on: ubuntu-latest
+    # The long pole: a cold flutter-action downloads the whole SDK before
+    # `flutter pub get` has run a line.
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: app
@@ -140,6 +161,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.ts == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: packages/server
@@ -158,6 +180,81 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  # ARCHITECTURE.md §8 job 4 is "emit + git add -A -- contract/ + git diff
+  # --cached --exit-code + oasdiff breaking-change check". The oasdiff half needs
+  # contract/openapi.json, which f1-contract-emitter produces; until then this job
+  # is the first two steps and says so rather than pretending to be the whole thing.
+  #
+  # Its own job rather than a line in `ts`: that job has
+  # working-directory: packages/server and caches on that package's lockfile.
+  contract:
+    name: contract
+    needs: changes
+    if: needs.changes.outputs.contract == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/contract
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/contract/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      # The determinism gate: re-emitting the committed artifacts from a clean
+      # checkout must change nothing. zod is pinned to an exact version for
+      # this reason — a caret range turns this step red with no diff in the
+      # repository, which is how a determinism gate gets deleted instead of
+      # fixed.
+      #
+      # The marker is stamped outside the repository, in RUNNER_TEMP, so it can
+      # never turn up in contract/ or in the comparison below.
+      - name: Stamp the tree before emitting
+        run: touch "${RUNNER_TEMP}/emit-marker"
+      - run: npm run emit
+      # An absolute working-directory, not `.`: this job's `defaults.run` puts
+      # every step in packages/contract, and unlike the bare repo-wide
+      # `git diff` this replaced, all three commands below carry a `contract/`
+      # pathspec. Resolve that relative to the wrong root and `find` matches
+      # nothing, the guard below fires on every run, and the gate is red
+      # forever for a reason that has nothing to do with the contract.
+      - name: The emitted contract matches the committed one
+        working-directory: ${{ github.workspace }}
+        run: |
+          # PROC-10 — a gate whose input set can silently reach zero cannot tell
+          # "nothing is wrong" from "nothing was checked". emit resolves its
+          # output root by walking four `..` segments up from src/adapters/
+          # (emit.ts, repositoryContractRoot). Let that resolve anywhere else and
+          # the emitter writes into a directory nobody compares, contract/ stays
+          # untouched, and the comparison below reports success on any diff at
+          # all. So make the emitter prove it wrote something first.
+          written=$(find contract -type f -newer "${RUNNER_TEMP}/emit-marker" | wc -l | tr -d ' ')
+          echo "npm run emit rewrote ${written} file(s) under contract/"
+          if [ "${written}" -eq 0 ]; then
+            echo "::error::npm run emit wrote nothing under contract/. Its output root no longer resolves to this directory, so this gate is checking nothing."
+            exit 1
+          fi
+          # PROC-8 — git cannot prove anything about a path it does not track.
+          # `git diff --exit-code` compares the worktree against the index and is
+          # blind to an untracked file, so the one mistake this gate exists to
+          # catch — a golden fixture committed without the <stem>.normalised.json
+          # that emit writes beside it — arrived here as an untracked file and
+          # exited 0. Reproduced: a staged fixture plus an unstaged record gives
+          # `git diff --exit-code` → EXIT=0.
+          #
+          # Staging first is the fix, and it is the one worth having over
+          # `test -z "$(git status --porcelain)"`: it folds untracked, modified
+          # and deleted into a single comparison *and* --exit-code still prints
+          # the patch, so the author sees the bytes that differ rather than a
+          # bare non-zero exit.
+          git add -A -- contract/
+          git diff --cached --exit-code -- contract/
+
   # The planning artifacts are code here: they are committed, and a malformed
   # change is a plan nobody can gate on. `validate --strict` is the same check
   # craftsman-lead runs before it lets BUILD start, so CI and the agent agree.
@@ -166,6 +263,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.spec == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -180,8 +278,10 @@ jobs:
   gate:
     name: gate
     if: always()
-    needs: [changes, secrets, dart, ts, spec]
+    needs: [changes, secrets, dart, ts, contract, spec]
     runs-on: ubuntu-latest
+    # Two `echo` steps. If this one ever runs long, something is very wrong.
+    timeout-minutes: 5
     steps:
       # `contains(needs.*.result, ...)` rather than a chain of
       # `needs.x.result == 'success'`: a path-filtered job reports 'skipped',
@@ -194,6 +294,7 @@ jobs:
           echo "secrets=${{ needs.secrets.result }}"
           echo "dart=${{ needs.dart.result }}"
           echo "ts=${{ needs.ts.result }}"
+          echo "contract=${{ needs.contract.result }}"
           echo "spec=${{ needs.spec.result }}"
           exit 1
       - name: Report

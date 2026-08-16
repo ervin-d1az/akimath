@@ -12,6 +12,13 @@ set -uo pipefail
 #     failure, a wrong commit identity, a forbidden trailer;
 #   * never block on findings inherited from the base (see "Baseline" below).
 #
+# A third category joined the two above when the deadline landed: a check that
+# never returns fails CLOSED. It is not a missing toolchain — the tool started
+# and ran — and the likeliest cause is a loop that does not terminate in the very
+# code being committed, which is exactly what a gate exists to stop. A gate that
+# hangs in silence is worse than no gate at all: the commit never returns, no
+# verdict is ever printed, and nothing says which command is to blame.
+#
 # Exit 2 is the only code Claude Code treats as blocking. A plain exit 1 would
 # be reported as a hook error and the tool call would proceed, which is exactly
 # the silent-advisory failure this gate exists to avoid.
@@ -29,8 +36,14 @@ set -uo pipefail
 # commits tests for. The commands below are the same ones .github/workflows/ci.yml
 # runs, so "green here" and "green in CI" mean the same thing.
 #
-#   app/**       flutter analyze --fatal-infos      + flutter test
-#   packages/**  npm run typecheck                  + npm test   (in packages/server)
+#   app/**                flutter analyze --fatal-infos + flutter test
+#   packages/server/**    npm run typecheck            + npm test  (in packages/server)
+#   packages/contract/**  npm run typecheck            + npm test  (in packages/contract)
+#   contract/**           npm run typecheck            + npm test  (in packages/contract)
+#
+# Each package is filtered on its own path. Until f0-pack-contract the filter
+# fired on any packages/ path but only ever ran packages/server, so a
+# contract-only change was gated by nothing at all.
 #
 # `dart run dart_code_linter:metrics` is in neither place. With no
 # `dart_code_linter:` block in app/analysis_options.yaml it reports nothing at
@@ -46,6 +59,11 @@ set -uo pipefail
 #   flutter test ................................. 34 passed
 #   npm run typecheck (packages/server) .......... 0 errors
 #   npm test (packages/server) ................... 3 passed
+#
+# packages/contract joined at f0-pack-contract (2026-08-16):
+#
+#   npm run typecheck (packages/contract) ........ 0 errors
+#   npm test (packages/contract) ................. 189 passed
 #
 # The baseline is zero, so every finding this gate can report was introduced by
 # the change in front of it. That is what makes a whole-tree check honest here
@@ -68,9 +86,18 @@ set -uo pipefail
 #                          failing open. Turn it on once the environment is
 #                          settled.
 #   AKIMATH_GATE_DEBUG     when set, log the commands the gate skipped.
+#   AKIMATH_GATE_TIMEOUT   seconds any single check may run before it is killed
+#                          and the commit is blocked. Default 600 — an order of
+#                          magnitude above anything this gate runs today (the
+#                          whole packages/contract suite is 0.8s) so it can only
+#                          ever fire on a hang, never on a slow machine.
 
 BASE_REF="${AKIMATH_GATE_BASE:-origin/dev}"
 REQUIRED_EMAIL="${AKIMATH_COMMIT_EMAIL:-geineryodan@gmail.com}"
+TIMEOUT_SECONDS="${AKIMATH_GATE_TIMEOUT:-600}"
+# Seconds between the polite SIGTERM and the SIGKILL, so a runner that traps
+# TERM gets to flush what it had before the group is torn down.
+GRACE_SECONDS=5
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "verify-gate: jq not on PATH, skipping." >&2
@@ -226,10 +253,15 @@ touches() {
 
 RUN_DART=0
 RUN_TS=0
+RUN_CONTRACT=0
 touches '^app/' && RUN_DART=1
-touches '^packages/' && RUN_TS=1
+touches '^packages/server/' && RUN_TS=1
+touches '^packages/contract/' && RUN_CONTRACT=1
+# contract/ holds the emitted artifacts packages/contract owns, so a change
+# there is gated by that package's suite.
+touches '^contract/' && RUN_CONTRACT=1
 
-if [ "$RUN_DART" -eq 0 ] && [ "$RUN_TS" -eq 0 ]; then
+if [ "$RUN_DART" -eq 0 ] && [ "$RUN_TS" -eq 0 ] && [ "$RUN_CONTRACT" -eq 0 ]; then
   if [ -n "${AKIMATH_GATE_DEBUG:-}" ]; then
     echo "verify-gate: no app/ or packages/ paths in the change, nothing to check." >&2
   fi
@@ -239,10 +271,62 @@ fi
 # --- Runner ----------------------------------------------------------------
 # Exit 126/127 means the runner itself could not start (not executable / not
 # found). That is a runtime error and fails open. Anything else non-zero is a
-# verdict from a tool that did run, and blocks.
+# verdict from a tool that did run, and blocks. A check that outlives
+# TIMEOUT_SECONDS is killed and blocks too, naming itself as it goes.
 
 TMP_OUT="$(mktemp)"
-trap 'rm -f "$TMP_OUT"' EXIT
+TIMED_OUT_FLAG="$TMP_OUT.timed-out"
+trap 'rm -f "$TMP_OUT" "$TIMED_OUT_FLAG"' EXIT
+
+case "$TIMEOUT_SECONDS" in
+  '' | 0 | *[!0-9]*)
+    block "AKIMATH_GATE_TIMEOUT is '$TIMEOUT_SECONDS', which is not a positive whole number of seconds." \
+      "The deadline is what keeps a hung check from hanging the commit, so a gate that cannot read it does not run."
+    ;;
+esac
+
+# Runs one command under a deadline, and returns its exit status.
+#
+# `timeout(1)` is not the answer here: it is GNU coreutils and macOS ships
+# neither it nor `gtimeout` (verified — `command -v timeout gtimeout` finds
+# nothing on this machine), and this hook only ever runs on a developer's
+# machine. One implementation that works everywhere beats two where the second
+# is never exercised.
+#
+# The command goes into its own process group (`set -m` gives a background job
+# one) so the watchdog can kill the whole tree. Killing the direct child alone
+# is not enough: `npm test` is the parent of vitest, which is the parent of its
+# workers, and those workers outlive their grandparent — measured, they stayed
+# alive and greppable until the group form reaped them. The watchdog gets a
+# group of its own for the same reason: its own `sleep` would otherwise outlive
+# it as an orphan.
+#
+# The flag file, not the exit status, is what says "this was a timeout": a
+# process killed by SIGTERM exits 143, and so could a runner that took the
+# signal from somewhere else.
+run_with_deadline() {
+  local dir="$1"
+  shift
+  rm -f "$TIMED_OUT_FLAG"
+  set -m
+  (cd "$dir" && exec "$@") >"$TMP_OUT" 2>&1 &
+  local job_pid=$!
+  (
+    sleep "$TIMEOUT_SECONDS"
+    kill -0 "$job_pid" 2>/dev/null || exit 0
+    : >"$TIMED_OUT_FLAG"
+    kill -TERM -- "-$job_pid" 2>/dev/null
+    sleep "$GRACE_SECONDS"
+    kill -KILL -- "-$job_pid" 2>/dev/null
+  ) >/dev/null 2>&1 &
+  local watchdog_pid=$!
+  set +m
+  local status=0
+  wait "$job_pid" 2>/dev/null || status=$?
+  kill -- "-$watchdog_pid" 2>/dev/null
+  wait "$watchdog_pid" 2>/dev/null
+  return "$status"
+}
 
 run_check() {
   local label="$1" dir="$2"
@@ -251,9 +335,20 @@ run_check() {
     fail_open "$label cannot run: $dir does not exist"
   fi
   local status=0
-  (cd "$dir" && "$@") >"$TMP_OUT" 2>&1 || status=$?
+  run_with_deadline "$dir" "$@" || status=$?
   if [ "$status" -eq 0 ]; then
     return 0
+  fi
+  if [ -f "$TIMED_OUT_FLAG" ]; then
+    {
+      printf 'verify-gate: BLOCKED — %s ran past %ss and was killed.\n' "$label" "$TIMEOUT_SECONDS"
+      printf 'verify-gate: a check that never returns makes a commit that never returns.\n'
+      printf 'verify-gate: suspect a loop with no exit in what you are about to commit.\n'
+      printf 'verify-gate: raise AKIMATH_GATE_TIMEOUT only once you know the command is honestly that slow.\n'
+      printf 'verify-gate: last 40 lines it managed to print follow.\n'
+      tail -n 40 "$TMP_OUT"
+    } >&2
+    exit 2
   fi
   if [ "$status" -eq 126 ] || [ "$status" -eq 127 ]; then
     fail_open "$label could not start (exit $status)"
@@ -293,6 +388,21 @@ if [ "$RUN_TS" -eq 1 ]; then
   fi
   run_check "npm run typecheck" packages/server "$NPM" run typecheck
   run_check "npm test" packages/server "$NPM" test
+fi
+
+if [ "$RUN_CONTRACT" -eq 1 ]; then
+  NPM="${AKIMATH_NPM_BIN:-}"
+  if [ -z "$NPM" ]; then
+    NPM="$(command -v npm 2>/dev/null || true)"
+  fi
+  if [ -z "$NPM" ] || [ ! -x "$NPM" ]; then
+    fail_open "packages/contract changed but npm is not resolvable (set AKIMATH_NPM_BIN)"
+  fi
+  if [ ! -d packages/contract/node_modules ]; then
+    fail_open "packages/contract/node_modules is missing (run npm ci there)"
+  fi
+  run_check "npm run typecheck (contract)" packages/contract "$NPM" run typecheck
+  run_check "npm test (contract)" packages/contract "$NPM" test
 fi
 
 exit 0
