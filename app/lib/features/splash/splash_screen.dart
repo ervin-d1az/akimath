@@ -24,6 +24,13 @@ enum SplashVariant {
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key, this.variant = SplashVariant.cream});
 
+  /// One gap, used three times. The design spaces this column uniformly, and a
+  /// single constant is what makes that structural rather than coincidental —
+  /// three expressions over the spacing scale read as three decisions. It is
+  /// not a scale entry: `BrandShape` governs recurring surfaces, and this is
+  /// one screen's rhythm.
+  static const double _gap = 26;
+
   final SplashVariant variant;
 
   @override
@@ -36,17 +43,17 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            if (onGreen) const _FaceTile() else const Aki(width: 222),
-            const SizedBox(height: BrandShape.space6 - BrandShape.space1),
+            if (onGreen) const _FaceTile() else const Aki(width: 210),
+            const SizedBox(height: _gap),
             AkiMathWordmark(
               fontSize: 62,
               tone: onGreen ? WordmarkTone.onBrandGreen : WordmarkTone.onLight,
             ),
-            const SizedBox(height: BrandShape.space6 - BrandShape.space1),
+            const SizedBox(height: _gap),
             BrandDescriptor(
               color: onGreen ? BrandColors.ink : BrandColors.muted,
             ),
-            const SizedBox(height: BrandShape.space7 - BrandShape.space2),
+            const SizedBox(height: _gap),
             const LoadingDots(),
           ],
         ),
@@ -72,7 +79,10 @@ class _FaceTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: BrandColors.cream,
         borderRadius: BorderRadius.circular(60),
-        border: Border.all(color: BrandColors.ink, width: 4),
+        border: Border.all(
+          color: BrandColors.ink,
+          width: BrandShape.borderWidth,
+        ),
         boxShadow: const <BoxShadow>[
           BoxShadow(
             color: BrandColors.ink,

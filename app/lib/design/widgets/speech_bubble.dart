@@ -40,7 +40,7 @@ class SpeechBubble extends StatelessWidget {
               boxShadow: const <BoxShadow>[
                 BoxShadow(
                   color: BrandColors.ink,
-                  offset: Offset(4, 6),
+                  offset: BrandShape.shadowButton,
                   blurRadius: 0,
                 ),
               ],
