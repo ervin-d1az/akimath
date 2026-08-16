@@ -4,7 +4,7 @@
 **From:** Ervin Diaz, AkiMath.
 **Opened:** 2026-08-16.
 **What we need back:** a short written answer per numbered question, cited by number. Not a memo.
-Ten questions, each with the answer we have assumed written underneath it — several may be
+Eleven questions, each with the answer we have assumed written underneath it — several may be
 confirmable in a sentence.
 
 **Nothing in this document is legal advice, and nothing in it should be read as our legal position.**
@@ -19,7 +19,9 @@ too.
 
 The database schema freezes in the next phase of work and does not get edited afterwards — after
 that point a column is added by a new forward-only migration, never by changing the one that made it.
-Six of the ten questions below decide a column, a constraint or a named constant in that schema.
+Four of the eleven questions below — Q-A1, Q-A2, Q-A3 and Q-A7 — decide a column, a constraint or a
+named constant in that schema. The rest decide a screen, a vendor or a document, all of which are
+cheaper to change later.
 
 Concretely: this consult blocks one change (`f1-schema-freeze`), which blocks every change in phase
 F3 — the server, the sync path, the deletion path and the app-store compliance artifacts. It is the
@@ -37,6 +39,13 @@ answerable without reading any code.
 Mexican Spanish, with a dog called Aki as the mascot. Markets for the first version: **Mexico and
 Spanish-speaking Latin America. No United States launch.** The audience explicitly includes children
 under 13.
+
+**One thing to be clear about before you read further: almost none of this is built yet.** There is
+no database, no server, no account system and no published app. Everything in §2.1 describes a
+schema that has been designed and is about to be frozen — not a system that is running and holding
+anyone's data today. That is precisely why we are asking now: we can still change a column for the
+cost of a sentence. Where this document says a setting "is switched off" or a column "does not
+exist", read it as *designed that way and not yet deployed*.
 
 What the app is *not*, because each absence removes a category of obligation and you should not have
 to ask:
@@ -108,6 +117,9 @@ whole under-18 population rather than only the under-13 one.
 > **What changes if you say otherwise:** one constant, and the shape of Q-A2's bands. Nothing else.
 > **What we need:** the number, and if it is not a single number — if the rule is graduated by age —
 > the graduation.
+> **Premise we could not verify:** that a parent-or-guardian consent duty attaches at all in the
+> form we describe — §5, line 5. If that line is wrong, this question may not have the shape we
+> have given it.
 
 ---
 
@@ -148,6 +160,9 @@ government identification, a payment instrument, or a signature** unless you tel
 > guess here is a schema we would have to change.
 > **What changes:** columns in the schema, and a screen that has not been designed yet — so an answer
 > now costs nothing and an answer later costs a migration.
+> **Premise we could not verify:** §5, line 5 — the existence and wording of the verification duty
+> this question assumes. If no such evidence must be retained, the answer is "collect nothing" and
+> the columns never exist.
 
 ---
 
@@ -157,11 +172,16 @@ The app asks for a date of birth in a neutral field — not a leading *"¿eres m
 which invites the answer that unlocks the app. The date is converted to a band **on the phone** and
 the date itself is then discarded; only the band is ever transmitted.
 
-We chose this because it collects strictly less than storing a birth date. **Is it enough?** The
-phrase we are unsure about is the obligation to make *reasonable efforts* to verify that a consent
-genuinely comes from the person holding parental authority — we do not know what "reasonable" means
-here for an app of this size, and whether it attaches to the age declaration, to the consent, or to
-both.
+We chose this because it collects strictly less than storing a birth date. **Is it enough?**
+
+We had understood there to be an obligation to make *reasonable efforts* to verify that a consent
+genuinely comes from the person holding parental authority — but **we could not confirm that this
+duty exists in Mexican law in that form** (§5, line 5; we may have read Spanish law by mistake). So
+the question is really two:
+
+1. **Does such a verification duty exist here at all**, and in what words?
+2. If it does, does a self-declared date reduced to a band satisfy it for an app of this size — and
+   does the duty attach to the age declaration, to the consent, or to both?
 
 > **Default encoded:** neutral date entry, reduced on device, date discarded.
 > **What changes:** if a stronger mechanism is required, it is a new screen and possibly a processor.
@@ -298,20 +318,32 @@ inventory is unusually short and a template would describe collection we do not 
 
 ### Q-A11 · Please price the alternative that removes the question
 
-Before you answer Q-A1 through Q-A5, we would like this option costed, because it makes most of them
-moot:
+Before you answer Q-A1 through Q-A5, we would like this option costed, because it may make most of
+them moot:
 
 > **Below the consent threshold, offer no account at all.** The child plays as a guest with
-> synchronisation switched off. Nothing leaves the device, ever. There is no email address, no
-> account, no server record — and therefore, we believe, nothing to consent to.
+> synchronisation switched off. There is no email address, no account and no server record; the
+> exercises answered are written to the phone's own storage and never transmitted.
 
-**Is that reading correct?** If a child's data never leaves their own phone, are we outside the
-regime entirely for that cohort?
+**We do not know whether that puts us outside the regime, and we are not assuming it does.** The
+question, stated as neutrally as we can:
 
-We are not asking you to recommend it. It costs the under-13 audience their saved progress across
-devices and their adaptive difficulty — which is most of what the product does — so whether to take
-it is a business decision. **But if it is legally clean, it is worth knowing what we are buying with
-the complexity of the alternative.**
+1. **When an app we distribute processes a child's data entirely on the child's own device and
+   transmits none of it, are we a controller of that data at all?** We can see the argument both
+   ways — nothing reaches us, but we wrote the software that creates and stores it.
+2. If we *are* still a controller, does the answer to Q-A1 through Q-A5 apply unchanged to a child
+   who never creates an account?
+3. Does a privacy notice have to be shown to someone who plays entirely offline and gives us nothing?
+
+**This is more urgent than its position in the list suggests.** The first playable version of the app
+works exactly this way — offline, no account, no server — and it is scheduled to exist *before* the
+schema this consult unblocks. **If local-only processing carries obligations, they attach to that
+build**, and we would need to know before it reaches anyone rather than after.
+
+We are not asking you to recommend the option as a permanent design. It costs the under-13 audience
+their progress across devices and their adaptive difficulty — most of what the product does — so
+whether to adopt it is a business decision. But if it is legally clean, it is worth knowing what we
+are buying with the complexity of the alternative.
 
 ---
 
@@ -378,7 +410,7 @@ For our own tracking. Counsel does not need this section.
 | Q-A8 email provider | a vendor and a contract | `f3-deletion-web` |
 | Q-A9 parental gate | one interstitial, or nothing | `req-legal-reachable` |
 | Q-A10 notice and terms | two published documents, plus their URLs in the compliance inventory | `f3-store-artifacts` |
-| Q-A11 the alternative | a product decision, taken by Ervin with this input | — |
+| Q-A11 the alternative | a product decision, taken by Ervin with this input — **and, if local-only processing carries obligations, a constraint on the offline build that ships before F1** | `f2-core-loop` |
 
 ---
 
