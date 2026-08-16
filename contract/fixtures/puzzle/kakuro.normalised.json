@@ -1,0 +1,159 @@
+{
+  "ok": true,
+  "pack": {
+    "expires_at": "2026-09-15T00:00:00.000Z",
+    "issued_at": "2026-08-16T00:00:00.000Z",
+    "items": [],
+    "pack_format_version": 1,
+    "pack_salt": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "puzzles": [
+      {
+        "kind": "kakuro",
+        "payload": {
+          "board": {
+            "blocked": [
+              {
+                "col": 0,
+                "row": 0
+              }
+            ],
+            "given": [
+              {
+                "col": 0,
+                "row": 1
+              },
+              {
+                "col": 1,
+                "row": 1
+              }
+            ],
+            "size": 3,
+            "solution": [
+              [
+                0,
+                1,
+                3
+              ],
+              [
+                4,
+                2,
+                9
+              ],
+              [
+                6,
+                8,
+                5
+              ]
+            ]
+          },
+          "runs": [
+            {
+              "cells": [
+                {
+                  "col": 1,
+                  "row": 0
+                },
+                {
+                  "col": 2,
+                  "row": 0
+                }
+              ],
+              "sum": 4
+            },
+            {
+              "cells": [
+                {
+                  "col": 0,
+                  "row": 1
+                },
+                {
+                  "col": 1,
+                  "row": 1
+                },
+                {
+                  "col": 2,
+                  "row": 1
+                }
+              ],
+              "sum": 15
+            },
+            {
+              "cells": [
+                {
+                  "col": 0,
+                  "row": 2
+                },
+                {
+                  "col": 1,
+                  "row": 2
+                },
+                {
+                  "col": 2,
+                  "row": 2
+                }
+              ],
+              "sum": 19
+            },
+            {
+              "cells": [
+                {
+                  "col": 0,
+                  "row": 1
+                },
+                {
+                  "col": 0,
+                  "row": 2
+                }
+              ],
+              "sum": 10
+            },
+            {
+              "cells": [
+                {
+                  "col": 1,
+                  "row": 0
+                },
+                {
+                  "col": 1,
+                  "row": 1
+                },
+                {
+                  "col": 1,
+                  "row": 2
+                }
+              ],
+              "sum": 11
+            },
+            {
+              "cells": [
+                {
+                  "col": 2,
+                  "row": 0
+                },
+                {
+                  "col": 2,
+                  "row": 1
+                },
+                {
+                  "col": 2,
+                  "row": 2
+                }
+              ],
+              "sum": 17
+            }
+          ]
+        },
+        "reference_sheet": [
+          "Los tramos van hacia la derecha y hacia abajo.",
+          "Solo se usan los dígitos del 1 al 9."
+        ],
+        "tutorial_steps": [
+          "Cada tramo suma el número de su pista.",
+          "Dentro de un tramo no se repite ningún dígito."
+        ]
+      }
+    ],
+    "skill_fallbacks": [],
+    "skill_nodes": []
+  }
+}

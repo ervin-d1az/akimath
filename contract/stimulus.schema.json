@@ -1,0 +1,238 @@
+{
+  "analogy": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "pairs": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "left": {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer"
+            },
+            "right": {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "left",
+            "right"
+          ],
+          "type": "object"
+        },
+        "maxItems": 2,
+        "minItems": 2,
+        "type": "array"
+      },
+      "unknown_index": {
+        "maximum": 9007199254740991,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "pairs",
+      "unknown_index"
+    ],
+    "type": "object"
+  },
+  "arithmetic": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "left": {
+        "additionalProperties": false,
+        "properties": {
+          "den": {
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "num": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "num",
+          "den"
+        ],
+        "type": "object"
+      },
+      "operator": {
+        "enum": [
+          "+",
+          "-",
+          "×",
+          "÷"
+        ],
+        "type": "string"
+      },
+      "right": {
+        "additionalProperties": false,
+        "properties": {
+          "den": {
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "num": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "num",
+          "den"
+        ],
+        "type": "object"
+      }
+    },
+    "required": [
+      "operator",
+      "left",
+      "right"
+    ],
+    "type": "object"
+  },
+  "figurate": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "figures": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "dots": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "dots"
+          ],
+          "type": "object"
+        },
+        "maxItems": 4,
+        "minItems": 3,
+        "type": "array"
+      },
+      "unknown_index": {
+        "maximum": 9007199254740991,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "figures",
+      "unknown_index"
+    ],
+    "type": "object"
+  },
+  "hiddenOperation": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "examples": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer"
+            },
+            "output": {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "maxItems": 3,
+        "minItems": 2,
+        "type": "array"
+      },
+      "query_input": {
+        "maximum": 9007199254740991,
+        "minimum": -9007199254740991,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "examples",
+      "query_input"
+    ],
+    "type": "object"
+  },
+  "matrix": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "cells": {
+        "items": {
+          "maximum": 9007199254740991,
+          "minimum": -9007199254740991,
+          "type": "integer"
+        },
+        "maxItems": 9,
+        "minItems": 4,
+        "type": "array"
+      },
+      "size": {
+        "maximum": 3,
+        "minimum": 2,
+        "type": "integer"
+      },
+      "unknown_index": {
+        "maximum": 9007199254740991,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "size",
+      "cells",
+      "unknown_index"
+    ],
+    "type": "object"
+  },
+  "numberSeries": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "terms": {
+        "items": {
+          "maximum": 9007199254740991,
+          "minimum": -9007199254740991,
+          "type": "integer"
+        },
+        "maxItems": 7,
+        "minItems": 3,
+        "type": "array"
+      },
+      "unknown_index": {
+        "maximum": 9007199254740991,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "terms",
+      "unknown_index"
+    ],
+    "type": "object"
+  }
+}

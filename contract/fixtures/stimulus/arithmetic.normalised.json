@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "pack": {
+    "expires_at": "2026-09-15T00:00:00.000Z",
+    "issued_at": "2026-08-16T00:00:00.000Z",
+    "items": [
+      {
+        "answer": {
+          "digest": "46e7ad1f047791d40c2ad8e6bcdbb0359434effcd5ea67bb1fd94d22c0524e76",
+          "shape": "fraction"
+        },
+        "diagnosis": {
+          "diagnosis_version": 1,
+          "distractors": [
+            {
+              "diagnosis": {
+                "explain": "Aquí se sumaron también los números de abajo, y esos dicen el tamaño de la parte.",
+                "misconception": "adds_denominators",
+                "steps": [
+                  "Los de arriba se suman.",
+                  "Los de abajo se quedan como están."
+                ]
+              },
+              "digest": "6d7e37f9c5c07093826e8c71454355ef573326f7ef8ba165783bb0d8f7e69071"
+            }
+          ]
+        },
+        "keypad": "item",
+        "ladder_step": 4,
+        "skill_id": 1,
+        "stimulus": {
+          "kind": "arithmetic",
+          "payload": {
+            "left": {
+              "den": 2,
+              "num": 1
+            },
+            "operator": "+",
+            "right": {
+              "den": 3,
+              "num": 1
+            }
+          }
+        }
+      }
+    ],
+    "pack_format_version": 1,
+    "pack_salt": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "puzzles": [],
+    "skill_fallbacks": [
+      {
+        "diagnosis": {
+          "explain": "Aquí va el razonamiento completo, paso por paso, sin regaños.",
+          "misconception": "unclassified",
+          "steps": [
+            "Vuelve a ver el paso de en medio.",
+            "Ahí es donde se decide el resultado."
+          ]
+        },
+        "skill_id": 1
+      }
+    ],
+    "skill_nodes": [
+      {
+        "skill_id": 1,
+        "state": "started"
+      }
+    ]
+  }
+}

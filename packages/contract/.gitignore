@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+tmp/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+
+# SwarmForge runtime state
+.swarmforge/
+.worktrees/
