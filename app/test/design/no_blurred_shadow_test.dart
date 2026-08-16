@@ -1,24 +1,19 @@
 import 'package:akimath_app/design/theme.dart';
-import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
-import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'screen_registry.dart';
 
 /// The visual system forbids blurred shadows, gradients, and backdrop filters.
 ///
 /// That rule is only worth writing down if something enforces it, so this walks
 /// the rendered tree of every screen and fails on the first blur. New screens
-/// get added to [_screens] and inherit the check.
+/// get added to [registeredScreens] and inherit the check — and the overflow
+/// gate beside it — from that one registration.
 void main() {
-  final Map<String, Widget> screens = <String, Widget>{
-    'character sheet': const CharacterSheetScreen(),
-    'splash · cream': const SplashScreen(),
-    'splash · green': const SplashScreen(variant: SplashVariant.brandGreen),
-  };
-
-  for (final MapEntry<String, Widget> screen in screens.entries) {
-    testWidgets('${screen.key} draws only hard shadows', (WidgetTester tester) async {
-      await _pumpLarge(tester, screen.value);
+  for (final RegisteredScreen screen in registeredScreens) {
+    testWidgets('${screen.label} draws only hard shadows', (WidgetTester tester) async {
+      await _pumpLarge(tester, screen.build());
 
       final Iterable<DecoratedBox> boxes = tester.widgetList<DecoratedBox>(find.byType(DecoratedBox));
       expect(boxes, isNotEmpty, reason: 'Nothing rendered — the check is vacuous.');
@@ -39,16 +34,16 @@ void main() {
           expect(
             shadow.blurRadius,
             0,
-            reason: 'A blurred shadow appeared in ${screen.key}.',
+            reason: 'A blurred shadow appeared in ${screen.label}.',
           );
           expect(shadow.spreadRadius, 0);
         }
       }
     });
 
-    testWidgets('${screen.key} raises nothing with Material elevation',
+    testWidgets('${screen.label} raises nothing with Material elevation',
         (WidgetTester tester) async {
-      await _pumpLarge(tester, screen.value);
+      await _pumpLarge(tester, screen.build());
 
       for (final PhysicalModel model in tester.widgetList<PhysicalModel>(find.byType(PhysicalModel))) {
         expect(model.elevation, 0, reason: 'Elevation blurs. Use CandySurface.');

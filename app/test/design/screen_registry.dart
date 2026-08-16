@@ -1,0 +1,74 @@
+import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
+import 'package:akimath_app/features/splash/splash_screen.dart';
+import 'package:flutter/widgets.dart';
+
+/// A surface the design gates pump a screen at.
+///
+/// One entry per viewport the app promises to survive. The set is short on
+/// purpose: 390×844 is the design viewport every document is drawn against, and
+/// 1.3 is the text size a child's device arrives with more often than not.
+enum ScreenViewport {
+  designPhone('390×844', Size(390, 844), 1),
+  designPhoneLargeText('390×844 · textScaler 1.3', Size(390, 844), 1.3);
+
+  const ScreenViewport(this.label, this.physicalSize, this.textScale);
+
+  /// How the viewport is named in a test title and in a failure.
+  final String label;
+
+  final Size physicalSize;
+
+  final double textScale;
+}
+
+/// One screen the design gates walk.
+@immutable
+final class RegisteredScreen {
+  const RegisteredScreen({
+    required this.label,
+    required this.build,
+    this.excused = const <ScreenViewport, String>{},
+  });
+
+  /// The name the gates use in their test titles.
+  final String label;
+
+  /// Builds a fresh instance, so two gates pumping the same screen cannot share
+  /// element state.
+  final Widget Function() build;
+
+  /// The viewports this screen is excused from, each mapped to the overflow
+  /// message that earned the excuse.
+  ///
+  /// Nothing is excused in advance. An entry appears here only after the gate
+  /// actually went red, carries the message it reported, and is deleted in the
+  /// change that fixes the screen (design D-6). The gate asserts the reason is
+  /// not empty, so a viewport cannot leave the required set in silence.
+  final Map<ScreenViewport, String> excused;
+
+  /// The viewports this screen must survive.
+  List<ScreenViewport> get requiredViewports => ScreenViewport.values
+      .where((ScreenViewport viewport) => !excused.containsKey(viewport))
+      .toList();
+}
+
+/// Every screen under the design gates.
+///
+/// One list, read by `no_blurred_shadow_test.dart` and by
+/// `screen_overflow_test.dart`, so a new screen is registered once and inherits
+/// both. Two hand-maintained lists of the same ~50 screens would rot at
+/// different rates (design D-5).
+final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
+  RegisteredScreen(
+    label: 'character sheet',
+    build: () => const CharacterSheetScreen(),
+  ),
+  RegisteredScreen(
+    label: 'splash · cream',
+    build: () => const SplashScreen(),
+  ),
+  RegisteredScreen(
+    label: 'splash · green',
+    build: () => const SplashScreen(variant: SplashVariant.brandGreen),
+  ),
+];
