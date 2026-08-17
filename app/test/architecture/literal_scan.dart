@@ -179,6 +179,39 @@ const List<ScanRoot> geometryGateRoots = <ScanRoot>[
   ScanRoot(prefix: 'features/'),
 ];
 
+/// A hue selected by comparing two numbers.
+///
+/// The forbidden shape is `pct >= 90 ? BrandColors.green : BrandColors.pink`
+/// written inline in a widget. It scatters the thresholds that give a hue its
+/// meaning across every screen that draws one, and it is how a state ends up
+/// communicated by hue alone — which BRD-1 forbids for a reader who cannot
+/// separate the two. The remedy is a named level the adapter resolves in one
+/// place.
+///
+/// **Relational operators only, deliberately.** `==` is excluded because a null
+/// check or an enum comparison picking a colour is not a hue chosen by
+/// *measurement*, and `verdict == null ? focus : error` is correct code in this
+/// repo today. A threshold is what this is about.
+///
+/// **Two stated limits.** The left operand must be a plain identifier or member
+/// chain, so a comparison assembled across two statements is invisible here —
+/// as is one whose left side is a call. And a `switch` on an enum never matches,
+/// which is intended: it is the remedy, not the defect.
+final List<LiteralPattern> hueByComparisonPatterns = <LiteralPattern>[
+  LiteralPattern(
+    'a hue chosen by comparison',
+    r'[A-Za-z_][A-Za-z0-9_.]*\s*(?:<=|>=|<|>)\s*[A-Za-z0-9_.]+\s*'
+    r'\?[^;]{0,160}?(?:BrandColors|BrandColorRole)\b',
+  ),
+];
+
+/// Where the hue-by-comparison gate looks: all of `app/lib/` except the tokens,
+/// which are where a colour is legitimately named.
+const ScanRoot hueGateRoot = ScanRoot(
+  prefix: '',
+  excluding: <String>['design/tokens/'],
+);
+
 /// The colour literal BRD-2b carves out by name.
 ///
 /// `Colors.transparent` switches Material's surface tinting off and names no
