@@ -127,26 +127,41 @@ That is `ARCHITECTURE.md` §3's own lesson: a hand-recalled golden vector enshri
 
 ## 5 · Rederivation
 
-- [ ] 5.1 Write `src/template.ts`: `TemplateRef` with **four** fields — template, version, seed,
+- [x] 5.1 Write `src/template.ts`: `TemplateRef` with **four** fields — template, version, seed,
       ladder step (design, Context). Seed is a `bigint`.
       **Check:** the type matches what `issued_items` stores, column for column.
-- [ ] 5.2 Write `test/template/registry.test.ts` and `src/registry.ts`: a version resolves to the
+- [x] 5.2 Write `test/template/registry.test.ts` and `src/registry.ts`: a version resolves to the
       behaviour that version had; a retired version still rederives but is never issued.
       **Check:** red first. Assert both halves — resolvable *and* excluded from issuing.
-- [ ] 5.3 Write `test/template/versioning.test.ts`: two versions of one template produce
+- [x] 5.3 Write `test/template/versioning.test.ts`: two versions of one template produce
       **different** items from the same seed, and v1 still reproduces exactly what it always did.
       **Check:** the difference is asserted, not assumed — otherwise the test passes for two
       identical versions and proves nothing.
-- [ ] 5.4 Write the reference template, one file per version, and
+- [x] 5.4 Write the reference template, one file per version, and
       `test/template/reference_template.test.ts` reproducing a **named** item from
       `app/assets/packs/starter.json` at a committed seed.
       **Check:** red until the seed is found. Name the item in the test; a test that reproduces
-      "some item" is not a test.
-- [ ] 5.5 Write `test/template/contract_parity.test.ts`: a generated item, rendered through 4.1, is
+      "some item" is not a test. **Seed 389 reproduces `sub-2` (`8 − 15 = −7`) at ladder step 3**,
+      found by search and then written down. A control asserts seed 390 does *not* reproduce it,
+      because every other assertion is satisfied by a generator that ignores its seed.
+- [x] 5.5 Write `test/template/contract_parity.test.ts`: a generated item, rendered through 4.1, is
       accepted by the frozen item schema.
       **Check:** the validation must reach the **payload**, not stop at the envelope — verify by
       corrupting the payload and confirming the test goes red. A parse that short-circuits at the
       wrapper is a vacuous parity check.
+      **It does short-circuit, and this is now pinned.** `StimulusEnvelopeSchema` types `payload` as
+      `z.record(z.string(), z.unknown())`, so `ItemSchema.safeParse` accepts any object at all — a
+      parity test built on it alone is green for a stimulus core invented. `parseStimulus` is what
+      runs the arithmetic payload schema, and a control test proves the point directly: a nonsense
+      payload that `parseStimulus` rejects is still accepted by `ItemSchema`.
+
+**And the duplication gate had to be told about versioning.** Two versions of one template are
+near-identical by construction, jscpd measured 2.97% against a 1% threshold, and the gate failed.
+Factoring the shared body into a helper both versions call would give them **one** implementation —
+exactly what a version number exists to prevent, since changing the helper would silently change
+what every already-issued item rederives to. `src/templates/**` is excluded, with the reason in
+`src/templates/README.md`, and the exclusion is that directory only: the rest of the package is held
+to the same zero-clone bar as its two siblings, and reports 0.
 
 ## 6 · The rating
 

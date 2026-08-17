@@ -8,7 +8,10 @@
     "**/dist/**",
     "**/coverage/**",
     "**/tmp/**",
+    "**/reports/**",
     "**/.worktrees/**",
-    "**/.swarmforge/**"
+    "**/.swarmforge/**",
+
+    "src/templates/**"
   ]
 }
