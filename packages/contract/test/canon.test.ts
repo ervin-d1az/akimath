@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { readFixture } from "./fixture-files.js";
-import { canonicalize, CHAR_MAP, requireStoredCanonical } from "../src/canon.js";
+import {
+  canonicalize,
+  CHAR_MAP,
+  renderCanonicalAnswer,
+  requireStoredCanonical,
+} from "../src/canon.js";
 import { buildCanonGolden, CANON_INPUTS } from "../src/canon-vectors.js";
 
 const ARABIC_INDIC_ZERO = "٠";
@@ -129,5 +134,78 @@ describe("the committed canon.golden.json", () => {
 
   it("records the fold map the two stacks must share", () => {
     expect(buildCanonGolden().char_map).toEqual(CHAR_MAP);
+  });
+});
+
+describe("rendering is the inverse of canonicalizing, by construction", () => {
+  /** Every shape the renderer can produce, spanning sign, zero and denominator. */
+  const RENDERED: ReadonlyArray<{
+    readonly numerator: bigint;
+    readonly denominator?: bigint;
+    readonly expected: string;
+  }> = [
+    { numerator: 0n, expected: "0" },
+    { numerator: 7n, expected: "7" },
+    { numerator: -7n, expected: "-7" },
+    { numerator: 1n, denominator: 2n, expected: "1/2" },
+    { numerator: -3n, denominator: 4n, expected: "-3/4" },
+    { numerator: 5n, denominator: 4n, expected: "5/4" },
+    { numerator: 12n, denominator: 7n, expected: "12/7" },
+    { numerator: 4n, denominator: 1n, expected: "4/1" },
+    { numerator: 0n, denominator: 5n, expected: "0/5" },
+    // A sign on a zero magnitude is dropped, in both shapes. This is the rule a
+    // `-0/5` defect once shipped through on the Dart side.
+    { numerator: -0n, denominator: 5n, expected: "0/5" },
+    { numerator: 0n, denominator: -5n, expected: "0/5" },
+    { numerator: -0n, expected: "0" },
+    // A negative denominator moves its sign to the numerator.
+    { numerator: 3n, denominator: -4n, expected: "-3/4" },
+    { numerator: -3n, denominator: -4n, expected: "3/4" },
+    // Beyond a double.
+    { numerator: 9007199254740993n, expected: "9007199254740993" },
+  ];
+
+  it("renders the shape the format specifies", () => {
+    for (const { numerator, denominator, expected } of RENDERED) {
+      expect(renderCanonicalAnswer(numerator, denominator)).toBe(expected);
+    }
+    expect(RENDERED.length).toBeGreaterThan(0);
+  });
+
+  it("everything it renders is already storage-canonical", () => {
+    // The property that matters, and the reason the renderer lives in this
+    // module calling the same private join: if these two could disagree, a pack
+    // would carry answers its own validator refuses.
+    let checked = 0;
+    for (const { numerator, denominator } of RENDERED) {
+      const rendered = renderCanonicalAnswer(numerator, denominator);
+      const stored = requireStoredCanonical(rendered);
+      expect(stored, `requireStoredCanonical rejected ${rendered}`).toEqual({
+        ok: true,
+        value: rendered,
+      });
+      checked += 1;
+    }
+    expect(checked).toBe(RENDERED.length);
+    // eslint-disable-next-line no-console
+    console.log(`  render round-trip · ${checked} shapes`);
+  });
+
+  it("and the learner direction folds to the same string", () => {
+    for (const { numerator, denominator } of RENDERED) {
+      const rendered = renderCanonicalAnswer(numerator, denominator);
+      expect(canonicalize(rendered)).toEqual({ ok: true, value: rendered });
+    }
+  });
+
+  it("refuses a zero denominator rather than rendering nonsense", () => {
+    expect(() => renderCanonicalAnswer(1n, 0n)).toThrow(/non-zero denominator/);
+  });
+
+  it("distinguishes an omitted denominator from a denominator of one", () => {
+    // The shape is the caller's decision and the spelling is this module's.
+    // Guessing from the value would make these the same call.
+    expect(renderCanonicalAnswer(4n)).toBe("4");
+    expect(renderCanonicalAnswer(4n, 1n)).toBe("4/1");
   });
 });

@@ -30,6 +30,22 @@ export const CANON_INPUTS: readonly string[] = [
   "1⁄2",
   "1/-2",
   "12/007",
+
+  // Added by `f1-core-rederivation`: every shape `renderCanonicalAnswer` can
+  // produce, so the cross-language fixture covers the renderer's whole output
+  // and not only what a learner types.
+  //
+  // **The set had a hole exactly here.** Its nineteen original vectors contain
+  // no negative-zero fraction, and that is the gap through which a `-0/5`
+  // defect shipped in Dart: the two canonicalisers disagreed and nothing
+  // compared them on the one input where they did. The Dart parity test
+  // iterates whatever this list contains, so these five buy that coverage with
+  // no Dart edit at all.
+  "0/5",
+  "-0/5",
+  "-3/4",
+  "4/1",
+  "12/7",
 ];
 
 export interface CanonVector {

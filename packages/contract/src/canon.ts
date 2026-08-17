@@ -114,6 +114,48 @@ export function canonicalize(raw: string): CanonResult {
 }
 
 /**
+ * A canonical answer, built from the numbers rather than parsed from a string.
+ *
+ * **The inverse of `canonicalize`, and it calls the same private join.** That is
+ * the whole design: rendering and canonicalising cannot disagree about what
+ * `5/4` looks like, because there is one implementation of the spelling and both
+ * directions go through it. Two canonicalisers already exist across two
+ * languages and a differential fuzz over 22,440 inputs found 4,916 tag-only
+ * divergences between them; a third copy — even "just a template literal" —
+ * would reorder something and break a caller switching on the tag.
+ *
+ * It lives here and not in `packages/core` for the same reason: core has zero
+ * dependencies and cannot import this module, so a renderer there would be a
+ * second implementation by construction. Core produces exact values; this
+ * decides how one is written down.
+ *
+ * **Omitting the denominator renders an integer; passing one always renders a
+ * fraction, including `4/1`.** The shape is the caller's decision and the
+ * spelling is this module's — `4/1` is canonical input to `canonicalize`, so it
+ * has to be renderable, and guessing from the value would make `4/1` and `4`
+ * the same call with different answers.
+ */
+export function renderCanonicalAnswer(
+  numerator: bigint,
+  denominator?: bigint,
+): string {
+  if (denominator === 0n) {
+    throw new RangeError("a canonical answer needs a non-zero denominator");
+  }
+
+  const negative: boolean =
+    numerator < 0n !== (denominator !== undefined && denominator < 0n);
+  const magnitude = (value: bigint): string =>
+    (value < 0n ? -value : value).toString();
+
+  return joinCanonical(
+    negative ? "-" : "",
+    magnitude(numerator),
+    denominator === undefined ? undefined : magnitude(denominator),
+  );
+}
+
+/**
  * Pack content in, the same string out — or a rejection. A pack states its
  * answers already canonical, so nothing here folds: `not_canonical` is what a
  * stored spelling the learner direction *would* have folded earns, which is

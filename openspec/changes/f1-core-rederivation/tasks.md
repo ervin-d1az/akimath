@@ -105,17 +105,25 @@ That is `ARCHITECTURE.md` §3's own lesson: a hand-recalled golden vector enshri
 
 ## 4 · One canonical join, in the contract
 
-- [ ] 4.1 Add `renderCanonicalAnswer` to `packages/contract/src/canon.ts`, calling the **private**
+- [x] 4.1 Add `renderCanonicalAnswer` to `packages/contract/src/canon.ts`, calling the **private**
       join the canonicaliser already uses (design D5).
       **Check:** a round-trip test — every shape the renderer produces is accepted by the
       canonicaliser as already-canonical.
-- [ ] 4.2 Extend `CANON_INPUTS` with `0/5`, `-0/5`, `-3/4`, `4/1`, `12/7` and regenerate
+- [x] 4.2 Extend `CANON_INPUTS` with `0/5`, `-0/5`, `-3/4`, `4/1`, `12/7` and regenerate
       `contract/fixtures/canon.golden.json`.
-      **Check:** `npm run emit` then the tree must not move. **The Dart suite must go green on the
-      new vectors without a Dart edit** — its parity test iterates whatever the fixture contains,
-      and `-0/5` is the exact hole a defect once shipped through.
-- [ ] 4.3 Add the set-equality assertion to `packages/contract/test/public_surface.test.ts`.
+      **Check:** `npm run emit` then the tree must not move — verified, byte-identical across two
+      runs. **The Dart suite went green on the new vectors with zero Dart edits**: 19 vectors → 24,
+      the Dart parity test reported `canon parity · vectors → 24`, and the app's suite rose 623 → 633
+      because the new rows are new cases. `-0/5` behaves as the signed-zero rule requires — the
+      learner direction folds it to `0/5`, the storage direction refuses it as `not_canonical` —
+      which is the hole a defect once shipped through, now covered from both languages.
+- [x] 4.3 Add the set-equality assertion to `packages/contract/test/public_surface.test.ts`.
       **Check:** red against the new export before 4.1's assertion is added.
+      **And it found something the moment it was written.** The five existing assertions between
+      them name sixteen exports; the package actually has **36**. Twenty — every schema,
+      `canonicalJson`, `checkDistractors`, `declaredState`, the three parsers — had no surface
+      coverage at all, which is exactly the shape that let a new export ship unnoticed. All 36 are
+      now pinned.
 
 ## 5 · Rederivation
 

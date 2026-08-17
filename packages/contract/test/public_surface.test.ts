@@ -13,9 +13,10 @@ describe("the package's public surface", () => {
     expect(typeof contract.parsePack).toBe("function");
   });
 
-  it("exposes both canonicalization directions and the fold map", () => {
+  it("exposes both canonicalization directions, the renderer and the fold map", () => {
     expect(typeof contract.canonicalize).toBe("function");
     expect(typeof contract.requireStoredCanonical).toBe("function");
+    expect(typeof contract.renderCanonicalAnswer).toBe("function");
     expect(contract.CHAR_MAP["−"]).toBe("-");
   });
 
@@ -35,5 +36,67 @@ describe("the package's public surface", () => {
     expect(contract.KEYPAD_LAYOUTS.length).toBe(3);
     expect(contract.SKILL_NODE_STATES.length).toBe(4);
     expect(contract.ANSWER_SHAPES.length).toBe(2);
+  });
+
+  it("exposes exactly this surface and no more", () => {
+    // **Set equality, because the assertions above cannot see an addition.**
+    // Each of them checks a name it already knows, so a new export ships with
+    // no test at all — which is how `renderCanonicalAnswer` would have arrived
+    // unnoticed.
+    //
+    // Writing this list down was itself the finding: the surface is **36**
+    // names, and the five assertions above between them mention sixteen. Twenty
+    // exports — every schema, `canonicalJson`, `checkDistractors`,
+    // `declaredState`, the parsers — had no surface coverage at all.
+    // `f1-contract-emitter` inherits this package, so what it can reach is part
+    // of the contract rather than an implementation detail, and adding to it
+    // should be a decision. This is what makes it one.
+    const exported = Object.keys(contract).sort();
+
+    expect(exported).toEqual(
+      [
+        "ANSWER_SHAPES",
+        "AnswerSpecSchema",
+        "CANON_INPUTS",
+        "CHAR_MAP",
+        "DIAGNOSIS_VERSION",
+        "DiagnosisCopySchema",
+        "DiagnosisPayloadSchema",
+        "DigestSchema",
+        "ItemSchema",
+        "KEYPAD_LAYOUTS",
+        "KeypadLayoutSchema",
+        "PACK_FORMAT_VERSION",
+        "PUZZLE_KINDS",
+        "PUZZLE_PAYLOAD_SCHEMAS",
+        "PackSchema",
+        "PuzzleEnvelopeSchema",
+        "SKILL_NODE_STATES",
+        "STIMULUS_KINDS",
+        "STIMULUS_PAYLOAD_SCHEMAS",
+        "SkillFallbackSchema",
+        "SkillNodeSchema",
+        "StimulusEnvelopeSchema",
+        "answerDigest",
+        "buildCanonGolden",
+        "canonicalJson",
+        "canonicalize",
+        "checkDistractors",
+        "declaredState",
+        "digestStoredAnswer",
+        "fallbackForSkill",
+        "lookupDiagnosis",
+        "parsePack",
+        "parsePuzzle",
+        "parseStimulus",
+        "renderCanonicalAnswer",
+        "requireStoredCanonical",
+      ].sort(),
+    );
+
+    // PROC-11: `[] === []` passes for a module that failed to load.
+    expect(exported.length).toBeGreaterThan(0);
+    // eslint-disable-next-line no-console
+    console.log(`  contract public surface · ${exported.length} exports`);
   });
 });

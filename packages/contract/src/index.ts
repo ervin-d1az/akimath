@@ -6,7 +6,12 @@
 export { ANSWER_SHAPES, AnswerSpecSchema, DigestSchema } from "./answer.js";
 export type { AnswerShape, AnswerSpec } from "./answer.js";
 
-export { canonicalize, CHAR_MAP, requireStoredCanonical } from "./canon.js";
+export {
+  canonicalize,
+  CHAR_MAP,
+  renderCanonicalAnswer,
+  requireStoredCanonical,
+} from "./canon.js";
 export type { AnswerAccepted, AnswerRejected, CanonResult, RejectionTag } from "./canon.js";
 
 export { buildCanonGolden, CANON_INPUTS } from "./canon-vectors.js";
