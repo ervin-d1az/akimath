@@ -1,28 +1,11 @@
 import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
+import 'spec/brand_glyph.dart';
 
-/// Every glyph the app names.
-///
-/// The set comes from the design corpus's inventory, so a call site can already
-/// ask for the right thing by name even though the artwork is not here yet.
-enum BrandGlyph {
-  backspace,
-  submit,
-  check,
-  alert,
-  close,
-  back,
-  forward,
-  pause,
-  undo,
-  hint,
-  pencil,
-  gear,
-  flame,
-  wifiOff,
-  padlock,
-}
+// Re-exported so a call site that draws a glyph does not need two imports. The
+// enum itself stays in `spec/`, importing nothing — see the note there.
+export 'spec/brand_glyph.dart';
 
 /// A brand glyph, at a size and a colour the caller chooses.
 ///
