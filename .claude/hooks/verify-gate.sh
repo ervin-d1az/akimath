@@ -40,6 +40,8 @@ set -uo pipefail
 #   packages/server/**    npm run typecheck            + npm test  (in packages/server)
 #   packages/contract/**  npm run typecheck            + npm test  (in packages/contract)
 #   contract/**           npm run typecheck            + npm test  (in packages/contract)
+#                                                      + npm test  (in packages/core)
+#   packages/core/**      npm run typecheck            + npm test  (in packages/core)
 #
 # Each package is filtered on its own path. Until f0-pack-contract the filter
 # fired on any packages/ path but only ever ran packages/server, so a
@@ -254,14 +256,25 @@ touches() {
 RUN_DART=0
 RUN_TS=0
 RUN_CONTRACT=0
+RUN_CORE=0
 touches '^app/' && RUN_DART=1
 touches '^packages/server/' && RUN_TS=1
 touches '^packages/contract/' && RUN_CONTRACT=1
+touches '^packages/core/' && RUN_CORE=1
 # contract/ holds the emitted artifacts packages/contract owns, so a change
 # there is gated by that package's suite.
 touches '^contract/' && RUN_CONTRACT=1
+# **Both sides of the edge.** packages/core holds the frozen contract as a
+# devDependency and its parity suite checks core's output against it, so a
+# change to the contract or to its emitted artifacts has to run core's tests
+# too. A gate that watches one side of an edge reports green while the other
+# drifts — the same reasoning as the `core` filter in ci.yml.
+touches '^packages/contract/' && RUN_CORE=1
+touches '^contract/' && RUN_CORE=1
+# The reference template reproduces a named item from the shipped pack.
+touches '^app/assets/packs/' && RUN_CORE=1
 
-if [ "$RUN_DART" -eq 0 ] && [ "$RUN_TS" -eq 0 ] && [ "$RUN_CONTRACT" -eq 0 ]; then
+if [ "$RUN_DART" -eq 0 ] && [ "$RUN_TS" -eq 0 ] && [ "$RUN_CONTRACT" -eq 0 ] && [ "$RUN_CORE" -eq 0 ]; then
   if [ -n "${AKIMATH_GATE_DEBUG:-}" ]; then
     echo "verify-gate: no app/ or packages/ paths in the change, nothing to check." >&2
   fi
@@ -403,6 +416,21 @@ if [ "$RUN_CONTRACT" -eq 1 ]; then
   fi
   run_check "npm run typecheck (contract)" packages/contract "$NPM" run typecheck
   run_check "npm test (contract)" packages/contract "$NPM" test
+fi
+
+if [ "$RUN_CORE" -eq 1 ]; then
+  NPM="${AKIMATH_NPM_BIN:-}"
+  if [ -z "$NPM" ]; then
+    NPM="$(command -v npm 2>/dev/null || true)"
+  fi
+  if [ -z "$NPM" ] || [ ! -x "$NPM" ]; then
+    fail_open "packages/core changed but npm is not resolvable (set AKIMATH_NPM_BIN)"
+  fi
+  if [ ! -d packages/core/node_modules ]; then
+    fail_open "packages/core/node_modules is missing (run npm ci there)"
+  fi
+  run_check "npm run typecheck (core)" packages/core "$NPM" run typecheck
+  run_check "npm test (core)" packages/core "$NPM" test
 fi
 
 exit 0

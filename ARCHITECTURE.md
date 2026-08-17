@@ -99,7 +99,7 @@ nothing is submitted yet.
 akimath/
 ├── contract/openapi.json         COMMITTED ARTIFACT — generated, never hand-edited
 ├── packages/
-│   ├── core/                     @aki/core — pure, zero dependencies
+│   ├── core/                     @akimath/core — pure, zero dependencies
 │   ├── contract/                 Zod + route defs + the OpenAPI emitter
 │   └── server/                   Hono, Drizzle, Better Auth, batch jobs
 ├── app/                          the only Dart package
@@ -158,15 +158,24 @@ roughly 3× will be quoted back as a reason to reopen this.
 `packages/core` is not a utility library — it is the **rederivation machine**.
 One invariant governs the whole design: `attempts` is append-only and the server
 must reconstruct the exact problem years later, on a different Node, from
-`(template_id, template_version, seed)`.
+`(template_id, template_version, seed, ladder_step)` — **four fields, not
+three**. `issued_items` stores the ladder step alongside the other three because
+nothing in a seed says which step an item was issued at, and the same seed at a
+different step is a different item. Corrected 2026-08-17 by
+`f1-core-rederivation`, against the applied migration.
 
-- **Zero `dependencies`.** Enforced by a CI check that reads `package.json`, not
-  by pnpm's strictness — an agent runs `pnpm add drizzle-orm --filter @aki/core`
-  and a resolution-based invariant dies in a one-line diff.
-- The check nobody proposed and that actually protects determinism:
-  `no-restricted-globals` over `packages/core/**` for `Math.random`, `Date`,
-  `performance`, `crypto.randomUUID`, `Intl`, `toLocaleString`. No import ban
-  catches `Math.random()`.
+- **Zero `dependencies`.** Enforced by a test that reads `package.json`, not
+  by pnpm's strictness — an agent runs `pnpm add drizzle-orm --filter
+  @akimath/core` and a resolution-based invariant dies in a one-line diff. The
+  package is **`@akimath/core`**, matching its two siblings on disk; earlier
+  drafts of this document and of `CLAUDE.md` said `@aki/core`.
+- The check nobody proposed and that actually protects determinism: a ban over
+  `packages/core/**` on `Math.random`, `Date`, `performance`,
+  `crypto.randomUUID`, `Intl` and `toLocaleString`. No import ban catches
+  `Math.random()`. **Implemented as a TypeScript AST walk rather than
+  `no-restricted-globals`**, because a flat ban cannot scope a permission and
+  this one must: Glicko needs `Math.exp`, and the generators must not inherit
+  it. There is also no ESLint anywhere in this repository.
 - **Rationals as `BigInt`**, vendored PRNG with a golden vector *emitted from the
   code* — the canonical cyrb128+sfc32 snippet does not produce the vector that was
   claimed, which is exactly the kind of thing a hand-written golden test enshrines

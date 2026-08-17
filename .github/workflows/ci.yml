@@ -67,6 +67,7 @@ jobs:
       dart: ${{ steps.filter.outputs.dart }}
       ts: ${{ steps.filter.outputs.ts }}
       contract: ${{ steps.filter.outputs.contract }}
+      core: ${{ steps.filter.outputs.core }}
       spec: ${{ steps.filter.outputs.spec }}
     steps:
       - uses: actions/checkout@v7
@@ -78,8 +79,16 @@ jobs:
         id: filter
         with:
           filters: |
+            # ARCHITECTURE.md §8 has always said the dart job runs on
+            # `dart` OR `contract`, and the workflow only ever implemented the
+            # first half. `contract/fixtures/canon.golden.json` is the single
+            # file binding the Dart and TypeScript canonicalisers — risk R2 —
+            # and the Dart parity test iterates whatever it contains. A change
+            # to it that nobody re-ran Dart against is exactly how the two
+            # silently diverge.
             dart:
               - 'app/**'
+              - 'contract/**'
               - '.github/workflows/ci.yml'
             # Narrowed from 'packages/**' when packages/contract landed: the ts
             # job has working-directory packages/server, so a contract-only
@@ -96,6 +105,16 @@ jobs:
             contract:
               - 'packages/contract/**'
               - 'contract/**'
+              - '.github/workflows/ci.yml'
+            # **Both sides of the edge.** `packages/core`'s parity suite imports
+            # the frozen contract as a devDependency, so a change to the contract
+            # has to run core's tests — a filter watching only core's own tree
+            # reports green while the thing it is checked against moves.
+            core:
+              - 'packages/core/**'
+              - 'packages/contract/**'
+              - 'contract/**'
+              - 'app/assets/packs/starter.json'
               - '.github/workflows/ci.yml'
             spec:
               - 'openspec/**'
@@ -402,6 +421,39 @@ jobs:
           git add -A -- packages/server/schema.sql
           git diff --cached --exit-code -- packages/server/schema.sql
 
+  # `packages/core` is the rederivation machine: zero runtime dependencies, no
+  # ambient IO, and three committed golden artifacts. Without this job those
+  # artifacts are decorative — a golden no required check reads cannot fail.
+  core:
+    name: core
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/core
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/core/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      # The artifacts must be what the code produces. Staged before diffing,
+      # because a bare `git diff` is blind to a file the author never committed
+      # — the lesson the `contract` job already carries.
+      - name: The committed golden artifacts still match
+        run: |
+          npm run emit
+          cd "$GITHUB_WORKSPACE"
+          git add -A -- packages/core/golden/
+          git diff --cached --exit-code -- packages/core/golden/
+
   spec:
     name: spec
     needs: changes
@@ -422,7 +474,7 @@ jobs:
   gate:
     name: gate
     if: always()
-    needs: [changes, protected-paths, secrets, dart, ts, contract, integration, spec]
+    needs: [changes, protected-paths, secrets, dart, ts, contract, core, integration, spec]
     runs-on: ubuntu-latest
     # Two `echo` steps. If this one ever runs long, something is very wrong.
     timeout-minutes: 5
@@ -440,6 +492,7 @@ jobs:
           echo "dart=${{ needs.dart.result }}"
           echo "ts=${{ needs.ts.result }}"
           echo "contract=${{ needs.contract.result }}"
+          echo "core=${{ needs.core.result }}"
           echo "integration=${{ needs.integration.result }}"
           echo "spec=${{ needs.spec.result }}"
           exit 1

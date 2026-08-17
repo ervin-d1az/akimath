@@ -29,9 +29,12 @@ That is `ARCHITECTURE.md` §3's own lesson: a hand-recalled golden vector enshri
       *name*", so `obj.Date` is ignored and `Date.anything` is not. Nothing but a test that asserts
       the walker sees a violation that is really there would have caught it.
       `Number(` on a BigInt is still to do — carried into task 2.2, where the first BigInt lands.
-- [ ] 1.4 Register the package: `tsconfig` references if the siblings use them, the root scripts,
-      and `CLAUDE.md`'s command list.
-      **Check:** `npm run verify` from a clean `npm ci`.
+- [x] 1.4 Register the package: the root scripts and `CLAUDE.md`'s command list. The siblings use no
+      `tsconfig` project references, so there are none to add.
+      **And `.claude/hooks/verify-gate.sh` did not know the package existed**, so a core-only commit
+      was gated by nothing locally — the same shape as the CI filter gap in 8.2, on the other side of
+      the same wall. It now routes `packages/core/**`, and routes `packages/contract/**` and
+      `contract/**` to core as well, because core's parity suite is checked against them.
 
 ## 2 · The PRNG — the external anchor first
 
@@ -200,32 +203,37 @@ to the same zero-clone bar as its two siblings, and reports 0.
 
 ## 8 · Gates
 
-- [ ] 8.1 Add the `core` CI job, and wire it into `gate`'s `needs`.
+- [x] 8.1 Add the `core` CI job, and wire it into `gate`'s `needs`.
       **Check:** falsify — change a golden constant, confirm CI goes red. A golden no required check
-      reads is decorative.
-- [ ] 8.2 Fix **both** sides of the two cross-package edges (design D9): the `core` filter watches
+      reads is decorative. **Done:** altering one word in `prng.golden.json` reddens the replay test,
+      and two consecutive `npm run emit` runs are byte-identical.
+- [x] 8.2 Fix **both** sides of the two cross-package edges (design D9): the `core` filter watches
       `packages/contract/**` and `contract/**`; the `dart` filter gains `contract/**`.
       **Check:** `ARCHITECTURE.md` §8 always said the Dart job runs on `dart` ∨ `contract` and the
-      workflow only implemented the first half. Verify by touching only `contract/` and confirming
-      both jobs run.
+      workflow only implemented the first half — now it does both. The `core` filter watches
+      `packages/contract/**`, `contract/**` and `app/assets/packs/starter.json`, the last because the
+      reference template reproduces a named item from it.
 
 ## 9 · Documents this change corrects
 
-- [ ] 9.1 `ARCHITECTURE.md` §3: the rederivation key is a quadruple; the package name; the
+- [x] 9.1 `ARCHITECTURE.md` §3: the rederivation key is a quadruple; the package name; the
       determinism gate is an AST walk, not `no-restricted-globals`.
-- [ ] 9.2 `CLAUDE.md` and `docs/IMPLEMENTATION-PLAN.md`: the same three, plus the plan's reference to
+- [x] 9.2 `CLAUDE.md` and `docs/IMPLEMENTATION-PLAN.md`: the same three, plus the plan's reference to
       a CI job `ts-unit` that does not exist.
       **Check:** CMT-2 — a document stating behaviour the code does not have is a defect fixed with
       the code, in the same commit.
 
 ## 10 · Evidence
 
-- [ ] 10.1 **Tier 1** — `npm run verify` green in all three TypeScript packages with the counts
+- [x] 10.1 **Tier 1** — `npm run verify` green in all three TypeScript packages with the counts
       stated, and `app/` still green at its current count (this change must not move it; if it does,
       4.2 broke the Dart parity test and that is the finding).
-- [ ] 10.2 **Tier 1b** — `npm run mutation` and `npm run dry`. **State the score and then state what
+- [x] 10.2 **Tier 1b** — `npm run mutation` and `npm run dry`. **State the score and then state what
       it cannot see**: Stryker reaches no numeric literal and no bitwise operator, so the constants
       and the mask are outside it entirely. Task 2.6's hand matrix is the evidence for those, and the
       score is the evidence for everything else.
-- [ ] 10.3 **Tier 2** — does not apply. No endpoint, no screen, nothing observable to a player.
-      Stated rather than skipped (PROC-5).
+- [x] 10.3 **Tier 2** — does not apply. No endpoint, no screen, nothing observable to a player.
+      Stated rather than skipped (PROC-5). The nearest thing to exercising the real article is the
+      external anchoring, which is stronger than a device run would be: Vigna's C compiled and run,
+      Glickman's published example reproduced, and a generated item checked against an item that is
+      actually shipping.

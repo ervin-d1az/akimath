@@ -27,13 +27,14 @@ app/                      the Flutter client — the only Dart package
   test/architecture/       import-graph and literal gates: pure predicates + one SourceTree adapter
 packages/server/          @akimath/server — pure `routing.ts`, IO in `adapters/`
 packages/contract/        @akimath/contract — the offline pack format, pure; emitter in `adapters/`
+packages/core/            @akimath/core — the rederivation machine. ZERO runtime dependencies,
+                          no ambient IO; the one adapter writes the golden artifacts
 contract/                 the frozen artifacts: 3 schemas, 37 fixtures, canon.golden.json
 docs/adr/                 ADR 0001 decides the Dart API client; older decisions live in ARCHITECTURE.md
 ```
 
 Planned, **not yet on disk** (README's layout block describes the destination, not the
-present): `contract/openapi.json`, `packages/core` (`@aki/core`, zero dependencies),
-`app/lib/api/`. `packages/contract` now exists and holds the offline pack format; its
+present): `contract/openapi.json` and `app/lib/api/`. `packages/contract` now exists and holds the offline pack format; its
 OpenAPI half arrives with `f1-contract-emitter`.
 
 ## What exists today
@@ -134,6 +135,12 @@ npm run retention     # delete expired rows; needs RETENTION_DATABASE_URL
 #   createdb akimath_dev
 #   export TEST_DATABASE_URL=postgresql://localhost/akimath_dev
 
+# TypeScript — from packages/core/
+npm run verify        # tsc --noEmit && vitest run
+npm run mutation      # Stryker over src/, excluding adapters/ and index.ts
+npm run dry           # jscpd duplication (src/templates/** is excused — see its README)
+npm run emit          # rewrite golden/; the tree must not move afterwards
+
 # TypeScript — from packages/contract/
 npm run verify        # tsc --noEmit && vitest run
 npm run mutation      # Stryker over src/, excluding adapters/
@@ -141,7 +148,7 @@ npm run dry           # jscpd duplication
 npm run emit          # rewrite contract/; the tree must not move afterwards
 ```
 
-`flutter analyze --fatal-infos` + `flutter test` + `npm run verify` **in both TypeScript
+`flutter analyze --fatal-infos` + `flutter test` + `npm run verify` **in all three TypeScript
 packages** are the everyday gate, and
 they are the *enforced* gate: `.claude/hooks/verify-gate.sh` runs them on every `git commit`
 and `git push` and exits 2 (blocking) on a failure, and `.github/workflows/ci.yml` runs the
