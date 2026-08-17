@@ -416,7 +416,30 @@ For our own tracking. Counsel does not need this section.
 
 ## 7 · Status
 
+**Deferred, deliberately — Ervin, 2026-08-16.** The app is for personal use for now. It is not
+distributed, not in a store, and collects nothing from anyone: the first playable build has no
+account, no network and no database at all (decision #2). Nothing in §2.1 exists as a running system,
+so there is no processing to be compliant about.
+
+That makes this cheap to defer rather than a risk being carried. It also defers more than this gate:
+`f1-schema-freeze` and every F3 change sit behind the same fact, and none of them is on the path to a
+build you can play.
+
+**What reopens it — any one of these, and this document is the first thing to pick up:**
+
+- The app reaches **any child who is not in this household** — a niece, a nephew, a friend's kid, a
+  classroom. That is the real line, and it is crossed by handing someone a phone, not by publishing.
+- A **TestFlight or Play internal-test build** goes to anyone outside the household.
+- **Any store submission**, even unlisted.
+- **The server exists and holds a real person's row** — the moment `f1-schema-freeze` runs against a
+  database that is not throwaway.
+
+Until then the plan's recorded defaults stand as defaults and are labelled as such wherever they
+appear, which is what §5's disclaimer was written to make possible. Nothing needs unpicking later —
+the threshold is one named constant, the bands are one enumerated type.
+
 - [x] Brief written — 2026-08-16
+- [x] Deferred — 2026-08-16, personal use, tripwires above
 - [ ] Counsel engaged
 - [ ] Consult held
 - [ ] Answers recorded below
