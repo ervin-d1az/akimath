@@ -100,6 +100,32 @@ class FontMetrics {
   double get descentRatio => descent / unitsPerEm;
 }
 
+/// The metrics of every face an expression can use.
+///
+/// A token is laid out in the face it is *painted* in. That is not a detail:
+/// D7 sets `=` in Plus Jakarta and everything else in Darumadrop, the two
+/// x-heights are 536 and 435 over an em, and the axis sits half an x-height
+/// above the baseline — so measuring every token with one face puts `=` about
+/// 0.05 em off the axis its neighbours sit on, which is a visible ~3.8 px at
+/// 76 px.
+class MathMetrics {
+  const MathMetrics({required this.display, required this.textHeavy});
+
+  /// The two faces this brand ships.
+  static const MathMetrics brand = MathMetrics(
+    display: FontMetrics.darumadrop,
+    textHeavy: FontMetrics.plusJakarta,
+  );
+
+  final FontMetrics display;
+  final FontMetrics textHeavy;
+
+  FontMetrics forFace(MathFace face) => switch (face) {
+        MathFace.display => display,
+        MathFace.textHeavy => textHeavy,
+      };
+}
+
 /// A laid-out node in its own coordinate space, origin at its top-left.
 class MathBox {
   const MathBox({
@@ -176,13 +202,16 @@ sealed class MathNode {
   /// [measure] for horizontal extent.
   static MathBox layout(
     MathNode node, {
-    required FontMetrics metrics,
+    required MathMetrics metrics,
     required double size,
     required GlyphMeasure measure,
   }) {
     return switch (node) {
-      NumeralNode() => _leaf(node.digits, metrics, size, measure),
-      OperatorNode() => _leaf(node.glyph, metrics, size, measure),
+      // A numeral is always the display face; an operator carries its own.
+      NumeralNode() =>
+        _leaf(node.digits, metrics.display, size, measure),
+      OperatorNode() =>
+        _leaf(node.glyph, metrics.forFace(node.face), size, measure),
       FractionNode() => _fraction(node, metrics, size, measure),
       RowNode() => _row(node, metrics, size, measure),
     };
@@ -215,7 +244,7 @@ sealed class MathNode {
 
   static MathBox _fraction(
     FractionNode node,
-    FontMetrics metrics,
+    MathMetrics metrics,
     double size,
     GlyphMeasure measure,
   ) {
@@ -238,7 +267,8 @@ sealed class MathNode {
     );
 
     final FractionMetrics rule = FractionMetrics.forSize(size);
-    final double gap = metrics.xHeightRatio * size * _ruleGapInXHeights;
+    final double gap =
+        metrics.display.xHeightRatio * size * _ruleGapInXHeights;
     final double width = <double>[
       numerator.width,
       denominator.width,
@@ -291,7 +321,7 @@ sealed class MathNode {
 
   static MathBox _row(
     RowNode node,
-    FontMetrics metrics,
+    MathMetrics metrics,
     double size,
     GlyphMeasure measure,
   ) {

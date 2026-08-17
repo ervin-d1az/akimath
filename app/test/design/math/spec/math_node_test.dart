@@ -18,7 +18,7 @@ void main() {
           numerator: const NumeralNode('1'),
           denominator: const NumeralNode('2'),
         ),
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 76,
         measure: measureFlat,
       );
@@ -43,7 +43,7 @@ void main() {
           ),
           denominator: const NumeralNode('3'),
         ),
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 76,
         measure: measureFlat,
       );
@@ -64,7 +64,7 @@ void main() {
           numerator: const NumeralNode('1'),
           denominator: const NumeralNode('3'),
         ),
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 76,
         measure: measureFlat,
       );
@@ -81,7 +81,7 @@ void main() {
           numerator: const NumeralNode('1'),
           denominator: const NumeralNode('2'),
         ),
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 76,
         measure: measureFlat,
       );
@@ -107,13 +107,13 @@ void main() {
       // as the statement of intent a reader of this file meets first.
       final MathBox once = MathNode.layout(
         const NumeralNode('7'),
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 46,
         measure: measureFlat,
       );
       final MathBox twice = MathNode.layout(
         const NumeralNode('7'),
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 46,
         measure: measureFlat,
       );
@@ -128,13 +128,16 @@ void main() {
     test('two faces produce two different axes at the same size', () {
       final MathBox daruma = MathNode.layout(
         const NumeralNode('7'),
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 76,
         measure: measureFlat,
       );
       final MathBox jakarta = MathNode.layout(
         const NumeralNode('7'),
-        metrics: FontMetrics.plusJakarta,
+        metrics: const MathMetrics(
+          display: FontMetrics.plusJakarta,
+          textHeavy: FontMetrics.plusJakarta,
+        ),
         size: 76,
         measure: measureFlat,
       );
@@ -152,6 +155,61 @@ void main() {
       expect(FontMetrics.darumadrop.capHeightRatio, closeTo(0.590, 0.0001));
       expect(FontMetrics.plusJakarta.xHeightRatio, closeTo(0.536, 0.0001));
       expect(FontMetrics.plusJakarta.capHeightRatio, closeTo(0.745, 0.0001));
+    });
+  });
+
+  group('a token is laid out in the face it is painted in', () {
+    test('a textHeavy operator uses Plus Jakarta metrics, not Darumadrop', () {
+      // D7 sets `=` in Plus Jakarta 800 and everything else in Darumadrop. The
+      // two faces have different x-heights (536 against 435), and the axis is
+      // half an x-height above the baseline — so laying every token out with
+      // one metrics set puts `=` about 0.05em off the axis the fractions sit
+      // on. At 76px that is ~3.8px of visible misalignment on the solve screen.
+      final MathBox equals = MathNode.layout(
+        OperatorNode.of('='),
+        metrics: MathMetrics.brand,
+        size: 76,
+        measure: measureFlat,
+      );
+
+      final double jakartaAxis = FontMetrics.plusJakarta.ascentRatio * 76 -
+          FontMetrics.plusJakarta.xHeightRatio * 76 / 2;
+
+      expect(equals.axis, closeTo(jakartaAxis, 0.001));
+    });
+
+    test('a display operator still uses Darumadrop metrics', () {
+      final MathBox plus = MathNode.layout(
+        OperatorNode.of('+'),
+        metrics: MathMetrics.brand,
+        size: 76,
+        measure: measureFlat,
+      );
+
+      final double darumaAxis = FontMetrics.darumadrop.ascentRatio * 76 -
+          FontMetrics.darumadrop.xHeightRatio * 76 / 2;
+
+      expect(plus.axis, closeTo(darumaAxis, 0.001));
+    });
+
+    test('the equals sign lands on the row axis with the fractions', () {
+      final MathBox row = MathNode.layout(
+        RowNode(<MathNode>[
+          FractionNode(
+            numerator: const NumeralNode('3'),
+            denominator: const NumeralNode('4'),
+          ),
+          OperatorNode.of('='),
+          const NumeralNode('1'),
+        ]),
+        metrics: MathMetrics.brand,
+        size: 76,
+        measure: measureFlat,
+      );
+
+      for (final PlacedBox child in row.children) {
+        expect(child.dy + child.box.axis, closeTo(row.axis, 0.001));
+      }
     });
   });
 
@@ -200,7 +258,7 @@ void main() {
       // A laid-out fraction always yields a rule and exactly two children.
       final MathBox box = MathNode.layout(
         fraction,
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 76,
         measure: measureFlat,
       );
@@ -231,7 +289,7 @@ void main() {
             denominator: const NumeralNode('5'),
           ),
         ]),
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 76,
         measure: measureFlat,
       );
@@ -252,7 +310,7 @@ void main() {
           OperatorNode.of('+'),
           const NumeralNode('4'),
         ]),
-        metrics: FontMetrics.darumadrop,
+        metrics: MathMetrics.brand,
         size: 76,
         measure: measureFlat,
       );
