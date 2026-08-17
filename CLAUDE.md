@@ -70,10 +70,20 @@ OpenAPI half arrives with `f1-contract-emitter`.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **622 Flutter tests, green.**
-  Content is a **bundled 20-item JSON pack** (`app/assets/packs/starter.json`) read by
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **805 Flutter tests, green.**
+  **All six frozen stimulus families draw and grade** — arithmetic, number series, matrix,
+  analogy, the function machine and figurate. `content/model/stimulus_reader.dart` holds the six
+  hand-written parsers and `test/content/model/stimulus_fixture_test.dart` checks each against
+  `contract/fixtures/stimulus/`, one golden and one rejection row per kind, reporting
+  *6 frozen kinds → 6 readable, 0 pending*. That is R2's remedy moved from grading to layout, and
+  it is what makes adding a family mechanical. Four of them share `StimulusTile`; figurate paints
+  dots from `design/math/spec/figurate_layout.dart`, the one file excluded from
+  `no_geometry_literal_test` and excluded by name rather than by directory.
+  Content is a **bundled 70-item JSON pack** (`app/assets/packs/starter.json`) read by
   `content/pack_reader.dart` — the one adapter in `content/`. An expired or malformed pack is
-  refused where it is read. **Grading answers to the frozen contract**: `content/model/canon.dart` is
+  refused where it is read. **Its order is a product decision under test**: `seriesPlan` takes five
+  items in pack order, so `pack_variety_test.dart` holds the pack to showing all six families
+  inside the first ten items and no more than two of a kind in any series. **Grading answers to the frozen contract**: `content/model/canon.dart` is
   checked against `contract/fixtures/canon.golden.json` itself, 19 vectors in both modes, which is
   what stops the Dart and TypeScript canonicalisers drifting (R2).
 - **A scaffold, plus the frozen schema.** `packages/server` routes one endpoint, `GET /health`,
@@ -231,7 +241,7 @@ is now a red build rather than a precedent: `app/test/architecture/pure_boundary
 walks the import graph transitively — through `export` and `part`, so the tokens barrel cannot
 smuggle `package:flutter/painting.dart` into a pure root — and reports a per-root file count so
 a mistyped root cannot make it vacuously green. Today that bites over `design/**/spec/` and its
-12 files, `features/*/policy/` and its 7, and `content/model/` and its 3 — all three roots are on
+14 files, `features/*/policy/` and its 8, and `content/model/` and its 4 — all three roots are on
 disk now, and the last two flipped from absent to covered when the round landed. **Import the token
 you need, not the barrel:** `tokens.dart` re-exports `brand_typography.dart`, which imports
 `package:flutter/painting.dart`, so a pure module reaching for the barrel fails the gate. The root is a **glob, not a list**, so
