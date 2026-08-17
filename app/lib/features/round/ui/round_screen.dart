@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../content/model/demo_pack.dart';
 import '../../../content/model/item.dart';
 import '../../../design/math/math_view.dart';
 import '../../../design/math/spec/math_node.dart';
@@ -21,8 +20,12 @@ import '../policy/grading.dart';
 /// become is `AnswerDraft`, and whether an answer is right is `grade`. This
 /// widget holds the current index and the current draft and nothing else, which
 /// is what keeps both of those testable without pumping a screen.
+///
+/// It takes its items rather than fetching them. `RoundRoute` is the adapter
+/// that reads the bundled pack, so nothing here touches an `AssetBundle` — and
+/// a test plays a round by handing over a one-item list.
 class RoundScreen extends StatefulWidget {
-  const RoundScreen({super.key, this.items = demoPack});
+  const RoundScreen({super.key, required this.items});
 
   final List<Item> items;
 

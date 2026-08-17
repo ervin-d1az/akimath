@@ -72,6 +72,9 @@ flutter:
   #
   # Both families are licensed under the SIL Open Font License; the license
   # texts sit next to the files in assets/fonts/.
+  assets:
+    - assets/packs/
+
   fonts:
     - family: Darumadrop One
       fonts:

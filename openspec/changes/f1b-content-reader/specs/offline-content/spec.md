@@ -50,3 +50,35 @@ The system SHALL fail the build when any bundled item's expected answer is not c
 - **WHEN** the shipped pack is checked
 - **THEN** every expected answer passes stored-mode canonicalisation
   → `app/test/content/model/demo_pack_test.dart`
+
+### Requirement: req-offline-pack-play · The app plays from a bundled pack, with no network
+
+The system SHALL load its items from a pack compiled into the app, and SHALL make no network request
+to do so.
+
+#### Scenario: A pack is read from the bundle
+- **WHEN** the reader is given a pack via a fake `AssetBundle`
+- **THEN** it yields the declared item count with each item's prompt payload, answer and
+  `ladder_step`
+  → `app/test/content/pack_reader_test.dart`
+
+#### Scenario: Difficulty comes from the pack, never from the client
+- **WHEN** an item is read
+- **THEN** its difficulty is the pack's `ladder_step` and no rating is computed in Dart
+  → `app/test/content/model/pack_test.dart`
+
+#### Scenario: An expired pack is refused
+- **WHEN** a pack whose expiry has passed is read with an injected `now`
+- **THEN** it reports expired rather than serving its items, and the round is not shown
+  → `app/test/content/model/pack_test.dart`, `app/test/features/round/ui/round_route_test.dart`
+
+#### Scenario: A malformed pack fails where it is read
+- **WHEN** a pack has no items, an unknown prompt token kind, or an answer that is not
+  storage-canonical
+- **THEN** parsing throws rather than returning a partial pack
+  → `app/test/content/model/pack_test.dart`
+
+#### Scenario: The pack that ships is valid
+- **WHEN** the bundled pack is loaded through the real bundle
+- **THEN** it parses, is unexpired, and every item has a unique id
+  → `app/test/content/pack_reader_test.dart`

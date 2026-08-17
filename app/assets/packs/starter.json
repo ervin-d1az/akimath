@@ -1,0 +1,486 @@
+{
+  "pack_version": 1,
+  "pack_id": "starter",
+  "issued_at": "2026-08-16T00:00:00Z",
+  "expires_at": "2027-08-16T00:00:00Z",
+  "items": [
+    {
+      "id": "add-1",
+      "ladder_step": 1,
+      "answer": "13",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "7"
+        },
+        {
+          "kind": "operator",
+          "glyph": "+"
+        },
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "add-2",
+      "ladder_step": 2,
+      "answer": "42",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "28"
+        },
+        {
+          "kind": "operator",
+          "glyph": "+"
+        },
+        {
+          "kind": "text",
+          "value": "14"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "sub-1",
+      "ladder_step": 1,
+      "answer": "6",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "15"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "9"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "sub-2",
+      "ladder_step": 3,
+      "answer": "-7",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "15"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "mul-1",
+      "ladder_step": 2,
+      "answer": "42",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "×"
+        },
+        {
+          "kind": "text",
+          "value": "7"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "mul-2",
+      "ladder_step": 2,
+      "answer": "42",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "14"
+        },
+        {
+          "kind": "operator",
+          "glyph": "×"
+        },
+        {
+          "kind": "text",
+          "value": "3"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "mul-3",
+      "ladder_step": 3,
+      "answer": "144",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "12"
+        },
+        {
+          "kind": "operator",
+          "glyph": "×"
+        },
+        {
+          "kind": "text",
+          "value": "12"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "div-1",
+      "ladder_step": 2,
+      "answer": "24",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "96"
+        },
+        {
+          "kind": "operator",
+          "glyph": "÷"
+        },
+        {
+          "kind": "text",
+          "value": "4"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "div-2",
+      "ladder_step": 3,
+      "answer": "12",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "144"
+        },
+        {
+          "kind": "operator",
+          "glyph": "÷"
+        },
+        {
+          "kind": "text",
+          "value": "12"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "div-3",
+      "ladder_step": 2,
+      "answer": "9",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "81"
+        },
+        {
+          "kind": "operator",
+          "glyph": "÷"
+        },
+        {
+          "kind": "text",
+          "value": "9"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "fr-1",
+      "ladder_step": 3,
+      "answer": "5/4",
+      "prompt": [
+        {
+          "kind": "fraction",
+          "numerator": "3",
+          "denominator": "4"
+        },
+        {
+          "kind": "operator",
+          "glyph": "+"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "2",
+          "denominator": "4"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "fr-2",
+      "ladder_step": 3,
+      "answer": "4/5",
+      "prompt": [
+        {
+          "kind": "fraction",
+          "numerator": "1",
+          "denominator": "5"
+        },
+        {
+          "kind": "operator",
+          "glyph": "+"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "3",
+          "denominator": "5"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "fr-3",
+      "ladder_step": 3,
+      "answer": "4/8",
+      "prompt": [
+        {
+          "kind": "fraction",
+          "numerator": "5",
+          "denominator": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "1",
+          "denominator": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "fr-4",
+      "ladder_step": 3,
+      "answer": "5/9",
+      "prompt": [
+        {
+          "kind": "fraction",
+          "numerator": "7",
+          "denominator": "9"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "2",
+          "denominator": "9"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "fr-5",
+      "ladder_step": 4,
+      "answer": "5/6",
+      "prompt": [
+        {
+          "kind": "fraction",
+          "numerator": "1",
+          "denominator": "2"
+        },
+        {
+          "kind": "operator",
+          "glyph": "+"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "1",
+          "denominator": "3"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "fr-6",
+      "ladder_step": 5,
+      "answer": "11/12",
+      "prompt": [
+        {
+          "kind": "fraction",
+          "numerator": "2",
+          "denominator": "3"
+        },
+        {
+          "kind": "operator",
+          "glyph": "+"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "1",
+          "denominator": "4"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "fr-7",
+      "ladder_step": 5,
+      "answer": "7/12",
+      "prompt": [
+        {
+          "kind": "fraction",
+          "numerator": "3",
+          "denominator": "4"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "1",
+          "denominator": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "fr-8",
+      "ladder_step": 4,
+      "answer": "9/10",
+      "prompt": [
+        {
+          "kind": "fraction",
+          "numerator": "1",
+          "denominator": "2"
+        },
+        {
+          "kind": "operator",
+          "glyph": "+"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "2",
+          "denominator": "5"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "mix-1",
+      "ladder_step": 4,
+      "answer": "6/4",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "2"
+        },
+        {
+          "kind": "operator",
+          "glyph": "×"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "3",
+          "denominator": "4"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    },
+    {
+      "id": "mix-2",
+      "ladder_step": 4,
+      "answer": "6/5",
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "3"
+        },
+        {
+          "kind": "operator",
+          "glyph": "×"
+        },
+        {
+          "kind": "fraction",
+          "numerator": "2",
+          "denominator": "5"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ]
+    }
+  ]
+}

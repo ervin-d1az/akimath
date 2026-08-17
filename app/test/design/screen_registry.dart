@@ -1,5 +1,6 @@
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
+import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:flutter/widgets.dart';
 
@@ -59,6 +60,25 @@ final class RegisteredScreen {
 /// `screen_overflow_test.dart`, so a new screen is registered once and inherits
 /// both. Two hand-maintained lists of the same ~50 screens would rot at
 /// different rates (design D-5).
+/// A fixed item for the gates to pump.
+///
+/// The screen takes its items rather than loading them, so the registry supplies
+/// one — which also keeps the design gates independent of whatever the shipped
+/// pack happens to contain today.
+const List<Item> registryRoundItems = <Item>[
+  Item(
+    id: 'registry',
+    prompt: <PromptToken>[
+      PromptToken.fraction(numerator: '3', denominator: '4'),
+      PromptToken.operator('+'),
+      PromptToken.fraction(numerator: '2', denominator: '4'),
+      PromptToken.operator('='),
+    ],
+    expected: '5/4',
+    ladderStep: 3,
+  ),
+];
+
 final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'character sheet',
@@ -74,6 +94,6 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   ),
   RegisteredScreen(
     label: 'round',
-    build: () => const RoundScreen(),
+    build: () => const RoundScreen(items: registryRoundItems),
   ),
 ];

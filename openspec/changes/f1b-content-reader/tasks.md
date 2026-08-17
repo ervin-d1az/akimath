@@ -33,11 +33,37 @@
 - [x] 3.2 **Tier 1b** — the fixture defect in 2.1 *is* the falsification: the new rule was run
       against existing content and found a real defect the old one hid. Stronger than a mutation,
       because nobody planted it.
-- [ ] 3.3 **Tier 2** — the corrected item renders and grades on the simulator. Deferred to the next
-      device pass; the round already ran green and this changes one fixture value.
+- [x] 3.3 **Tier 2** — done. `evidence/pack-playing.png`: the app opens the **bundled 20-item pack**
+      on the iPhone 17 and shows its first item, `7 + 6 =` at Nivel 1.
 
-## 4 · What this change does not close
+## 4 · The asset reader — added 2026-08-16
 
-- The **asset reader** — a bundled JSON pack, its manifest and its expiry.
-- The **HMAC membership verifier**. The frozen pack carries a digest rather than a plaintext answer
-  (`ARCHITECTURE.md` §4); the fixture holds plaintext and says so.
+- [x] 4.1 `content/model/pack.dart`, test-first: the declared item count and payload, `ladder_step`
+      from the pack, expiry against an **injected** `now`, and four malformed-pack refusals.
+      **Done.** Seen failing first. Expiry is asserted by handing it two dates and requiring the
+      answers to differ — a module reaching for `DateTime.now()` returns the same answer for both.
+- [x] 4.2 `content/pack_reader.dart` — the one adapter. It touches an `AssetBundle` and decodes a
+      string; every decision about what a pack *is* stays in `Pack.fromJson`.
+      **Done.** `req-offline-pack-play` is satisfied **by construction**: an `AssetBundle` serves
+      what was compiled in, so there is no network request to make.
+- [x] 4.3 `assets/packs/starter.json` — **20 real items**, whole-number arithmetic through unlike
+      denominators, ladder steps 1–5.
+      **Done.** A test loads it through the *real* bundle and checks every item, so a typo in the
+      committed pack is a red build rather than a file nothing reads.
+- [x] 4.4 `RoundRoute` — loads the pack, refuses an expired one, shows a message on a broken one.
+      **Done.** The IO is here so the screen has none; the expiry *decision* is still the pure
+      `isExpiredAt`. No spinner — `4.11` is annotated *esqueletos, sin ruedita* and `LoadingDots` is
+      not to be repurposed, which a test asserts.
+- [x] 4.5 Delete `demo_pack.dart` and make `RoundScreen.items` required.
+      **Done.** Two fixtures for one job is one too many: the pack is the content now, and the
+      screen takes items rather than defaulting to a second hard-coded list.
+
+## 5 · What this change still does not close
+
+- The **HMAC membership verifier**. `contract/pack.schema.json` carries a `digest`, not a plaintext
+  answer (`ARCHITECTURE.md` §4). `assets/packs/starter.json` is the app's **offline fixture format**
+  and says so in `pack.dart`'s own doc comment — plaintext is safe here precisely because nothing
+  ships: the pack is authored, bundled and played on one device. Reading the frozen format needs
+  HMAC-SHA256, which needs a dependency (`package:crypto`), which needs a DEP-1 decision this change
+  does **not** take on its own.
+- **The pack builder.** `f1-5-pack-builder` generates packs; these 20 items are hand-written.

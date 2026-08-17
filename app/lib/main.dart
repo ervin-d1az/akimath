@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'design/theme.dart';
-import 'features/round/ui/round_screen.dart';
+import 'features/round/ui/round_route.dart';
 
 void main() {
   runApp(const AkiMathApp());
@@ -12,6 +12,10 @@ void main() {
 /// The home is the round: the app can now be played. It replaces the character
 /// sheet, which was the home only because the brand layer was the only thing
 /// built. Real navigation arrives with `f2-app-shell`.
+///
+/// `RoundRoute` rather than `RoundScreen`: the route loads the bundled pack and
+/// the screen plays it, so the screen holds no IO and stays testable by handing
+/// it a list of items.
 class AkiMathApp extends StatelessWidget {
   const AkiMathApp({super.key});
 
@@ -21,7 +25,7 @@ class AkiMathApp extends StatelessWidget {
       title: 'AkiMath',
       debugShowCheckedModeBanner: false,
       theme: AkiMathTheme.build(),
-      home: const RoundScreen(),
+      home: const RoundRoute(),
     );
   }
 }
