@@ -8,8 +8,8 @@ hyphen in one feature and not another.
 
 ### Requirement: req-keypad-layout-pure · A layout is data, not a widget
 
-The system SHALL declare the three layouts as pure constants — key ids, faces and per-key fills —
-in a module that touches no `Canvas` and no widget.
+The system SHALL declare the three layouts as pure constants — key ids, faces, and the text each key
+emits — in a module that touches no `Canvas` and no widget.
 
 #### Scenario: The three layouts are the three the design draws
 - **WHEN** `KeypadLayout.item`, `.puzzle` and `.otp` are enumerated

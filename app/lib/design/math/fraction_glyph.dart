@@ -12,9 +12,7 @@ import 'spec/math_node.dart';
 ///
 /// Only the `plain` variant exists. The **struck** variant (`04 Error`'s
 /// −16° bar) and the **editable slot** (dashed pink, r12) belong to the changes
-/// that consume them, and the dashed one cannot be built at all until
-/// `f0-dashed-border` lands — a solid stand-in shipped now is a widget that
-/// gets rewritten rather than extended.
+/// that consume them.
 class FractionGlyph extends StatelessWidget {
   const FractionGlyph({
     super.key,

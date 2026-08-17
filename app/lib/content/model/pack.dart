@@ -12,6 +12,7 @@
 /// bundled and played entirely on one device.
 library;
 
+import '../../design/math/spec/math_node.dart';
 import 'canon.dart';
 import 'item.dart';
 
@@ -96,7 +97,7 @@ class Pack {
     }
     return switch (raw['kind']) {
       'text' => PromptToken.text(_requireString(raw, 'value')),
-      'operator' => PromptToken.operator(_requireString(raw, 'glyph')),
+      'operator' => _operator(_requireString(raw, 'glyph')),
       'fraction' => PromptToken.fraction(
           numerator: _requireString(raw, 'numerator'),
           denominator: _requireString(raw, 'denominator'),
@@ -106,6 +107,22 @@ class Pack {
       final Object? kind =>
         throw FormatException('unknown prompt token kind "$kind"'),
     };
+  }
+
+  /// An operator token, refused at parse if the compositor cannot draw it.
+  ///
+  /// `OperatorNode.of` throws on a solidus — an inline fraction is not something
+  /// it declines to draw, it is something it cannot express. Without this the
+  /// throw happened in `build`, mid-round, when that item's turn came: past the
+  /// point where "content is validated where it is read" is true, and presented
+  /// to a child as a red screen.
+  static PromptToken _operator(String glyph) {
+    try {
+      OperatorNode.of(glyph);
+    } on ArgumentError catch (error) {
+      throw FormatException('unusable operator "$glyph": ${error.message}');
+    }
+    return PromptToken.operator(glyph);
   }
 
   static String _requireString(Map<String, dynamic> json, String key) {

@@ -23,11 +23,18 @@ import 'dart:ui' show Rect;
 
 import 'fraction_metrics.dart';
 
-/// Measures the advance width of [text] painted at [size].
+/// Measures the advance width of [text] painted at [size] in [face].
 ///
 /// Supplied by the adapter, which has a `TextPainter`. Injected rather than
 /// called, so this module stays a function of its inputs.
-typedef GlyphMeasure = double Function(String text, double size);
+///
+/// **[face] is a parameter because the two families are not the same width.**
+/// Measured from the bundled TTFs, `=` advances 334/1000 em in Darumadrop and
+/// 606/1000 in Plus Jakarta — nearly double. A measure that ignored the face
+/// allotted every `=` a Darumadrop box and painted a Plus Jakarta glyph into it,
+/// so 43 % of the mark fell outside and `Stack`'s default `Clip.hardEdge` cut it
+/// off silently. Every prompt in the pack ends in `=`, so it was every prompt.
+typedef GlyphMeasure = double Function(String text, double size, MathFace face);
 
 /// Which face a token is set in.
 ///
@@ -45,11 +52,15 @@ enum MathFace {
 /// How emphatic a token is.
 ///
 /// **A role, never a colour.** The adapter resolves it against `BrandColors`.
-/// The value set is the two the type scale already distinguishes for text; the
-/// corpus names the `tone:` parameter without enumerating it, so this is the
-/// minimum that is grounded rather than invented, and it widens when a design
-/// digest asks it to.
-enum MathTone { ink, muted }
+///
+/// **One value, because one value is all the corpus grounds.** The `tone:`
+/// parameter is named in the component inventory and its values are enumerated
+/// nowhere. A second member was inferred from the type scale and had no
+/// producer anywhere in `lib/` — while a test pinned the value set, so the
+/// enum read as covered while the adapter arm behind it was unreachable. That
+/// is coverage the suite did not have. The set widens when a digest asks, and
+/// the parameter stays so the widening costs one line.
+enum MathTone { ink }
 
 /// Metrics of one face, in font units over an em.
 ///
@@ -292,7 +303,7 @@ sealed class MathNode {
     final double height =
         (metrics.ascentRatio + metrics.descentRatio) * size;
     return MathBox(
-      width: measure(leaf.text, size),
+      width: measure(leaf.text, size, leaf.face),
       height: height,
       axis: baseline - metrics.xHeightRatio * size / 2,
       baseline: baseline,

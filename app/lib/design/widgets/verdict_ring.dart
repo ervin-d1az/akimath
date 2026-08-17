@@ -13,7 +13,14 @@ import 'spec/verdict.dart';
 /// but never as the only channel. Strip the colour and the two rings still
 /// differ, which is the property `verdict_test.dart` asserts.
 class VerdictRing extends StatelessWidget {
-  const VerdictRing(this.verdict, {super.key, this.size = 44, this.color});
+  const VerdictRing(this.verdict, {super.key, this.size = defaultSize, this.color});
+
+  /// Twice the 22px circle the corpus draws on the progress strip.
+  ///
+  /// The strip's dot is an indicator glanced at in a row of eight; this is the
+  /// single verdict a player looks straight at after answering. Same component,
+  /// deliberately larger — the strip passes 22 when it lands.
+  static const double defaultSize = 44;
 
   final Verdict verdict;
   final double size;

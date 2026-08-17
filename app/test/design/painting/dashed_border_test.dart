@@ -1,4 +1,5 @@
 import 'package:akimath_app/design/painting/dashed_border_painter.dart';
+import 'package:akimath_app/design/painting/spec/cage_outline.dart';
 import 'package:akimath_app/design/painting/spec/dash_spec.dart';
 import 'package:akimath_app/design/tokens/tokens.dart';
 import 'package:akimath_app/design/widgets/candy_surface.dart';

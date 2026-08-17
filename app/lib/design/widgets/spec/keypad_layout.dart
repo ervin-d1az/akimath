@@ -10,6 +10,8 @@
 /// imports a widget or touches a `Canvas`.
 library;
 
+import '../../icons/spec/brand_glyph.dart';
+
 /// What a key shows.
 ///
 /// A sealed type rather than `String? label` plus `IconData? icon`, which would
@@ -30,9 +32,15 @@ final class TextFace extends KeyFace {
 final class IconFace extends KeyFace {
   const IconFace(this.glyph);
 
-  /// The `BrandGlyph` name, as a string — this module holds no widget import,
-  /// and the adapter resolves it.
-  final String glyph;
+  /// The glyph itself, typed.
+  ///
+  /// It was a `String`, on the stated grounds that "this module holds no widget
+  /// import". A review disproved that in one line: `design/icons/spec/brand_glyph.dart`
+  /// imports **nothing**, and `design/widgets/spec/verdict.dart` — a sibling pure
+  /// module — already holds a `BrandGlyph` field. So the type costs no purity and
+  /// the string bought nothing but a `firstWhere` in the adapter and a typo that
+  /// only a pumped test would catch.
+  final BrandGlyph glyph;
 }
 
 /// A stacked fraction, for the `a/b` key.
@@ -114,8 +122,8 @@ class KeypadLayout {
       ),
       KeypadKey(id: 'decimal', face: TextFace(_decimal), emits: _decimal),
       KeypadKey(id: '0', face: TextFace('0'), emits: '0'),
-      KeypadKey(id: 'backspace', face: IconFace('backspace')),
-      KeypadKey(id: 'submit', face: IconFace('submit')),
+      KeypadKey(id: 'backspace', face: IconFace(BrandGlyph.backspace)),
+      KeypadKey(id: 'submit', face: IconFace(BrandGlyph.submit)),
     ],
   );
 
@@ -137,7 +145,7 @@ class KeypadLayout {
       KeypadKey(id: '7', face: TextFace('7'), emits: '7'),
       KeypadKey(id: '8', face: TextFace('8'), emits: '8'),
       KeypadKey(id: '9', face: TextFace('9'), emits: '9'),
-      KeypadKey(id: 'backspace', face: IconFace('backspace')),
+      KeypadKey(id: 'backspace', face: IconFace(BrandGlyph.backspace)),
     ],
   );
 
@@ -158,9 +166,9 @@ class KeypadLayout {
       KeypadKey(id: '7', face: TextFace('7'), emits: '7'),
       KeypadKey(id: '8', face: TextFace('8'), emits: '8'),
       KeypadKey(id: '9', face: TextFace('9'), emits: '9'),
-      KeypadKey(id: 'backspace', face: IconFace('backspace')),
+      KeypadKey(id: 'backspace', face: IconFace(BrandGlyph.backspace)),
       KeypadKey(id: '0', face: TextFace('0'), emits: '0'),
-      KeypadKey(id: 'enter', face: IconFace('submit')),
+      KeypadKey(id: 'enter', face: IconFace(BrandGlyph.submit)),
     ],
   );
 

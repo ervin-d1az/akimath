@@ -1,3 +1,4 @@
+import 'package:akimath_app/content/model/canon.dart';
 import 'package:akimath_app/features/round/policy/answer_draft.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,16 +39,53 @@ void main() {
       expect(draft.text, isNot(contains('-')));
     });
 
-    test('a decimal comma is stored as typed', () {
-      expect(AnswerDraft.empty.type('4').type(',').type('2').text, '4,2');
+    test('a fraction slash is accepted', () {
+      expect(AnswerDraft.empty.type('1').type('/').type('2').text, '1/2');
     });
   });
 
   group('what a draft refuses', () {
-    test('a second decimal separator is ignored', () {
-      final AnswerDraft draft =
-          AnswerDraft.empty.type('4').type(',').type('2').type(',');
-      expect(draft.text, '4,2');
+    test('a character the grader cannot read is ignored', () {
+      // The item pad ships `,` and `²` because the design draws them, and the
+      // frozen answer shape admits neither. Before this, one tap on either
+      // produced a draft `grade` could only score wrong — two keys of sixteen
+      // that punished a child for the app's own gap.
+      for (final String rejected in <String>[',', '²', 'x', '.', '+']) {
+        expect(
+          AnswerDraft.empty.type('4').type(rejected).text,
+          '4',
+          reason: '"$rejected" reached the draft',
+        );
+      }
+    });
+
+    test('a draft of only a rejected character cannot be submitted', () {
+      expect(AnswerDraft.empty.type(',').canSubmit, isFalse);
+      expect(AnswerDraft.empty.type(',').text, isEmpty);
+    });
+
+    test('the accepted set is exactly what a canonical answer can contain', () {
+      // Kept in agreement with the canonicaliser here rather than by memory.
+      // Every accepted character is exercised in a position where it is legal,
+      // and the result must canonicalise — an accepted character the grader
+      // cannot read is the defect this whole group exists for.
+      expect(
+        AnswerDraft.acceptedCharacters,
+        <String>{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '−', '/'},
+      );
+
+      for (final String digit in <String>['0', '5', '9']) {
+        expect(canonicalise(digit, mode: CanonMode.learner).ok, isTrue);
+      }
+      expect(canonicalise('−5', mode: CanonMode.learner).ok, isTrue);
+      expect(canonicalise('1/2', mode: CanonMode.learner).ok, isTrue);
+    });
+
+    test('the keys the pad offers but the grader cannot read are excluded', () {
+      // `,` and `²` are on KeypadLayout.item because the design draws them.
+      // Neither appears in a canonical answer, so neither may reach a draft.
+      expect(AnswerDraft.acceptedCharacters, isNot(contains(',')));
+      expect(AnswerDraft.acceptedCharacters, isNot(contains('²')));
     });
 
     test('a minus is only accepted in the leading position', () {

@@ -138,4 +138,53 @@ void main() {
       );
     });
   });
+
+  group('a pack cannot smuggle in a token the compositor refuses', () {
+    test('an operator the compositor cannot draw is refused at parse', () {
+      // OperatorNode.of throws on a solidus. Without validation here that throw
+      // happened in build, mid-round, when the item's turn came — past the
+      // point where "content is validated where it is read" is true, and shown
+      // to a child as a red screen.
+      expect(
+        () => Pack.fromJson(
+          _packJson(
+            items: <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'bad',
+                'ladder_step': 1,
+                'answer': '1',
+                'prompt': <Map<String, dynamic>>[
+                  <String, dynamic>{'kind': 'operator', 'glyph': '/'},
+                ],
+              },
+            ],
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('the operators the pack actually uses all parse', () {
+      for (final String glyph in <String>['+', '−', '×', '÷', '=']) {
+        expect(
+          () => Pack.fromJson(
+            _packJson(
+              items: <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'ok',
+                  'ladder_step': 1,
+                  'answer': '1',
+                  'prompt': <Map<String, dynamic>>[
+                    <String, dynamic>{'kind': 'operator', 'glyph': glyph},
+                  ],
+                },
+              ],
+            ),
+          ),
+          returnsNormally,
+          reason: '"$glyph" was refused',
+        );
+      }
+    });
+  });
 }

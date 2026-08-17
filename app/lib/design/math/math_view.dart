@@ -46,19 +46,41 @@ class MathView extends StatelessWidget {
     );
   }
 
-  /// Advance width of [text] at [size], from the font itself.
+  /// Advance width of [text] at [size] **in the face it will be painted in**.
+  ///
+  /// Measuring every leaf in the display face was a real defect: `=` is set in
+  /// Plus Jakarta 800 by D7 and advances nearly twice as wide as in Darumadrop,
+  /// so it was allotted a box 43 % too narrow and clipped by the `Stack`.
   ///
   /// The scaler is already applied to [size] by the caller, so this must not
   /// apply it again — hence `TextScaler.noScaling` rather than the default.
-  static double _measure(String text, double size) {
+  static double _measure(String text, double size, MathFace face) {
     final TextPainter painter = TextPainter(
-      text: TextSpan(text: text, style: BrandText.numeral(size)),
+      text: TextSpan(text: text, style: _styleForFace(face, size)),
       textDirection: TextDirection.ltr,
       textScaler: TextScaler.noScaling,
     )..layout();
     final double width = painter.width;
     painter.dispose();
     return width;
+  }
+
+  /// The style a face is set in, without a colour.
+  ///
+  /// Shared by the measurement and the painting so the two cannot disagree —
+  /// which is exactly how the clipped `=` happened.
+  static TextStyle _styleForFace(MathFace face, double size) {
+    final FontMetrics metrics = MathMetrics.brand.forFace(face);
+    final TextStyle base = switch (face) {
+      MathFace.display => BrandText.numeral(size),
+      MathFace.textHeavy => BrandText.action(size: size).copyWith(
+          fontWeight: FontWeight.w800,
+          fontVariations: const <FontVariation>[FontVariation('wght', 800)],
+        ),
+    };
+    return base.copyWith(
+      height: metrics.ascentRatio + metrics.descentRatio,
+    );
   }
 
   /// Flattens the box tree into positioned children.
@@ -110,27 +132,13 @@ class MathView extends StatelessWidget {
   TextStyle _styleFor(MathLeaf leaf) {
     final Color color = switch (leaf.tone) {
       MathTone.ink => BrandColors.ink,
-      MathTone.muted => BrandColors.muted,
     };
-
-    final FontMetrics metrics = MathMetrics.brand.forFace(leaf.face);
 
     // The brand's text styles set `height: 1`, which is right for a headline
     // and wrong here: it collapses the line box to the font size, while the
-    // layout is built on the font's own ascent plus descent. Restoring the
-    // natural ratio puts the baseline exactly where the spec said it is —
-    // Darumadrop's ascent alone is 1.16 em, so the difference is 27 px at 76
-    // and the denominator ends up sitting on the rule.
-    final double naturalLine = metrics.ascentRatio + metrics.descentRatio;
-
-    final TextStyle base = switch (leaf.face) {
-      MathFace.display => BrandText.numeral(leaf.size),
-      MathFace.textHeavy => BrandText.action(size: leaf.size).copyWith(
-          fontWeight: FontWeight.w800,
-          fontVariations: const <FontVariation>[FontVariation('wght', 800)],
-        ),
-    };
-
-    return base.copyWith(color: color, height: naturalLine);
+    // layout is built on the font's own ascent plus descent. `_styleForFace`
+    // restores the natural ratio — Darumadrop's ascent alone is 1.16 em, so the
+    // difference is 27 px at 76 and the denominator ends up on the rule.
+    return _styleForFace(leaf.face, leaf.size).copyWith(color: color);
   }
 }

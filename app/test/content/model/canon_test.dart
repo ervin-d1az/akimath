@@ -89,4 +89,38 @@ void main() {
       expect(canonicalise('2/4', mode: CanonMode.learner).value, '2/4');
     });
   });
+
+  group('a zero magnitude drops its sign in BOTH shapes', () {
+    // Found by differential fuzzing against the real `packages/contract`
+    // implementation over 22,440 inputs, not by the golden fixture — whose 19
+    // vectors contain no `-0/n` case at all. The fixture approximates the
+    // cross-stack check; it does not replace it.
+    //
+    // The bug: the integer branch suppressed the sign on `-0` and the fraction
+    // branch re-applied it, so `-0/5` canonicalised to `-0/5` in Dart and `0/5`
+    // in TypeScript. In stored mode Dart *accepted* `-0/5` as canonical where
+    // the contract rejects it — so a pack authored with that answer loaded
+    // clean and told a child typing `0/5` they were wrong.
+    test('an integer zero drops its sign', () {
+      expect(canonicalise('-0', mode: CanonMode.learner).value, '0');
+    });
+
+    test('a fraction with a zero numerator drops its sign', () {
+      expect(canonicalise('-0/5', mode: CanonMode.learner).value, '0/5');
+      expect(canonicalise('-00/11', mode: CanonMode.learner).value, '0/11');
+      expect(canonicalise('−0/70', mode: CanonMode.learner).value, '0/70');
+    });
+
+    test('a signed zero fraction is not storage-canonical', () {
+      final CanonResult stored =
+          canonicalise('-0/5', mode: CanonMode.stored);
+      expect(stored.ok, isFalse);
+      expect(stored.tag, 'not_canonical');
+    });
+
+    test('a non-zero magnitude keeps its sign in both shapes', () {
+      expect(canonicalise('-7', mode: CanonMode.learner).value, '-7');
+      expect(canonicalise('-1/5', mode: CanonMode.learner).value, '-1/5');
+    });
+  });
 }

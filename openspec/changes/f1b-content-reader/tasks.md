@@ -57,6 +57,13 @@
 - [x] 4.5 Delete `demo_pack.dart` and make `RoundScreen.items` required.
       **Done.** Two fixtures for one job is one too many: the pack is the content now, and the
       screen takes items rather than defaulting to a second hard-coded list.
+- [x] 4.6 **Tier 1 for this section** — analyze clean, **376 Flutter tests** green (363 before §4).
+      Recorded separately because §3.1's figure covers only the canonicaliser; a section that adds
+      six files and thirteen tests and states no count of its own is a gap a reviewer had to find.
+- [x] 4.7 **Tier 1b for this section** — §3.2's fixture defect covers the canonicaliser, not the
+      reader. The reader's own falsification is `pack_test.dart`'s four refusal cases plus the
+      operator-glyph case added under review: each was written to fail against a parser that
+      returned a partial pack, and each does.
 
 ## 5 · What this change still does not close
 

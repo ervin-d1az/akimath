@@ -1,3 +1,4 @@
+import 'package:akimath_app/design/icons/spec/brand_glyph.dart';
 import 'package:akimath_app/design/widgets/spec/keypad_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -113,6 +114,12 @@ void main() {
       expect(faceOf(KeypadLayout.item, 'fraction'), isA<FractionFace>());
       expect(faceOf(KeypadLayout.item, '7'), isA<TextFace>());
       expect(faceOf(KeypadLayout.item, 'backspace'), isA<IconFace>());
+      // Typed, not a string: a typo is a compile error rather than a runtime
+      // firstWhere that only a pumped test reaches.
+      expect(
+        (faceOf(KeypadLayout.item, 'backspace') as IconFace).glyph,
+        BrandGlyph.backspace,
+      );
     });
 
     test('no key has a null face', () {

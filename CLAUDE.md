@@ -40,7 +40,7 @@ OpenAPI half arrives with `f1-contract-emitter`.
 - **Built and tested — and playable.** `main.dart` opens the round: an item renders, the keypad
   takes an answer, a verdict comes back. On top of the brand layer sit the math compositor
   (`design/math/`), the press primitives, the dashed outline, the verdict encoding, the keypad,
-  and `features/round/` with its two pure policies. **376 Flutter tests, green.**
+  and `features/round/` with its two pure policies. **394 Flutter tests, green.**
   Content is a **bundled 20-item JSON pack** (`app/assets/packs/starter.json`) read by
   `content/pack_reader.dart` — the one adapter in `content/`. An expired or malformed pack is
   refused where it is read. **Grading answers to the frozen contract**: `content/model/canon.dart` is
@@ -167,8 +167,10 @@ is now a red build rather than a precedent: `app/test/architecture/pure_boundary
 walks the import graph transitively — through `export` and `part`, so the tokens barrel cannot
 smuggle `package:flutter/painting.dart` into a pure root — and reports a per-root file count so
 a mistyped root cannot make it vacuously green. Today that bites over `design/**/spec/` and its
-9 files, `features/*/policy/` and its 2, and `content/model/` and its 2 — all three roots are on
-disk now, and the last two flipped from absent to covered when the round landed. The root is a **glob, not a list**, so
+10 files, `features/*/policy/` and its 3, and `content/model/` and its 4 — all three roots are on
+disk now, and the last two flipped from absent to covered when the round landed. **Import the token
+you need, not the barrel:** `tokens.dart` re-exports `brand_typography.dart`, which imports
+`package:flutter/painting.dart`, so a pure module reaching for the barrel fails the gate. The root is a **glob, not a list**, so
 `design/math/spec/` was covered the moment it existed and no one had to declare it — the next spec
 root is free the same way.
 

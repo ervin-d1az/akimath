@@ -47,9 +47,10 @@ and SHALL treat an unparseable answer as wrong rather than as an error.
 The system SHALL fail the build when any bundled item's expected answer is not canonical.
 
 #### Scenario: An item written with a non-canonical answer
-- **WHEN** the shipped pack is checked
-- **THEN** every expected answer passes stored-mode canonicalisation
-  → `app/test/content/model/demo_pack_test.dart`
+- **WHEN** a pack is read whose item stores an answer that is not canonical
+- **THEN** parsing throws rather than serving it, and the shipped pack is checked
+  the same way through the real bundle
+  → `app/test/content/model/pack_test.dart`, `app/test/content/pack_reader_test.dart`
 
 ### Requirement: req-offline-pack-play · The app plays from a bundled pack, with no network
 

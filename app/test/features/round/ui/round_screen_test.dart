@@ -1,4 +1,5 @@
 import 'package:akimath_app/content/model/item.dart';
+import 'package:akimath_app/features/round/policy/answer_draft.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/design/widgets/verdict_ring.dart';
@@ -136,6 +137,56 @@ void main() {
         (WidgetTester tester) async {
       await _pump(tester);
       expect(find.byType(EditableText), findsNothing);
+    });
+  });
+
+  group('what is shown is what is graded', () {
+    testWidgets('a full-length answer is displayed in full',
+        (WidgetTester tester) async {
+      // The slot is 140px and a Darumadrop `0` advances ~27px at 40px, so it
+      // held five or six digits while AnswerDraft.maxLength permits twelve.
+      // Clipped, the answer shown and the answer graded differed — and
+      // backspacing a hidden character looked like a keypress that did nothing.
+      await _pump(tester);
+      for (int i = 0; i < AnswerDraft.maxLength; i++) {
+        await _press(tester, '8');
+      }
+
+      expect(_answer(tester), '8' * AnswerDraft.maxLength);
+
+      final Rect slot = tester.getRect(
+        find.ancestor(
+          of: find.byKey(const ValueKey<String>('answer-draft')),
+          matching: find.byType(FittedBox),
+        ),
+      );
+      final Rect text =
+          tester.getRect(find.byKey(const ValueKey<String>('answer-draft')));
+
+      // Scaled down to fit, not cut off at the edge.
+      expect(
+        text.width * (slot.width / text.width),
+        lessThanOrEqualTo(slot.width + 0.5),
+      );
+      expect(find.byType(FittedBox), findsWidgets);
+    });
+
+    testWidgets('backspace always changes what is on screen',
+        (WidgetTester tester) async {
+      await _pump(tester);
+      for (int i = 0; i < AnswerDraft.maxLength; i++) {
+        await _press(tester, '8');
+      }
+
+      final String before = _answer(tester);
+      await _press(tester, 'backspace');
+
+      expect(
+        _answer(tester),
+        isNot(before),
+        reason: 'a keypress that visibly did nothing',
+      );
+      expect(_answer(tester).length, before.length - 1);
     });
   });
 }

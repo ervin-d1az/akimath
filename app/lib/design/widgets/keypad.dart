@@ -44,10 +44,7 @@ class KeypadKeyView extends StatelessWidget {
           textScaler: TextScaler.noScaling,
           style: BrandText.numeral(iconSize * 1.2),
         ),
-      IconFace(:final String glyph) => BrandIcon(
-          BrandGlyph.values.firstWhere((BrandGlyph g) => g.name == glyph),
-          size: iconSize,
-        ),
+      IconFace(:final BrandGlyph glyph) => BrandIcon(glyph, size: iconSize),
       // 15px, per the digest: `a` over a 20x3 bar over `b`. The plain variant
       // takes a size and never a FractionMetrics — the invariant that keeps the
       // F0/F1b split honest (design D5).

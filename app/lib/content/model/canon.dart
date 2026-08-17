@@ -40,35 +40,39 @@ class CanonResult {
   final String? tag;
 }
 
-/// U+200B..U+200D, U+2060, U+FEFF — characters that occupy no width and would
-/// let two visually identical answers compare unequal.
-bool _isInvisible(int rune) =>
-    (rune >= 0x200B && rune <= 0x200D) || rune == 0x2060 || rune == 0xFEFF;
+/// Characters that occupy no width and would let two visually identical
+/// answers compare unequal.
+///
+/// **The set and the order are the contract's, not this file's.** Differential
+/// fuzzing against `packages/contract/src/canon.ts` over 22,440 inputs found
+/// 4,916 tag-only divergences: Dart hard-coded six digit blocks, four combining
+/// ranges and five invisible code points where TypeScript uses `\p{Nd}`,
+/// `\p{M}` and a wider invisible set, and the two checked in different orders.
+/// Both sides rejected the same inputs, so no verdict moved — but the tags are a
+/// shared contract a caller may switch on, so the drift was real and only
+/// latent.
+final RegExp _invisible =
+    RegExp(r'[\u00AD\u200B-\u200F\u2028\u2029\u2060\uFEFF]', unicode: true);
 
-/// Combining diacriticals. `1` followed by U+0301 looks like `1`.
-bool _isCombining(int rune) =>
-    (rune >= 0x0300 && rune <= 0x036F) ||
-    (rune >= 0x1AB0 && rune <= 0x1AFF) ||
-    (rune >= 0x20D0 && rune <= 0x20FF) ||
-    (rune >= 0xFE20 && rune <= 0xFE2F);
+/// Any Unicode mark. `1` followed by U+0301 looks like `1`.
+final RegExp _combiningMark = RegExp(r'\p{M}', unicode: true);
 
-/// A digit that is not an ASCII digit — Arabic-Indic, Devanagari, and the rest.
+/// Any Unicode decimal digit.
+final RegExp _decimalDigit = RegExp(r'\p{Nd}', unicode: true);
+
+/// A decimal digit that is not an ASCII one — Arabic-Indic, Thai, Devanagari.
 ///
 /// Rejected rather than folded: `٠` and `0` are the same number and different
 /// text, and silently equating them is a decision the contract does not make.
-bool _isNonAsciiDigit(int rune) {
-  if (rune >= 0x30 && rune <= 0x39) {
-    return false;
+bool _hasNonAsciiDigit(String raw) {
+  for (final int rune in raw.runes) {
+    final String character = String.fromCharCode(rune);
+    if (_decimalDigit.hasMatch(character) &&
+        !(rune >= 0x30 && rune <= 0x39)) {
+      return true;
+    }
   }
-  const List<List<int>> digitBlocks = <List<int>>[
-    <int>[0x0660, 0x0669], // Arabic-Indic
-    <int>[0x06F0, 0x06F9], // Extended Arabic-Indic
-    <int>[0x0966, 0x096F], // Devanagari
-    <int>[0x09E6, 0x09EF], // Bengali
-    <int>[0x0BE6, 0x0BEF], // Tamil
-    <int>[0xFF10, 0xFF19], // Fullwidth
-  ];
-  return digitBlocks.any((List<int> b) => rune >= b[0] && rune <= b[1]);
+  return false;
 }
 
 /// The character map the fixture declares: space removed, U+2044 FRACTION
@@ -107,24 +111,24 @@ CanonResult canonicalise(String raw, {required CanonMode mode}) {
 }
 
 CanonResult _asLearner(String raw) {
-  final String spaceless = raw.replaceAll(' ', '');
-  if (spaceless.isEmpty) {
+  // The three character-class refusals run on the **raw** string, before
+  // folding, and in this order. Both are the contract's: a value carrying an
+  // invisible character and a non-ASCII digit reports `invisible_character`,
+  // not `non_ascii_digit`.
+  if (_invisible.hasMatch(raw)) {
+    return const CanonResult.rejected('invisible_character');
+  }
+  if (_combiningMark.hasMatch(raw)) {
+    return const CanonResult.rejected('combining_mark');
+  }
+  if (_hasNonAsciiDigit(raw)) {
+    return const CanonResult.rejected('non_ascii_digit');
+  }
+
+  final String folded = _fold(raw);
+  if (folded.isEmpty) {
     return const CanonResult.rejected('empty');
   }
-
-  for (final int rune in spaceless.runes) {
-    if (_isNonAsciiDigit(rune)) {
-      return const CanonResult.rejected('non_ascii_digit');
-    }
-    if (_isInvisible(rune)) {
-      return const CanonResult.rejected('invisible_character');
-    }
-    if (_isCombining(rune)) {
-      return const CanonResult.rejected('combining_mark');
-    }
-  }
-
-  final String folded = _fold(spaceless);
   if (!_shape.hasMatch(folded)) {
     return const CanonResult.rejected('non_numeric');
   }
@@ -134,11 +138,9 @@ CanonResult _asLearner(String raw) {
   final List<String> parts = body.split('/');
 
   final String numerator = _stripLeadingZeros(parts.first);
+
   if (parts.length == 1) {
-    // `-0` is `0`: a signed zero is a sign with nothing to sign.
-    final String signed =
-        negative && numerator != '0' ? '-$numerator' : numerator;
-    return CanonResult.ok(signed);
+    return CanonResult.ok(_signed(numerator, numerator, negative));
   }
 
   final String denominator = _stripLeadingZeros(parts[1]);
@@ -148,6 +150,26 @@ CanonResult _asLearner(String raw) {
 
   // **A fraction is never reduced.** 2/4 and 1/2 are different answers, and
   // deciding they are the same is a pedagogical call this layer does not make.
-  final String value = '$numerator/$denominator';
-  return CanonResult.ok(negative ? '-$value' : value);
+  return CanonResult.ok(
+    _signed('$numerator/$denominator', numerator, negative),
+  );
 }
+
+/// Applies the sign, suppressing it when the magnitude is zero.
+///
+/// **Both shapes, which is the fix for a real divergence.** The integer branch
+/// suppressed the sign on `-0` and the fraction branch re-applied it
+/// unconditionally, so Dart canonicalised `-0/5` to `-0/5` where the frozen
+/// TypeScript produced `0/5` — and worse, Dart *accepted* `-0/5` as already
+/// canonical in stored mode where the contract rejects it.
+///
+/// The consequence was reachable through content, not just across the wire: a
+/// pack authored with `"answer": "-0/5"` passed `Pack._item`'s guard, loaded
+/// clean, and told a child typing `0/5` they were wrong, with nothing reporting
+/// anything.
+///
+/// The golden fixture did not catch it — its 19 vectors contain no `-0/n` case.
+/// It was found by differential fuzzing the two implementations against each
+/// other, which is the check the fixture approximates and does not replace.
+String _signed(String value, String magnitude, bool negative) =>
+    negative && magnitude != '0' ? '-$value' : value;

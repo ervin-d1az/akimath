@@ -6,9 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 /// A stand-in for the adapter's text measurement.
 ///
 /// Real advance widths need a font, which needs IO — so the module takes a
-/// measure and does not perform one. A fixed ratio per character is enough to
-/// assert arrangement, and it is what keeps this test free of a fake canvas.
-double measureFlat(String text, double size) => text.length * size * 0.55;
+/// measure and does not perform one. A ratio per character is enough to assert
+/// arrangement, and it keeps this test free of a fake canvas.
+///
+/// **The two ratios are the real ones**, measured from the bundled TTFs: `=`
+/// advances 334/1000 em in Darumadrop and 606/1000 in Plus Jakarta. A stand-in
+/// that returned one width for both faces is precisely what let a clipped `=`
+/// ship — the suite loads no fonts, so every family measures identically unless
+/// the fake says otherwise.
+double measureFlat(String text, double size, MathFace face) =>
+    text.length * size * (face == MathFace.textHeavy ? 0.606 : 0.334);
 
 void main() {
   group('a nested fraction lays out from metrics alone', () {
@@ -241,7 +248,10 @@ void main() {
       for (final MathTone tone in MathTone.values) {
         expect(tone.toString(), isNot(contains('Color')));
       }
-      expect(MathTone.values, <MathTone>[MathTone.ink, MathTone.muted]);
+      // One member, because one is all the corpus grounds. A second was
+      // inferred and had no producer, so this assertion read as coverage of an
+      // adapter arm nothing could reach.
+      expect(MathTone.values, <MathTone>[MathTone.ink]);
     });
   });
 
@@ -321,6 +331,48 @@ void main() {
         edge = child.dx + child.box.width;
       }
       expect(row.width, closeTo(edge, 0.001));
+    });
+  });
+
+  group('a leaf is measured in the face it is painted in', () {
+    test('the measure is told which face to use', () {
+      // The critical defect this guards: GlyphMeasure took only (text, size),
+      // so the adapter could only measure in one family. `=` is painted in Plus
+      // Jakarta 800 and advances 606/1000 em against Darumadrop's 334 — nearly
+      // double — so every `=` was allotted a box 43% too narrow and clipped by
+      // the Stack. Every prompt in the pack ends in `=`.
+      final List<MathFace> seen = <MathFace>[];
+      double spy(String text, double size, MathFace face) {
+        seen.add(face);
+        return text.length * size * 0.5;
+      }
+
+      MathNode.layout(
+        RowNode(<MathNode>[
+          const NumeralNode('7'),
+          OperatorNode.of('='),
+        ]),
+        metrics: MathMetrics.brand,
+        size: 76,
+        measure: spy,
+      );
+
+      expect(
+        seen,
+        <MathFace>[MathFace.display, MathFace.textHeavy],
+        reason: 'the measure was not told the face of each leaf',
+      );
+    });
+
+    test('a wider face yields a wider box at the same size', () {
+      double byFace(MathFace face) => MathNode.layout(
+            OperatorNode('=', face: face, tone: MathTone.ink),
+            metrics: MathMetrics.brand,
+            size: 76,
+            measure: measureFlat,
+          ).width;
+
+      expect(byFace(MathFace.textHeavy), greaterThan(byFace(MathFace.display)));
     });
   });
 }

@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
-import '../tokens/tokens.dart';
 import 'spec/dash_spec.dart';
 
 /// Paints the segments [DashSpec] computed, around a rounded rectangle.
@@ -70,43 +69,4 @@ class DashedBorderPainter extends CustomPainter {
       oldDelegate.color != color ||
       oldDelegate.strokeWidth != strokeWidth ||
       oldDelegate.radius != radius;
-}
-
-/// The dashed outline a puzzle cage carries.
-///
-/// Cages are `f6-puzzles`, phases away. These numbers live here because they
-/// are a property of the outline geometry and they are in the design digests
-/// today — recorded where the geometry lives, so F6 consumes a tested figure
-/// rather than re-deriving it from a mock six phases later (design D4).
-class CageOutline {
-  const CageOutline({
-    required this.dash,
-    required this.strokeWidth,
-    required this.radius,
-    required this.inset,
-  });
-
-  /// The rule drawn on a board's cell edges. A cage must clear it.
-  static const double cellHairline = 1.5;
-
-  static const CageOutline kenKen = CageOutline(
-    dash: DashSpec.kenKenCage,
-    strokeWidth: BrandShape.borderWidthSmallSurface,
-    radius: 10,
-    inset: 5,
-  );
-
-  static const CageOutline killer = CageOutline(
-    dash: DashSpec.killerCage,
-    strokeWidth: BrandShape.borderWidthSmallSurface,
-    radius: 9,
-    inset: 6,
-  );
-
-  final DashSpec dash;
-  final double strokeWidth;
-  final double radius;
-
-  /// How far inside the cell block the outline sits.
-  final double inset;
 }
