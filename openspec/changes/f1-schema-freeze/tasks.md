@@ -165,3 +165,22 @@ database — see 8.3.
       green.
 - [x] 8.4 Update `CLAUDE.md`'s "What exists today": the database section currently reads *"Does not
       exist. No database, no migrations…"* and would be wrong the moment 3.1 lands.
+
+## 9 · Found after the change was complete
+
+- [x] 9.1 **`offline_packs.template_refs` lost bigint seeds, silently.** It is `jsonb`, and
+      node-postgres parses jsonb with `JSON.parse` — pg-types registers OID 3802 to it directly.
+      Every seed above 2^53 came back a different number: `9223372036854775807` →
+      `9223372036854776000`. `issued_items.seed` is `bigint` (OID 20), which pg-types returns as a
+      raw string, so the online path was always safe and only the **offline** one was not — the path
+      where the child has already been graded against the original item.
+      **Silent, because splitmix64 avalanches.** A seed off by one does not rederive a similar item;
+      it rederives an unrelated one, and every schema in the frozen pack format is perfectly happy
+      with the result.
+      `0002_pack_seeds_are_strings.sql` refuses a non-string seed at the database — a **type** rule
+      and not a magnitude rule, because a magnitude rule passes every seed under 2^53 and fails the
+      day the generator starts minting full-width ones, which is to say in production. Falsified:
+      without 0002 the two rejection tests go green-when-they-should-be-red. 49 tests green.
+      **Found by the adversarial review of the `f1-core-rederivation` design**, which asked what
+      happens to a bigint on the way through jsonb. Nothing had written a pack yet, so nothing was
+      corrupted — the forward-only discipline did its job and the fix is an ALTER, not an edit.

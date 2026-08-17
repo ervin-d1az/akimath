@@ -208,6 +208,9 @@ both:
 offline_packs (
   id uuid PRIMARY KEY, player_id uuid NOT NULL, skill_id smallint,
   template_refs jsonb NOT NULL,   -- [{template_id, template_version, seed, ladder_step}] × N
+                                  -- seed is a JSON *string*: jsonb is read with
+                                  -- JSON.parse, which loses a bigint above 2^53.
+                                  -- Migration 0002 refuses a numeric seed.
   pack_salt bytea NOT NULL, issued_at timestamptz, expires_at timestamptz
 );
 ```
