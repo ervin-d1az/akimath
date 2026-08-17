@@ -84,17 +84,24 @@ That is `ARCHITECTURE.md` §3's own lesson: a hand-recalled golden vector enshri
 
 ## 3 · Rationals, and the answer boundary
 
-- [ ] 3.1 Write `test/rational.test.ts`: exact arithmetic, lowest terms, sign on the numerator, one
+- [x] 3.1 Write `test/rational.test.ts`: exact arithmetic, lowest terms, sign on the numerator, one
       representation of zero.
       **Check:** red.
-- [ ] 3.2 Write `src/rational.ts` — a **method-free frozen interface**. No `toString`, no
-      `toNumber`, no parser, no formatter (design D4).
-      **Check:** green.
-- [ ] 3.3 Write `test/public_surface.test.ts`: set-equality over the public surface, failing on any
+- [x] 3.2 Write `src/rational.ts` — a **method-free frozen interface**. No `toString`, no
+      `toNumber`, no parser, no formatter (design D4). Frozen at runtime and not only in the types:
+      `readonly` is erased at build, so a caller in plain JavaScript can reshape a value another
+      module still holds.
+      **Check:** green. **And the mutation report found dead code guarded by a false comment.** An
+      early return for a zero numerator claimed the general path would give `0/-1` for a negative
+      denominator. It would not: `gcd(0, d)` is `|d|`, so the reduction already lands on `0/1`.
+      Deleting the branch changed no behaviour — verified — so it is gone, and `rationalOf(0n, -5n)`
+      stays pinned in the suite.
+- [x] 3.3 Write `test/public_surface.test.ts`: set-equality over the public surface, failing on any
       export matching `/render|format|canonical|toString/`.
-      **Check:** red against a deliberately added `toString`, then green. Set-equality and not
-      `typeof` checks — the contract's own surface test uses `typeof` and a new export ships
-      uncovered.
+      **Check:** red against a deliberately added `toString`, then green — falsified by exporting
+      `rationalToString`, which reddened two assertions and named the offender in both. Set-equality
+      and not `typeof` checks: the contract's own surface test asserts five things about five named
+      exports, so a sixth ships uncovered.
 
 ## 4 · One canonical join, in the contract
 
