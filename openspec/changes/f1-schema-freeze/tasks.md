@@ -7,7 +7,7 @@ where that is stated as evidence rather than skipped. Everything unmarked runs t
 
 ## 1 · The dependency
 
-- [ ] 1.1 Add `pg` to `packages/server/package.json` as its first runtime dependency, pinned exactly,
+- [x] 1.1 Add `pg` to `packages/server/package.json` as its first runtime dependency, pinned exactly,
       with `@types/pg` as a dev dependency. Record the DEP-1 audit **in the same change** — design D8
       has the wording; it goes next to the dependency, not in a commit message that nobody greps.
       **Check:** `npm run verify` green in `packages/server`; the `dependencies` key exists for the
@@ -15,19 +15,19 @@ where that is stated as evidence rather than skipped. Everything unmarked runs t
 
 ## 2 · The migration planner — pure, and testable today
 
-- [ ] 2.1 Write `packages/server/test/migration.test.ts` for the ordering case: given files on disk
+- [x] 2.1 Write `packages/server/test/migration.test.ts` for the ordering case: given files on disk
       and rows already recorded, the planner returns the unrecorded files in filename order and
       nothing else.
       **Check:** red — `src/migrate.ts` does not exist.
-- [ ] 2.2 Add the checksum-refusal case: a recorded file whose checksum no longer matches makes the
+- [x] 2.2 Add the checksum-refusal case: a recorded file whose checksum no longer matches makes the
       planner return an error **naming that file**, and no plan.
       **Check:** red. Assert on the message containing the filename, not just on the error type — the
       point of the refusal is that a human knows which file.
-- [ ] 2.3 Add the case that proves the refusal is not vacuous: a recorded file whose checksum still
+- [x] 2.3 Add the case that proves the refusal is not vacuous: a recorded file whose checksum still
       matches plans nothing and errors on nothing (PROC-11 — an error that fires for every input is
       not a check).
       **Check:** red, then all three green once `src/migrate.ts` is written.
-- [ ] 2.4 Write `packages/server/src/migrate.ts`. **PURE** — no `fs`, no `pg`, no clock. Inputs are
+- [x] 2.4 Write `packages/server/src/migrate.ts`. **PURE** — no `fs`, no `pg`, no clock. Inputs are
       two lists; output is a plan or a named error.
       **Check:** `npm run verify` green with the count stated; `npm run mutation` covers it.
 
