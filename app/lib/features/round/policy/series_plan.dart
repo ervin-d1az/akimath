@@ -8,6 +8,20 @@ import '../../../content/model/item.dart';
 /// series is, and so changing it is one edit in one pure module.
 const int seriesLength = 5;
 
+/// Where in the pack the next series starts, given how many items have been
+/// played before it.
+///
+/// Wrapping rather than running out: four series into a pack of twenty and the
+/// fifth has to come from somewhere. A player who reaches the end sees the pack
+/// again, which is honest about there being twenty items and better than an
+/// empty series.
+int seriesStart(int itemsPlayed, int packSize) {
+  if (itemsPlayed < 0) {
+    throw RangeError('items played cannot be negative: $itemsPlayed');
+  }
+  return packSize == 0 ? 0 : itemsPlayed % packSize;
+}
+
 /// The items a series will play, in order.
 ///
 /// **PURE** — a list in, a list out. No clock, no randomness, no pack reading:
@@ -24,5 +38,24 @@ const int seriesLength = 5;
 /// would show a player something they answered ninety seconds ago and call it a
 /// challenge. The shipped pack holds twenty, so this is defensive — but the
 /// alternative fails silently and this one is a `clamp`.
-List<Item> seriesPlan(List<Item> pack) =>
-    pack.take(seriesLength).toList(growable: false);
+/// **A second series is not the first series again.** `from` is how many items
+/// the player has already been served, so each series continues where the last
+/// one stopped and wraps at the end of the pack. Without it, the pack has twenty
+/// items and a player sees five of them, forever — the first thing anyone would
+/// notice.
+///
+/// No item repeats inside one series, whatever the offset: the count is clamped
+/// to the pack, so a pack of three yields three and not the same one twice.
+List<Item> seriesPlan(List<Item> pack, {int from = 0}) {
+  if (pack.isEmpty) {
+    return const <Item>[];
+  }
+  final int start = seriesStart(from, pack.length);
+  final int count = seriesLength < pack.length ? seriesLength : pack.length;
+
+  return List<Item>.generate(
+    count,
+    (int offset) => pack[(start + offset) % pack.length],
+    growable: false,
+  );
+}

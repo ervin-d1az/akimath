@@ -7,6 +7,7 @@ import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/round/policy/series_plan.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:akimath_app/features/round/ui/summary/series_summary_screen.dart';
+import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -181,6 +182,85 @@ void main() {
       // once, which is what makes the streak visible without a relaunch.
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.text('1'), findsWidgets);
+    });
+  });
+
+  group('a second series is not the first series again', () {
+    testWidgets('the next series starts where the last one stopped',
+        (WidgetTester tester) async {
+      // The first thing anyone would notice: a pack of eight, five served, and
+      // the second series has to open on the sixth.
+      await _pump(tester);
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+      for (int i = 1; i <= seriesLength; i++) {
+        await _answer(tester, i);
+      }
+      await tester.tap(find.text('Volver al inicio'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      // Item ids run a0..a7 and item aN wants N+1, so the sixth wants 6.
+      await _press(tester, '6');
+      await _press(tester, 'submit');
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Siguiente'),
+        findsOneWidget,
+        reason: 'the second series reopened on an item already answered',
+      );
+    });
+
+    testWidgets('and it survives a relaunch', (WidgetTester tester) async {
+      // Advancing only in memory would give the same five every time the app
+      // opened, which is the behaviour this exists to end.
+      await _pump(tester);
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+      for (int i = 1; i <= seriesLength; i++) {
+        await _answer(tester, i);
+      }
+      await tester.tap(find.text('Volver al inicio'));
+      await tester.pumpAndSettle();
+
+      // Unmount, then mount again over the same storage — the only thing that
+      // makes this a launch rather than a rebuild.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await _pump(tester);
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+      await _press(tester, '6');
+      await _press(tester, 'submit');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Siguiente'), findsOneWidget);
+    });
+
+    testWidgets('leaving a series halfway does not consume its items',
+        (WidgetTester tester) async {
+      // The cursor advances on *finishing*. A player who closes a series after
+      // one item has not been served five of them in any sense worth
+      // remembering.
+      await _pump(tester);
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+      await _answer(tester, 1);
+
+      await tester.tap(find.byType(IconButtonTile).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+      await _press(tester, '1');
+      await _press(tester, 'submit');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Siguiente'), findsOneWidget);
     });
   });
 }

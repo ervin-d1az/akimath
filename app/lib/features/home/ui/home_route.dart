@@ -8,6 +8,7 @@ import '../../round/policy/series_plan.dart';
 import '../../round/policy/streak_policy.dart';
 import '../data/day_log_store.dart';
 import '../data/prefs_day_log_store.dart';
+import '../data/series_cursor_store.dart';
 import '../policy/day_log.dart';
 import '../../round/ui/round_screen.dart';
 import '../../round/ui/summary/series_summary_screen.dart';
@@ -30,6 +31,7 @@ class HomeRoute extends StatefulWidget {
     this.reader = const PackReader(),
     this.now = DateTime.now,
     this.dayLog,
+    this.seriesCursor = const SeriesCursorStore(),
   });
 
   final PackReader reader;
@@ -41,6 +43,10 @@ class HomeRoute extends StatefulWidget {
   /// Tests hand in an in-memory store instead — the seam is why swapping it is
   /// a constructor argument and nothing else.
   final DayLogStore? dayLog;
+
+  /// How many items the player has already been served, so a second series is
+  /// not the first series again. Persisted, or a relaunch would repeat it.
+  final SeriesCursorStore seriesCursor;
 
   @override
   State<HomeRoute> createState() => _HomeRouteState();
@@ -106,7 +112,11 @@ class _HomeRouteState extends State<HomeRoute> {
   ///
   /// Which five is `seriesPlan`'s decision, made without a screen.
   Future<void> _startSeries(BuildContext context, Pack pack) async {
-    final List<Item> plan = seriesPlan(pack.items);
+    final int served = await widget.seriesCursor.read();
+    if (!context.mounted) {
+      return;
+    }
+    final List<Item> plan = seriesPlan(pack.items, from: served);
     if (plan.isEmpty) {
       // `Pack.fromJson` refuses an empty pack, so this is unreachable through
       // the shipped one — but `RoundScreen` asserts a non-empty list and a
@@ -121,6 +131,10 @@ class _HomeRouteState extends State<HomeRoute> {
           now: widget.now,
           attemptDays: _log.days,
           dayLog: _dayLog,
+          // Advanced when the series is *finished*, not when it is started:
+          // a player who closes a series halfway has not been served those
+          // items in any sense worth remembering.
+          onFinishedSeries: (int played) => widget.seriesCursor.advance(played),
           onDone: () => Navigator.of(sessionContext).maybePop(),
         ),
       ),
@@ -190,6 +204,7 @@ class _SeriesSession extends StatefulWidget {
     required this.now,
     required this.attemptDays,
     required this.dayLog,
+    required this.onFinishedSeries,
     required this.onDone,
   });
 
@@ -197,6 +212,7 @@ class _SeriesSession extends StatefulWidget {
   final DateTime Function() now;
   final List<DateTime> attemptDays;
   final DayLogStore dayLog;
+  final void Function(int itemsPlayed) onFinishedSeries;
   final VoidCallback onDone;
 
   @override
@@ -229,7 +245,10 @@ class _SeriesSessionState extends State<_SeriesSession> {
       now: widget.now,
       attemptDays: widget.attemptDays,
       dayLog: widget.dayLog,
-      onFinished: (RoundOutcome result) => setState(() => _outcome = result),
+      onFinished: (RoundOutcome result) {
+        widget.onFinishedSeries(result.total);
+        setState(() => _outcome = result);
+      },
     );
   }
 }

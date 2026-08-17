@@ -53,3 +53,26 @@ the stat readouts exist, the streak exists. This change spends them.
 - [x] 4.3 **Tier 2** — the whole loop on the iPhone 17: five items, the summary, back to the home.
       This is the change whose entire point is what a player sees, so a screenshot of the summary is
       the evidence, not a description of it.
+
+## 5 · Closing this change's own open question
+
+- [x] 5.1 **A second series drew the same five items**, which was the first thing anyone would
+      notice: the pack holds twenty and a player saw five of them, forever. `seriesPlan` now takes
+      `from` — how many items the player has already been served — and continues from there,
+      wrapping at the end of the pack rather than running out.
+      **Check:** offsets 0/5/10 give distinct series; 18 wraps to `i18, i19, i0, i1, i2`; 20 equals
+      0; no item repeats inside one series at any offset for packs of 5, 6 and 20; a negative offset
+      is refused rather than reinterpreted, because `-1 % 20` is 19 in Dart and would silently start
+      near the end.
+- [x] 5.2 **It persists**, in `SeriesCursorStore` on the `shared_preferences` the day log already
+      uses. Advancing only in memory would give the same five every time the app opened, which is
+      the behaviour this exists to end. Unreadable or negative reads as zero — a corrupt preference
+      costs a repeated series, never a launch, and a negative would make `seriesPlan` throw.
+- [x] 5.3 **The cursor advances on finishing, not on starting.** A player who closes a series after
+      one item has not been served five of them in any sense worth remembering, and a test walks
+      exactly that path.
+      **Check:** falsified both halves — the plan ignoring its offset reddens 5, the cursor never
+      advancing reddens 2. 677 tests green.
+
+**Open question 1 in `design.md` is answered and stays recorded** rather than deleted: the answer is
+"it advances through the pack and wraps", and the reasoning is above.

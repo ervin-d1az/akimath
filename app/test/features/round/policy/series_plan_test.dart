@@ -85,4 +85,74 @@ void main() {
       expect(seriesPlan(other).map((Item i) => i.id).toList(), <String>['z0', 'z1']);
     });
   });
+
+  group('a second series is not the first series again', () {
+    test('the offset advances through the pack', () {
+      final List<Item> source = pack(20);
+
+      expect(
+        seriesPlan(source, from: 0).map((Item i) => i.id).toList(),
+        <String>['i0', 'i1', 'i2', 'i3', 'i4'],
+      );
+      expect(
+        seriesPlan(source, from: 5).map((Item i) => i.id).toList(),
+        <String>['i5', 'i6', 'i7', 'i8', 'i9'],
+      );
+      expect(
+        seriesPlan(source, from: 10).map((Item i) => i.id).toList(),
+        <String>['i10', 'i11', 'i12', 'i13', 'i14'],
+      );
+    });
+
+    test('it wraps rather than running out', () {
+      // Four series into a pack of twenty and the fifth has to come from
+      // somewhere. Wrapping beats an empty series or a crash.
+      final List<Item> source = pack(20);
+
+      expect(
+        seriesPlan(source, from: 18).map((Item i) => i.id).toList(),
+        <String>['i18', 'i19', 'i0', 'i1', 'i2'],
+      );
+      expect(
+        seriesPlan(source, from: 20).map((Item i) => i.id).toList(),
+        seriesPlan(source, from: 0).map((Item i) => i.id).toList(),
+      );
+      expect(
+        seriesPlan(source, from: 45).map((Item i) => i.id).toList(),
+        seriesPlan(source, from: 5).map((Item i) => i.id).toList(),
+      );
+    });
+
+    test('no item repeats inside one series', () {
+      // Wrapping must not hand the same item twice in one sitting, which it
+      // would the moment a pack is shorter than a series.
+      for (final int size in <int>[5, 6, 20]) {
+        for (int from = 0; from < size; from++) {
+          final List<Item> plan = seriesPlan(pack(size), from: from);
+          expect(
+            plan.map((Item i) => i.id).toSet(),
+            hasLength(plan.length),
+            reason: 'pack $size from $from',
+          );
+        }
+      }
+    });
+
+    test('a pack shorter than a series still yields it whole, once', () {
+      final List<Item> plan = seriesPlan(pack(3), from: 7);
+
+      expect(plan, hasLength(3));
+      expect(plan.map((Item i) => i.id).toSet(), hasLength(3));
+    });
+
+    test('an offset into an empty pack is still empty, not a crash', () {
+      expect(seriesPlan(<Item>[], from: 9), isEmpty);
+    });
+
+    test('a negative offset is refused rather than reinterpreted', () {
+      // `-1 % 20` is 19 in Dart, so a negative offset would silently start near
+      // the end of the pack instead of failing.
+      expect(() => seriesPlan(pack(20), from: -1), throwsRangeError);
+    });
+  });
 }
