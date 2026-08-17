@@ -1,3 +1,4 @@
+import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
@@ -31,14 +32,30 @@ Future<void> _press(WidgetTester tester, String id) async {
 ///
 /// Typed rather than looked up, because the pack is real content and this test
 /// should not carry a second copy of it.
-String _expectedAnswer(WidgetTester tester) {
+Item _currentItem(WidgetTester tester) {
   final RoundScreen round = tester.widget<RoundScreen>(find.byType(RoundScreen));
   final int index = int.parse(
     (tester.widget<Text>(find.textContaining('Reto ')).data ?? 'Reto 1')
         .replaceAll(RegExp(r'\D'), ''),
   );
-  return round.items[index - 1].expected;
+  return round.items[index - 1];
 }
+
+String _expectedAnswer(WidgetTester tester) => _currentItem(tester).expected;
+
+/// What kind of question the item on screen is asking.
+///
+/// Read off the live `RoundScreen`, so it names what the device actually drew
+/// rather than what the pack was expected to contain.
+String _currentFamily(WidgetTester tester) =>
+    switch (_currentItem(tester).stimulus) {
+      ArithmeticStimulus() => 'arithmetic',
+      NumberSeriesStimulus() => 'numberSeries',
+      MatrixStimulus() => 'matrix',
+      AnalogyStimulus() => 'analogy',
+      HiddenOperationStimulus() => 'hiddenOperation',
+      FigurateStimulus() => 'figurate',
+    };
 
 /// A character of an answer, mapped to the key that produces it.
 ///
@@ -51,7 +68,8 @@ const Map<String, String> _keyFor = <String, String>{
   '/': 'fraction',
 };
 
-Future<void> _answerCurrentItem(WidgetTester tester) async {
+Future<String> _answerCurrentItem(WidgetTester tester) async {
+  final String family = _currentFamily(tester);
   for (final String character in _expectedAnswer(tester).split('')) {
     await _press(tester, _keyFor[character] ?? character);
   }
@@ -59,6 +77,7 @@ Future<void> _answerCurrentItem(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('Siguiente'));
   await tester.pumpAndSettle();
+  return family;
 }
 
 void main() {
@@ -103,18 +122,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RoundScreen), findsOneWidget);
 
-    // Five items of real content, answered from the pack's own answers.
-    for (int i = 0; i < 5; i++) {
-      if (find.byType(SeriesSummaryScreen).evaluate().isNotEmpty) break;
-      await _answerCurrentItem(tester);
+    // **Two series, not one, and the reason is coverage.** The pack is
+    // interleaved so all six families appear inside the first ten items —
+    // `pack_variety_test` asserts that against the file — and this is where
+    // that claim is cashed on a real device: every family drawn by the real
+    // renderer, its answer typed on the app's own keypad, and graded.
+    final Set<String> answered = <String>{};
+
+    for (int series = 0; series < 2; series++) {
+      if (series > 0) {
+        await tester.tap(find.text('Empezar la serie'));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byType(RoundScreen), findsOneWidget);
+
+      for (int i = 0; i < 5; i++) {
+        if (find.byType(SeriesSummaryScreen).evaluate().isNotEmpty) break;
+        answered.add(await _answerCurrentItem(tester));
+      }
+
+      expect(find.byType(SeriesSummaryScreen), findsOneWidget,
+          reason: 'series ${series + 1} did not end');
+      expect(find.text('5 de 5'), findsOneWidget);
+
+      await tester.tap(find.text('Volver al inicio'));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeScreen), findsOneWidget);
     }
 
-    expect(find.byType(SeriesSummaryScreen), findsOneWidget,
-        reason: 'the series did not end');
-    expect(find.text('5 de 5'), findsOneWidget);
-
-    await tester.tap(find.text('Volver al inicio'));
-    await tester.pumpAndSettle();
-    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(
+      answered,
+      hasLength(6),
+      reason: 'ten items on a real device covered only $answered',
+    );
   });
 }
