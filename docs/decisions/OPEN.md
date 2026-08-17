@@ -125,7 +125,7 @@ either extracts `CenteredStateView` or records why not, here.
 
 ---
 
-## 7 · Tier 2 cannot be driven from a session, and two tasks are stuck on it
+## 7 · ~~Tier 2 cannot be driven from a session~~ — RESOLVED 2026-08-17
 
 **Today.** Device evidence is captured by rooting `main.dart` at the screen under test, building for
 the iPhone 17 simulator, and screenshotting with `xcrun simctl io`. That reaches anything **static**.
@@ -147,6 +147,18 @@ geometry of every control **is** evidenced (`f0-pressable-surface/evidence/contr
    its own change rather than smuggled into whichever one hits the wall first — which is how it nearly
    got added twice already, on 2026-08-17.
 
-**Cost of leaving it.** Two open boxes with a named reason, which is the honest state. It rises the
-moment a change's *whole point* is a gesture — the puzzle boards at F6 drag and long-press, and a
-written observation will not carry that.
+**Resolved: option 2.** `integration_test` is in, as a dev dependency, and
+`app/integration_test/playthrough_test.dart` drives a fresh install from the welcome screen through
+the teaching item, the home, a five-item series of real pack content and the summary, on an actual
+simulator — real asset bundle, real `shared_preferences` plugin, real renderer. Thirteen seconds.
+
+It exists because Ervin asked whether the app could be watched playing itself, which is the same
+question this entry had been holding open. `f0-pressable-surface` 5.3 and `f0-keypad` 3.3 are now
+reachable: a press a machine can perform is exactly what they were waiting for.
+
+Two things the first run found, both of which a written observation would have missed. A real device
+is slower than a widget test and the first-run flag is written asynchronously, so one
+`pumpAndSettle` is not enough to reach the home — it settles with a budget now. And the fourth item
+of the shipped series is `sub-2`, whose answer is `−7`: the minus key's id is `negate` and the
+fraction bar's is `fraction`, neither of which is the character on the key face. Any driver that
+assumed otherwise would have worked on four items out of five.

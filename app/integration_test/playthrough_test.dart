@@ -1,0 +1,120 @@
+import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/features/home/ui/home_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
+import 'package:akimath_app/features/round/ui/round_screen.dart';
+import 'package:akimath_app/features/round/ui/summary/series_summary_screen.dart';
+import 'package:akimath_app/main.dart' as app;
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+
+/// The whole app, driven on a real device.
+///
+/// **This is what a written observation was standing in for.** Every widget test
+/// in `test/` pumps a screen in isolation with a fake bundle and a fake store;
+/// this runs `main()` on an actual simulator, against the real asset bundle, the
+/// real `shared_preferences` plugin and the real renderer, and taps its way from
+/// a fresh install to a finished series.
+///
+/// It is also the thing `docs/decisions/OPEN.md` §7 said was missing: a press
+/// that a machine can perform. Two `f0-*` Tier 2 tasks were open on exactly
+/// that.
+Future<void> _press(WidgetTester tester, String id) async {
+  await tester.tap(
+    find.byWidgetPredicate((Widget w) => w is KeypadKeyView && w.data.id == id),
+  );
+  await tester.pump();
+}
+
+/// The answer the item on screen is asking for, read off the prompt.
+///
+/// Typed rather than looked up, because the pack is real content and this test
+/// should not carry a second copy of it.
+String _expectedAnswer(WidgetTester tester) {
+  final RoundScreen round = tester.widget<RoundScreen>(find.byType(RoundScreen));
+  final int index = int.parse(
+    (tester.widget<Text>(find.textContaining('Reto ')).data ?? 'Reto 1')
+        .replaceAll(RegExp(r'\D'), ''),
+  );
+  return round.items[index - 1].expected;
+}
+
+/// A character of an answer, mapped to the key that produces it.
+///
+/// The pack's answers are real content, so `-7` and `5/4` both occur and both
+/// have to be typeable. The minus is `negate` and the fraction bar is
+/// `fraction`, neither of which is the character on the key face.
+const Map<String, String> _keyFor = <String, String>{
+  '-': 'negate',
+  '\u2212': 'negate',
+  '/': 'fraction',
+};
+
+Future<void> _answerCurrentItem(WidgetTester tester) async {
+  for (final String character in _expectedAnswer(tester).split('')) {
+    await _press(tester, _keyFor[character] ?? character);
+  }
+  await _press(tester, 'submit');
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Siguiente'));
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('a fresh install plays through to a finished series',
+      (WidgetTester tester) async {
+    app.main();
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+
+    // 0.2 Bienvenida — or the home, if this device has run it before.
+    if (find.byType(WelcomeScreen).evaluate().isNotEmpty) {
+      await tester.tap(find.text('Resolver uno'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FirstItemScreen), findsOneWidget);
+      // 5 + 8 = 13, the teaching item.
+      await _press(tester, '1');
+      await _press(tester, '3');
+      await _press(tester, 'submit');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+    }
+
+    // A real device is slower than a widget test and the first-run flag is
+    // written asynchronously, so settle with a budget rather than once.
+    for (int i = 0; i < 20 && find.byType(HomeScreen).evaluate().isEmpty; i++) {
+      await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    }
+    if (find.byType(HomeScreen).evaluate().isEmpty) {
+      final Iterable<String> onScreen = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((Text t) => t.data ?? '')
+          .where((String s) => s.isNotEmpty);
+      // ignore: avoid_print
+      print('ON SCREEN INSTEAD: ${onScreen.join(" | ")}');
+    }
+    expect(find.byType(HomeScreen), findsOneWidget, reason: 'never reached the home');
+
+    await tester.tap(find.text('Empezar la serie'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RoundScreen), findsOneWidget);
+
+    // Five items of real content, answered from the pack's own answers.
+    for (int i = 0; i < 5; i++) {
+      if (find.byType(SeriesSummaryScreen).evaluate().isNotEmpty) break;
+      await _answerCurrentItem(tester);
+    }
+
+    expect(find.byType(SeriesSummaryScreen), findsOneWidget,
+        reason: 'the series did not end');
+    expect(find.text('5 de 5'), findsOneWidget);
+
+    await tester.tap(find.text('Volver al inicio'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+}
