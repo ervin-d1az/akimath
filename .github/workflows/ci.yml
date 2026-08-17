@@ -445,10 +445,30 @@ jobs:
       - name: The suites, against a real database
         run: npm test
 
+      # **`pg_dump` refuses a server newer than itself**, and the runner image
+      # ships 16 against this job's `postgres:18` service — "aborting because of
+      # server version mismatch", before it reads a single table. The client has
+      # to match the server's major, not merely exist. `CLAUDE.md` already says
+      # CI mirrors production at 18 because that is what Neon provisioned; this
+      # is the half of that claim the workflow was not keeping.
+      #
+      # The dump script still normalises the version header and the random
+      # restrict key, which is a different problem: those make two dumps of the
+      # *same* schema differ.
+      - name: A pg_dump that can read a PostgreSQL 18 server
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-18
+          echo /usr/lib/postgresql/18/bin >> "$GITHUB_PATH"
+
       # The snapshot, on a database of its own so the suites' wiping cannot race
-      # it. `pg_dump` comes from the runner image; the client version is what the
-      # dump script normalises away, along with the random restrict key that
-      # would otherwise make every dump differ from the last.
+      # it.
       - name: Apply the migrations to an empty database
         run: |
           PGPASSWORD=postgres createdb -h localhost -U postgres akimath_snapshot
@@ -480,6 +500,22 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: packages/core/package-lock.json
+
+      # **Core typechecks *through* contract's sources, so it needs contract's
+      # dependencies on disk — not merely its own.** `@akimath/contract` is a
+      # `file:` devDependency, which npm installs as a symlink, and TypeScript
+      # resolves a module from a file's *real* path. So `import { z } from "zod"`
+      # inside `packages/contract/src/` is looked up under
+      # `packages/contract/node_modules/`, which core's own `npm ci` never
+      # creates. Locally it is always there because anyone who has run the
+      # contract suite has installed it, which is exactly why this went unnoticed
+      # until a pull request compared the whole tree against `main`: 38
+      # `Cannot find module 'zod'` errors, none of them reproducible on a
+      # developer's machine.
+      - name: The contract's dependencies, which core resolves through
+        working-directory: packages/contract
+        run: npm ci
+
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
