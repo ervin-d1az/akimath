@@ -96,13 +96,33 @@ the shipped TTFs rather than from the document — Darumadrop `OS/2.sxHeight` 43
       **Done.** 10 tests green; the gate reports `design/**/spec/ → 4 files`; `grep -c
       "package:flutter"` returns 0. The three measured rows live in one visible table rather than in
       branches, so a reader checks them against the design without reading control flow.
-- [ ] 2.6 Write `app/test/design/math/spec/math_node_test.dart`: a fraction nested inside a fraction
+- [x] 2.6 Write `app/test/design/math/spec/math_node_test.dart`: a fraction nested inside a fraction
       laying out from **injected** metrics (Darumadrop x-height 435/1000), per-token operator faces,
       the defaults when a token names none, and the absence of any inline-fraction parameter.
       **Check:** `flutter test` — failures across all four; the test passes literal metrics and uses
       no fake canvas and no golden.
-- [ ] 2.7 Write `app/lib/design/math/spec/math_node.dart` with `OperatorNode(face:, tone:)`.
+      **Done.** Seen failing first (`'PlacedBox' isn't a type`). 13 tests, no canvas, no golden — the
+      adapter's text measurement is injected as a `GlyphMeasure` closure and the test passes a flat
+      stand-in. Two assertions earn their place beyond the scenario text: two different faces must
+      produce two different axes at the same size (a module hard-coding a ratio passes everything
+      else), and the recorded metric ratios are checked against the shipped TTFs so replacing a font
+      file fails a test rather than shifting every fraction quietly.
+- [x] 2.7 Write `app/lib/design/math/spec/math_node.dart` with `OperatorNode(face:, tone:)`.
       **Check:** green. **Nesting stops at what the spec asserts** — no general box engine (design D6).
+      **Done.** 180 Flutter tests green; `design/**/spec/ → 5 files`.
+      **`tone` had to be defined, because the corpus names the parameter and never enumerates it.**
+      It is a role — `MathTone { ink, muted }` — and never a `Color`, following the precedent
+      `Verdict` set by carrying no `.color`. Worth stating plainly: `dart:ui` is an *allowed* leaf
+      under a pure root, so nothing would have stopped a `Color` living in that file, and
+      `no_color_literal_test` scans `design/widgets/` and `features/`, not `design/**/spec/`. No gate
+      catches this one; the discipline is the guard, and the value set widens when a digest asks.
+- [x] 2.8 **Found while implementing, and it is a modelling fix rather than a bug fix.** The first
+      assembly measured the numerator's ink as its baseline, which is true of a numeral and false of
+      a fraction — so a nested fraction came out *shorter* than a flat one. `MathBox` now publishes
+      `inkTop` and `inkBottom`, and the assembly measures from those.
+      **Check:** the nested case went from `Actual: 177.08` against `greater than 203.20` to green.
+      The parent no longer asks what kind of node it received, which is what makes one level of
+      recursion work without becoming the general engine D6 defers.
 
 ## 3 · The adapter
 
