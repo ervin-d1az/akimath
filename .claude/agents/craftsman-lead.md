@@ -67,7 +67,8 @@ spec, and do not accept a description of it from the chat.
 ## Why TDD is a gate here
 
 Unlike projects that leave tests untracked, **AkiMath commits its tests and they are the primary
-evidence** — 34 Flutter tests and 3 TypeScript tests are green today. TDD is a hard requirement, not
+evidence.** The counts move every change, so read them rather than quoting this line: `CLAUDE.md`'s
+"What exists today" carries the current figures, and `cd app && flutter test` is the authority. TDD is a hard requirement, not
 a preference, so the BUILD gate is not "code exists" but **red-then-green**: the engineer's ledger
 entry must show the new test failing *before* the implementation and passing after. A slice whose
 build entry has no red step did not follow the process; send it back rather than waving it through.
@@ -168,10 +169,11 @@ inverted is not evidence.
 - *Dart:* there is **no configured mutation harness** — `mutation_test` is a dev dependency but the
   rules XML that would define its test commands does not exist. Do not invent the command. Until it
   exists, the substitute is a **falsification step**, and it edits versioned production code, so
-  PROC-5 fixes its mechanism: `git stash push -- <file>` (or an in-place edit you are ready to
-  `git checkout --`), invert one assertion or return value, confirm a **named** test goes red,
-  restore, then prove the restore with `git diff --quiet -- <file>` **and** a `flutter test` back at
-  the pre-mutation count. Both proofs go in the ledger.
+  PROC-5 fixes its mechanism: record `shasum -a 256 <file>` and copy the file aside, invert one
+  assertion or return value, confirm a **named** test goes red, restore, then prove the restore with
+  **the same checksum** (or `diff -q`) **and** a `flutter test` back at the pre-mutation count. Both
+  proofs go in the ledger. **Not `git diff --quiet`** — PROC-8: it exits 0 for an untracked path, so
+  it is vacuous exactly when the file is new.
 
 **Tier 2 — run the app and look at it.** Whenever the change surfaces on screen. Brand invariants —
 the 48px minimum touch area, success and error distinguishable by **shape** and not only by hue,
@@ -196,8 +198,9 @@ difference is that it gets written down.
 - ❌ No ARCHIVE before the pull request has merged. `/opsx:archive` records history; running it on
   unmerged work files a lie.
 - ❌ No BUILD entry accepted without the red-then-green record — the test failed first.
-- ❌ No BUILD entry accepted whose Dart falsification step lacks its **closing proof** — a
-  `git diff --quiet -- <file>` on the mutated file and a `flutter test` back at the pre-mutation
+- ❌ No BUILD entry accepted whose Dart falsification step lacks its **closing proof** — a repeated
+  `shasum -a 256` matching the pre-mutation digest (PROC-8: `git diff --quiet` exits 0 for an
+  untracked path and proves nothing) and a `flutter test` back at the pre-mutation
   count. The mutation
   lands in a versioned file, and Phase 5 stages "the files belonging to that change", so an
   unproven revert is a mutation one `git add` away from being committed. It has happened in this

@@ -135,8 +135,12 @@ dependency, has no config here, and sees 0 of the 18 Dart files; and
 `app/analysis_options.yaml`, so it reports nothing on any input. Neither can support a finding.
 
 **Do not leave the tree dirty.** You are read-only, which includes not mutating a file to test a
-hypothesis. If you must, `git stash push -- <file>`, then restore and prove it with
-`git diff --quiet -- <file>`.
+hypothesis. If you must, take a `shasum -a 256` of the file first, edit, then restore and prove the
+restore by repeating the checksum — or `diff -q <backup> <file>`.
+
+**Not `git diff --quiet`.** PROC-8: git cannot prove anything about a path it does not track, and
+that command exits 0 for an untracked file — vacuously, exactly when the file is new, which is
+exactly when a session reaches for it.
 
 ## Fix strategy
 

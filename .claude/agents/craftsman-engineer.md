@@ -153,13 +153,17 @@ invent a fourth.
      rules XML defining its test commands does not exist, so do not write that command as if it ran.
      Substitute a **falsification step**. It edits versioned production code, so run it exactly this
      way and never free-hand:
-     1. `git stash push -- <file>` — or edit in place only if you are ready to
-        `git checkout -- <file>`.
+     1. `shasum -a 256 <file>` and copy the file aside. Record the checksum — it is the proof, not
+        a formality.
      2. Invert one assertion or return value, `cd app && flutter test`, and note the **named** test
         that went red.
-     3. Restore, then **prove the restore**: `git diff --quiet -- <file>` (exit 0) and
-        `cd app && flutter test` back at the count you recorded in step 1. Paste both into the
-        ledger.
+     3. Restore, then **prove the restore**: repeat `shasum -a 256 <file>` and require the same
+        digest (or `diff -q <backup> <file>` reporting identical), **and** `cd app && flutter test`
+        back at the count you recorded in step 1. Paste both into the ledger.
+
+        **Never `git diff --quiet` for this.** PROC-8: git cannot prove anything about a path it
+        does not track, and that command exits 0 for an untracked file — so the proof is vacuous
+        precisely when the file is new.
 
      Skipping step 3 is how a mutation reaches a commit: Phase 5 tells you to stage "the files
      belonging to that change", and the file you mutated is one of them. That has already happened
