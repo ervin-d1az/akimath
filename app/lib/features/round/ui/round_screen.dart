@@ -39,6 +39,7 @@ class RoundScreen extends StatefulWidget {
     this.attemptDays = const <DateTime>[],
     this.dayLog,
     this.onClose,
+    this.onFinished,
   });
 
   final List<Item> items;
@@ -74,6 +75,13 @@ class RoundScreen extends StatefulWidget {
   /// Defaults to `Navigator.maybePop`, so a pushed round always has an exit
   /// even if a caller forgets to wire one.
   final VoidCallback? onClose;
+
+  /// Called instead of advancing, once every item has been answered.
+  ///
+  /// When null the round cycles — which is what a practice series does. The
+  /// teaching item on `0.3` is the opposite: exactly one item, and finishing it
+  /// continues the first run rather than offering another.
+  final VoidCallback? onFinished;
 
   @override
   State<RoundScreen> createState() => _RoundScreenState();
@@ -139,6 +147,12 @@ class _RoundScreenState extends State<RoundScreen> {
   }
 
   void _next() {
+    final VoidCallback? finished = widget.onFinished;
+    if (finished != null && _index == widget.items.length - 1) {
+      finished();
+      return;
+    }
+
     setState(() {
       _index = (_index + 1) % widget.items.length;
       _draft = AnswerDraft.empty;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'design/theme.dart';
-import 'features/home/ui/home_route.dart';
+import 'features/onboarding/ui/first_run_gate.dart';
 
 void main() {
   runApp(const AkiMathApp());
@@ -9,14 +9,13 @@ void main() {
 
 /// The application root.
 ///
-/// The home is the round: the app can now be played. It replaces the character
-/// sheet, which was the home only because the brand layer was the only thing
-/// built.
+/// `FirstRunGate` decides what a launch opens: the onboarding on a first run,
+/// the home on every one after. It owns the flag, so nothing else has to ask.
 ///
-/// `HomeRoute` is the single tab root: it loads the bundled pack, shows the
-/// home, and pushes the series as a **full-screen session** — declared rule 1,
-/// so a series has no navigation affordance and the only way out is its own
-/// control.
+/// Behind it, `HomeRoute` is the single tab root: it loads the bundled pack,
+/// shows the home, and pushes the series as a **full-screen session** — declared
+/// rule 1, so a series has no navigation affordance and the only way out is its
+/// own control.
 ///
 /// The frame is `AppShell`, which draws **no bottom navigation**: `visibleTabs`
 /// returns nothing while one root exists, so the bar is absent by rule rather
@@ -30,7 +29,7 @@ class AkiMathApp extends StatelessWidget {
       title: 'AkiMath',
       debugShowCheckedModeBanner: false,
       theme: AkiMathTheme.build(),
-      home: const HomeRoute(),
+      home: const FirstRunGate(),
     );
   }
 }

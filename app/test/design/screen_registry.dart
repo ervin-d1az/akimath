@@ -3,6 +3,8 @@ import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/shell/ui/app_shell.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
@@ -109,6 +111,18 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         onStart: () {},
       ),
     ),
+  ),
+  RegisteredScreen(
+    label: 'welcome',
+    // In the shell, which is how `OnboardingFlow` builds it — the screen is a
+    // bare `Padding` and has no Material ancestor of its own.
+    build: () => AppShell(child: WelcomeScreen(onStart: () {})),
+  ),
+  RegisteredScreen(
+    label: 'first item',
+    // Not in the shell: it composes `RoundScreen`, which brings its own
+    // `Scaffold` — the same shape `OnboardingFlow` builds.
+    build: () => FirstItemScreen(onFinished: () {}, onBack: () {}),
   ),
   RegisteredScreen(
     label: 'round',
