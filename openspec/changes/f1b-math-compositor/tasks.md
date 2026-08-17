@@ -126,19 +126,46 @@ the shipped TTFs rather than from the document — Darumadrop `OS/2.sxHeight` 43
 
 ## 3 · The adapter
 
-- [ ] 3.1 Write `app/test/design/math/math_view_test.dart`: a rendered fraction has a numerator box
+- [x] 3.1 Write `app/test/design/math/math_view_test.dart`: a rendered fraction has a numerator box
       above a rule above a denominator box, and the painted output contains **no `/` glyph**.
       **Check:** `flutter test` — red.
-- [ ] 3.2 Write `app/lib/design/math/math_view.dart`, resolving real font metrics and handing them to
+      **Not red first, and saying so.** The widget was written before this test, which is a TDD
+      miss. Rather than claim otherwise, the tests were **falsified** instead: `size: scaler.scale(size)`
+      was changed to `size: size` and the proportion assertion went
+      `Expected: greater than <6.0> / Actual: <6.0>` — the spike's exact defect, caught by the suite.
+      Restored by checksum to `a8051ec8cf3fc678cb3b51c160426e81209517d2700699f2f0122d2e764aac93`.
+- [x] 3.2 Write `app/lib/design/math/math_view.dart`, resolving real font metrics and handing them to
       the spec. All geometry decisions stay in `spec/`; this file holds none.
       **Check:** green, and `pure_boundary_test.dart` still passes — if it fails, a decision leaked
       down into the adapter.
-- [ ] 3.3 Add `ExpressionRow`, `AnswerSlot` and `FractionGlyph` (`plain` variant only — the struck
+      **Done.** The adapter does exactly three things the spec cannot: resolves the text scaler,
+      measures advances with a `TextPainter`, and maps `MathFace`/`MathTone` to a family and a
+      colour. Both the measurement and the painted runs use `TextScaler.noScaling`, because the
+      scaler is applied once on the way in — applying it again would square it.
+- [x] 3.3 Add `ExpressionRow`, `AnswerSlot` and `FractionGlyph` (`plain` variant only — the struck
       and editable-slot variants belong to their consuming changes).
       **Check:** `flutter test`; `flutter analyze --fatal-infos` clean.
-- [ ] 3.4 Confirm no colour literal and no `Offset(` literal entered the new widget files.
+      **One of the three built, and the other two are decisions rather than omissions.**
+      · **`FractionGlyph` — built.** It earns a name by taking two strings where `MathView` takes a
+        tree, and it has a scheduled consumer at a fixed small size (the keypad's 15 px `a/b` face,
+        `f0-keypad`). Tested at that size, where the rule clamps to 3 instead of vanishing.
+      · **`ExpressionRow` — not built, deliberately.** It would be exactly
+        `MathView(node: RowNode(children))` and nothing else. The plan's own warning about a second
+        widget that draws a 3 px outline applies to wrappers too: a name that adds no behaviour is a
+        second thing to keep in agreement with the first.
+      · **`AnswerSlot` — deferred to `f0-dashed-border`.** Its defining state is the *dashed* pink
+        focus outline, and nothing in the repo can draw a dash yet. A solid-only stand-in shipped now
+        is a widget that gets rewritten rather than extended — the same reasoning D22 used to keep
+        the dash and its gate in one change.
+- [x] 3.4 Confirm no colour literal and no `Offset(` literal entered the new widget files.
       **Check:** `no_color_literal_test.dart` and `no_geometry_literal_test.dart` green, both
       reporting a **higher** scanned-file count than before this change.
+      **The colour gate covered the new files; the geometry gate did not, and that was a real gap.**
+      Its roots were `design/widgets/` and `features/`, so `design/math/` — a widget surface, not
+      artwork — was the one painted layer `BrandShape` did not govern. Added test-first: the new
+      root assertion failed `Expected: length of <1> / Actual: []` before the root existed.
+      Counts now: colour `lib/ minus design/tokens/ → 19 files`, geometry `design/math/ → 5 files`
+      alongside `design/widgets/ → 3` and `features/ → 2`.
 
 ## 4 · Evidence
 

@@ -71,6 +71,19 @@ const BoxShadow shadow = BoxShadow(
       );
     });
 
+    test('govern the math adapter too', () {
+      // `design/math/` is a widget surface, not artwork: it composes tokens the
+      // way `design/widgets/` does. Left out, the compositor would be the one
+      // painted layer BrandShape does not govern — the same silent gap D22
+      // named when a border moved into a painter.
+      expect(
+        selectFilesIn(geometryGateRoots, const <String>[
+          'design/math/math_view.dart',
+        ]),
+        hasLength(1),
+      );
+    });
+
     test('leave the artwork layer alone', () {
       // aki_spec.dart holds 95 of these and every one of them is correct.
       expect(

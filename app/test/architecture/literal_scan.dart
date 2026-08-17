@@ -161,8 +161,16 @@ const ScanRoot colorGateRoot = ScanRoot(
 /// `design/brand/` is out of scope: 95 offsets in `aki_spec.dart` and one
 /// proportional expression in `app_icon.dart` are the artwork layer, where
 /// geometry *is* the content (design D9).
+///
+/// `design/math/` **is** in scope, and the distinction is worth stating because
+/// it looks like the artwork case and is not. The compositor composes tokens
+/// the way `design/widgets/` does; its geometry comes from `FractionMetrics`
+/// and an injected x-height, never from a number typed while reading a mock.
+/// Its `spec/` half is covered too and stays clean by having nothing to say
+/// about offsets — it returns a `Rect` it computed.
 const List<ScanRoot> geometryGateRoots = <ScanRoot>[
   ScanRoot(prefix: 'design/widgets/'),
+  ScanRoot(prefix: 'design/math/'),
   ScanRoot(prefix: 'features/'),
 ];
 

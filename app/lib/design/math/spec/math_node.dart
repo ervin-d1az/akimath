@@ -136,6 +136,7 @@ class MathBox {
     required this.inkTop,
     required this.inkBottom,
     this.rule,
+    this.leaf,
     this.children = const <PlacedBox>[],
   });
 
@@ -168,7 +169,32 @@ class MathBox {
   /// fraction.
   final Rect? rule;
 
+  /// What to draw, when this box is a run of text rather than a composite.
+  final MathLeaf? leaf;
+
   final List<PlacedBox> children;
+}
+
+/// What a leaf box draws.
+///
+/// Carried on the box rather than looked up from the node tree, so the painter
+/// walks one structure instead of two in lockstep — the second walk is where a
+/// renderer drifts out of agreement with the layout it is rendering.
+class MathLeaf {
+  const MathLeaf({
+    required this.text,
+    required this.face,
+    required this.tone,
+    required this.size,
+  });
+
+  final String text;
+  final MathFace face;
+  final MathTone tone;
+
+  /// The size this run is painted at, already resolved — a nested fraction's
+  /// parts are smaller than their parent's.
+  final double size;
 }
 
 /// A child box and where it sits inside its parent.
@@ -208,10 +234,26 @@ sealed class MathNode {
   }) {
     return switch (node) {
       // A numeral is always the display face; an operator carries its own.
-      NumeralNode() =>
-        _leaf(node.digits, metrics.display, size, measure),
-      OperatorNode() =>
-        _leaf(node.glyph, metrics.forFace(node.face), size, measure),
+      NumeralNode() => _leaf(
+          MathLeaf(
+            text: node.digits,
+            face: MathFace.display,
+            tone: MathTone.ink,
+            size: size,
+          ),
+          metrics.display,
+          measure,
+        ),
+      OperatorNode() => _leaf(
+          MathLeaf(
+            text: node.glyph,
+            face: node.face,
+            tone: node.tone,
+            size: size,
+          ),
+          metrics.forFace(node.face),
+          measure,
+        ),
       FractionNode() => _fraction(node, metrics, size, measure),
       RowNode() => _row(node, metrics, size, measure),
     };
@@ -223,22 +265,23 @@ sealed class MathNode {
   /// contains its glyph instead of clipping it — Darumadrop's ascent alone is
   /// 1.16 em.
   static MathBox _leaf(
-    String text,
+    MathLeaf leaf,
     FontMetrics metrics,
-    double size,
     GlyphMeasure measure,
   ) {
+    final double size = leaf.size;
     final double baseline = metrics.ascentRatio * size;
     final double height =
         (metrics.ascentRatio + metrics.descentRatio) * size;
     return MathBox(
-      width: measure(text, size),
+      width: measure(leaf.text, size),
       height: height,
       axis: baseline - metrics.xHeightRatio * size / 2,
       baseline: baseline,
       // Digits and operators reach the cap height and sit on the baseline.
       inkTop: baseline - metrics.capHeightRatio * size,
       inkBottom: baseline,
+      leaf: leaf,
     );
   }
 
