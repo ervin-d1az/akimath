@@ -87,6 +87,31 @@ final class NumberSeriesStimulus extends Stimulus {
   final int unknownIndex;
 }
 
+/// A 2×2 or 3×3 grid with one cell missing.
+///
+/// The rule runs along the rows and down the columns at once, and the hole is
+/// where they meet — which is what makes the missing cell over-determined and
+/// therefore findable rather than guessable.
+final class MatrixStimulus extends Stimulus {
+  const MatrixStimulus({
+    required this.cells,
+    required this.size,
+    required this.unknownIndex,
+  });
+
+  /// Every cell in reading order, including the hidden one's true value. The
+  /// renderer is what refuses to draw it, for the reason
+  /// [NumberSeriesStimulus.terms] gives.
+  final List<int> cells;
+
+  /// The grid's edge length. [cells] always has `size * size` of them — the
+  /// reader refuses anything else, which is why nothing downstream re-checks.
+  final int size;
+
+  /// Which cell is blank. Always a valid index into [cells].
+  final int unknownIndex;
+}
+
 class Item {
   const Item({
     required this.id,

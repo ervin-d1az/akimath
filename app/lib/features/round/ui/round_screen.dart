@@ -18,6 +18,7 @@ import '../policy/answer_draft.dart';
 import '../policy/grading.dart';
 import '../policy/prompt_layout.dart';
 import '../policy/streak_policy.dart';
+import 'stimulus/matrix_view.dart';
 import 'stimulus/number_series_view.dart';
 import 'verdict/verdict_screen.dart';
 
@@ -346,6 +347,12 @@ class _RoundScreenState extends State<RoundScreen> {
           :final int unknownIndex
         ) =>
           NumberSeriesView(terms: terms, unknownIndex: unknownIndex),
+        MatrixStimulus(
+          :final List<int> cells,
+          :final int size,
+          :final int unknownIndex
+        ) =>
+          MatrixView(cells: cells, size: size, unknownIndex: unknownIndex),
       },
     );
   }

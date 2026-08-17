@@ -20,7 +20,11 @@ const String _fixtureDir = '../contract/fixtures/stimulus';
 /// A kind moves from [_pending] to here in the commit that adds its renderer,
 /// and never before — the whole point is that the list cannot drift from what
 /// the app really does, because the gate below runs the reader for real.
-const Set<String> _readable = <String>{'arithmetic', 'numberSeries'};
+const Set<String> _readable = <String>{
+  'arithmetic',
+  'numberSeries',
+  'matrix',
+};
 
 /// Frozen in the contract, not yet built here.
 ///
@@ -28,7 +32,6 @@ const Set<String> _readable = <String>{'arithmetic', 'numberSeries'};
 /// says so, because a family the app cannot draw must fail where the pack is
 /// read and not halfway through a round.
 const Set<String> _pending = <String>{
-  'matrix',
   'analogy',
   'hiddenOperation',
   'figurate',
@@ -107,6 +110,46 @@ void main() {
 
       expect(parsed.terms, payload['terms']);
       expect(parsed.unknownIndex, payload['unknown_index']);
+    });
+
+    test('matrix yields the grid the fixture declares', () {
+      final Map<String, dynamic> stimulus = _stimulusOf(_read('matrix.json'));
+      final Map<String, dynamic> payload =
+          stimulus['payload'] as Map<String, dynamic>;
+
+      final MatrixStimulus parsed =
+          readStimulus(stimulus, itemId: 'mat') as MatrixStimulus;
+
+      expect(parsed.cells, payload['cells']);
+      expect(parsed.size, payload['size']);
+      expect(parsed.unknownIndex, payload['unknown_index']);
+      // The invariant every consumer relies on and none re-checks.
+      expect(parsed.cells, hasLength(parsed.size * parsed.size));
+    });
+
+    test('a grid must be square, and 2×2 or 3×3', () {
+      // `matrix_cell_count` is a rejection tag in the frozen validator, and
+      // `size` is declared rather than inferred exactly so a truncated pack
+      // cannot become a silently smaller grid.
+      Object? read({required int size, required int cells}) => readStimulus(
+            <String, dynamic>{
+              'kind': 'matrix',
+              'payload': <String, dynamic>{
+                'size': size,
+                'cells': List<int>.generate(cells, (int i) => i + 1),
+                'unknown_index': 0,
+              },
+            },
+            itemId: 'grid',
+          );
+
+      expect(() => read(size: 2, cells: 4), returnsNormally);
+      expect(() => read(size: 3, cells: 9), returnsNormally);
+      expect(() => read(size: 3, cells: 8), throwsA(isA<FormatException>()),
+          reason: 'a truncated 3×3 must not become a 2×2 with a spare');
+      expect(() => read(size: 2, cells: 9), throwsA(isA<FormatException>()));
+      expect(() => read(size: 1, cells: 1), throwsA(isA<FormatException>()));
+      expect(() => read(size: 4, cells: 16), throwsA(isA<FormatException>()));
     });
 
     test('arithmetic flattens the frozen term pair into drawable tokens', () {

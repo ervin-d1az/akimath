@@ -16,13 +16,18 @@ MathNode nodeFor(Item item) => nodeForTokens(_promptOf(item));
 
 /// The tokens an item draws, for the kinds that draw an expression.
 ///
-/// Only arithmetic does. Every other family has its own renderer and does not
-/// come through here — which the exhaustive switch makes true by construction
-/// rather than by convention.
+/// **Only arithmetic does**, and the catch-all is deliberate rather than lazy.
+/// The alternative — one arm per family, each throwing the same sentence — would
+/// grow to five copies and make `RoundScreen`'s exhaustive switch the *second*
+/// place a new family has to be declared, without either catching anything the
+/// first one misses. Here the rule is a property of the function, not of the
+/// list of kinds: anything that is not an expression has its own renderer and
+/// does not come through here. The message names the family it was handed, so
+/// the mistake is legible without a stack trace.
 List<PromptToken> _promptOf(Item item) => switch (item.stimulus) {
       ArithmeticStimulus(:final List<PromptToken> prompt) => prompt,
-      NumberSeriesStimulus() => throw ArgumentError(
-          'a number series is not an expression; it has its own renderer',
+      final Stimulus other => throw ArgumentError(
+          '${other.runtimeType} is not an expression; it has its own renderer',
         ),
     };
 

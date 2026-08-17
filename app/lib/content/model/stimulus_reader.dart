@@ -50,6 +50,7 @@ Stimulus readStimulus(Object? raw, {required String itemId}) {
   return switch (raw['kind']) {
     'arithmetic' => _arithmetic(payload, itemId),
     'numberSeries' => _numberSeries(payload, itemId),
+    'matrix' => _matrix(payload, itemId),
     // Unknown kinds throw rather than degrading to something drawable: an item
     // rendered as a different question is worse than an item refused. A kind
     // the contract froze but the app has not built yet lands here too, which
@@ -149,6 +150,34 @@ Stimulus _numberSeries(Map<String, dynamic> payload, String itemId) {
   return NumberSeriesStimulus(
     terms: terms,
     unknownIndex: requireUnknownIndex(payload, terms.length, itemId),
+  );
+}
+
+/// A square grid with one cell hidden.
+///
+/// **`size` is declared, not inferred from the cell count.** That is the frozen
+/// schema's decision and it is the right one: inferring would make a pack
+/// truncated in transit into a silently smaller grid — a 3×3 arriving with
+/// eight cells would become a valid-looking 2×2 with a spare, and the learner
+/// would be shown a question nobody wrote. Declared, it is `matrix_cell_count`
+/// and the item is refused.
+Stimulus _matrix(Map<String, dynamic> payload, String itemId) {
+  final int size = _requireInt(payload, 'size', itemId);
+  if (size < 2 || size > 3) {
+    throw FormatException(
+      'item "$itemId" is a $size×$size grid; the format admits 2×2 and 3×3',
+    );
+  }
+  final List<int> cells = _requireInts(payload, 'cells', itemId);
+  if (cells.length != size * size) {
+    throw FormatException(
+      'item "$itemId" declares $size×$size but carries ${cells.length} cells',
+    );
+  }
+  return MatrixStimulus(
+    cells: cells,
+    size: size,
+    unknownIndex: requireUnknownIndex(payload, cells.length, itemId),
   );
 }
 

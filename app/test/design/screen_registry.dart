@@ -101,6 +101,21 @@ const List<Item> registrySeriesItems = <Item>[
   ),
 ];
 
+/// A matrix item for the gates: a 3×3 of three-digit cells, which is the most
+/// a grid can be asked to fit across 390 px.
+const List<Item> registryMatrixItems = <Item>[
+  Item(
+    id: 'registry-matrix',
+    stimulus: MatrixStimulus(
+      cells: <int>[100, 200, 300, 200, 400, 600, 300, 600, 900],
+      size: 3,
+      unknownIndex: 8,
+    ),
+    expected: '900',
+    ladderStep: 5,
+  ),
+];
+
 final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'character sheet',
@@ -151,6 +166,13 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // that draws itself but is not registered is a family whose first overflow
     // report comes from a player.
     build: () => const RoundScreen(items: registrySeriesItems),
+  ),
+  RegisteredScreen(
+    label: 'round · matrix',
+    // The third stimulus family. A family that draws itself but is not
+    // registered is a family whose first overflow report comes from a player —
+    // and a grid is the tallest prompt the round has had to hold.
+    build: () => const RoundScreen(items: registryMatrixItems),
   ),
   RegisteredScreen(
     label: 'verdict · acierto',
