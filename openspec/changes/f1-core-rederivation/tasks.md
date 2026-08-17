@@ -6,22 +6,29 @@ That is `ARCHITECTURE.md` §3's own lesson: a hand-recalled golden vector enshri
 
 ## 1 · The package
 
-- [ ] 1.1 Scaffold `packages/core` mirroring the two siblings file for file — `package.json`
+- [x] 1.1 Scaffold `packages/core` mirroring the two siblings file for file — `package.json`
       (private, `type: module`, `engines.node >= 22`, **no `dependencies` key**), `tsconfig.json`,
       `vitest.config.ts`, `stryker.config.json`, `.jscpd.json`, `.gitignore`, its own
       `package-lock.json`. `@akimath/contract` as a **devDependency** via `file:../contract`, with
       the reason at the declaration (design D1).
       **Check:** `npm run verify` green; `node -e "require('./package.json').dependencies"` is
       `undefined`.
-- [ ] 1.2 Write `test/dependency-allowlist.test.ts` **before** anything imports anything.
+- [x] 1.2 Write `test/dependency-allowlist.test.ts` **before** anything imports anything.
       **Check:** red first. Then green — and it must not be vacuous against an empty set: assert the
       manifest was found and is the right package, and that the devDependencies it declares are
       present, so "no dependencies" is distinguishable from "no file was read" (PROC-11).
-- [ ] 1.3 Write `test/determinism.test.ts` — a TypeScript AST walk over `src/**` (design D8).
+- [x] 1.3 Write `test/determinism.test.ts` — a TypeScript AST walk over `src/**` (design D8).
       **Check:** red against a file that calls `Math.random()`. It must report how many files and
       identifiers it walked and fail at zero (PROC-10), refuse the six globals, permit the
       transcendentals **only under `src/rating/`**, and refuse `Number(` on a BigInt in the PRNG
       modules.
+      **The control test earned its place immediately.** The first walker skipped any identifier
+      whose parent was a property access — which excluded `Date` in `Date.now()`, the single most
+      likely violation in the language, since `Date` sits in the *expression* position and
+      `Date.now` is not in the banned-property list either. The rule is "unless it is the property
+      *name*", so `obj.Date` is ignored and `Date.anything` is not. Nothing but a test that asserts
+      the walker sees a violation that is really there would have caught it.
+      `Number(` on a BigInt is still to do — carried into task 2.2, where the first BigInt lands.
 - [ ] 1.4 Register the package: `tsconfig` references if the siblings use them, the root scripts,
       and `CLAUDE.md`'s command list.
       **Check:** `npm run verify` from a clean `npm ci`.
