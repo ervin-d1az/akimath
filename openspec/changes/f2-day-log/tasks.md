@@ -87,6 +87,29 @@ Failures are now reported through `debugPrint`. It costs nothing in release and 
 between a mystery and a message. Recorded here because the lesson is not "install CocoaPods" — it is
 that **a tolerant adapter must still be a loud one**.
 
+## 4b · A second silence, found the next day
+
+The `debugPrint` above made failures **visible**. It did not make them **catchable**: both handlers
+were `on Exception`, and a key holding the wrong type throws a **`TypeError`**, which is an `Error`.
+So a corrupt preference did not produce a logged, tolerated, empty log — it **killed the launch**:
+
+```
+type 'bool' is not a subtype of type 'String?' in type cast
+  …/shared_preferences_async.dart 84:22  SharedPreferencesAsync.getString
+  …/prefs_day_log_store.dart 38:41       PrefsDayLogStore.read
+```
+
+Found while writing `OnboardingStore`, which had inherited the same narrow catch from this file.
+
+Both handlers are now deliberately broad, and the reason is written where the next reader will meet
+it: **the rule is that nothing about a stored value may prevent a launch, and that is wider than the
+exception hierarchy.** Three tests reproduce it — a bool under the key, an int under the key, and a
+record that repairs a wrongly-typed one.
+
+Worth naming plainly: the fix that made this adapter *loud* was written yesterday, in this same
+change, with a comment about tolerance. Tolerance and reachability are different properties, and
+having thought carefully about one is no evidence about the other.
+
 ## 5 · The decision this change does not take
 
 Whether a **zero streak should be shown at all** — still open from `f2-home-reduced`, and now more

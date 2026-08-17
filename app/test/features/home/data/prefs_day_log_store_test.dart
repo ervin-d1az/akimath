@@ -86,4 +86,31 @@ void main() {
       expect((await store.read()).days, hasLength(1));
     });
   });
+
+  group('a wrongly-typed key costs the streak, never the launch', () {
+    // A `TypeError` is an `Error`, not an `Exception`, so `on Exception` misses
+    // it — and a launch dies on a corrupt preference. Found while building
+    // `OnboardingStore`, which had the same narrow catch.
+    test('a bool under the key reads as an empty log', () async {
+      await SharedPreferencesAsync().setBool(PrefsDayLogStore.key, true);
+
+      expect((await const PrefsDayLogStore().read()).days, isEmpty);
+    });
+
+    test('an int under the key reads as an empty log', () async {
+      await SharedPreferencesAsync().setInt(PrefsDayLogStore.key, 7);
+
+      expect((await const PrefsDayLogStore().read()).days, isEmpty);
+    });
+
+    test('recording over a wrongly-typed key repairs it', () async {
+      await SharedPreferencesAsync().setBool(PrefsDayLogStore.key, true);
+
+      final DayLog after =
+          await const PrefsDayLogStore().record(day(2026, 8, 17));
+
+      expect(after.days, <DateTime>[day(2026, 8, 17)]);
+      expect((await const PrefsDayLogStore().read()).days, hasLength(1));
+    });
+  });
 }

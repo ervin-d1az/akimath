@@ -36,9 +36,16 @@ class PrefsDayLogStore implements DayLogStore {
   Future<DayLog> read() async {
     try {
       return DayLog.decode(await _prefs.getString(key) ?? '');
-    } on Exception catch (error) {
+    } catch (error) {
       // A device whose storage is unavailable loses the streak, not the app —
       // but says so rather than reporting an empty log as if it were true.
+      //
+      // **Deliberately broad.** A key holding the wrong type throws a
+      // `TypeError`, which is an `Error` and not an `Exception`, so
+      // `on Exception` let it through and the launch died on a corrupt
+      // preference — `type 'bool' is not a subtype of type 'String?'`. The rule
+      // is that *nothing* about a stored value may prevent a launch, and that
+      // is wider than the exception hierarchy.
       debugPrint('day log: could not read ($error)');
       return DayLog.empty;
     }
@@ -49,10 +56,11 @@ class PrefsDayLogStore implements DayLogStore {
     final DayLog updated = (await read()).recording(moment);
     try {
       await _prefs.setString(key, updated.encode());
-    } on Exception catch (error) {
+    } catch (error) {
       // The write failed. The returned value still reflects this session —
       // the same guarantee the in-memory store gives — but a store that cannot
-      // persist must not look like one that can.
+      // persist must not look like one that can. Broad for the same reason as
+      // the read.
       debugPrint('day log: could not write ($error)');
     }
     return updated;
