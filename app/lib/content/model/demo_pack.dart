@@ -50,7 +50,7 @@ const List<Item> demoPack = <Item>[
       PromptToken.text('15'),
       PromptToken.operator('='),
     ],
-    expected: '−7',
+    expected: '-7',
     ladderStep: 3,
   ),
   Item(

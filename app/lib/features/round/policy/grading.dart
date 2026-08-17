@@ -1,3 +1,4 @@
+import '../../../content/model/canon.dart';
 import '../../../content/model/item.dart';
 import '../../../design/widgets/spec/verdict.dart';
 
@@ -5,18 +6,26 @@ import '../../../design/widgets/spec/verdict.dart';
 ///
 /// Pure: two values in, a verdict out. No clock, no network, no storage.
 ///
-/// Offline this is the whole of grading, and its verdict is **provisional until
-/// sync** — `ARCHITECTURE.md` §4. It compares canonical forms rather than raw
-/// text so that the client and the server cannot disagree about what the player
-/// meant: the canonicalisation rules are the ones `packages/contract` froze.
-Verdict grade(Item item, String answer) =>
-    _canonical(answer) == _canonical(item.expected)
-        ? Verdict.correct
-        : Verdict.wrong;
-
-/// U+002D HYPHEN-MINUS folded to U+2212 MINUS SIGN.
+/// **Both sides go through the frozen canonicaliser**, and that is the point.
+/// The player's answer is read in learner mode — spaces folded, U+2212 folded to
+/// `-`, leading zeros stripped — and the item's expected answer in stored mode,
+/// which refuses anything that is not already canonical rather than quietly
+/// fixing it. A fixture written with `007` is a broken fixture and says so, at
+/// the moment it is graded, instead of grading correctly by accident.
 ///
-/// The keypad cannot emit a hyphen — `keypad_layout.dart` sees to that — but a
-/// hand-written fixture or a future paste path can, and a verdict that turned on
-/// which dash was typed would be the worst kind of wrong.
-String _canonical(String value) => value.trim().replaceAll('-', '−');
+/// An answer the canonicaliser refuses is **wrong, not an error**: `1/0` and
+/// `x+1` are things a player can produce, and the round has no error state for
+/// them (DR-K4).
+///
+/// Offline this is the whole of grading, and its verdict is **provisional until
+/// sync** — `ARCHITECTURE.md` §4.
+Verdict grade(Item item, String answer) {
+  final CanonResult typed = canonicalise(answer, mode: CanonMode.learner);
+  final CanonResult expected =
+      canonicalise(item.expected, mode: CanonMode.stored);
+
+  if (!typed.ok || !expected.ok) {
+    return Verdict.wrong;
+  }
+  return typed.value == expected.value ? Verdict.correct : Verdict.wrong;
+}

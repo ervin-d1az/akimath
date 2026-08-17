@@ -40,9 +40,11 @@ OpenAPI half arrives with `f1-contract-emitter`.
 - **Built and tested — and playable.** `main.dart` opens the round: an item renders, the keypad
   takes an answer, a verdict comes back. On top of the brand layer sit the math compositor
   (`design/math/`), the press primitives, the dashed outline, the verdict encoding, the keypad,
-  and `features/round/` with its two pure policies. **314 Flutter tests, green.**
-  The content is a hand-written `demoPack` fixture — `f1b-content-reader` replaces the source
-  without touching the screen.
+  and `features/round/` with its two pure policies. **363 Flutter tests, green.**
+  The content is a hand-written `demoPack` fixture — the asset reader replaces the source without
+  touching the screen. **Grading answers to the frozen contract**: `content/model/canon.dart` is
+  checked against `contract/fixtures/canon.golden.json` itself, 19 vectors in both modes, which is
+  what stops the Dart and TypeScript canonicalisers drifting (R2).
 - **A scaffold.** `packages/server` routes one endpoint, `GET /health`, through a pure
   `route()` function. 3 tests, green, 100% mutation score.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
