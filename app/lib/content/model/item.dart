@@ -77,7 +77,11 @@ final class NumberSeriesStimulus extends Stimulus {
   /// all. What it does mean is that **the renderer must not draw
   /// `terms[unknownIndex]`**, and `number_series_view_test.dart` holds it to
   /// that.
-  final List<String> terms;
+  ///
+  /// Integers, because the frozen payload says `z.array(z.int())` and because
+  /// the view is what knows how to write one in es-MX. A string here would be
+  /// a rendering decision made in the content.
+  final List<int> terms;
 
   /// Which term is blank. Always a valid index into [terms].
   final int unknownIndex;

@@ -35,7 +35,7 @@ Map<String, dynamic> _packJson({
 /// One number-series item, with everything overridable so each rejection can
 /// break exactly one thing and leave the rest valid.
 Map<String, dynamic> _seriesItem({
-  Object? terms = const <String>['2', '4', '6'],
+  Object? terms = const <int>[2, 4, 6],
   Object? unknownIndex = 2,
   String answer = '6',
   String kind = 'numberSeries',
@@ -45,10 +45,14 @@ Map<String, dynamic> _seriesItem({
     'id': 'ser',
     'ladder_step': 1,
     'answer': answer,
+    // `{kind, payload}`, which is the frozen shape — see `stimulus_reader.dart`
+    // and the fixtures it is checked against.
     'stimulus': <String, dynamic>{
       'kind': kind,
-      'terms': terms,
-      'unknown_index': unknownIndex,
+      'payload': <String, dynamic>{
+        'terms': terms,
+        'unknown_index': unknownIndex,
+      },
     },
     'prompt': ?alsoPrompt,
   };
@@ -169,7 +173,7 @@ void main() {
 
       final Stimulus stimulus = pack.items.single.stimulus;
       expect(stimulus, isA<NumberSeriesStimulus>());
-      expect((stimulus as NumberSeriesStimulus).terms, <String>['2', '4', '6']);
+      expect((stimulus as NumberSeriesStimulus).terms, <int>[2, 4, 6]);
       expect(stimulus.unknownIndex, 2);
     });
 
@@ -227,7 +231,7 @@ void main() {
               // Index 1, so the refusal can only be the term count — index 2
               // would be out of range for two terms and would pass this test
               // for the wrong reason.
-              _seriesItem(terms: const <String>['2', '4'], unknownIndex: 1),
+              _seriesItem(terms: const <int>[2, 4], unknownIndex: 1),
             ],
           ),
         ),
@@ -238,7 +242,7 @@ void main() {
         () => Pack.fromJson(
           _packJson(
             items: <Map<String, dynamic>>[
-              _seriesItem(terms: const <String>['2', '4', '6']),
+              _seriesItem(terms: const <int>[2, 4, 6]),
             ],
           ),
         ),
@@ -297,14 +301,21 @@ void main() {
           pack.items.single.stimulus as NumberSeriesStimulus;
       expect(stimulus.terms, hasLength(3));
       expect(stimulus.unknownIndex, 1);
-      expect(stimulus.terms[stimulus.unknownIndex], pack.items.single.expected);
+      // `toString`, because the terms are integers and the answer is the
+      // canonical *string* the grader compares against. Making them one type
+      // would mean either formatting in the content or grading against an int,
+      // and both are worse than one conversion in a test.
+      expect(
+        stimulus.terms[stimulus.unknownIndex].toString(),
+        pack.items.single.expected,
+      );
     });
 
-    test('terms that are not a list, or not strings, throw', () {
+    test('terms that are not a list, or not integers, throw', () {
       for (final Object? terms in <Object?>[
         null,
         'onetwothree',
-        const <Object>['2', 4, '6'],
+        const <Object>[2, '4', 6],
       ]) {
         expect(
           () => Pack.fromJson(

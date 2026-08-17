@@ -25,7 +25,7 @@ String _prompt(Item item) => switch (item.stimulus) {
               '$numerator/$denominator',
           };
         }).join(' '),
-      NumberSeriesStimulus(:final List<String> terms) =>
+      NumberSeriesStimulus(:final List<int> terms) =>
         'series: ${terms.join(' ')}',
     };
 

@@ -15,6 +15,7 @@ library;
 import '../../design/math/spec/math_node.dart';
 import 'canon.dart';
 import 'item.dart';
+import 'stimulus_reader.dart';
 
 class Pack {
   const Pack({
@@ -105,17 +106,11 @@ class Pack {
     }
 
     if (rawStimulus != null) {
-      if (rawStimulus is! Map<String, dynamic>) {
-        throw FormatException('item "${entry['id']}" has a malformed stimulus');
-      }
-      return switch (rawStimulus['kind']) {
-        'numberSeries' => _numberSeries(entry, rawStimulus),
-        // Unknown kinds throw rather than degrading to something drawable: an
-        // item rendered as a different question is worse than an item refused.
-        final Object? kind => throw FormatException(
-            'item "${entry['id']}" has unknown stimulus kind "$kind"',
-          ),
-      };
+      // Delegated, because the six per-kind parsers are the thing the frozen
+      // fixtures test directly and they cannot be reached through a whole pack
+      // — a fixture's answer is an HMAC digest, which this format does not
+      // carry yet.
+      return readStimulus(rawStimulus, itemId: '${entry['id']}');
     }
 
     if (rawPrompt is! List || rawPrompt.isEmpty) {
@@ -124,60 +119,6 @@ class Pack {
     return ArithmeticStimulus(<PromptToken>[
       for (final Object? token in rawPrompt) _token(token),
     ]);
-  }
-
-  static NumberSeriesStimulus _numberSeries(
-    Map<String, dynamic> entry,
-    Map<String, dynamic> stimulus,
-  ) {
-    final List<String> terms = _requireTerms(entry, stimulus);
-    return NumberSeriesStimulus(
-      terms: terms,
-      unknownIndex: _requireUnknownIndex(entry, stimulus, terms.length),
-    );
-  }
-
-  /// Which tile is blank, bounded against the run it indexes.
-  ///
-  /// Shared, because every family that hides a tile bounds it identically —
-  /// `packages/contract` factored the same check out as `checkUnknownIndex`,
-  /// and this is its Dart half. An out-of-range index would otherwise be a
-  /// range error thrown mid-round, in `build`, past the point where "content
-  /// is validated where it is read" is true.
-  static int _requireUnknownIndex(
-    Map<String, dynamic> entry,
-    Map<String, dynamic> stimulus,
-    int arity,
-  ) {
-    final Object? index = stimulus['unknown_index'];
-    if (index is! int || index < 0 || index >= arity) {
-      throw FormatException(
-        'item "${entry['id']}" hides tile $index of $arity, which is not one '
-        'of them',
-      );
-    }
-    return index;
-  }
-
-  static List<String> _requireTerms(
-    Map<String, dynamic> entry,
-    Map<String, dynamic> stimulus,
-  ) {
-    final Object? terms = stimulus['terms'];
-    // Two terms cannot establish a pattern, so a series of fewer is a series
-    // with no right answer.
-    if (terms is! List || terms.length < 3) {
-      throw FormatException(
-        'item "${entry['id']}" needs at least three terms to imply a fourth',
-      );
-    }
-    return <String>[
-      for (final Object? term in terms)
-        if (term is String)
-          term
-        else
-          throw FormatException('item "${entry['id']}" has a non-string term'),
-    ];
   }
 
   static PromptToken _token(Object? raw) {

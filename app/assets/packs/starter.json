@@ -488,14 +488,16 @@
       "answer": "10",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "2",
-          "4",
-          "6",
-          "8",
-          "10"
-        ],
-        "unknown_index": 4
+        "payload": {
+          "terms": [
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "unknown_index": 4
+        }
       }
     },
     {
@@ -504,14 +506,16 @@
       "answer": "15",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "5",
-          "10",
-          "15",
-          "20",
-          "25"
-        ],
-        "unknown_index": 2
+        "payload": {
+          "terms": [
+            5,
+            10,
+            15,
+            20,
+            25
+          ],
+          "unknown_index": 2
+        }
       }
     },
     {
@@ -520,14 +524,16 @@
       "answer": "13",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "1",
-          "4",
-          "7",
-          "10",
-          "13"
-        ],
-        "unknown_index": 4
+        "payload": {
+          "terms": [
+            1,
+            4,
+            7,
+            10,
+            13
+          ],
+          "unknown_index": 4
+        }
       }
     },
     {
@@ -536,14 +542,16 @@
       "answer": "24",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "3",
-          "6",
-          "12",
-          "24",
-          "48"
-        ],
-        "unknown_index": 3
+        "payload": {
+          "terms": [
+            3,
+            6,
+            12,
+            24,
+            48
+          ],
+          "unknown_index": 3
+        }
       }
     },
     {
@@ -552,14 +560,16 @@
       "answer": "100",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "100",
-          "90",
-          "80",
-          "70",
-          "60"
-        ],
-        "unknown_index": 0
+        "payload": {
+          "terms": [
+            100,
+            90,
+            80,
+            70,
+            60
+          ],
+          "unknown_index": 0
+        }
       }
     },
     {
@@ -568,14 +578,16 @@
       "answer": "9",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "1",
-          "4",
-          "9",
-          "16",
-          "25"
-        ],
-        "unknown_index": 2
+        "payload": {
+          "terms": [
+            1,
+            4,
+            9,
+            16,
+            25
+          ],
+          "unknown_index": 2
+        }
       }
     },
     {
@@ -584,14 +596,16 @@
       "answer": "162",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "2",
-          "6",
-          "18",
-          "54",
-          "162"
-        ],
-        "unknown_index": 4
+        "payload": {
+          "terms": [
+            2,
+            6,
+            18,
+            54,
+            162
+          ],
+          "unknown_index": 4
+        }
       }
     },
     {
@@ -600,15 +614,17 @@
       "answer": "8",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "1",
-          "1",
-          "2",
-          "3",
-          "5",
-          "8"
-        ],
-        "unknown_index": 5
+        "payload": {
+          "terms": [
+            1,
+            1,
+            2,
+            3,
+            5,
+            8
+          ],
+          "unknown_index": 5
+        }
       }
     },
     {
@@ -617,14 +633,16 @@
       "answer": "32",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "64",
-          "32",
-          "16",
-          "8",
-          "4"
-        ],
-        "unknown_index": 1
+        "payload": {
+          "terms": [
+            64,
+            32,
+            16,
+            8,
+            4
+          ],
+          "unknown_index": 1
+        }
       }
     },
     {
@@ -633,14 +651,16 @@
       "answer": "47",
       "stimulus": {
         "kind": "numberSeries",
-        "terms": [
-          "2",
-          "5",
-          "11",
-          "23",
-          "47"
-        ],
-        "unknown_index": 4
+        "payload": {
+          "terms": [
+            2,
+            5,
+            11,
+            23,
+            47
+          ],
+          "unknown_index": 4
+        }
       }
     }
   ]

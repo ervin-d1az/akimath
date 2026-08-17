@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../../design/math/spec/es_mx_number.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../../design/widgets/spec/term_visual.dart';
 import '../../../../design/widgets/candy_surface.dart';
@@ -31,7 +32,12 @@ class NumberSeriesView extends StatelessWidget {
   });
 
   /// Every term in order, including the hidden one's true value.
-  final List<String> terms;
+  ///
+  /// Integers, and written out here rather than in the content: `EsMxNumber`
+  /// is what knows that a thousand is `1 000` in es-MX, and a term arriving
+  /// pre-formatted would be a rendering decision made by whoever authored the
+  /// pack.
+  final List<int> terms;
 
   /// Which term is blank. The value at this index is never rendered.
   final int unknownIndex;
@@ -51,7 +57,11 @@ class NumberSeriesView extends StatelessWidget {
         if (i == unknownIndex)
           _TermTile(term: '?', size: size, state: TermState.unknown)
         else
-          _TermTile(term: terms[i], size: size, state: TermState.given),
+          _TermTile(
+            term: EsMxNumber.integer(terms[i]),
+            size: size,
+            state: TermState.given,
+          ),
     ];
 
     return Row(

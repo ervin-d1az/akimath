@@ -342,7 +342,7 @@ class _RoundScreenState extends State<RoundScreen> {
       child: switch (_item.stimulus) {
         ArithmeticStimulus() => MathView(node: nodeFor(_item)),
         NumberSeriesStimulus(
-          :final List<String> terms,
+          :final List<int> terms,
           :final int unknownIndex
         ) =>
           NumberSeriesView(terms: terms, unknownIndex: unknownIndex),

@@ -93,7 +93,7 @@ const List<Item> registrySeriesItems = <Item>[
   Item(
     id: 'registry-series',
     stimulus: NumberSeriesStimulus(
-      terms: <String>['2', '6', '18', '54', '162', '486'],
+      terms: <int>[2, 6, 18, 54, 162, 486],
       unknownIndex: 4,
     ),
     expected: '162',

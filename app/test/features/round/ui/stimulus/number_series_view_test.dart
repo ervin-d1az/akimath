@@ -1,3 +1,4 @@
+import 'package:akimath_app/design/math/spec/es_mx_number.dart';
 import 'package:akimath_app/features/round/ui/stimulus/number_series_view.dart';
 import 'package:akimath_app/design/widgets/candy_surface.dart';
 import 'package:flutter/material.dart';
@@ -5,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 Future<void> _pump(
   WidgetTester tester,
-  List<String> terms, {
+  List<int> terms, {
   required int unknownIndex,
 }) async {
   tester.view
@@ -35,16 +36,16 @@ void main() {
   group('a series shows its terms and one hole', () {
     testWidgets('every visible term is drawn, in order',
         (WidgetTester tester) async {
-      await _pump(tester, <String>['2', '4', '6', '8'], unknownIndex: 3);
+      await _pump(tester, <int>[2, 4, 6, 8], unknownIndex: 3);
 
-      for (final String term in <String>['2', '4', '6']) {
-        expect(find.text(term), findsOneWidget);
+      for (final int term in <int>[2, 4, 6]) {
+        expect(find.text(EsMxNumber.integer(term)), findsOneWidget);
       }
     });
 
     testWidgets('there is exactly one blank, and it is where the payload says',
         (WidgetTester tester) async {
-      await _pump(tester, <String>['2', '4', '6', '8'], unknownIndex: 1);
+      await _pump(tester, <int>[2, 4, 6, 8], unknownIndex: 1);
 
       expect(find.text('?'), findsOneWidget);
       expect(find.byType(CandySurface), findsNWidgets(4));
@@ -63,7 +64,7 @@ void main() {
       // The payload carries the true value — offline grading and the error
       // screen's replay both need it on the device. That makes *not drawing
       // it* the renderer's job, and this is the assertion that holds it there.
-      await _pump(tester, <String>['2', '6', '18', '54', '162'],
+      await _pump(tester, <int>[2, 6, 18, 54, 162],
           unknownIndex: 4);
 
       expect(find.text('162'), findsNothing);
@@ -74,13 +75,14 @@ void main() {
       // The first and last positions are the two the loop is most likely to
       // mishandle, so both are pumped rather than assumed.
       for (final int index in <int>[0, 3]) {
-        await _pump(tester, <String>['5', '10', '15', '20'],
+        await _pump(tester, <int>[5, 10, 15, 20],
             unknownIndex: index);
 
         expect(find.text('?'), findsOneWidget, reason: 'index $index');
         expect(find.byType(CandySurface), findsNWidgets(4),
             reason: 'index $index');
-        expect(find.text(<String>['5', '10', '15', '20'][index]), findsNothing,
+        expect(find.text(EsMxNumber.integer(<int>[5, 10, 15, 20][index])),
+            findsNothing,
             reason: 'index $index');
       }
     });
@@ -92,7 +94,7 @@ void main() {
       // Deuteranopia collapses a good deal of the palette, so the outline
       // pattern has to carry the difference and the fill only reinforce it —
       // the same rule the verdict ring follows.
-      await _pump(tester, <String>['2', '4', '6'], unknownIndex: 2);
+      await _pump(tester, <int>[2, 4, 6], unknownIndex: 2);
 
       final List<CandySurface> tiles =
           tester.widgetList<CandySurface>(find.byType(CandySurface)).toList();
@@ -107,7 +109,7 @@ void main() {
     });
 
     testWidgets('and it is filled differently too', (WidgetTester tester) async {
-      await _pump(tester, <String>['2', '4', '6'], unknownIndex: 2);
+      await _pump(tester, <int>[2, 4, 6], unknownIndex: 2);
 
       final List<CandySurface> tiles =
           tester.widgetList<CandySurface>(find.byType(CandySurface)).toList();
@@ -119,7 +121,7 @@ void main() {
         (WidgetTester tester) async {
       // The old renderer dashed whichever tile it appended, which is the same
       // thing as dashing the last one. With the hole first, those differ.
-      await _pump(tester, <String>['2', '4', '6'], unknownIndex: 0);
+      await _pump(tester, <int>[2, 4, 6], unknownIndex: 0);
 
       final List<CandySurface> tiles =
           tester.widgetList<CandySurface>(find.byType(CandySurface)).toList();
@@ -132,12 +134,23 @@ void main() {
   group('it survives real content', () {
     testWidgets('a five-term series and a three-digit term both fit',
         (WidgetTester tester) async {
-      await _pump(tester, <String>['1', '1', '2', '3', '5'], unknownIndex: 4);
+      await _pump(tester, <int>[1, 1, 2, 3, 5], unknownIndex: 4);
       expect(tester.takeException(), isNull);
 
-      await _pump(tester, <String>['2', '6', '18', '162'], unknownIndex: 0);
+      await _pump(tester, <int>[2, 6, 18, 162], unknownIndex: 0);
       expect(tester.takeException(), isNull);
       expect(find.text('162'), findsOneWidget);
+    });
+
+    testWidgets('a four-digit term is written the es-MX way',
+        (WidgetTester tester) async {
+      // The terms arrive as integers precisely so this decision lives here and
+      // not in the content. A pack shipping "1000" as a string would have put
+      // the grouping — or its absence — beyond the reach of any gate.
+      await _pump(tester, <int>[250, 500, 1000, 2000], unknownIndex: 3);
+
+      expect(find.text(EsMxNumber.integer(1000)), findsOneWidget);
+      expect(find.text('1000'), findsNothing);
     });
   });
 }
