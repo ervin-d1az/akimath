@@ -35,28 +35,52 @@ That is `ARCHITECTURE.md` §3's own lesson: a hand-recalled golden vector enshri
 
 ## 2 · The PRNG — the external anchor first
 
-- [ ] 2.1 Write `test/prng/reference.test.ts` from Vigna's published splitmix64 outputs, citing the
+- [x] 2.1 Write `test/prng/reference.test.ts` from Vigna's published splitmix64 outputs, citing the
       URL and the values in the test.
       **Check:** red — nothing exists. **This test is the only thing in the change that carries
       correctness from outside the repository; write it first or the rest is self-referential.**
-- [ ] 2.2 Write `src/prng/splitmix64.ts`: zero imports, the constants and shifts transcribed with
+      **Vigna publishes the algorithm and no test vector**, which is exactly the situation in which
+      a plausible recalled vector gets enshrined. So the anchor was *derived*: his C fetched
+      (sha256 `071795a8…`), a seeder and a `main` appended, compiled with clang, run. 40 words across
+      5 seeds spanning zero, one, 2⁶³, 2⁶⁴−1 and an arbitrary value. The checksum is part of the
+      citation, so "I fetched his file" is checkable rather than asserted.
+- [x] 2.2 Write `src/prng/splitmix64.ts`: zero imports, the constants and shifts transcribed with
       the source URL beside them.
       **Check:** 2.1 green.
-- [ ] 2.3 Write `test/prng/differential.test.ts` — a second, independent implementation in the test
+- [x] 2.3 Write `test/prng/differential.test.ts` — a second, independent implementation in the test
       as an oracle, so a transcription slip has to happen identically twice (design D3).
       **Check:** green, over a spread of seeds including the signed extremes.
-- [ ] 2.4 Write `test/prng/counter_linearity.test.ts`: the indexed word equals a stateful walk of
+- [x] 2.4 Write `test/prng/counter_linearity.test.ts`: the indexed word equals a stateful walk of
       the same length, at seeds `0`, `1`, `2⁶³` and `2⁶⁴−1`.
       **Check:** green. This is what makes statelessness structural rather than a discipline.
-- [ ] 2.5 Add bounded draws with rejection, and `test/prng/rejection.test.ts`.
+- [x] 2.5 Add bounded draws with rejection, and `test/prng/rejection.test.ts`.
       **Check:** the threshold table, plus a span narrow enough to force rejection that still
       terminates and still reaches both ends. Export the limit so its removal is catchable — the
       golden provably cannot catch it.
-- [ ] 2.6 **Falsify by hand, and record the matrix.** Stryker ships no numeric-literal or bitwise
+- [x] 2.6 **Falsify by hand, and record the matrix.** Stryker ships no numeric-literal or bitwise
       mutator, so nothing it does reaches the six constants or the mask. Flip one bit in each
       constant, each shift and the mask in turn; confirm which test goes red for each.
       **Check:** a table in the build log with one row per site. A site no test notices is a hole,
       not a footnote.
+
+      | Site | Result | Caught by |
+      |---|---|---|
+      | `GOLDEN_GAMMA` low bit | 3 red | `reference` |
+      | `MULTIPLIER_1` low bit | 2 red | `reference` |
+      | `MULTIPLIER_2` low bit | 2 red | `reference` |
+      | `SHIFT_1` 30 → 29 | 2 red | `reference` |
+      | `SHIFT_2` 27 → 26 | 2 red | `reference` |
+      | `SHIFT_3` 31 → 32 | 2 red | `reference` |
+      | `MASK64` one bit short | 3 red | `rejection` |
+      | index `+ 1` dropped | 3 red | `reference` |
+
+      Restored byte-identical after each. **And the matrix found a defect rather than only
+      confirming coverage:** the `MASK64` case did not redden the suite on the first attempt, it
+      **hung** the run, which had to be killed. A rejection loop with a wrong limit never
+      terminates, and a hang reports nothing — no failing test, no message. `drawBelow` is now
+      bounded and throws, and it takes its word source as a value so the bound is reachable from a
+      test; with the real kernel it is unreachable by construction, which is what makes that kind of
+      guard rot unverified.
 
 ## 3 · Rationals, and the answer boundary
 
