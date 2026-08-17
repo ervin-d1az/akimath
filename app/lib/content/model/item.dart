@@ -112,6 +112,24 @@ final class MatrixStimulus extends Stimulus {
   final int unknownIndex;
 }
 
+/// `2 › 4 · como · 5 › ?` — two pairs that share a rule.
+///
+/// The only family whose question is about a *relation* rather than a value.
+/// The frozen payload is two `{left, right}` cards; [terms] flattens them into
+/// the four-term reading order `unknown_index` already walks, because one bound
+/// over four terms is the convention the contract chose and re-nesting here
+/// would make the index mean something different on each side.
+final class AnalogyStimulus extends Stimulus {
+  const AnalogyStimulus({required this.terms, required this.unknownIndex});
+
+  /// The four terms in reading order — first pair's left and right, then the
+  /// second pair's — including the hidden one's true value.
+  final List<int> terms;
+
+  /// Which term is blank. Always a valid index into [terms].
+  final int unknownIndex;
+}
+
 class Item {
   const Item({
     required this.id,

@@ -51,6 +51,7 @@ Stimulus readStimulus(Object? raw, {required String itemId}) {
     'arithmetic' => _arithmetic(payload, itemId),
     'numberSeries' => _numberSeries(payload, itemId),
     'matrix' => _matrix(payload, itemId),
+    'analogy' => _analogy(payload, itemId),
     // Unknown kinds throw rather than degrading to something drawable: an item
     // rendered as a different question is worse than an item refused. A kind
     // the contract froze but the app has not built yet lands here too, which
@@ -179,6 +180,43 @@ Stimulus _matrix(Map<String, dynamic> payload, String itemId) {
     size: size,
     unknownIndex: requireUnknownIndex(payload, cells.length, itemId),
   );
+}
+
+/// Two pair-cards, flattened to the four terms the index walks.
+///
+/// The frozen payload nests — `pairs: [{left, right}, {left, right}]` — but
+/// `unknown_index` does not: `checkAnalogy` bounds it against
+/// `pairs.length * 2`, so the index is already an offset into a flat reading
+/// order. Flattening here means the model, the renderer and the contract all
+/// count the same way; keeping the nesting would leave the index meaning one
+/// thing in the pack and another in the widget.
+Stimulus _analogy(Map<String, dynamic> payload, String itemId) {
+  final Object? pairs = payload['pairs'];
+  // Exactly two. `z.array(...).length(2)` — one pair states a relation but
+  // gives nothing to apply it to, and three is a shape no screen draws.
+  if (pairs is! List || pairs.length != 2) {
+    throw FormatException(
+      'item "$itemId" needs exactly two pairs; an analogy compares one '
+      'relation to one other',
+    );
+  }
+  final List<int> terms = <int>[
+    for (final Object? pair in pairs) ...<int>[
+      _pairSide(pair, 'left', itemId),
+      _pairSide(pair, 'right', itemId),
+    ],
+  ];
+  return AnalogyStimulus(
+    terms: terms,
+    unknownIndex: requireUnknownIndex(payload, terms.length, itemId),
+  );
+}
+
+int _pairSide(Object? pair, String side, String itemId) {
+  if (pair is! Map<String, dynamic>) {
+    throw FormatException('item "$itemId" has a malformed pair');
+  }
+  return _requireInt(pair, side, itemId);
 }
 
 /// Which tile is blank, bounded against the run it indexes.

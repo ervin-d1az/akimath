@@ -116,6 +116,20 @@ const List<Item> registryMatrixItems = <Item>[
   ),
 ];
 
+/// An analogy item for the gates: three-digit terms, which is the widest an
+/// analogy gets before the bridge and four tiles stop fitting 390 px.
+const List<Item> registryAnalogyItems = <Item>[
+  Item(
+    id: 'registry-analogy',
+    stimulus: AnalogyStimulus(
+      terms: <int>[100, 300, 250, 750],
+      unknownIndex: 3,
+    ),
+    expected: '750',
+    ladderStep: 4,
+  ),
+];
+
 final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'character sheet',
@@ -166,6 +180,12 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // that draws itself but is not registered is a family whose first overflow
     // report comes from a player.
     build: () => const RoundScreen(items: registrySeriesItems),
+  ),
+  RegisteredScreen(
+    label: 'round · analogy',
+    // The fourth stimulus family, and the widest prompt the round draws: four
+    // tiles and a bridge on one line.
+    build: () => const RoundScreen(items: registryAnalogyItems),
   ),
   RegisteredScreen(
     label: 'round · matrix',

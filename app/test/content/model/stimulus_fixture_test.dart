@@ -24,6 +24,7 @@ const Set<String> _readable = <String>{
   'arithmetic',
   'numberSeries',
   'matrix',
+  'analogy',
 };
 
 /// Frozen in the contract, not yet built here.
@@ -32,7 +33,6 @@ const Set<String> _readable = <String>{
 /// says so, because a family the app cannot draw must fail where the pack is
 /// read and not halfway through a round.
 const Set<String> _pending = <String>{
-  'analogy',
   'hiddenOperation',
   'figurate',
 };
@@ -150,6 +150,51 @@ void main() {
       expect(() => read(size: 2, cells: 9), throwsA(isA<FormatException>()));
       expect(() => read(size: 1, cells: 1), throwsA(isA<FormatException>()));
       expect(() => read(size: 4, cells: 16), throwsA(isA<FormatException>()));
+    });
+
+    test('analogy flattens two nested pairs into four indexed terms', () {
+      // The frozen payload nests; `unknown_index` does not. `checkAnalogy`
+      // bounds it against `pairs.length * 2`, so the index is already an offset
+      // into a flat reading order — and the model has to count the same way or
+      // the index means one thing in the pack and another in the widget.
+      final Map<String, dynamic> stimulus = _stimulusOf(_read('analogy.json'));
+      final Map<String, dynamic> payload =
+          stimulus['payload'] as Map<String, dynamic>;
+      final List<dynamic> pairs = payload['pairs'] as List<dynamic>;
+
+      final AnalogyStimulus parsed =
+          readStimulus(stimulus, itemId: 'ana') as AnalogyStimulus;
+
+      expect(parsed.terms, <int>[
+        (pairs[0] as Map<String, dynamic>)['left'] as int,
+        (pairs[0] as Map<String, dynamic>)['right'] as int,
+        (pairs[1] as Map<String, dynamic>)['left'] as int,
+        (pairs[1] as Map<String, dynamic>)['right'] as int,
+      ]);
+      expect(parsed.unknownIndex, payload['unknown_index']);
+    });
+
+    test('an analogy compares exactly two pairs', () {
+      // `z.array(...).length(2)`. One pair states a relation but gives nothing
+      // to apply it to; three is a shape no screen draws. Both sides, because
+      // a rule tested from one side can be moved from the other in silence.
+      Object? read(int pairs) => readStimulus(
+            <String, dynamic>{
+              'kind': 'analogy',
+              'payload': <String, dynamic>{
+                'pairs': <Map<String, dynamic>>[
+                  for (int i = 0; i < pairs; i++)
+                    <String, dynamic>{'left': i + 1, 'right': (i + 1) * 2},
+                ],
+                'unknown_index': 0,
+              },
+            },
+            itemId: 'ana$pairs',
+          );
+
+      expect(() => read(1), throwsA(isA<FormatException>()));
+      expect(() => read(2), returnsNormally);
+      expect(() => read(3), throwsA(isA<FormatException>()));
     });
 
     test('arithmetic flattens the frozen term pair into drawable tokens', () {

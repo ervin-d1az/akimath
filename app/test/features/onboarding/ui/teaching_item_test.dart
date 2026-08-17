@@ -28,6 +28,8 @@ String _prompt(Item item) => switch (item.stimulus) {
       NumberSeriesStimulus(:final List<int> terms) =>
         'series: ${terms.join(' ')}',
       MatrixStimulus(:final List<int> cells) => 'matrix: ${cells.join(' ')}',
+      AnalogyStimulus(:final List<int> terms) =>
+        'analogy: ${terms.join(' ')}',
     };
 
 void main() {
