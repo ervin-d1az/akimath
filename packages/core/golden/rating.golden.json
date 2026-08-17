@@ -1,0 +1,622 @@
+{
+  "sessions": [
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1500,
+          "opponentDeviation": 200,
+          "score": 1
+        }
+      ],
+      "after": {
+        "rating": 1672.7308349609375,
+        "deviation": 266.6112365722656
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1500,
+          "opponentDeviation": 200,
+          "score": 0
+        }
+      ],
+      "after": {
+        "rating": 1327.2691650390625,
+        "deviation": 266.6112365722656
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1400,
+          "opponentDeviation": 30,
+          "score": 1
+        },
+        {
+          "opponentRating": 1550,
+          "opponentDeviation": 100,
+          "score": 0
+        },
+        {
+          "opponentRating": 1700,
+          "opponentDeviation": 300,
+          "score": 0
+        }
+      ],
+      "after": {
+        "rating": 1441.548583984375,
+        "deviation": 193.20223999023438
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 1
+        },
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 1
+        },
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 0.5
+        }
+      ],
+      "after": {
+        "rating": 1375.2135009765625,
+        "deviation": 273.8729248046875
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1500,
+          "opponentDeviation": 200,
+          "score": 1
+        }
+      ],
+      "after": {
+        "rating": 1578.6290283203125,
+        "deviation": 179.8809051513672
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1500,
+          "opponentDeviation": 200,
+          "score": 0
+        }
+      ],
+      "after": {
+        "rating": 1421.3709716796875,
+        "deviation": 179.8809051513672
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1400,
+          "opponentDeviation": 30,
+          "score": 1
+        },
+        {
+          "opponentRating": 1550,
+          "opponentDeviation": 100,
+          "score": 0
+        },
+        {
+          "opponentRating": 1700,
+          "opponentDeviation": 300,
+          "score": 0
+        }
+      ],
+      "after": {
+        "rating": 1464.1064453125,
+        "deviation": 151.39889526367188
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 1
+        },
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 1
+        },
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 0.5
+        }
+      ],
+      "after": {
+        "rating": 1444.8546142578125,
+        "deviation": 182.0623016357422
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1500,
+          "opponentDeviation": 200,
+          "score": 1
+        }
+      ],
+      "after": {
+        "rating": 1224.6619873046875,
+        "deviation": 79.08979034423828
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1500,
+          "opponentDeviation": 200,
+          "score": 0
+        }
+      ],
+      "after": {
+        "rating": 1194.26123046875,
+        "deviation": 79.08979034423828
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1400,
+          "opponentDeviation": 30,
+          "score": 1
+        },
+        {
+          "opponentRating": 1550,
+          "opponentDeviation": 100,
+          "score": 0
+        },
+        {
+          "opponentRating": 1700,
+          "opponentDeviation": 300,
+          "score": 0
+        }
+      ],
+      "after": {
+        "rating": 1219.0399169921875,
+        "deviation": 77.30683135986328
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 1
+        },
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 1
+        },
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 0.5
+        }
+      ],
+      "after": {
+        "rating": 1208.1868896484375,
+        "deviation": 76.09180450439453
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1500,
+          "opponentDeviation": 200,
+          "score": 1
+        }
+      ],
+      "after": {
+        "rating": 1901.511474609375,
+        "deviation": 49.83908462524414
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1500,
+          "opponentDeviation": 200,
+          "score": 0
+        }
+      ],
+      "after": {
+        "rating": 1889.4393310546875,
+        "deviation": 49.83908462524414
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1400,
+          "opponentDeviation": 30,
+          "score": 1
+        },
+        {
+          "opponentRating": 1550,
+          "opponentDeviation": 100,
+          "score": 0
+        },
+        {
+          "opponentRating": 1700,
+          "opponentDeviation": 300,
+          "score": 0
+        }
+      ],
+      "after": {
+        "rating": 1881.935302734375,
+        "deviation": 49.46494674682617
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "outcomes": [
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 1
+        },
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 1
+        },
+        {
+          "opponentRating": 1000,
+          "opponentDeviation": 120,
+          "score": 0.5
+        }
+      ],
+      "after": {
+        "rating": 1893.6024169921875,
+        "deviation": 49.9578857421875
+      }
+    }
+  ],
+  "decays": [
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "elapsedDays": 0,
+      "after": {
+        "rating": 1500,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "elapsedDays": 1,
+      "after": {
+        "rating": 1500,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "elapsedDays": 7,
+      "after": {
+        "rating": 1500,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "elapsedDays": 30,
+      "after": {
+        "rating": 1500,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "elapsedDays": 365,
+      "after": {
+        "rating": 1500,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 350
+      },
+      "elapsedDays": 1000,
+      "after": {
+        "rating": 1500,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "elapsedDays": 0,
+      "after": {
+        "rating": 1500,
+        "deviation": 200
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "elapsedDays": 1,
+      "after": {
+        "rating": 1500,
+        "deviation": 200.8202362060547
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "elapsedDays": 7,
+      "after": {
+        "rating": 1500,
+        "deviation": 205.6729736328125
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "elapsedDays": 30,
+      "after": {
+        "rating": 1500,
+        "deviation": 223.30027770996094
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "elapsedDays": 365,
+      "after": {
+        "rating": 1500,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1500,
+        "deviation": 200
+      },
+      "elapsedDays": 1000,
+      "after": {
+        "rating": 1500,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "elapsedDays": 0,
+      "after": {
+        "rating": 1200,
+        "deviation": 80
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "elapsedDays": 1,
+      "after": {
+        "rating": 1200,
+        "deviation": 82.02906036376953
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "elapsedDays": 7,
+      "after": {
+        "rating": 1200,
+        "deviation": 93.28113555908203
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "elapsedDays": 30,
+      "after": {
+        "rating": 1200,
+        "deviation": 127.52651977539062
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "elapsedDays": 365,
+      "after": {
+        "rating": 1200,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1200,
+        "deviation": 80
+      },
+      "elapsedDays": 1000,
+      "after": {
+        "rating": 1200,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "elapsedDays": 0,
+      "after": {
+        "rating": 1900,
+        "deviation": 50
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "elapsedDays": 1,
+      "after": {
+        "rating": 1900,
+        "deviation": 53.1861572265625
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "elapsedDays": 7,
+      "after": {
+        "rating": 1900,
+        "deviation": 69.29191589355469
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "elapsedDays": 30,
+      "after": {
+        "rating": 1900,
+        "deviation": 111.1890869140625
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "elapsedDays": 365,
+      "after": {
+        "rating": 1900,
+        "deviation": 350
+      }
+    },
+    {
+      "prior": {
+        "rating": 1900,
+        "deviation": 50
+      },
+      "elapsedDays": 1000,
+      "after": {
+        "rating": 1900,
+        "deviation": 350
+      }
+    }
+  ]
+}

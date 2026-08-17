@@ -165,30 +165,35 @@ to the same zero-clone bar as its two siblings, and reports 0.
 
 ## 6 · The rating
 
-- [ ] 6.1 Write `test/rating/glicko.test.ts` from Glickman's published worked example, cited.
-      **Check:** red. External anchor again: the constants are not recalled here either.
-- [ ] 6.2 Write `src/rating/glicko.ts`: the session is the rating period, the opponent rating is a
+- [x] 6.1 Write `test/rating/glicko.test.ts` from Glickman's published worked example, cited.
+      **Check:** red. External anchor again: the constants are not recalled here either. Glickman's
+      paper fetched from <https://www.glicko.net/glicko/glicko.pdf>; his page-4 example — a 1500/RD
+      200 player against 1400/30, 1550/100 and 1700/300, winning one — reproduces as **1464** and
+      **151.4** exactly.
+- [x] 6.2 Write `src/rating/glicko.ts`: the session is the rating period, the opponent rating is a
       parameter (design D7), outputs narrowed with `Math.fround` (design D6).
       **Check:** green, and rating a batch together differs from rating one at a time — the whole
       reason the period is the session.
-- [ ] 6.3 Write `src/rating/decay.ts` and its test: elapsed **days**, capped, and zero days changes
+- [x] 6.3 Write `src/rating/decay.ts` and its test: elapsed **days**, capped, and zero days changes
       nothing.
       **Check:** red first.
-- [ ] 6.4 Prove the float32 margin rather than asserting it: perturb the transcendentals' results by
+- [x] 6.4 Prove the float32 margin rather than asserting it: perturb the transcendentals' results by
       a plausible cross-engine amount and show the narrowed output does not move.
       **Check:** the test states the margin it measured. This is what makes a byte-exact rating
-      fixture honest instead of lucky.
+      fixture honest instead of lucky. Perturbing an opponent rating and an opponent deviation by 8
+      ULPs each leaves both stored figures bit-identical — a real cross-engine `Math.pow` difference
+      is one or two.
 
 ## 7 · The golden artifacts
 
-- [ ] 7.1 Write `src/adapters/emit-golden.ts` — the **only** filesystem writer in the package. It
+- [x] 7.1 Write `src/adapters/emit-golden.ts` — the **only** filesystem writer in the package. It
       calls the three builders and serialises; it holds no decision.
       **Check:** `npm run emit` twice produces no diff.
-- [ ] 7.2 Write the three replay tests. Each reads the **committed** artifact from disk and reports
+- [x] 7.2 Write the three replay tests. Each reads the **committed** artifact from disk and reports
       how many vectors it compared, failing at zero.
       **Check:** a replay that recomputes instead of reading is circular; verify by hand-editing one
       committed value and confirming red.
-- [ ] 7.3 Every value that could exceed 2^53 is serialised as a **string**. The same defect just
+- [x] 7.3 Every value that could exceed 2^53 is serialised as a **string**. The same defect just
       cost a migration in `f1-schema-freeze`: `JSON.parse` silently rounds a bigint, and a seed off
       by one rederives an unrelated item.
       **Check:** a round-trip test over the extremes, not over a typical value.
