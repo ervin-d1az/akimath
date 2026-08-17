@@ -223,15 +223,14 @@ import 'dart:math'; // never package:flutter/material.dart
     test('reports a root that is not on disk as absent, not as empty', () {
       final SourceTree tree = SourceTree.readAppLib();
 
+      // All three roots are now on disk. The first two flipped from absent to
+      // present when `f2-core-loop` landed `features/round/policy/` and
+      // `content/model/` — which is the flip this test's earlier form
+      // predicted in its own reason string, and the moment the gate started
+      // covering them rather than reporting them missing.
       expect(tree.presentRoots, contains(PureRoot.designSpec));
-      expect(
-        tree.presentRoots,
-        isNot(contains(PureRoot.featurePolicy)),
-        reason: 'No features/*/policy/ exists yet. When the first one lands '
-            'this expectation flips to a presence check and the boundary gate '
-            'starts covering it.',
-      );
-      expect(tree.presentRoots, isNot(contains(PureRoot.contentModel)));
+      expect(tree.presentRoots, contains(PureRoot.featurePolicy));
+      expect(tree.presentRoots, contains(PureRoot.contentModel));
     });
 
     test('refuses a lib root that does not resolve', () {

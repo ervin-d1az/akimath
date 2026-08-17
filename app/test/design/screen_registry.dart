@@ -1,5 +1,6 @@
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
+import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:flutter/widgets.dart';
 
 /// A surface the design gates pump a screen at.
@@ -70,5 +71,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'splash · green',
     build: () => const SplashScreen(variant: SplashVariant.brandGreen),
+  ),
+  RegisteredScreen(
+    label: 'round',
+    build: () => const RoundScreen(),
   ),
 ];

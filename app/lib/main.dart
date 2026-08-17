@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'design/theme.dart';
-import 'features/character_sheet/character_sheet_screen.dart';
+import 'features/round/ui/round_screen.dart';
 
 void main() {
   runApp(const AkiMathApp());
@@ -9,9 +9,9 @@ void main() {
 
 /// The application root.
 ///
-/// The only thing built so far is the brand layer, so the home screen is Aki's
-/// character sheet. It gets replaced by the real navigation the moment there is
-/// something to navigate to.
+/// The home is the round: the app can now be played. It replaces the character
+/// sheet, which was the home only because the brand layer was the only thing
+/// built. Real navigation arrives with `f2-app-shell`.
 class AkiMathApp extends StatelessWidget {
   const AkiMathApp({super.key});
 
@@ -21,7 +21,7 @@ class AkiMathApp extends StatelessWidget {
       title: 'AkiMath',
       debugShowCheckedModeBanner: false,
       theme: AkiMathTheme.build(),
-      home: const CharacterSheetScreen(),
+      home: const RoundScreen(),
     );
   }
 }
