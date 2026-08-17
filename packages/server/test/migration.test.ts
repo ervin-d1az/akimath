@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { runMigrations } from "../src/adapters/migrate-runner.js";
 import { planMigrations, type AppliedMigration, type MigrationFile } from "../src/migrate.js";
+import {
+  MIGRATIONS_DIR,
+  describeWithDatabase,
+  emptyDatabase,
+  fixtures,
+  type TestDatabase,
+} from "./support/database.js";
 
 const file = (name: string, checksum: string): MigrationFile => ({
   name,
@@ -115,5 +123,65 @@ describe("a migration edited after it shipped stops the runner", () => {
 
     expect(plan.ok).toBe(false);
     expect(plan.ok === false && plan.error).toContain("0001_first.sql");
+  });
+});
+
+describeWithDatabase("the runner, against a real database", () => {
+  // The scenarios the pure planner cannot answer: whether the SQL applies at
+  // all, whether a second run is a no-op, and what a half-failed file leaves
+  // behind.
+  let db: TestDatabase;
+
+  beforeEach(async () => {
+    db = await emptyDatabase();
+  });
+
+  afterEach(async () => {
+    await db.close();
+  });
+
+  it("the first run applies everything and the second applies none", async () => {
+    const first = await runMigrations(db.client, MIGRATIONS_DIR);
+    expect(first.applied.length).toBeGreaterThan(0);
+
+    const second = await runMigrations(db.client, MIGRATIONS_DIR);
+    expect(second.applied).toEqual([]);
+
+    const ledger = await db.client.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM schema_migrations",
+    );
+    expect(Number(ledger.rows[0]?.count)).toBe(first.applied.length);
+  });
+
+  it("a file that raises partway leaves nothing of itself applied", async () => {
+    // One transaction per file, not one for the run: the good file before it
+    // stays applied, and the broken one is neither applied nor recorded, so
+    // re-running retries it whole.
+    await expect(
+      runMigrations(db.client, fixtures.migrationsDir("broken-run")),
+    ).rejects.toThrow("0002_breaks_halfway.sql");
+
+    const tables = await db.client.query<{ table_name: string }>(
+      `SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name LIKE 'fixture%'
+        ORDER BY table_name`,
+    );
+    expect(tables.rows.map((r) => r.table_name)).toEqual(["fixture_first"]);
+
+    const ledger = await db.client.query<{ name: string }>(
+      "SELECT name FROM schema_migrations ORDER BY name",
+    );
+    expect(ledger.rows.map((r) => r.name)).toEqual(["0001_ok.sql"]);
+  });
+
+  it("an edited migration stops the runner before it touches anything", async () => {
+    await runMigrations(db.client, MIGRATIONS_DIR);
+    await db.client.query(
+      "UPDATE schema_migrations SET checksum = 'not-what-it-was'",
+    );
+
+    await expect(runMigrations(db.client, MIGRATIONS_DIR)).rejects.toThrow(
+      /0001_initial\.sql/,
+    );
   });
 });
