@@ -80,8 +80,11 @@ OpenAPI half arrives with `f1-contract-emitter`.
   0 clones. **Zod 4.4.3 is the repository's first runtime dependency**, pinned exactly
   because the determinism gate is byte-for-byte.
 - **Does not exist.** No auth, no API endpoints beyond health, no dev environment, no deploy, and
-  **no database instance** — the schema and its migration exist, but nothing is provisioned to run
-  them against outside a local Postgres and CI's service container. Item generation, the keypad and the pack *builder* are all
+  no deployed *application*. **The database is provisioned**: a Neon project (`akimath`,
+  `aws-us-east-1`, PostgreSQL 18.4) with both migrations applied, its connection strings in
+  `packages/server/.env.local`, which is gitignored. `MIGRATE_DATABASE_URL` is the direct string and
+  `DATABASE_URL` the pooled one; **`TEST_DATABASE_URL` is deliberately not set there**, because the
+  harness drops and recreates the public schema on every run. Item generation, the keypad and the pack *builder* are all
   unwritten — the pack *format* is frozen, the packs are not built. **The math compositor is
   built**: `EsMxNumber`, `FractionMetrics`, `MathNode` (pure) and `MathView` + `FractionGlyph`
   (adapters) are landed and tested. `AnswerSlot` waits on `f0-dashed-border`. Spike B cleared its
@@ -95,7 +98,7 @@ OpenAPI half arrives with `f1-contract-emitter`.
   `protected-paths` and `integration` landed with the schema: the first refuses an unattended edit
   to `packages/server/migrations/**` or `schema.sql` unless a pull request carries the
   `allow-protected-edit` label, and the second runs the database suites and the snapshot diff
-  against a **`postgres:17` service container** rather than ARCHITECTURE.md §8's ephemeral Neon
+  against a **`postgres:18` service container** rather than ARCHITECTURE.md §8's ephemeral Neon
   branch — a container needs no account, no project and no secret, and what those tests assert is
   plain PostgreSQL behaviour. ARCHITECTURE.md §8's remaining jobs — compliance, mutation — are
   deliberately absent because the code they guard does not exist; `contract`'s own `oasdiff`
@@ -125,7 +128,9 @@ npm run schema:dump   # regenerate schema.sql; the tree must not move afterwards
 npm run retention     # delete expired rows; needs RETENTION_DATABASE_URL
 
 # A database to run the above against, local:
-#   brew install postgresql@17 && brew services start postgresql@17
+#   brew install postgresql@18 && brew services start postgresql@18
+#   (18, because that is what Neon provisioned and CI mirrors production;
+#    `pg_dump` output is byte-identical on 17 and 18, verified)
 #   createdb akimath_dev
 #   export TEST_DATABASE_URL=postgresql://localhost/akimath_dev
 

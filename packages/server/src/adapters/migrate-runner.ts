@@ -72,6 +72,37 @@ export async function runMigrations(
   client: Client,
   directory: string,
 ): Promise<MigrationRun> {
+  // **One migration run at a time per database.** Two deploy pods starting
+  // together both read an empty ledger and both apply `0001`; the loser fails on
+  // whatever it tries to create second, having already committed the first file.
+  // `ARCHITECTURE.md` §5 already reaches for an advisory lock to serialise two
+  // devices, and this is the same tool for the same shape of problem.
+  //
+  // Session-level rather than transaction-level, because the run is many
+  // transactions — one per file — and a transaction-scoped lock would release
+  // between them.
+  //
+  // **Advisory locks are per-database, verified rather than assumed:** a lock
+  // held on one database does not block the same key on another in the same
+  // cluster. So this covers the production case, where there is one database,
+  // and does not cover two fresh databases racing to create the same
+  // cluster-wide ROLE. That case is the test harness's, and it serialises on the
+  // shared connection it already has.
+  await client.query("SELECT pg_advisory_lock($1)", [MIGRATION_LOCK]);
+  try {
+    return await applyPending(client, directory);
+  } finally {
+    await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK]);
+  }
+}
+
+/** An arbitrary constant, fixed forever: every runner must pick the same one. */
+const MIGRATION_LOCK = 8_314_159_265_358_979n % 2_147_483_647n;
+
+async function applyPending(
+  client: Client,
+  directory: string,
+): Promise<MigrationRun> {
   const onDisk = await filesIn(directory);
   const plan = planMigrations({ onDisk, applied: await appliedIn(client) });
 

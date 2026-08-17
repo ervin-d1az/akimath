@@ -340,7 +340,12 @@ jobs:
   # pooler or on autosuspend, that test wants a real Neon branch and this comment
   # is where to say so.
   #
-  # The image is pinned to the same major the schema was frozen against.
+  # The image is pinned to the major **production** runs, which is what CI should
+  # mirror. Neon provisioned PostgreSQL 18 in August 2026; the schema was
+  # developed against 17, and moving CI to 18 cost nothing — `pg_dump` produces a
+  # byte-identical `schema.sql` on both majors, verified. PostgreSQL 18 did expose
+  # one real defect that 17 had hidden: two workers migrating fresh databases
+  # concurrently raced on `CREATE ROLE`, which is cluster-wide.
   integration:
     name: integration
     needs: changes
@@ -352,7 +357,7 @@ jobs:
         working-directory: packages/server
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: akimath_ci

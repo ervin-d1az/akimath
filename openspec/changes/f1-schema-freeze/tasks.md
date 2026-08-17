@@ -184,3 +184,21 @@ database — see 8.3.
       **Found by the adversarial review of the `f1-core-rederivation` design**, which asked what
       happens to a bigint on the way through jsonb. Nothing had written a pack yet, so nothing was
       corrupted — the forward-only discipline did its job and the fix is an ALTER, not an edit.
+
+- [x] 9.2 **The database is provisioned, and it is PostgreSQL 18.** Neon project `akimath`
+      (`silent-fire-02286626`, `aws-us-east-1`), both migrations applied through the real runner, its
+      strings in the gitignored `packages/server/.env.local`. `TEST_DATABASE_URL` is deliberately
+      absent from that file — the harness drops the public schema every run.
+      **CI moved to `postgres:18` to mirror production.** It cost nothing: `pg_dump` produces a
+      byte-identical `schema.sql` on 17 and 18, verified by dumping the same schema from both.
+- [x] 9.3 **A concurrency defect that PostgreSQL 17 had been hiding.** `0001` creates two roles with
+      check-then-create, and roles are **cluster-wide**. Two vitest workers migrating their own fresh
+      databases raced and one died on `pg_authid_rolname_index`; 17 happened to interleave them
+      harmlessly and 18 did not. Two deploy pods starting together are the same shape of bug.
+      Fixed in two places, because one lock cannot cover both: the runner takes a session-level
+      **advisory lock** so only one migration run touches a database at a time, and the test harness
+      takes one on the **shared** connection every worker uses to create its own database, because
+      advisory locks are per-database — measured, not assumed, by holding a key in one database and
+      taking it successfully in another.
+      `0001` was **not** edited. It is applied and its checksum is watched; that is the discipline
+      working, and the fix went where a fix could go.

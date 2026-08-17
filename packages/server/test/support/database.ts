@@ -72,6 +72,31 @@ async function connectToWorkerDatabase(): Promise<pg.Client> {
   return client;
 }
 
+/**
+ * Runs `work` with every other worker in this cluster locked out.
+ *
+ * **Roles are cluster-wide and the migration creates two of them.** Each worker
+ * migrates its own fresh database, so the runner's own advisory lock — which is
+ * per-database, verified — does not serialise them, and two workers reaching
+ * `CREATE ROLE app_request` together fail on
+ * `pg_authid_rolname_index`. PostgreSQL 17 happened to interleave them harmlessly
+ * and 18 did not, which is the whole argument for CI mirroring production's major.
+ *
+ * The lock is taken on the **shared** database every worker connects to in order
+ * to create its own, because that is the one place they all meet.
+ */
+async function withClusterLock<T>(work: () => Promise<T>): Promise<T> {
+  const admin = new pg.Client({ connectionString: TEST_DATABASE_URL });
+  await admin.connect();
+  await admin.query("SELECT pg_advisory_lock($1)", [4242]);
+  try {
+    return await work();
+  } finally {
+    await admin.query("SELECT pg_advisory_unlock($1)", [4242]);
+    await admin.end();
+  }
+}
+
 async function wipe(client: pg.Client): Promise<void> {
   await client.query("DROP SCHEMA IF EXISTS public CASCADE");
   await client.query("CREATE SCHEMA public");
@@ -81,17 +106,21 @@ async function wipe(client: pg.Client): Promise<void> {
 export async function freshDatabase(
   migrationsDir: string = MIGRATIONS_DIR,
 ): Promise<TestDatabase> {
-  const client = await connectToWorkerDatabase();
-  await wipe(client);
-  await runMigrations(client, migrationsDir);
-  return { client, close: () => client.end() };
+  return withClusterLock(async () => {
+    const client = await connectToWorkerDatabase();
+    await wipe(client);
+    await runMigrations(client, migrationsDir);
+    return { client, close: () => client.end() };
+  });
 }
 
 /** Connects and wipes, without applying anything. */
 export async function emptyDatabase(): Promise<TestDatabase> {
-  const client = await connectToWorkerDatabase();
-  await wipe(client);
-  return { client, close: () => client.end() };
+  return withClusterLock(async () => {
+    const client = await connectToWorkerDatabase();
+    await wipe(client);
+    return { client, close: () => client.end() };
+  });
 }
 
 /**
