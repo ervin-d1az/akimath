@@ -8,7 +8,8 @@ TypeScript backend, Postgres on Neon (planned). One repository — see
 That is an engineering constraint, not a marketing note: no third-party SDK that collects
 data, no ads, no external analytics. Before adding *any* dependency, check whether it phones
 home; if it does, it does not go in. Today that constraint holds by construction — `app/`
-ships `flutter`, `cupertino_icons` and `meta` at runtime, `packages/server` has no
+ships `flutter`, `cupertino_icons`, `meta` and `shared_preferences` at runtime — the last
+added 2026-08-16 with its audit recorded in `dependency_allowlist_test.dart` itself — `packages/server` has no
 `dependencies` key at all, and `packages/contract` has exactly one: `zod`, pinned to an
 exact `4.4.3` because the pack determinism gate is byte-for-byte.
 
@@ -48,8 +49,10 @@ OpenAPI half arrives with `f1-contract-emitter`.
   absent by rule rather than by omission. The app opens on the **home** — Aki, the `RETO DEL DÍA`
   preview composed by the real compositor, the streak pill — and a series is pushed as a full-screen
   route with no navigation affordance. The streak is **earned within a session** — `DayLog` records
-  the day on submit and the home re-reads it — but does **not survive a relaunch**: persisting needs
-  a storage plugin, and that is an open DEP-1 decision. **532 Flutter tests, green.**
+  the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
+  **Unverified on a device:** `pod` is not installed on this machine, so `flutter run` cannot link
+  the plugin (`brew install cocoapods` unblocks it). The suite covers the store against the real
+  `SharedPreferencesAsync` API. **540 Flutter tests, green.**
   Content is a **bundled 20-item JSON pack** (`app/assets/packs/starter.json`) read by
   `content/pack_reader.dart` — the one adapter in `content/`. An expired or malformed pack is
   refused where it is read. **Grading answers to the frozen contract**: `content/model/canon.dart` is

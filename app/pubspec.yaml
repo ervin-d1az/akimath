@@ -39,7 +39,22 @@ dependencies:
   # any Flutter widget code, which is what keeps it testable in isolation.
   meta: ^1.17.0
 
+  # The day log's storage. Flutter exposes no writable path without a plugin,
+  # and the streak has to survive a relaunch to mean anything.
+  #
+  # DEP-1 audit, 2026-08-16, decided by Ervin: published by flutter.dev, wraps
+  # NSUserDefaults on iOS and SharedPreferences on Android, makes no network
+  # request of any kind, collects nothing, and reports nothing. It stores one
+  # string under one key on the device.
+  shared_preferences: ^2.3.0
+
 dev_dependencies:
+  # Dev only, and deliberately so: it carries `InMemorySharedPreferencesAsync`,
+  # the backend that lets `PrefsDayLogStore` be tested against the **real**
+  # SharedPreferencesAsync API rather than mocked out. It does not ship, which
+  # is why `dependency_allowlist_test` scopes itself to runtime dependencies.
+  shared_preferences_platform_interface: ^2.4.0
+
   flutter_test:
     sdk: flutter
 

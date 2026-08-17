@@ -26,10 +26,43 @@
       covered end to end by `home_route_test.dart`, through the real widgets. Stated rather than
       skipped (PROC-5), and it lands the moment there is a reason to run the app by hand.
 
-## 3 · The decision this change does not take
+## 3 · Persistence — decided, built, and blocked on tooling
 
-**Persisting between launches needs a plugin**, and adding one is DEP-1's — see design D1. The audit
-is done so the answer is a yes or a no: `shared_preferences` and `path_provider` are both Flutter-team
-packages wrapping platform storage, neither makes a network request, and `shared_preferences` is the
-smaller surface for one string under one key. `dependency_allowlist_test` will go red on the addition
-by design, and amending it is the other half of the same decision.
+- [x] 3.1 **DEP-1 decision taken by Ervin, 2026-08-16: add `shared_preferences`.**
+      The gate fired first, exactly as designed:
+      `Expected: {flutter, cupertino_icons, meta} / Actual: {…, shared_preferences}`.
+      That failure **is** the mechanism working — it cannot judge whether a package phones home, so
+      it summons someone who can.
+- [x] 3.2 The audit is recorded in the allowlist itself, beside the entry, because DEP-1 requires it
+      in the same change. Verified offline rather than asserted: every one of the six federated
+      packages resolves to `github.com/flutter/packages`, and grepping the shipped Dart of the
+      facade, the platform interface and both mobile implementations for `HttpClient`,
+      `package:http`, `Socket` and `WebSocket` returns **zero files**.
+- [x] 3.3 `PrefsDayLogStore` — one string under one key, behind the existing seam. 8 tests against
+      the **real** `SharedPreferencesAsync` API over the plugin's in-memory backend, which is why
+      `shared_preferences_platform_interface` is a **dev** dependency: it does not ship, which is the
+      reason the allowlist scopes itself to runtime.
+- [x] 3.4 `HomeRoute` defaults to it.
+- [ ] 3.5 **Tier 2 — BLOCKED, and the blocker is the machine, not the code.**
+      `flutter run` now fails with *"CocoaPods not installed or not in valid state — without
+      CocoaPods, plugins will not work on iOS"*. `pod` is not on this machine. Every earlier
+      screenshot in this change was therefore of the **previously installed, plugin-free binary**,
+      which is why one showed a stale verdict screen and the cold launch showed a streak of zero.
+      Confirmed at the filesystem rather than guessed: the app container's `Library/Preferences/` is
+      empty and the key appears nowhere under the simulator's data.
+      **To unblock:** `brew install cocoapods`, then `flutter run`. Nothing in the repo changes.
+
+## 4 · What that incident cost, and what it changed
+
+`PrefsDayLogStore` swallowed storage errors without a word, so a store that could not write **at
+all** was indistinguishable from one that worked — the app showed zero and nothing said why. That is
+the defect the tests could not see, because the tests use a backend that always succeeds.
+
+Failures are now reported through `debugPrint`. It costs nothing in release and is the difference
+between a mystery and a message. Recorded here because the lesson is not "install CocoaPods" — it is
+that **a tolerant adapter must still be a loud one**.
+
+## 5 · The decision this change does not take
+
+Whether a **zero streak should be shown at all** — still open from `f2-home-reduced`, and now more
+visible, since a fresh install shows one until the first series is played.

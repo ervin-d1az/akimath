@@ -12,6 +12,8 @@ import 'package:akimath_app/design/widgets/loading_dots.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 class _FakeBundle extends CachingAssetBundle {
   _FakeBundle(this.source, {this.delay = Duration.zero});
@@ -73,6 +75,14 @@ Future<void> _pump(
 }
 
 void main() {
+  setUp(() {
+    // The app's default store is the real `PrefsDayLogStore`, so these tests
+    // exercise the real wiring rather than a substitute — over an in-memory
+    // backend, which is what makes that possible without a device.
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+  });
+
   group('the home loads its pack', () {
     testWidgets('a valid pack reaches the home', (WidgetTester tester) async {
       await _pump(tester);

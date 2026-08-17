@@ -15,6 +15,28 @@ const Set<String> allowedRuntimeDependencies = <String>{
   'flutter',
   'cupertino_icons',
   'meta',
+
+  // Added 2026-08-16, decided by Ervin. The day log's storage: Flutter exposes
+  // no writable path without a plugin, and a streak that resets on every
+  // launch is not a streak.
+  //
+  // **DEP-1 audit, performed before the addition and recorded here because the
+  // rule requires it in the same change:**
+  // · Published at github.com/flutter/packages — the Flutter team's own
+  //   monorepo. Verified from the resolved package's `repository:` field, for
+  //   the federated implementations as well as the facade.
+  // · It wraps `NSUserDefaults` on iOS and `SharedPreferences` on Android. It
+  //   stores one string under one key, on the device.
+  // · **It makes no network request.** Verified by grepping the shipped Dart of
+  //   the facade, the platform interface and both mobile implementations for
+  //   `HttpClient`, `package:http`, `Socket` and `WebSocket`: zero files.
+  // · It collects nothing and reports nothing. There is no identifier, no
+  //   analytics hook and no remote configuration in it.
+  //
+  // It brings six federated packages with it — `_android`, `_foundation`,
+  // `_linux`, `_platform_interface`, `_web`, `_windows` — all from the same
+  // monorepo, and only the host platform's implementation compiles in.
+  'shared_preferences',
 };
 
 /// Reads the `dependencies:` block of `app/pubspec.yaml`.

@@ -5,6 +5,7 @@ import '../../../content/pack_reader.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../round/policy/streak_policy.dart';
 import '../data/day_log_store.dart';
+import '../data/prefs_day_log_store.dart';
 import '../policy/day_log.dart';
 import '../../round/ui/round_screen.dart';
 import '../../shell/ui/app_shell.dart';
@@ -33,9 +34,9 @@ class HomeRoute extends StatefulWidget {
 
   /// Where the days practised are kept.
   ///
-  /// Defaults to an in-memory store, which is the honest default while no
-  /// persistent one exists: the streak is true within a session and starts over
-  /// on relaunch, rather than being a number nothing backs.
+  /// Defaults to the device's own storage, so the streak survives a relaunch.
+  /// Tests hand in an in-memory store instead — the seam is why swapping it is
+  /// a constructor argument and nothing else.
   final DayLogStore? dayLog;
 
   @override
@@ -44,7 +45,7 @@ class HomeRoute extends StatefulWidget {
 
 class _HomeRouteState extends State<HomeRoute> {
   late final Future<Pack> _pack = widget.reader.load();
-  late final DayLogStore _dayLog = widget.dayLog ?? InMemoryDayLogStore();
+  late final DayLogStore _dayLog = widget.dayLog ?? const PrefsDayLogStore();
   DayLog _log = DayLog.empty;
 
   @override
