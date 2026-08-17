@@ -96,3 +96,57 @@ next screen shows, so hiding it makes the tutorial teach a shell the app does no
 
 **Found by:** the Tier 2 pass of 2026-08-17, on the simulator. No test could see it — the design
 gates assert overflow and shadows, not what the chrome claims.
+
+---
+
+## 6 · `0.2` is a bespoke column, and the plan assigns it `CenteredStateView`
+
+**Today.** `features/onboarding/ui/welcome_screen.dart` is a `Padding` around a `Column`. It draws
+Aki, a bubble, one line of body copy and one primary action.
+
+**What the plan says.** `docs/IMPLEMENTATION-PLAN.md` §4.0 gives `CenteredStateView` to
+`f2-onboarding-first-run` with `0.2` as its first consumer, and §3.3 counts **11 screens** for it —
+`4.8`–`4.10`, `4.12`–`4.15`, `0.2`, `0.4`, `0.6`, `0.7`. The approved proposal for that change never
+mentioned it, and neither does the code. The component does not exist.
+
+**Why that is defensible today.** The plan's own promotion test is *two features and no domain
+vocabulary*, and exactly one screen needs this shape. Building an 11-screen abstraction from one call
+site is how a component acquires parameters nobody drew — the plan itself warns that naming
+compositions as widgets is what turns a 53-row inventory into a 130-row one.
+
+**Cost of leaving it.** The second screen of this shape — `0.4`, `0.6`, `0.7` or any of `4.8`–`4.15` —
+either forks the column or extracts the component then. Extracting from two real call sites is
+cheaper and more honest than guessing from one. **The risk is not the fork, it is the silence:** the
+plan says a change built this and it did not, so this entry exists to stop the next reader trusting
+§4.0's table over the tree.
+
+**What has to be decided.** Nothing yet. The first change that draws a second centred state view
+either extracts `CenteredStateView` or records why not, here.
+
+---
+
+## 7 · Tier 2 cannot be driven from a session, and two tasks are stuck on it
+
+**Today.** Device evidence is captured by rooting `main.dart` at the screen under test, building for
+the iPhone 17 simulator, and screenshotting with `xcrun simctl io`. That reaches anything **static**.
+It cannot reach anything that needs a **touch**: this machine gives `osascript` no assistive access
+(`-1719`), `simctl` has no tap operation, and `idb` is not installed. A synthetic
+`PointerDownEvent` through `GestureBinding` drives the pressed state under `flutter test` and has no
+effect in the device build.
+
+**What it blocks, concretely.** `f0-pressable-surface` 5.3 and `f0-keypad` 3.3 — *"confirm the travel
+reads as sinking rather than sliding"* and *"the keys travel"*. Both are the same missing capability,
+and both are the interaction language of ~50 drawn elements, so they are not cosmetic. The resting
+geometry of every control **is** evidenced (`f0-pressable-surface/evidence/controls-resting.png`).
+
+**The options, and neither is a session's call.**
+1. **A human taps.** Free, immediate, and unrepeatable — it closes these two tasks and nothing later.
+2. **`integration_test`.** A dev dependency plus a `test_driver/` entry point; real taps, real device,
+   screenshots through the driver, and it keeps working for every future Tier 2. It is out of scope of
+   the runtime allowlist by design (DEP-1 governs what *ships*), but it is new tooling and belongs in
+   its own change rather than smuggled into whichever one hits the wall first — which is how it nearly
+   got added twice already, on 2026-08-17.
+
+**Cost of leaving it.** Two open boxes with a named reason, which is the honest state. It rises the
+moment a change's *whole point* is a gesture — the puzzle boards at F6 drag and long-press, and a
+written observation will not carry that.

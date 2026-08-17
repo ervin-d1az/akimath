@@ -686,7 +686,7 @@ the change that owns their screen.
 | `FractionGlyph` · the **struck** and **editable-slot** variants and metrics-driven sizing | `f1b-math-compositor` | `04 Error`'s strike and the answer slot, F2 |
 | `SkeletonBlock` (now `shell/ui/`), `InlineBanner` | `f2-app-shell` | `4.11`, the offline banner |
 | `ScreenHeaderBar` | `f2-core-loop` | the six item screens |
-| `CenteredStateView` | `f2-onboarding-first-run` | `0.2` |
+| `CenteredStateView` | `f2-onboarding-first-run` | `0.2` — **not built; `0.2` is a bespoke column. `docs/decisions/OPEN.md` §6.** |
 | `BrandTextField`, `SegmentedIndicator` | `f3-auth-screens` | `1.1`, `1.5` |
 | `EntityRow` | `f5-skill-map` | `2.7 Detalle de nodo` |
 | `AppBottomNav` | `f5-skill-map` | the second tab root |
