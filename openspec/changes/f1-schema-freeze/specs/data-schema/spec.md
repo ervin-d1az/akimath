@@ -60,9 +60,10 @@ SHALL make a player row without a band impossible rather than merely discouraged
 
 ### Requirement: req-erasure-grants · Only erasure and the retention job may delete an attempt
 
-The system SHALL grant the request-path role SELECT and INSERT on attempts and nothing else, SHALL
-grant DELETE on attempts to the retention role alone, and SHALL express both as grants rather than as
-discipline.
+The system SHALL grant the request-path role SELECT and INSERT on attempts and no DELETE on any
+table, SHALL grant DELETE on every table holding player data to the retention role alone — which is
+the role both the retention job and the erasure path run under — and SHALL express both as grants
+rather than as discipline.
 
 #### Scenario: The request-path role tries to change history
 
@@ -74,8 +75,17 @@ discipline.
 #### Scenario: The retention role may delete and nothing more
 
 - **WHEN** the grant catalogue is enumerated for the retention role
-- **THEN** it holds DELETE on attempts and on the diagnosis events, and holds no INSERT or UPDATE on
-  either
+- **THEN** it holds DELETE on every table that holds player data, and holds no INSERT and no UPDATE
+  on any table
+  → `packages/server/test/grants.test.ts`, CI job `integration`
+
+#### Scenario: A later table arrives without grants
+
+- **WHEN** the grant catalogue is enumerated over every table in the schema rather than over a named
+  list
+- **THEN** a table the request-path role can delete from fails the check, and so does a table holding
+  player data that the retention role cannot delete from — so a migration that forgets its grants is
+  caught by the same test that proves today's
   → `packages/server/test/grants.test.ts`, CI job `integration`
 
 ### Requirement: req-retention-job · Retention is a job whose figures live in one pure module
@@ -108,19 +118,19 @@ those two figures.
 
 ### Requirement: req-pack-manifest · An offline pack is one row, not one row per item
 
-The system SHALL store an issued offline pack as a single manifest row carrying the references needed
-to rederive every item in it, SHALL identify an item by its pack and its index within that pack, and
-SHALL store no row per offline item.
+The system SHALL store an issued offline pack as a single manifest row carrying, for every item in
+it, the references a later change needs to rederive that item, and SHALL store no row per offline
+item in any table.
 
 #### Scenario: A pack of fifty items is issued
 
 - **WHEN** a pack containing fifty items is recorded
-- **THEN** exactly one row exists for it, and the fifty items are recoverable from that row alone
+- **THEN** exactly one row exists for it, and that row carries fifty references
   → `packages/server/test/offline-packs.test.ts`, CI job `integration`
 
-#### Scenario: An item is identified after the fact
+#### Scenario: A second table starts holding one row per item
 
-- **WHEN** an attempt refers to an offline item
-- **THEN** it does so by pack and index, and the server can rederive the item from the manifest
-  without the client having told it what the item was
+- **WHEN** every table in the schema is enumerated
+- **THEN** none of them is keyed per offline item, so the four-downloads-a-day cost stays one row and
+  not fifty
   → `packages/server/test/offline-packs.test.ts`, CI job `integration`

@@ -44,8 +44,10 @@ where that is stated as evidence rather than skipped. Everything unmarked runs t
       them, and nowhere else.
       **Check:** `grep -c` for each value across `packages/server/src` and the migration returns the
       expected counts; a third occurrence is a review finding.
-- [ ] 3.3 Add the grants: `app_request` gets SELECT + INSERT on `attempts` and no DELETE anywhere;
-      `retention_job` gets DELETE on `attempts` and `diag_events` and nothing else (design D5).
+- [ ] 3.3 Add the grants (design D5): `app_request` gets SELECT + INSERT on `attempts` and **no
+      DELETE on any table**; `retention_job` gets DELETE on **every table holding player data** and no
+      INSERT or UPDATE anywhere. Wider than the nightly job needs, because `ARCHITECTURE.md`:242 puts
+      the erasure path `DELETE /v1/me` under the same role, and the grants ship frozen.
       **Check:** written into the migration, not applied by hand — a grant applied by hand is a grant
       that does not exist on the next database.
 
@@ -109,17 +111,20 @@ where that is stated as evidence rather than skipped. Everything unmarked runs t
 
 - [ ] 7.1 **[db]** `packages/server/test/grants.test.ts`: the request-path role's DELETE and UPDATE
       against `attempts` are refused, and the grant catalogue shows it holding only SELECT and
-      INSERT. Enumerate **every** table, not the named two — a later migration forgetting its grants
-      is the realistic failure (design D5).
+      INSERT. Assert **both directions over every table** — the request path deletes from nothing, and
+      the retention role deletes from everything holding player data — because a later migration
+      forgetting either grant is the realistic failure and a test naming two tables cannot see it
+      (design D5).
       **Check:** `integration`; the test reports how many tables it swept.
 - [ ] 7.2 **[db]** `packages/server/test/players.test.ts`: an insert with no band is refused; an
       insert with a fourth band is refused; and `information_schema.columns` over every table this
       migration creates holds no name and no day, month or year of birth.
       **Check:** `integration`.
-- [ ] 7.3 **[db]** `packages/server/test/offline-packs.test.ts`: a fifty-item pack is one row, and an
-      item is identified by `(pack_id, index)` with the server able to rederive it from the manifest
-      alone.
-      **Check:** `integration`.
+- [ ] 7.3 **[db]** `packages/server/test/offline-packs.test.ts`: a fifty-item pack is one row
+      carrying fifty references, and no table in the schema is keyed per offline item.
+      **Check:** `integration`. **Structural claims only** — that the server can *rederive* an item
+      from those references is `f1-core-rederivation`'s capability and there is no `packages/core` to
+      test it against, so this requirement asserts the storage shape and stops there.
 
 ## 8 · Evidence
 

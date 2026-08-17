@@ -89,15 +89,29 @@ source, next to the retention figures, for the same reason.
 | Role | Holds |
 |---|---|
 | owner / migrator | DDL. Used by the runner on the **direct** connection string, never at runtime. |
-| `app_request` | SELECT + INSERT on `attempts`; SELECT/INSERT/UPDATE elsewhere as each table needs. **No DELETE anywhere.** |
-| `retention_job` | DELETE on `attempts` and `diag_events`, and nothing else. |
+| `app_request` | SELECT + INSERT on `attempts`; SELECT/INSERT/UPDATE elsewhere as each table needs. **No DELETE on any table.** |
+| `retention_job` | DELETE on every table holding player data. No INSERT and no UPDATE anywhere. |
+
+**`retention_job`'s DELETE is wider than the retention job, and that is deliberate.**
+`ARCHITECTURE.md` §5 puts *two* callers under this role: the retention job, which touches `attempts`
+and `diag_events`, and **the erasure path `DELETE /v1/me`**, which has to clear a player from every
+table that holds them. An earlier draft of this design granted the role only the two tables the
+nightly job uses, which would have left erasure with nowhere to run — and the grants ship frozen, so
+that is a mistake discovered at F3 rather than here. The role's grant set is therefore the union of
+what both callers need; the job simply uses less of it than the endpoint will.
 
 Grants are the enforcement. A trigger refusing UPDATE was considered as belt-and-braces and rejected:
 the owner bypasses it anyway, so it would add a second mechanism that is weaker than the first and
 invites the reader to trust whichever they find.
 
 **The grant test enumerates every table, not the two named ones.** A later migration that creates a
-table and forgets its grants is the realistic failure, and a test naming `attempts` cannot see it.
+table and forgets its grants is the realistic failure, and a test naming `attempts` cannot see it. It
+asserts both directions: `app_request` holds DELETE nowhere, and `retention_job` holds DELETE
+everywhere a player leaves a row.
+
+Better Auth's tables are not in this set because they do not exist yet (see `proposal.md` —
+Non-goals). Their grants, and `ARCHITECTURE.md` §5's point that erasure must also clear
+`account.password` and `verification.identifier`, land with them at F3.
 
 ### D6 · `retention.ts` is PURE and holds the only copy of the two figures
 
