@@ -38,8 +38,8 @@ OpenAPI half arrives with `f1-contract-emitter`.
 ## What exists today
 
 - **Built and tested.** The brand layer and Aki's character sheet: tokens, wordmark, app
-  icon, three poses, the splash screen — plus the math compositor (`design/math/`).
-  194 Flutter tests, green.
+  icon, three poses, the splash screen — plus the math compositor (`design/math/`) and the
+  press primitives (`PressableSurface`, `BrandButton`, `IconButtonTile`). 212 Flutter tests, green.
 - **A scaffold.** `packages/server` routes one endpoint, `GET /health`, through a pure
   `route()` function. 3 tests, green, 100% mutation score.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
