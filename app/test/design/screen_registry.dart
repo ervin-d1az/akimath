@@ -2,6 +2,8 @@ import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
+import 'package:akimath_app/features/home/ui/home_screen.dart';
+import 'package:akimath_app/features/shell/ui/app_shell.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
 import 'package:flutter/widgets.dart';
@@ -93,6 +95,20 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'splash · green',
     build: () => const SplashScreen(variant: SplashVariant.brandGreen),
+  ),
+  RegisteredScreen(
+    label: 'home',
+    // Inside the shell, because that is the only way it ever renders. Pumped
+    // bare it has no Material ancestor and `screen_text_style_test` fails —
+    // correctly: a screen registered in a shape the app never builds is a gate
+    // checking something nobody ships.
+    build: () => AppShell(
+      child: HomeScreen(
+        preview: registryRoundItems.single,
+        streakDays: 7,
+        onStart: () {},
+      ),
+    ),
   ),
   RegisteredScreen(
     label: 'round',

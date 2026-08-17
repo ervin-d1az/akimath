@@ -122,4 +122,50 @@ void main() {
       expect(find.text('3 / 9'), findsOneWidget);
     });
   });
+
+  group('a pill hugs its content', () {
+    testWidgets('it does not stretch to fill the width it is offered',
+        (WidgetTester tester) async {
+      // The exact trap CandySurface documents in its own source:
+      // `Container.alignment` expands to its constraints, which turns a pill
+      // into a full-width bar. Seen on the home, where the streak pill spanned
+      // the screen.
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(
+            child: SizedBox(
+              width: 390,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: StatPill(child: Text('7')),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester.getSize(find.byType(StatPill)).width,
+        lessThan(200),
+        reason: 'the pill stretched to the width it was offered',
+      );
+    });
+
+    testWidgets('a wider label makes a wider pill', (WidgetTester tester) async {
+      await _pump(tester, const StatPill(child: Text('7')));
+      final double narrow = tester.getSize(find.byType(StatPill)).width;
+
+      await _pump(tester, const StatPill(child: Text('1 180')));
+      final double wide = tester.getSize(find.byType(StatPill)).width;
+
+      expect(wide, greaterThan(narrow));
+    });
+  });
 }

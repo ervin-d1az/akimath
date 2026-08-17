@@ -45,7 +45,9 @@ OpenAPI half arrives with `f1-contract-emitter`.
   `04 Error`, which show time and streak and **no rating**: F2 has no server, so nothing on them is
   a figure sync could later contradict. `features/shell/` is the frame: cream, a banner slot, and
   **no bottom navigation** — `visibleTabs` returns nothing while one root exists, so the bar is
-  absent by rule rather than by omission. **489 Flutter tests, green.**
+  absent by rule rather than by omission. The app opens on the **home** — Aki, the `RETO DEL DÍA`
+  preview composed by the real compositor, the streak pill — and a series is pushed as a full-screen
+  route with no navigation affordance. **513 Flutter tests, green.**
   Content is a **bundled 20-item JSON pack** (`app/assets/packs/starter.json`) read by
   `content/pack_reader.dart` — the one adapter in `content/`. An expired or malformed pack is
   refused where it is read. **Grading answers to the frozen contract**: `content/model/canon.dart` is

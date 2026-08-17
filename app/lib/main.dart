@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'design/theme.dart';
-import 'features/round/ui/round_route.dart';
-import 'features/shell/ui/app_shell.dart';
+import 'features/home/ui/home_route.dart';
 
 void main() {
   runApp(const AkiMathApp());
@@ -14,14 +13,14 @@ void main() {
 /// sheet, which was the home only because the brand layer was the only thing
 /// built. Real navigation arrives with `f2-app-shell`.
 ///
-/// `RoundRoute` rather than `RoundScreen`: the route loads the bundled pack and
-/// the screen plays it, so the screen holds no IO and stays testable by handing
-/// it a list of items.
+/// `HomeRoute` is the single tab root: it loads the bundled pack, shows the
+/// home, and pushes the series as a **full-screen session** — declared rule 1,
+/// so a series has no navigation affordance and the only way out is its own
+/// control.
 ///
-/// `AppShell` is the frame. It draws **no bottom navigation** — `visibleTabs`
+/// The frame is `AppShell`, which draws **no bottom navigation**: `visibleTabs`
 /// returns nothing while one root exists, so the bar is absent by rule rather
-/// than by omission, and the same rule draws it when the skill map lands at F5.
-/// The round is the single root today; `f2-home-reduced` becomes it.
+/// than by omission, and the same rule draws it when the map lands at F5.
 class AkiMathApp extends StatelessWidget {
   const AkiMathApp({super.key});
 
@@ -31,7 +30,7 @@ class AkiMathApp extends StatelessWidget {
       title: 'AkiMath',
       debugShowCheckedModeBanner: false,
       theme: AkiMathTheme.build(),
-      home: const AppShell(child: RoundRoute()),
+      home: const HomeRoute(),
     );
   }
 }

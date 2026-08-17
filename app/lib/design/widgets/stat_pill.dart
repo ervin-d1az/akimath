@@ -59,7 +59,11 @@ class StatPill extends StatelessWidget {
     return Container(
       height: height ?? size.height,
       padding: const EdgeInsets.symmetric(horizontal: BrandShape.space4),
-      alignment: Alignment.center,
+      // **No `alignment:` here.** `Container.alignment` expands to its
+      // constraints, which turns a pill into a full-width bar — `CandySurface`
+      // documents the same trap in its own source, and this widget walked into
+      // it anyway. It showed up as a streak pill spanning the home screen.
+      // Centring with an `Align` that carries a width factor hugs the content.
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(size.radius),
@@ -76,7 +80,11 @@ class StatPill extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
+      child: Align(
+        alignment: Alignment.center,
+        widthFactor: 1,
+        child: child,
+      ),
     );
   }
 }
