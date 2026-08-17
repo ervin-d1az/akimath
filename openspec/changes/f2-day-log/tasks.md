@@ -43,14 +43,39 @@
       `shared_preferences_platform_interface` is a **dev** dependency: it does not ship, which is the
       reason the allowlist scopes itself to runtime.
 - [x] 3.4 `HomeRoute` defaults to it.
-- [ ] 3.5 **Tier 2 — BLOCKED, and the blocker is the machine, not the code.**
-      `flutter run` now fails with *"CocoaPods not installed or not in valid state — without
-      CocoaPods, plugins will not work on iOS"*. `pod` is not on this machine. Every earlier
-      screenshot in this change was therefore of the **previously installed, plugin-free binary**,
-      which is why one showed a stale verdict screen and the cold launch showed a streak of zero.
-      Confirmed at the filesystem rather than guessed: the app container's `Library/Preferences/` is
-      empty and the key appears nowhere under the simulator's data.
-      **To unblock:** `brew install cocoapods`, then `flutter run`. Nothing in the repo changes.
+- [x] 3.5 **Tier 2 — done 2026-08-17, once CocoaPods was installed.**
+
+      It was blocked for a day, and the blocker was the machine: `flutter run` failed with
+      *"CocoaPods not installed — without CocoaPods, plugins will not work on iOS"*, so every
+      screenshot taken during that attempt was of the **previously installed, plugin-free binary**.
+      That is why one showed a stale verdict screen and the cold launch showed zero. Confirmed at
+      the filesystem rather than guessed: the container's `Library/Preferences/` was empty and the
+      key appeared nowhere under the simulator's data. Ervin installed CocoaPods 1.17.0.
+
+      **The proof is two launches of two different binaries**, because one binary cannot show that
+      a value outlived the process that wrote it.
+
+      *Launch 1* — a harness recording **yesterday**, chosen so the streak can only read non-zero if
+      the value genuinely round-tripped: `DIAG recorded, log now: [2026-08-16 00:00:00.000]`. The
+      write is then verified **on disk**, not inferred from the app:
+
+      ```
+      Library/Preferences/com.akimath.akimathApp.plist
+        "akimath.day_log.v1" => "2026-08-16"
+      ```
+
+      One key, a bare date, no time — `req-day-log-days-not-moments` confirmed against real device
+      storage rather than a fake.
+
+      *Launch 2* — `main.dart` restored and verified by checksum to
+      `afe905a7c7128cb9e2ea6b00dcebfac104549c00c7eb3e90879f8237403601b6`, with
+      `grep -c 'PrefsDayLogStore\|DIAG' lib/main.dart` returning **0**: the running build contains
+      no write code at all. The home reads **1**. `evidence/launch-2-persisted.png`.
+
+      Two things fell out of it for free. The reinstall between launches **preserved** the container,
+      so persistence survives `flutter run` and not merely a relaunch. And with the stored day being
+      the 16th and the run on the 17th, `StreakPolicy`'s "yesterday still counts" is now confirmed on
+      a device and not only in a unit test.
 
 ## 4 · What that incident cost, and what it changed
 

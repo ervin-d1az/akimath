@@ -50,9 +50,9 @@ OpenAPI half arrives with `f1-contract-emitter`.
   preview composed by the real compositor, the streak pill — and a series is pushed as a full-screen
   route with no navigation affordance. The streak is **earned within a session** — `DayLog` records
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
-  **Unverified on a device:** `pod` is not installed on this machine, so `flutter run` cannot link
-  the plugin (`brew install cocoapods` unblocks it). The suite covers the store against the real
-  `SharedPreferencesAsync` API. **540 Flutter tests, green.**
+  **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
+  no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **540 Flutter tests, green.**
   Content is a **bundled 20-item JSON pack** (`app/assets/packs/starter.json`) read by
   `content/pack_reader.dart` — the one adapter in `content/`. An expired or malformed pack is
   refused where it is read. **Grading answers to the frozen contract**: `content/model/canon.dart` is
