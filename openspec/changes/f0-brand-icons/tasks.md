@@ -4,16 +4,16 @@ TDD throughout: each test is written and **seen failing** before the code that s
 
 ## 1 · The dependency allowlist — first, because it constrains everything after it
 
-- [ ] 1.1 Write `app/test/architecture/dependency_allowlist_test.dart`: parse `app/pubspec.yaml` and
+- [x] 1.1 Write `app/test/architecture/dependency_allowlist_test.dart`: parse `app/pubspec.yaml` and
       assert `dependencies` is exactly `flutter`, `cupertino_icons`, `meta`.
       **Check:** `flutter test` — the test must be seen **failing first**, so write the assertion
       against a deliberately wrong list, watch it go red, then correct it to the real three and watch
       it go green. A gate that was green from the moment it was written proves nothing (PROC-8).
-- [ ] 1.2 Add the second scenario: an added dependency fails the build **and the failure names the
+- [x] 1.2 Add the second scenario: an added dependency fails the build **and the failure names the
       package**.
       **Check:** add a scratch entry to `pubspec.yaml`, confirm the message names it, then remove the
       entry and confirm the suite returns to its prior count.
-- [ ] 1.3 Assert the test reports how many dependencies it scanned and fails at zero.
+- [x] 1.3 Assert the test reports how many dependencies it scanned and fails at zero.
       **Check:** the count appears in the output — a parser that silently matches nothing is the
       vacuous-gate failure `f0-invariant-tests` already caught once.
 
@@ -58,3 +58,42 @@ TDD throughout: each test is written and **seen failing** before the code that s
       numeric test cannot catch (design D1).
       **Check:** a screenshot, and `main.dart` restored afterwards **by checksum** — `git diff` is
       blind to an untracked harness file (PROC-8).
+
+---
+
+## Build log — 2026-08-16 · **partially built, and the reason is external**
+
+**Section 1 (the dependency allowlist) is done. Sections 2 and 3 (the geometry) are blocked.**
+
+`f0-brand-icons` calls for ~21 glyphs transcribed **verbatim** from the design digests, and design
+D2 forbids redrawing one by eye — an icon drawn from memory is a fork of the design nobody knows
+exists. **The digests are not reachable from this session:** `DesignSync list_projects` returns only
+`Boletomóvil Design System`, which is the user's employer's and explicitly off-limits. The AkiMath
+design project is not listed.
+
+So no glyph was invented. What shipped instead:
+
+- **`app/test/architecture/dependency_allowlist_test.dart`** — the change's most durable output and
+  the half that needed no digests. It freezes the runtime list at `flutter`, `cupertino_icons`,
+  `meta`, reports the count it scanned, and fails on **any** addition rather than only a
+  data-collecting one — the test cannot judge whether a package phones home, so it summons a human
+  who can. The failure path is proven against an in-test manifest carrying a fake
+  `some_analytics_sdk`, so the real `pubspec.yaml` never had to be edited to prove the gate bites.
+  Dev dependencies are deliberately out of scope: they do not ship, and sweeping them in would fire
+  the gate on every tooling bump and get it disabled within a week.
+- **`app/lib/design/icons/brand_icon.dart`** — the **seam**, decided with Ervin 2026-08-16. Every
+  glyph is named in `BrandGlyph` and renders a visible **stand-in character** today. That is a
+  placeholder, not an approximation: nothing claims to be the design. Call sites already say
+  `BrandIcon(BrandGlyph.backspace)`, so transcribed path data replaces one map and **no screen
+  changes**. Without the seam, `f0-keypad` and `f0-verdict` would reach for `Text('⌫')` directly and
+  the swap would touch every call site instead of one file.
+- Tests: every named glyph renders something non-blank (a missing icon otherwise reaches a
+  screenshot unnoticed), one glyph at two sizes stays one glyph, the colour comes from the caller,
+  and the icon does **not** scale with the text scaler — an icon growing inside a fixed 48 px tile
+  would overflow it.
+
+**To finish this change:** supply the icon digest and sections 2 and 3 proceed as written —
+`BrandIconSpec` as pure path data with per-glyph stroke weights (submit 3.2, backspace 2.6), painted
+by an adapter, under the existing `design/**/spec/` pure root.
+
+255 Flutter tests green, analyze clean.
