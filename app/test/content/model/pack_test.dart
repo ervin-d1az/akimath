@@ -36,14 +36,20 @@ Map<String, dynamic> _packJson({
 /// break exactly one thing and leave the rest valid.
 Map<String, dynamic> _seriesItem({
   Object? terms = const <String>['2', '4', '6'],
+  Object? unknownIndex = 2,
+  String answer = '6',
   String kind = 'numberSeries',
   Object? alsoPrompt,
 }) {
   return <String, dynamic>{
     'id': 'ser',
     'ladder_step': 1,
-    'answer': '8',
-    'stimulus': <String, dynamic>{'kind': kind, 'terms': terms},
+    'answer': answer,
+    'stimulus': <String, dynamic>{
+      'kind': kind,
+      'terms': terms,
+      'unknown_index': unknownIndex,
+    },
     'prompt': ?alsoPrompt,
   };
 }
@@ -156,7 +162,7 @@ void main() {
   });
 
   group('a number-series item is read as its own stimulus', () {
-    test('its terms arrive in order and the answer is not among them', () {
+    test('its terms arrive in order, hole and all', () {
       final Pack pack = Pack.fromJson(
         _packJson(items: <Map<String, dynamic>>[_seriesItem()]),
       );
@@ -164,9 +170,7 @@ void main() {
       final Stimulus stimulus = pack.items.single.stimulus;
       expect(stimulus, isA<NumberSeriesStimulus>());
       expect((stimulus as NumberSeriesStimulus).terms, <String>['2', '4', '6']);
-      // The hole is drawn by the view, so the answer must not be a term. A pack
-      // that shipped it would show the player what to type.
-      expect(stimulus.terms, isNot(contains(pack.items.single.expected)));
+      expect(stimulus.unknownIndex, 2);
     });
 
     test('an item declaring both a prompt and a stimulus throws', () {
@@ -220,7 +224,10 @@ void main() {
         () => Pack.fromJson(
           _packJson(
             items: <Map<String, dynamic>>[
-              _seriesItem(terms: const <String>['2', '4']),
+              // Index 1, so the refusal can only be the term count — index 2
+              // would be out of range for two terms and would pass this test
+              // for the wrong reason.
+              _seriesItem(terms: const <String>['2', '4'], unknownIndex: 1),
             ],
           ),
         ),
@@ -238,6 +245,59 @@ void main() {
         returnsNormally,
         reason: 'three terms are the shortest series that means anything',
       );
+    });
+
+    test('the hidden index must name one of the terms', () {
+      // Out of range would be a RangeError thrown in `build`, mid-round, when
+      // the item's turn came — past the point where "content is validated
+      // where it is read" is true, and shown to a player as a red screen.
+      for (final Object? index in <Object?>[null, -1, 3, 99, '2', 1.5]) {
+        expect(
+          () => Pack.fromJson(
+            _packJson(
+              items: <Map<String, dynamic>>[_seriesItem(unknownIndex: index)],
+            ),
+          ),
+          throwsA(isA<FormatException>()),
+          reason: 'unknown_index $index was accepted for three terms',
+        );
+      }
+      for (final int index in <int>[0, 1, 2]) {
+        expect(
+          () => Pack.fromJson(
+            _packJson(
+              items: <Map<String, dynamic>>[
+                // The answer is the hidden term, so it moves with the hole.
+                _seriesItem(
+                  unknownIndex: index,
+                  answer: <String>['2', '4', '6'][index],
+                ),
+              ],
+            ),
+          ),
+          returnsNormally,
+          reason: 'unknown_index $index was refused for three terms',
+        );
+      }
+    });
+
+    test('the hidden term travels, and is the answer', () {
+      // The payload carries the true value on purpose — offline grading and
+      // the error screen's replay both need it — so the reader must keep it
+      // rather than strip it, and the renderer is what refuses to draw it.
+      final Pack pack = Pack.fromJson(
+        _packJson(
+          items: <Map<String, dynamic>>[
+            _seriesItem(unknownIndex: 1, answer: '4'),
+          ],
+        ),
+      );
+
+      final NumberSeriesStimulus stimulus =
+          pack.items.single.stimulus as NumberSeriesStimulus;
+      expect(stimulus.terms, hasLength(3));
+      expect(stimulus.unknownIndex, 1);
+      expect(stimulus.terms[stimulus.unknownIndex], pack.items.single.expected);
     });
 
     test('terms that are not a list, or not strings, throw', () {

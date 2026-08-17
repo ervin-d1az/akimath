@@ -109,9 +109,7 @@ class Pack {
         throw FormatException('item "${entry['id']}" has a malformed stimulus');
       }
       return switch (rawStimulus['kind']) {
-        'numberSeries' => NumberSeriesStimulus(
-            _requireTerms(entry, rawStimulus),
-          ),
+        'numberSeries' => _numberSeries(entry, rawStimulus),
         // Unknown kinds throw rather than degrading to something drawable: an
         // item rendered as a different question is worse than an item refused.
         final Object? kind => throw FormatException(
@@ -126,6 +124,39 @@ class Pack {
     return ArithmeticStimulus(<PromptToken>[
       for (final Object? token in rawPrompt) _token(token),
     ]);
+  }
+
+  static NumberSeriesStimulus _numberSeries(
+    Map<String, dynamic> entry,
+    Map<String, dynamic> stimulus,
+  ) {
+    final List<String> terms = _requireTerms(entry, stimulus);
+    return NumberSeriesStimulus(
+      terms: terms,
+      unknownIndex: _requireUnknownIndex(entry, stimulus, terms.length),
+    );
+  }
+
+  /// Which tile is blank, bounded against the run it indexes.
+  ///
+  /// Shared, because every family that hides a tile bounds it identically —
+  /// `packages/contract` factored the same check out as `checkUnknownIndex`,
+  /// and this is its Dart half. An out-of-range index would otherwise be a
+  /// range error thrown mid-round, in `build`, past the point where "content
+  /// is validated where it is read" is true.
+  static int _requireUnknownIndex(
+    Map<String, dynamic> entry,
+    Map<String, dynamic> stimulus,
+    int arity,
+  ) {
+    final Object? index = stimulus['unknown_index'];
+    if (index is! int || index < 0 || index >= arity) {
+      throw FormatException(
+        'item "${entry['id']}" hides tile $index of $arity, which is not one '
+        'of them',
+      );
+    }
+    return index;
   }
 
   static List<String> _requireTerms(

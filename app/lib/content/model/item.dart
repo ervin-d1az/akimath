@@ -57,14 +57,30 @@ final class ArithmeticStimulus extends Stimulus {
   final List<PromptToken> prompt;
 }
 
-/// `2, 4, 6, 8, ?` — a run of terms with the next one missing.
+/// `2, ?, 18, 54` — a run of terms with one of them missing.
+///
+/// **The hole is a position, not the end.** `packages/contract` spells every
+/// family that hides a tile the same way — the full run travels and
+/// `unknown_index` says which one is blank — and this follows it rather than
+/// inventing a second convention that a pack builder would then have to
+/// translate. It is also the better puzzle: a hole in the middle asks the
+/// learner to run the rule backwards.
 final class NumberSeriesStimulus extends Stimulus {
-  const NumberSeriesStimulus(this.terms);
+  const NumberSeriesStimulus({required this.terms, required this.unknownIndex});
 
-  /// The terms shown, in order. The answer is what comes next, and it is *not*
-  /// in this list — the blank is drawn by the renderer, so a pack cannot
-  /// accidentally ship the answer on screen.
+  /// Every term in order, **including the true value of the hidden one**.
+  ///
+  /// That value is on the device on purpose: offline grading needs it and so
+  /// does the replay the error screen will draw. It does not contradict *the
+  /// answer never travels* — that invariant is about the online item response
+  /// (`ARCHITECTURE.md` §4), which carries a rendered prompt and no answer at
+  /// all. What it does mean is that **the renderer must not draw
+  /// `terms[unknownIndex]`**, and `number_series_view_test.dart` holds it to
+  /// that.
   final List<String> terms;
+
+  /// Which term is blank. Always a valid index into [terms].
+  final int unknownIndex;
 }
 
 class Item {

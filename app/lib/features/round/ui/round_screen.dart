@@ -341,8 +341,11 @@ class _RoundScreenState extends State<RoundScreen> {
       fit: BoxFit.scaleDown,
       child: switch (_item.stimulus) {
         ArithmeticStimulus() => MathView(node: nodeFor(_item)),
-        NumberSeriesStimulus(:final List<String> terms) =>
-          NumberSeriesView(terms: terms),
+        NumberSeriesStimulus(
+          :final List<String> terms,
+          :final int unknownIndex
+        ) =>
+          NumberSeriesView(terms: terms, unknownIndex: unknownIndex),
       },
     );
   }

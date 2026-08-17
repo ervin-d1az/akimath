@@ -4,11 +4,17 @@ import '../../../../design/tokens/tokens.dart';
 import '../../../../design/widgets/spec/term_visual.dart';
 import '../../../../design/widgets/candy_surface.dart';
 
-/// `2 · 4 · 6 · 8 · ?` — the number-series stimulus.
+/// `2 · ? · 18 · 54` — the number-series stimulus.
 ///
 /// The second item family the app can draw, and the first that is not an
 /// expression. Everything about it is a row of tiles: the terms the player is
-/// given, then the one they have to supply.
+/// given, and the one they have to supply.
+///
+/// **The hole is a position, not the end.** The payload carries every term —
+/// including the true value of the hidden one, which offline grading and the
+/// error screen's replay both need on the device — and names the index that is
+/// blank. So this widget's first responsibility is a negative one: it must not
+/// draw `terms[unknownIndex]`.
 ///
 /// **The unknown tile is yellow and dashed, and that is not decoration.**
 /// Solid-and-white means "this is given"; dashed-and-yellow means "this is the
@@ -17,11 +23,18 @@ import '../../../../design/widgets/candy_surface.dart';
 /// carries the distinction and the fill only reinforces it. It is the same rule
 /// the verdict ring already follows.
 class NumberSeriesView extends StatelessWidget {
-  const NumberSeriesView({super.key, required this.terms, this.size = 46});
+  const NumberSeriesView({
+    super.key,
+    required this.terms,
+    required this.unknownIndex,
+    this.size = 46,
+  });
 
-  /// The terms shown, in order. The answer is deliberately **not** among them —
-  /// the blank is drawn here, so a pack cannot ship the answer on screen.
+  /// Every term in order, including the hidden one's true value.
   final List<String> terms;
+
+  /// Which term is blank. The value at this index is never rendered.
+  final int unknownIndex;
 
   /// Nominal numeral size, before text scaling.
   final double size;
@@ -34,9 +47,11 @@ class NumberSeriesView extends StatelessWidget {
     // more tiles. Wrapping onto a second line was the first attempt and it
     // looked like two series rather than one.
     final List<Widget> tiles = <Widget>[
-      for (final String term in terms)
-        _TermTile(term: term, size: size, state: TermState.given),
-      _TermTile(term: '?', size: size, state: TermState.unknown),
+      for (int i = 0; i < terms.length; i++)
+        if (i == unknownIndex)
+          _TermTile(term: '?', size: size, state: TermState.unknown)
+        else
+          _TermTile(term: terms[i], size: size, state: TermState.given),
     ];
 
     return Row(

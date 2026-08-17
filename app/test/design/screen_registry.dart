@@ -86,13 +86,17 @@ const List<Item> registryRoundItems = <Item>[
   ),
 ];
 
-/// A number-series item for the gates. Five terms and a three-digit one, which
-/// is the widest a series in the shipped pack gets.
+/// A number-series item for the gates. Six terms and a three-digit one, which
+/// is the widest a series in the shipped pack gets — the widest case is the one
+/// worth registering, because it is the one that overflows first.
 const List<Item> registrySeriesItems = <Item>[
   Item(
     id: 'registry-series',
-    stimulus: NumberSeriesStimulus(<String>['2', '6', '18', '54', '162']),
-    expected: '486',
+    stimulus: NumberSeriesStimulus(
+      terms: <String>['2', '6', '18', '54', '162', '486'],
+      unknownIndex: 4,
+    ),
+    expected: '162',
     ladderStep: 3,
   ),
 ];
