@@ -4,9 +4,21 @@ Adaptive math challenges in Mexican Spanish, with a dog called Aki. Flutter clie
 TypeScript backend, Postgres on Neon (planned). One repository — see
 [ARCHITECTURE.md](ARCHITECTURE.md) §1 for why.
 
-**Audience includes children under 13** (Mexico and Spanish-speaking LatAm, decision #1).
-That is an engineering constraint, not a marketing note: no third-party SDK that collects
-data, no ads, no external analytics. Before adding *any* dependency, check whether it phones
+**The audience is adults, and children can play too** (Mexico and Spanish-speaking LatAm,
+decision #1; clarified 2026-08-17). Read both halves — the product is not child-directed and its
+register should not be, but a **mixed audience is governed by its youngest member**, so every
+protection an under-13 needs is unconditional: no third-party SDK that collects data, no ads, no
+external analytics.
+
+That distinction is doing work rather than decorating. It is why `players.age_band` exists and is
+resolved before the device obtains any session: the band is the **routing decision** that sends a
+player into child protections or not, not a compliance residual. And it is why Gate A's question is
+"what does a general-audience app owing child protections have to do", not "what does a
+child-directed app have to do" — a materially different question with a different answer.
+
+Where a comment or a document says "a child", ask whether it means *the player* or specifically
+*the under-13 case*. Much of the prose written before this clarification says the first and means
+the second. Before adding *any* dependency, check whether it phones
 home; if it does, it does not go in. Today that constraint holds by construction — `app/`
 ships `flutter`, `cupertino_icons`, `meta` and `shared_preferences` at runtime — the last
 added 2026-08-16 with its audit recorded in `dependency_allowlist_test.dart` itself — `packages/server` has no

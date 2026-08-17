@@ -18,6 +18,13 @@ judgment on the open questions in §11.
 
 ## 1 · The decision that gated the rest: one repo, not two
 
+> **Audience, clarified 2026-08-17.** The product is for **adults**, and children can play it too.
+> Every constraint in this document that exists "because children" still holds without exception — a
+> mixed audience is governed by its youngest member — but the product is **not child-directed**, and
+> that changes two things: the register of the copy is not a register for children, and
+> `players.age_band` is the routing decision between the two populations rather than a compliance
+> footnote. Prose here written before that date often says "a child" where it means "a player".
+
 **Decided and done: a single `akimath` repository.** This reversed an earlier
 two-repo split. `akimath-app` and `akimath-api` are archived; their histories
 live under `app/` and `packages/server/` with `git log --follow` and `git blame`
