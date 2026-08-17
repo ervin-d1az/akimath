@@ -68,24 +68,34 @@ the shipped TTFs rather than from the document — Darumadrop `OS/2.sxHeight` 43
       change, and `no file under a pure root reaches a forbidden URI today` is green. The new module
       was covered without anyone remembering to declare it — which is the argument for a glob over a
       list, and it is worth recording because the next spec root will be free too.
-- [ ] 2.2 Write `app/test/design/math/spec/fraction_metrics_test.dart` asserting the three measured
+- [x] 2.2 Write `app/test/design/math/spec/fraction_metrics_test.dart` asserting the three measured
       rows: 76 → (6, 58), 46 → (4, 36), 22 → (3, 26).
       **Check:** `flutter test` — three failures. Assert the pairs, not a formula (design D3).
-- [ ] 2.3 **Spike finding 2** — add a fourth case *between* the stated rows, and one above the
+      **Done.** Seen failing first: `Undefined name 'FractionMetrics'`.
+- [x] 2.3 **Spike finding 2** — add a fourth case *between* the stated rows, and one above the
       largest. A step function passes 2.2 and is still wrong: text scaling puts the effective size
       between the rows (76 × 1.3 = 98.8), where a step serves the same 6 px bar it gives 76 and the
       bar reads too thin. Seen directly in `spike-b/scaled-1.3.png`.
-      **Check:** the interpolated cases go red against a step implementation. Thickness fits
-      `max(3, round(size × 0.079))` on all three stated rows; minimum bar width fits no single ratio
-      (58/76 = 0.763 against 36/46 = 0.783), so interpolate between the measured points and clamp
-      outside them rather than inventing a constant that moves a number the design measured.
-- [ ] 2.4 **Spike finding 1** — the parameter is the **effective** size, not the nominal one. Name it
+      **Check:** the interpolated cases go red against a step implementation.
+      **Done, and demonstrated rather than asserted.** The step function was written first and run:
+      it **passes all three stated rows** and fails six other assertions. The sharpest is the
+      proportion one — `Actual: 0.06072` against `Expected: within 0.0079 of 0.07895` — which is the
+      23 % collapse measured off the spike capture, reproduced as a number.
+      The final shape is piecewise-linear through the three measured points, clamped below 22 and
+      slope-extended above 76. `max(3, round(size × 0.079))` was considered and dropped: it fits the
+      three rows but rounds, which reintroduces a step between them.
+- [x] 2.4 **Spike finding 1** — the parameter is the **effective** size, not the nominal one. Name it
       so in the signature and say so in the doc comment, because "size" is exactly what a caller will
       pass an unscaled value to.
-      **Check:** a test passing a nominal 76 with a 1.3 scaler resolves 98.8 and gets the thicker bar.
-      The adapter resolves `MediaQuery.textScaler`; the spec receives a number and stays pure.
-- [ ] 2.5 Write `app/lib/design/math/spec/fraction_metrics.dart`.
+      **Check:** the parameter is `effectiveSize` and the doc comment says what goes wrong if a
+      caller passes a nominal value. The property is tested as the thing a user sees — the
+      thickness-to-size ratio holds within 10 % across the whole 1.0–1.3 range — rather than as an
+      implementation detail. The spec never sees a `TextScaler`; the adapter resolves it.
+- [x] 2.5 Write `app/lib/design/math/spec/fraction_metrics.dart`.
       **Check:** green, and the pure-boundary gate now reports the root present with a non-zero count.
+      **Done.** 10 tests green; the gate reports `design/**/spec/ → 4 files`; `grep -c
+      "package:flutter"` returns 0. The three measured rows live in one visible table rather than in
+      branches, so a reader checks them against the design without reading control flow.
 - [ ] 2.6 Write `app/test/design/math/spec/math_node_test.dart`: a fraction nested inside a fraction
       laying out from **injected** metrics (Darumadrop x-height 435/1000), per-token operator faces,
       the defaults when a token names none, and the absence of any inline-fraction parameter.
