@@ -57,3 +57,25 @@ SHALL re-read the log when a series ends.
 - **WHEN** the submitted answer is wrong
 - **THEN** the day is recorded all the same
   → `app/test/features/home/ui/home_route_test.dart`
+
+### Requirement: req-day-log-persists · The log survives the process that wrote it
+
+The system SHALL keep the day log on the device, under a single key, so a streak earned in one launch
+is still there in the next.
+
+#### Scenario: A new store over the same storage
+- **WHEN** one store records a day and a second store reads it
+- **THEN** the day is there
+  → `app/test/features/home/data/prefs_day_log_store_test.dart`
+
+#### Scenario: A build that cannot write still reads what was written
+- **WHEN** a build containing no write path launches after one that recorded a day
+- **THEN** the streak reflects the recorded day
+  → `openspec/changes/f2-day-log/evidence/launch-2-persisted.png`, and the two-launch record in
+    `tasks.md` §3.5
+
+#### Scenario: Storage that fails outright
+- **WHEN** the underlying store throws on read or on write
+- **THEN** neither call throws, the read reports an empty log, and the write still returns the
+  session's own log
+  → `app/test/features/home/data/prefs_day_log_store_test.dart`

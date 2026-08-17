@@ -107,15 +107,26 @@ The one structural pattern the repo already commits to, on both sides of the sta
   Spanish**, and they read as a person talking to a child, not as a system reporting
   (`'Se me desenroscó la cola. Ya vuelve.'`). There is no i18n layer yet, so player-facing Spanish
   sits inline in the widget that shows it; when a layer arrives this rule gains a clause under
-  PROC-6.
+  PROC-6. **A verbatim quotation of a Spanish design document, or of player-facing copy, may stand
+  inside an English comment** provided the rationale around it is in English — `banner_visual.dart`'s
+  *"Sin conexión no es un error del usuario: va en amarillo"* is the reason a decision was taken, and
+  paraphrasing a source into English loses the ability to check it against the source. Quoting is not
+  writing the comment in Spanish.
 
 ## DEP — Dependencies & the audience
 
 - **DEP-1** NEVER add a dependency that sends data off the device — analytics, ads, attribution,
   crash reporting, remote config, remote fonts, any SDK that "phones home". The audience includes
   children under 13 and the compliance posture in `ARCHITECTURE.md` §11 is minimization by
-  construction. Before adding *any* dependency, state in the PR what network calls it makes and what
-  it collects; "it's only a util" is not an audit. Assets ship bundled for the same reason — the
+  construction. Before adding *any* dependency, audit what network calls it makes and what it
+  collects; "it's only a util" is not an audit. **The audit lives in
+  `app/test/architecture/dependency_allowlist_test.dart`, beside the allowlist entry, in the same
+  change** — not in a pull-request body, which is not greppable, not versioned next to the thing it
+  describes, and fails no build. `shared_preferences`, added 2026-08-16, is the worked example: the
+  gate went red on the addition, and the entry carries the publisher, what the package wraps, what it
+  stores, and a verified negative for `HttpClient`, `package:http`, `Socket` and `WebSocket` across
+  the facade, the platform interface and both mobile implementations. A **dev** dependency is out of
+  the allowlist's scope because it does not ship, and the reason is stated at its declaration. Assets ship bundled for the same reason — the
   brand typefaces live in `app/assets/fonts/` precisely so that first launch makes no third-party
   request.
 
@@ -319,6 +330,26 @@ credit.
   isNotEmpty)` in `app/test/design/screen_overflow_test.dart` and the per-root counts in
   `app/test/architecture/pure_boundary_test.dart` are the two forms this takes today. The same
   applies to a path-filtered scan: report how many files it walked, and fail at zero.
+- **PROC-11** MUST: **an assertion that holds for any input is not a test.** Green that carries no
+  information is worse than a gap, because a gap is visible. Four instances, all in this repository,
+  all found by review rather than by the suite:
+  - **An `expect` whose sides are algebraically equal.** `round_screen_test.dart` asserted
+    `text.width * (slot.width / text.width) <= slot.width + 0.5`, which reduces to
+    `slot.width <= slot.width + 0.5`. It was written to hold down a painting defect that had shipped,
+    and it held nothing.
+  - **A `hasLength` or value-set check over an enum whose arms nothing exercises.** `MathTone.values`
+    was pinned at two members while the adapter arm behind one was unreachable;
+    `BannerPlacement.values` was pinned at two while neither placement's radius was rendered in a
+    test.
+  - **A `catch` no test reaches.** Both arms of `PrefsDayLogStore` were unreached, because the only
+    backend in the tests never fails — and the write arm was the half the original incident was on.
+  - **A test whose name claims more than its body checks.** `'a notice banner renders with its
+    glyph'` checked a widget type, a string and a rect ordering, so a grep for glyph coverage
+    returned a false positive.
+
+  The remedy is the same in every case: **state the mutation the test would catch, then make it.**
+  When a test is the record of a defect that shipped, PROC-5's tier-1b falsification is not optional
+  — invert the fix and watch that specific test go red.
 
 
 ---

@@ -140,4 +140,80 @@ void main() {
       );
     });
   });
+
+  group('a daylight-saving transition does not break a streak', () {
+    // **These pass vacuously in a zone without DST**, which includes
+    // `America/Mexico_City` (abolished 2022) and the UTC that CI defaults to.
+    // `.github/workflows/ci.yml` therefore runs this file a second time under
+    // `TZ=America/Tijuana`; without that run, the bug they cover is invisible
+    // to the suite. Tijuana and Ciudad Juárez are Mexican DST zones, so this is
+    // the target audience and not a travelling device.
+    //
+    // What it cost before the fix: a child with a 30-day run, opening the app
+    // on the morning of 9 March 2026, saw **0** on the home and then **29** on
+    // the verdict screen. Two screens, one morning, neither number right.
+    List<DateTime> consecutiveDaysEnding(DateTime last, int count) => <DateTime>[
+          for (int i = 0; i < count; i++)
+            DateTime(last.year, last.month, last.day - i),
+        ];
+
+    test('the grace path survives spring forward', () {
+      // Played through the 8th, opens the app on the 9th before playing.
+      expect(
+        streakLength(
+          attemptDays: consecutiveDaysEnding(day(2026, 3, 8), 30),
+          today: DateTime(2026, 3, 9, 9),
+        ),
+        30,
+      );
+    });
+
+    test('the counting loop survives spring forward', () {
+      // Played through the 9th, including today.
+      expect(
+        streakLength(
+          attemptDays: consecutiveDaysEnding(day(2026, 3, 9), 30),
+          today: DateTime(2026, 3, 9, 9),
+        ),
+        30,
+      );
+    });
+
+    test('a run spanning autumn back is counted whole', () {
+      expect(
+        streakLength(
+          attemptDays: consecutiveDaysEnding(day(2026, 11, 3), 10),
+          today: DateTime(2026, 11, 3, 9),
+        ),
+        10,
+      );
+    });
+
+    test('every day of a DST year counts a five-day run as five', () {
+      // A sweep, because a single date proves one transition and there are two
+      // a year in every zone that has them.
+      for (int dayOfYear = 5; dayOfYear < 365; dayOfYear++) {
+        final DateTime today = DateTime(2026, 1, dayOfYear);
+        expect(
+          streakLength(
+            attemptDays: consecutiveDaysEnding(today, 5),
+            today: today,
+          ),
+          5,
+          reason: 'played-today path wrong at $today',
+        );
+        expect(
+          streakLength(
+            attemptDays: consecutiveDaysEnding(
+              DateTime(today.year, today.month, today.day - 1),
+              5,
+            ),
+            today: today,
+          ),
+          5,
+          reason: 'grace path wrong at $today',
+        );
+      }
+    });
+  });
 }

@@ -7,7 +7,7 @@ TDD throughout: each test is written and **seen failing** before the widget that
 - [x] 1.1 Write `app/test/architecture/no_hue_by_comparison_test.dart`: no colour is chosen by a
       numeric comparison anywhere in `app/lib/`.
       **Check:** seen failing first against a deliberately wrong pattern, then corrected — a gate
-      green from the moment it was written proves nothing (PROC-8). It must report the file count it
+      green from the moment it was written proves nothing (PROC-10, and now PROC-11). It must report the file count it
       scanned and fail at zero.
 - [x] 1.2 State the scan's limits in the source, so they read as limits rather than being found as
       bugs: it cannot see a comparison split across statements, and it must allow a colour resolved

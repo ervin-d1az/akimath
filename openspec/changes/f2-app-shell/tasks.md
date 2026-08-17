@@ -19,7 +19,13 @@
       **Done.** Tested by pushing from a shell that *is* drawing a bar and asserting the bar is no
       longer visible; asserting it against a shell with no bar would have proved nothing.
 - [x] 2.3 `InlineBanner` — one widget, two placements (K7).
-      **Done.**
+      **Check:** `app/test/features/shell/ui/inline_banner_test.dart` — both tones' fills, both
+      placements' radii, a glyph for **every** `BannerKind`, and the action chip present only when
+      both a label and a callback are given.
+      **Landed with no check named and no test file at all**, which a review caught: four decisions
+      shipped unasserted, and the policy test's `hasLength(2)` over `BannerPlacement.values` read as
+      coverage of arms nothing rendered — the `MathTone.muted` failure again, one file over. That
+      pattern is now PROC-11.
 - [x] 2.4 `SkeletonBlock` — content-shaped, unanimated.
       **Done.** The no-motion assertion is that no frame is scheduled after a build, which catches a
       shimmer added later.

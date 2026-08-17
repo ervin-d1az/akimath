@@ -18,10 +18,20 @@ import '../tokens/tokens.dart';
 /// drafts.
 enum StatPillSize {
   /// `01` and `2.1`. A fixed height.
-  header(radius: 24, shadow: BrandShape.shadowTile, height: 48),
+  header(
+    radius: BrandShape.radiusStatPillHeader,
+    shadow: BrandShape.shadowTile,
+    // Exactly the touch minimum, which is not a coincidence: a pill this size
+    // is pressable on several screens.
+    height: BrandShape.minTouchTarget,
+  ),
 
   /// `0.6`'s rating chip and `4.12`'s streak badge. Height from the call site.
-  hero(radius: 22, shadow: BrandShape.shadowButton, height: null);
+  hero(
+    radius: BrandShape.radiusStatPillHero,
+    shadow: BrandShape.shadowButton,
+    height: null,
+  );
 
   const StatPillSize({
     required this.radius,

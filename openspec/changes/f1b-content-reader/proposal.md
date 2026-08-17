@@ -19,7 +19,7 @@ reader follows.
   file rather than copied into the test.
 - **`grade` now goes through it**, both sides: the answer in learner mode, the item's expected value
   in stored mode.
-- **`app/test/content/model/demo_pack_test.dart`** — every shipped item's expected answer must be
+- **`app/test/content/model/pack_test.dart`** — every shipped item's expected answer must be
   storage-canonical.
 
 ## Capabilities

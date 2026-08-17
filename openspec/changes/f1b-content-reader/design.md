@@ -20,7 +20,7 @@ one of the five shipped fixture items**: `demo-4` stored `−7` with U+2212. In 
 it worked by accident; under the contract it is not canonical, and a player typing the right answer
 would have seen a wrong verdict on a device with nothing reporting an error anywhere.
 
-That is now a build failure via `demo_pack_test.dart`, over the whole pack rather than that one item.
+That is now a build failure via `pack_test.dart`, over the whole pack rather than that one item.
 
 ## D3 · Order of refusals is part of the contract
 

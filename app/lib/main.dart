@@ -11,7 +11,7 @@ void main() {
 ///
 /// The home is the round: the app can now be played. It replaces the character
 /// sheet, which was the home only because the brand layer was the only thing
-/// built. Real navigation arrives with `f2-app-shell`.
+/// built.
 ///
 /// `HomeRoute` is the single tab root: it loads the bundled pack, shows the
 /// home, and pushes the series as a **full-screen session** — declared rule 1,

@@ -23,6 +23,20 @@ abstract final class BrandShape {
   /// screen asks for a slot and not for a number. Two names may share a value
   /// — that is two roles, not a duplication.
   static const double radiusSlot = 12;
+
+  /// The three stat-tile variants and the two stat-pill sizes.
+  ///
+  /// Named for their surfaces even though each shares a value with a radius
+  /// above — that is two roles, not a duplication, and it is what lets a tile
+  /// ask for a tile rather than borrow a button's number. They were literals in
+  /// `stat_tile.dart` and `stat_pill.dart` until a review read BRD-2c against
+  /// them; `no_geometry_literal_test` scans `Offset(` only, so a bare radius is
+  /// exactly the case the rule reserves for a reader.
+  static const double radiusStatTileRaised = 20;
+  static const double radiusStatTileCompact = 18;
+  static const double radiusStatTileFlat = 16;
+  static const double radiusStatPillHeader = 24;
+  static const double radiusStatPillHero = 22;
   static const double radiusChip = 14;
   static const double radiusControl = 16;
   static const double radiusPill = 18;

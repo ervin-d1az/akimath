@@ -6,7 +6,9 @@ import 'package:akimath_app/features/home/policy/day_log.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
+import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
 import 'package:akimath_app/features/shell/ui/skeleton_block.dart';
+import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/design/widgets/loading_dots.dart';
 import 'package:flutter/material.dart';
@@ -164,19 +166,86 @@ void main() {
       expect(find.text('RETO DEL DÍA'), findsNothing);
     });
 
-    testWidgets('the session can be left and the home is still there',
+    testWidgets('a player can leave the session by tapping its close control',
         (WidgetTester tester) async {
+      // **The earlier version of this test called `Navigator.pop` directly.**
+      // That proved the *route* was poppable; it never proved a *player* could
+      // pop it — and on iOS they could not. A `fullscreenDialog` route gets no
+      // edge-swipe back gesture, iOS has no system back button, the round
+      // cycles items forever, and there was no close control anywhere. A child
+      // who tapped "Empezar la serie" could not reach the home again without
+      // killing the app. Android hid it, because hardware back pops the route.
+      //
+      // So this taps what a player can see.
+      await _pump(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RoundScreen), findsOneWidget);
+
+      await tester.tap(find.byType(IconButtonTile).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(RoundScreen), findsNothing);
+    });
+
+    testWidgets('a player can leave from a verdict screen too',
+        (WidgetTester tester) async {
+      // A verdict is its own full screen, so it needs its own exit — reaching
+      // one by tapping "Siguiente" first would be an exit that depends on
+      // answering another question.
       await _pump(tester);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Empezar la serie'));
       await tester.pumpAndSettle();
 
-      Navigator.of(tester.element(find.byType(RoundScreen))).pop();
+      for (final String id in <String>['4', '2', 'submit']) {
+        await tester.tap(
+          find.byWidgetPredicate(
+            (Widget w) => w is KeypadKeyView && w.data.id == id,
+          ),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(VerdictScreen), findsOneWidget);
+
+      await tester.tap(find.byType(IconButtonTile).first);
       await tester.pumpAndSettle();
 
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.byType(RoundScreen), findsNothing);
+    });
+
+    testWidgets('every full-screen session offers a visible way out',
+        (WidgetTester tester) async {
+      // The general rule rather than the two instances: whatever a session
+      // shows, it shows a close control. A screen added later without one
+      // fails here.
+      await _pump(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(IconButtonTile), findsWidgets);
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await tester.tap(
+          find.byWidgetPredicate(
+            (Widget w) => w is KeypadKeyView && w.data.id == id,
+          ),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byType(IconButtonTile),
+        findsWidgets,
+        reason: 'the verdict screen has no way out',
+      );
     });
   });
 

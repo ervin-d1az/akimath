@@ -20,11 +20,9 @@
 - [x] 2.2 **Tier 1b** — the round-trip requirement in 1.1 is the falsification: written against a
       decoder that accepted `2026-13-45`, it failed with
       `Expected: empty / Actual: [DateTime:2027-02-14 00:00:00.000]`.
-- [ ] 2.3 **Tier 2 — not run, and why.** The behaviour is a sequence of taps: start a series, answer,
-      return, and watch the pill rise. `xcrun simctl` cannot drive a tap, so a device pass would show
-      only the same static home already captured in `f2-home-reduced`. The full sequence **is**
-      covered end to end by `home_route_test.dart`, through the real widgets. Stated rather than
-      skipped (PROC-5), and it lands the moment there is a reason to run the app by hand.
+- [x] 2.3 **Tier 2 — superseded by 3.5 below**, which ran it once CocoaPods was installed. This box
+      said "not run" for a day and stayed open twenty-three lines above the proof; a ledger that
+      contradicts itself is worse than one that admits a gap.
 
 ## 3 · Persistence — decided, built, and blocked on tooling
 

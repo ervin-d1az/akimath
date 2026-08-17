@@ -158,21 +158,30 @@ void main() {
 
       expect(_answer(tester), '8' * AnswerDraft.maxLength);
 
+      final Finder answer = find.byKey(const ValueKey<String>('answer-draft'));
       final Rect slot = tester.getRect(
-        find.ancestor(
-          of: find.byKey(const ValueKey<String>('answer-draft')),
-          matching: find.byType(FittedBox),
-        ),
+        find.ancestor(of: answer, matching: find.byType(FittedBox)),
       );
-      final Rect text =
-          tester.getRect(find.byKey(const ValueKey<String>('answer-draft')));
+      final Rect text = tester.getRect(answer);
 
-      // Scaled down to fit, not cut off at the edge.
+      // **Both corners, on real rects.** The first version of this assertion
+      // read `text.width * (slot.width / text.width) <= slot.width + 0.5`,
+      // which reduces to `slot.width <= slot.width + 0.5` — true of any widget
+      // tree, and so no test at all. It was written to hold down a *painting*
+      // defect and held down nothing.
+      //
+      // Checking only the top-left would repeat last round's miss: an overflow
+      // on the right can never violate it.
       expect(
-        text.width * (slot.width / text.width),
-        lessThanOrEqualTo(slot.width + 0.5),
+        slot.inflate(1).contains(text.topLeft),
+        isTrue,
+        reason: 'the answer starts outside its slot',
       );
-      expect(find.byType(FittedBox), findsWidgets);
+      expect(
+        slot.inflate(1).contains(text.bottomRight),
+        isTrue,
+        reason: 'the answer overflows its slot: $text against $slot',
+      );
     });
 
     testWidgets('backspace always changes what is on screen',

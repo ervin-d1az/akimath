@@ -58,6 +58,8 @@ class InlineBanner extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
+          // 20 against the body text's 15: large enough to read as an icon
+          // beside a sentence without becoming the loudest thing in the band.
           BrandIcon(visual.glyph, size: 20),
           const SizedBox(width: BrandShape.space2),
           Flexible(child: Text(message, style: BrandText.body())),

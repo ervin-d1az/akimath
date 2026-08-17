@@ -123,6 +123,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         streakDays: 7,
       ),
       onContinue: () {},
+      onClose: () {},
     ),
   ),
   RegisteredScreen(
@@ -134,6 +135,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         streakDays: 1,
       ),
       onContinue: () {},
+      onClose: () {},
     ),
   ),
 ];

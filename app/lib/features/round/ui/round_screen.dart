@@ -7,7 +7,9 @@ import '../../../design/math/math_view.dart';
 import '../../../design/painting/spec/dash_spec.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
+import '../../../design/icons/brand_icon.dart';
 import '../../../design/widgets/candy_surface.dart';
+import '../../../design/widgets/icon_button_tile.dart';
 import '../../../design/widgets/keypad.dart';
 import '../../../design/widgets/spec/keypad_layout.dart';
 import '../../home/data/day_log_store.dart';
@@ -26,9 +28,9 @@ import 'verdict/verdict_screen.dart';
 /// into a node tree is `nodeFor`, and it lives in `policy/` for the same reason
 /// the other two do.
 ///
-/// It takes its items rather than fetching them. `RoundRoute` is the adapter
-/// that reads the bundled pack, so nothing here touches an `AssetBundle` — and
-/// a test plays a round by handing over a one-item list.
+/// It takes its items rather than fetching them. `HomeRoute` is the adapter
+/// that reads the bundled pack and pushes this screen, so nothing here touches
+/// an `AssetBundle` — and a test plays a round by handing over a one-item list.
 class RoundScreen extends StatefulWidget {
   const RoundScreen({
     super.key,
@@ -36,6 +38,7 @@ class RoundScreen extends StatefulWidget {
     this.now = DateTime.now,
     this.attemptDays = const <DateTime>[],
     this.dayLog,
+    this.onClose,
   });
 
   final List<Item> items;
@@ -57,6 +60,20 @@ class RoundScreen extends StatefulWidget {
   /// records the day — **right or wrong**, because the streak counts days
   /// practised and not days won.
   final DayLogStore? dayLog;
+
+  /// Leaves the series.
+  ///
+  /// **The only way out, and it has to exist.** A series is pushed as a
+  /// full-screen route, which on iOS means no system back button and — because
+  /// `fullscreenDialog` routes get no `_CupertinoBackGestureDetector` — no
+  /// edge-swipe either. The round itself never ends: it cycles items forever.
+  /// So without this control an iPhone player who started a series could not
+  /// reach the home again without killing the app. Android hid it, because the
+  /// hardware back pops the route.
+  ///
+  /// Defaults to `Navigator.maybePop`, so a pushed round always has an exit
+  /// even if a caller forgets to wire one.
+  final VoidCallback? onClose;
 
   @override
   State<RoundScreen> createState() => _RoundScreenState();
@@ -134,7 +151,11 @@ class _RoundScreenState extends State<RoundScreen> {
   Widget build(BuildContext context) {
     final VerdictSummary? summary = _summary;
     if (summary != null) {
-      return VerdictScreen(summary: summary, onContinue: _next);
+      return VerdictScreen(
+        summary: summary,
+        onContinue: _next,
+        onClose: _close,
+      );
     }
 
     // Scaffold, not a bare ColoredBox: without a Material ancestor Flutter
@@ -167,10 +188,27 @@ class _RoundScreenState extends State<RoundScreen> {
     );
   }
 
+  /// `close · progress · …` — the shell's first element, per the item-shell
+  /// design. It was specified and never built, and its absence trapped an iOS
+  /// player inside the session.
+  void _close() {
+    final VoidCallback? handler = widget.onClose;
+    if (handler != null) {
+      handler();
+      return;
+    }
+    Navigator.of(context).maybePop();
+  }
+
   Widget _header() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
+        IconButtonTile(
+          onPressed: _close,
+          child: const BrandIcon(BrandGlyph.close, size: 22),
+        ),
         Text('Reto ${_index + 1}', style: BrandText.eyebrow()),
         // No visible timer, ever — time is measured quietly (CLAUDE.md).
         Text('Nivel ${_item.ladderStep}', style: BrandText.eyebrow()),

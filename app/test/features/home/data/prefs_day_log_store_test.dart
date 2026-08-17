@@ -11,6 +11,8 @@ DateTime day(int y, int m, int d) => DateTime(y, m, d);
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  _brokenStorageTests();
+
   setUp(() {
     // The in-memory backend the plugin ships for tests. It is the real
     // SharedPreferencesAsync API over a fake store, so the adapter under test
@@ -111,6 +113,59 @@ void main() {
 
       expect(after.days, <DateTime>[day(2026, 8, 17)]);
       expect((await const PrefsDayLogStore().read()).days, hasLength(1));
+    });
+  });
+
+}
+
+/// A backend whose every operation throws.
+///
+/// The in-memory backend the other groups use never fails, so **the catch arms
+/// were never reached** — including the write arm, which is the half the
+/// original incident was on: a plugin that never linked fails the write as
+/// surely as the read. A tolerant adapter whose tolerance nothing exercises is
+/// a claim, not a behaviour.
+base class _BrokenBackend extends SharedPreferencesAsyncPlatform {
+  @override
+  Future<void> setString(String key, String value, SharedPreferencesOptions o) =>
+      throw StateError('storage unavailable');
+
+  @override
+  Future<String?> getString(String key, SharedPreferencesOptions o) =>
+      throw StateError('storage unavailable');
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw StateError('storage unavailable');
+}
+
+void _brokenStorageTests() {
+  group('storage that fails outright costs the streak, never the launch', () {
+    setUp(() {
+      SharedPreferencesAsyncPlatform.instance = _BrokenBackend();
+    });
+
+    test('a failing read returns an empty log rather than throwing', () async {
+      expect((await const PrefsDayLogStore().read()).days, isEmpty);
+    });
+
+    test('a failing write does not throw and still reports the session', () async {
+      // The returned value reflects this session — the same guarantee the
+      // in-memory store gives — so the verdict screen still shows a streak
+      // even when nothing could be persisted.
+      final DayLog after =
+          await const PrefsDayLogStore().record(day(2026, 8, 17));
+
+      expect(after.days, <DateTime>[day(2026, 8, 17)]);
+    });
+
+    test('neither path leaks the failure to the caller', () async {
+      // The whole contract: a broken store is survivable. Both calls complete.
+      await expectLater(const PrefsDayLogStore().read(), completes);
+      await expectLater(
+        const PrefsDayLogStore().record(day(2026, 8, 17)),
+        completes,
+      );
     });
   });
 }

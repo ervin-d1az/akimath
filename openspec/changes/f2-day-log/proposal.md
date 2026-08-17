@@ -26,13 +26,15 @@ cannot earn.
 - **New:** `features/home/policy/day_log.dart`, `features/home/data/day_log_store.dart`.
 - **Modified:** `RoundScreen` gains an optional store; `HomeRoute` owns one and refreshes from it.
 - `features/*/policy/` under the pure root goes from 6 files to 7.
-- **No new dependency** — and that is the change's main open question, below.
+- **One new runtime dependency, `shared_preferences`** — decided by Ervin 2026-08-16 after the
+  allowlist gate fired, with the DEP-1 audit recorded beside the allowlist entry. It was an open
+  question when this change opened and is not one now.
 
 ## Non-goals
 
-- **Persisting between launches.** See the design note: it needs a plugin, and adding one is a
-  **DEP-1 decision that is not a session's to take**. The seam is built and tested so the persistent
-  implementation is one file and nothing else moves.
+- **Nothing here.** Persistence *was* a non-goal while the dependency was undecided; the decision
+  was taken inside this change and the persistent store shipped with it. Left visible rather than
+  rewritten, because the sequence — seam first, decision second, implementation third — is the point.
 - **Syncing the log.** `attempts` is the server's record and arrives at F3. This is a local
   convenience for a local figure.
 - **Deciding whether a zero streak should be shown at all.** A design question, still open from

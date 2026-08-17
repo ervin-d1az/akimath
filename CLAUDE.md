@@ -179,7 +179,7 @@ is now a red build rather than a precedent: `app/test/architecture/pure_boundary
 walks the import graph transitively — through `export` and `part`, so the tokens barrel cannot
 smuggle `package:flutter/painting.dart` into a pure root — and reports a per-root file count so
 a mistyped root cannot make it vacuously green. Today that bites over `design/**/spec/` and its
-12 files, `features/*/policy/` and its 6, and `content/model/` and its 4 — all three roots are on
+12 files, `features/*/policy/` and its 7, and `content/model/` and its 3 — all three roots are on
 disk now, and the last two flipped from absent to covered when the round landed. **Import the token
 you need, not the barrel:** `tokens.dart` re-exports `brand_typography.dart`, which imports
 `package:flutter/painting.dart`, so a pure module reaching for the barrel fails the gate. The root is a **glob, not a list**, so

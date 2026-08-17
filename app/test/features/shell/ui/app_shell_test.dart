@@ -96,8 +96,11 @@ void main() {
   });
 
   group('the banner sits above the content', () {
-    testWidgets('a notice banner renders with its glyph',
+    testWidgets('a banner sits above the content it warns about',
         (WidgetTester tester) async {
+      // Named for what it checks. It used to say "renders with its glyph" and
+      // check no glyph at all, so a grep for glyph coverage returned a false
+      // positive — the glyph is `inline_banner_test.dart`'s job.
       await _pump(
         tester,
         const AppShell(

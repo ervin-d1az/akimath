@@ -40,9 +40,7 @@ int streakLength({
   }
 
   // The run may end today or yesterday; anything older is already broken.
-  DateTime cursor = played.contains(end)
-      ? end
-      : end.subtract(const Duration(days: 1));
+  DateTime cursor = played.contains(end) ? end : _previousDay(end);
   if (!played.contains(cursor)) {
     return 0;
   }
@@ -50,10 +48,30 @@ int streakLength({
   int length = 0;
   while (played.contains(cursor)) {
     length++;
-    cursor = _startOfDay(cursor.subtract(const Duration(days: 1)));
+    cursor = _previousDay(cursor);
   }
   return length;
 }
+
+/// The calendar day before [day], as local midnight.
+///
+/// **Component arithmetic, never `subtract(Duration(days: 1))`.** A `Duration`
+/// is absolute elapsed time and a local calendar day is 23, 24 or 25 hours
+/// long, so subtracting 24 hours from midnight lands at 23:00 or 01:00 across a
+/// daylight-saving transition — and the days in [streakLength] are a set of
+/// midnights, so the lookup simply misses.
+///
+/// That was not hypothetical. In `America/Tijuana` — Tijuana, not a travelling
+/// device — a child with a 30-day run opening the app on the morning of
+/// 9 March 2026 saw a streak of **0** on the home, then **29** on the verdict
+/// screen after answering: two screens, one morning, neither number right. It
+/// also reached `America/Ciudad_Juarez`, `America/Havana`, `America/Santiago`
+/// and every US and European zone.
+///
+/// `DateTime(y, m, d - 1)` normalises day zero into the previous month and
+/// always yields that calendar day's local midnight, whatever the offset does.
+DateTime _previousDay(DateTime day) =>
+    DateTime(day.year, day.month, day.day - 1);
 
 /// Midnight local, so a time of day inside a counted day is ignored.
 ///

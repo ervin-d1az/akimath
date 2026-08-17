@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/brand/aki.dart';
+import '../../../../design/icons/brand_icon.dart';
 import '../../../../design/math/spec/es_mx_number.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../../design/widgets/brand_button.dart';
+import '../../../../design/widgets/icon_button_tile.dart';
 import '../../../../design/widgets/spec/verdict.dart';
 import '../../../../design/widgets/stat_tile.dart';
 import '../../../../design/widgets/verdict_ring.dart';
@@ -46,10 +48,15 @@ class VerdictScreen extends StatelessWidget {
     super.key,
     required this.summary,
     required this.onContinue,
+    required this.onClose,
   });
 
   final VerdictSummary summary;
   final VoidCallback onContinue;
+
+  /// Leaves the series. A verdict is a full screen with no system back on iOS,
+  /// so it carries the same exit the item does.
+  final VoidCallback onClose;
 
   bool get _correct => summary.verdict == Verdict.correct;
 
@@ -72,6 +79,13 @@ class VerdictScreen extends StatelessWidget {
           ),
           child: Column(
             children: <Widget>[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButtonTile(
+                  onPressed: onClose,
+                  child: const BrandIcon(BrandGlyph.close, size: 22),
+                ),
+              ),
               const Spacer(),
               _band(),
               const SizedBox(height: BrandShape.space4),

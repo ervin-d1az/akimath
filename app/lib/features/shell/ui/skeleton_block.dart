@@ -22,7 +22,9 @@ class SkeletonBlock extends StatelessWidget {
     Key? key,
     required double width,
     double fontSize = 15,
-  }) : this(key: key, width: width, height: fontSize, radius: 6);
+  })  // 6 rather than the block's radiusChip: a line of text is thin, and a
+      // 14px radius on a 15px-tall box draws a lozenge rather than a line.
+      : this(key: key, width: width, height: fontSize, radius: 6);
 
   final double width;
   final double height;

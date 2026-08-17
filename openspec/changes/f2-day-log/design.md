@@ -8,8 +8,10 @@ children under 13, every dependency is checked for whether it phones home *befor
 and `dependency_allowlist_test` fails loudly on any addition **precisely so a human takes that call**
 rather than a session slipping it in inside an unrelated change.
 
-So this change ships the model, the seam and the wiring, all tested, and stops there. The persistent
-implementation is one file behind the answer, and nothing else moves when it lands.
+So this change shipped the model, the seam and the wiring first and **stopped there until the
+decision was taken**. Ervin took it the same day; `PrefsDayLogStore` is the one file that followed,
+and nothing else moved. The order is the point: a seam built before the decision is a seam that does
+not presume it.
 
 The audit, so the answer is a yes or a no rather than homework: both packages are published by the
 Flutter team, both are wrappers over platform storage APIs, and neither makes a network request.

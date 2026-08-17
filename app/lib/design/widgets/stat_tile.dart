@@ -9,13 +9,25 @@ import '../tokens/tokens.dart';
 /// size and in nothing else.
 enum StatTileVariant {
   /// `03 Acierto`'s tiles.
-  raised(radius: 20, valueSize: 26, shadow: BrandShape.shadowTile),
+  raised(
+      radius: BrandShape.radiusStatTileRaised,
+      valueSize: 26,
+      shadow: BrandShape.shadowTile,
+  ),
 
   /// `2.5`'s tiles.
-  compact(radius: 18, valueSize: 24, shadow: BrandShape.shadowTile),
+  compact(
+      radius: BrandShape.radiusStatTileCompact,
+      valueSize: 24,
+      shadow: BrandShape.shadowTile,
+  ),
 
   /// `04 Error`'s flat tiles. No shadow.
-  flat(radius: 16, valueSize: 22, shadow: null);
+  flat(
+      radius: BrandShape.radiusStatTileFlat,
+      valueSize: 22,
+      shadow: null,
+  );
 
   const StatTileVariant({
     required this.radius,
@@ -129,6 +141,8 @@ class _DeltaValue extends StatelessWidget {
       textBaseline: TextBaseline.alphabetic,
       children: <Widget>[
         if (parts.sign.isNotEmpty) ...<Widget>[
+          // 15 against the digits' 22, and a 3px gap: the sign is a modifier
+          // on the number, not a second number beside it.
           Text(parts.sign, style: BrandText.action(size: 15)),
           const SizedBox(width: 3),
         ],

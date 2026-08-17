@@ -21,6 +21,7 @@ Future<void> _pump(WidgetTester tester, Verdict verdict) async {
           streakDays: 7,
         ),
         onContinue: () {},
+        onClose: () {},
       ),
     ),
   );
