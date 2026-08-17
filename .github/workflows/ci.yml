@@ -365,6 +365,46 @@ jobs:
   # byte-identical `schema.sql` on both majors, verified. PostgreSQL 18 did expose
   # one real defect that 17 had hidden: two workers migrating fresh databases
   # concurrently raced on `CREATE ROLE`, which is cluster-wide.
+
+      # ARCHITECTURE.md §8 job 4 is "emit + git add + git diff --cached + oasdiff
+      # breaking-change check". The first three have been here since
+      # f0-pack-contract; this is the fourth, which `CLAUDE.md` recorded as
+      # waiting on f1-contract-emitter.
+      #
+      # **Version-pinned**, for the same reason `pg_dump` is in the integration
+      # job: a tool that changes its own output turns a gate into noise and
+      # somebody deletes it.
+      #
+      # **Breaking changes only.** A gate that fires on every addition trains
+      # people to pass `--fail-on none`, and then it is gone.
+      - name: Install oasdiff
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/oasdiff.tar.gz \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/oasdiff.tar.gz -C /tmp oasdiff
+          sudo install -m 0755 /tmp/oasdiff /usr/local/bin/oasdiff
+          oasdiff --version
+        env:
+          OASDIFF_VERSION: "1.29.1"
+
+      - name: No breaking change to a shipped contract
+        working-directory: ${{ github.workspace }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "no base commit to compare against; nothing to check."
+            exit 0
+          fi
+          if ! git cat-file -e "$BASE:contract/openapi.json" 2>/dev/null; then
+            echo "the base commit has no contract/openapi.json — this is its first appearance."
+            exit 0
+          fi
+          git show "$BASE:contract/openapi.json" > /tmp/openapi.base.json
+          oasdiff breaking /tmp/openapi.base.json contract/openapi.json --fail-on ERR
+
   integration:
     name: integration
     needs: changes

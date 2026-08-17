@@ -199,8 +199,12 @@ generator to Dart; and letting the client send `(template_id, seed)` back at
 answer time lets it request hard and answer easy.
 
 **Resolution:** the server emits, records in `issued_items`, and returns
-`{itemId, prompt: PromptToken[], keypad, options?}`. `templateId`, `templateVersion`,
+`{itemId, prompt: PromptToken[], keypad}`. `templateId`, `templateVersion`,
 and `seed` never appear in the response. The client answers with `itemId`.
+(`options` was listed here until 2026-08-17 and contradicted this section's own
+resolution — a field offering a child a set of answers to pick from is a
+different product. `contract/openapi.json` now says so, and a test sweeps the
+emitted document for all four names.)
 
 The invariant gets rewritten to something true:
 

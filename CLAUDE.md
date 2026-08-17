@@ -29,12 +29,13 @@ packages/server/          @akimath/server — pure `routing.ts`, IO in `adapters
 packages/contract/        @akimath/contract — the offline pack format, pure; emitter in `adapters/`
 packages/core/            @akimath/core — the rederivation machine. ZERO runtime dependencies,
                           no ambient IO; the one adapter writes the golden artifacts
-contract/                 the frozen artifacts: 3 schemas, 37 fixtures, canon.golden.json
+contract/                 the frozen artifacts: 3 schemas, 37 fixtures, canon.golden.json,
+                          openapi.json (OpenAPI 3.0.3, emitted, byte-diffed and oasdiff'd)
 docs/adr/                 ADR 0001 decides the Dart API client; older decisions live in ARCHITECTURE.md
 ```
 
 Planned, **not yet on disk** (README's layout block describes the destination, not the
-present): `contract/openapi.json` and `app/lib/api/`. `packages/contract` now exists and holds the offline pack format; its
+present): `app/lib/api/`. `packages/contract` now exists and holds the offline pack format; its
 OpenAPI half arrives with `f1-contract-emitter`.
 
 ## What exists today
@@ -102,8 +103,9 @@ OpenAPI half arrives with `f1-contract-emitter`.
   against a **`postgres:18` service container** rather than ARCHITECTURE.md §8's ephemeral Neon
   branch — a container needs no account, no project and no secret, and what those tests assert is
   plain PostgreSQL behaviour. ARCHITECTURE.md §8's remaining jobs — compliance, mutation — are
-  deliberately absent because the code they guard does not exist; `contract`'s own `oasdiff`
-  half waits on `f1-contract-emitter`. `gate` is the intended required check and is **not
+  deliberately absent because the code they guard does not exist; `contract` now runs its `oasdiff`
+  half too, version-pinned, failing only on a **breaking** change — a gate that fires on every
+  addition trains people to switch it off. `gate` is the intended required check and is **not
   registered on the `protect-main` ruleset yet**, so today CI is advisory on `main`.
 - **The workspace is declared but not live.** The root `package.json` names
   `pnpm@11.21.0` and `pnpm-workspace.yaml` carries a `catalog:`, but pnpm is not installed

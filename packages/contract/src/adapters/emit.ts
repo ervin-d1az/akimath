@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 
 import { buildCanonGolden } from "../canon-vectors.js";
+import { buildOpenApiDocument } from "../openapi/document.js";
 import { canonicalJson } from "../canonical-json.js";
 import { PackSchema, parsePack, type PackResult } from "../pack.js";
 import { PUZZLE_PAYLOAD_SCHEMAS } from "../puzzle/index.js";
@@ -67,6 +68,11 @@ export function emitContract(options: EmitOptions): void {
   write(join(options.outputRoot, "stimulus.schema.json"), schemaMap(STIMULUS_PAYLOAD_SCHEMAS));
   write(join(options.outputRoot, "puzzle.schema.json"), schemaMap(PUZZLE_PAYLOAD_SCHEMAS));
   write(join(options.outputRoot, "fixtures", "canon.golden.json"), buildCanonGolden());
+  // The API specification. Emitted here beside the schemas it shares a package
+  // with, and for the same reason: `ARCHITECTURE.md` §2 wants it produced
+  // without booting Hono or reaching for `DATABASE_URL`, so the gate cannot go
+  // flaky for a reason unrelated to the contract.
+  write(join(options.outputRoot, "openapi.json"), buildOpenApiDocument());
   emitNormalisedRecords(options);
 }
 
