@@ -59,12 +59,22 @@ control test asserts a launch that *did not* finish still opens on the welcome.
 
 - [x] 4.1 **Tier 1** — `flutter analyze --fatal-infos`: *No issues found!* `flutter test`: **608
       tests, green** (571 before this change).
-- [x] 4.2 **Tier 1b** — falsified twice, and restored by checksum both times (PROC-8; the file is
-      versioned, so `shasum -a 256` before and after is the proof, not `git diff`).
-      · `isComplete()` hard-coded to `false` → **1 test red**: *the second launch goes straight to
-        the home*.
+- [x] 4.2 **Tier 1b** — six falsifications, each reddening only its own tests, each restored and the
+      restoration proved.
+      · `isComplete()` hard-coded to `false` → **1 test red**: *the second launch goes straight to the
+        home*.
       · `markComplete()` made a no-op → **7 tests red**, across the flow and the store.
-      Checksum after restoring: `be68329c…` — the same file that was hashed before the first edit.
+      · the teaching item put back to `7 + 6` → **1 test red**: the pack-collision gate.
+      · `if (store != null) finishedAt` made unconditional → **1 test red**: the tutorial's `RACHA`.
+      · `&& solved` dropped from `_next` → **2 tests red**: *Intentar otro* finishing the run.
+      · `_startedAt` returned to a `late` initializer → **2 tests red**: the negative first duration.
+      · the skip control made unconditional → **3 tests red**.
+      Suite back to its count after each. **On the restoration proof:** for the two files that were
+      *tracked and clean*, `git diff --quiet -- <file>` is the proof, which is PROC-8's tracked
+      branch — an earlier draft of this line claimed the opposite and the rule now says so
+      explicitly. For `round_screen.dart`, tracked but carrying uncommitted work, neither
+      `git checkout` nor a bare `git diff` was usable: a backup copy and `diff -q` were, and reported
+      byte-identical.
 - [x] 4.3 **Tier 2** — iPhone 17 simulator (`92FD8A62`), debug build installed with `simctl`.
       · **Launch 1, fresh install** — `0.2` renders: Aki at 200, the bubble, the tagline, one green
         action. Fonts real, nothing clipped.
@@ -96,3 +106,20 @@ items it compared, so a pack that read as empty cannot pass it silently (PROC-10
 
 One thing seen on the device and **not** changed: the teaching item wears the series' `Reto 1` /
 `Nivel 1` header. Recorded as `docs/decisions/OPEN.md` §5 rather than decided in a session.
+
+## 5 · The review round
+
+- [x] 5.1 `craftsman-reviewer` and `craftsman-bug-hunter` over the landed commit, in parallel.
+      **4 criticals, 3 blocking conventions findings, all closed.** Written up in
+      `docs/REVIEW-2026-08-17-first-run.md`; three rules added to the rulebook because three findings
+      had no ID to cite (CMT-2, PROC-12, and a clause on PROC-8).
+- [x] 5.2 The two worst were on the first sixty seconds of a child's first launch, and both wrote the
+      flag: **"Intentar otro"** — the button a *wrong* answer offers — completed the first run, and so
+      did **"Saltar este reto"**. Both because `onFinished` was bound to `_next`, the target of every
+      forward affordance, rather than to the event it names. The run now completes when the item is
+      **solved**, and a one-item round has no skip control.
+- [x] 5.3 A third was nine commits older than this change and reached every verdict in the app:
+      `late DateTime _startedAt = widget.now()` evaluates on first *read*, which was inside `_submit`
+      after the finish instant. Every round's first item reported a **negative** duration — the tile
+      read `−7,4 s`. Now assigned in `initState`.
+- [x] 5.4 Suite 610 → **622**, analyze clean.

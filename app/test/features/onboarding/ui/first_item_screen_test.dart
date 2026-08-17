@@ -6,9 +6,9 @@ import 'package:akimath_app/design/math/math_view.dart';
 import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
+import 'package:akimath_app/design/widgets/stat_tile.dart';
 import 'package:akimath_app/design/widgets/speech_bubble.dart';
 import 'package:akimath_app/design/widgets/verdict_ring.dart';
-import 'package:akimath_app/features/home/data/prefs_day_log_store.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:flutter/material.dart';
@@ -159,9 +159,44 @@ void main() {
       }
       await tester.pumpAndSettle();
 
-      final Set<String> keys = await SharedPreferencesAsync().getKeys();
-      expect(keys, isNot(contains(PrefsDayLogStore.key)));
-      expect(keys, isEmpty, reason: 'the tutorial wrote $keys');
+      // `isEmpty` subsumes "no day-log key"; asserting both said it twice.
+      expect(
+        await SharedPreferencesAsync().getKeys(),
+        isEmpty,
+        reason: 'the tutorial wrote to storage',
+      );
+    });
+
+    testWidgets('its verdict shows no streak either',
+        (WidgetTester tester) async {
+      // **The number, not just the storage.** `RoundScreen` used to append
+      // `finishedAt` to the streak unconditionally, so the tutorial's verdict
+      // read `RACHA 1` while the home behind it read `0` — the same two-screens
+      // one-morning contradiction `StreakPolicy` was fixed for, in the other
+      // direction, and on a first-run player's very first result.
+      await _pump(tester);
+      for (final String id in <String>['1', '3', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.text('RACHA'), findsOneWidget);
+      final Finder streak = find.ancestor(
+        of: find.text('RACHA'),
+        matching: find.byType(StatTile),
+      );
+      final Iterable<String> figures = tester
+          .widgetList<Text>(
+            find.descendant(of: streak, matching: find.byType(Text)),
+          )
+          .map((Text t) => t.data ?? '')
+          .where((String text) => text != 'RACHA');
+
+      expect(
+        figures,
+        <String>['0'],
+        reason: 'the tutorial claimed a streak it recorded nowhere',
+      );
     });
   });
 
@@ -243,18 +278,66 @@ void main() {
       expect(find.byType(Keypad), findsNothing);
     });
 
-    testWidgets('skipping the item is not finishing it either',
+    testWidgets('asking for another go is not finishing either',
         (WidgetTester tester) async {
-      // "Saltar este reto" advances, and with one item there is nowhere to
-      // advance to — so it lands on the same finish as answering. What it must
-      // not do is silently cycle back to an unanswered item forever.
+      // **The worst of the three exits.** A wrong verdict's continue button is
+      // labelled *"Intentar otro"* — a request for another go — and it routed to
+      // the same `_next` as *"Siguiente"*. So the child who answered *wrong*, the
+      // one who most needs the screen that teaches the answer format, is the one
+      // who permanently lost it by tapping the button the app offered them. There
+      // is no reset path: no settings screen, and nothing else reads the flag.
       int finished = 0;
       await _pump(tester, onFinished: () => finished++);
 
-      await tester.tap(find.text('Saltar este reto'));
+      for (final String id in <String>['9', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('Intentar otro'), findsOneWidget);
+
+      await tester.tap(find.text('Intentar otro'));
+      await tester.pumpAndSettle();
+
+      expect(finished, 0, reason: 'a wrong answer completed the first run');
+      // Another go means the item back, with an empty slot.
+      expect(find.byType(Keypad), findsOneWidget);
+      expect(_promptGlyphs(tester), <String>['5', '+', '8', '=']);
+    });
+
+    testWidgets('and then solving it does finish', (WidgetTester tester) async {
+      // The control: retrying must not have made the run unfinishable.
+      int finished = 0;
+      await _pump(tester, onFinished: () => finished++);
+
+      for (final String id in <String>['9', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Intentar otro'));
+      await tester.pumpAndSettle();
+
+      for (final String id in <String>['1', '3', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Siguiente'));
       await tester.pumpAndSettle();
 
       expect(finished, 1);
+    });
+
+    testWidgets('there is nothing to skip, so no skip control is offered',
+        (WidgetTester tester) async {
+      // **This was a live defect.** "Saltar este reto" routes to `_next`, which
+      // on the last item calls `onFinished` — so one tap completed the first run
+      // permanently, with no item ever solved, one row below a close control
+      // that deliberately does not. The two exits meant opposite things and
+      // looked the same.
+      int finished = 0;
+      await _pump(tester, onFinished: () => finished++);
+
+      expect(find.text('Saltar este reto'), findsNothing);
+      expect(finished, 0);
     });
   });
 

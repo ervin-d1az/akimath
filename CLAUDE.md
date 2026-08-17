@@ -46,13 +46,17 @@ OpenAPI half arrives with `f1-contract-emitter`.
   `04 Error`, which show time and streak and **no rating**: F2 has no server, so nothing on them is
   a figure sync could later contradict. `features/shell/` is the frame: cream, a banner slot, and
   **no bottom navigation** — `visibleTabs` returns nothing while one root exists, so the bar is
-  absent by rule rather than by omission. The app opens on the **home** — Aki, the `RETO DEL DÍA`
-  preview composed by the real compositor, the streak pill — and a series is pushed as a full-screen
-  route with no navigation affordance. The streak is **earned within a session** — `DayLog` records
+  absent by rule rather than by omission. The app opens on **`FirstRunGate`**, which reads one
+  boolean and shows either the first run — `0.2 Bienvenida`, then `0.3 Primer reto`, a fixed teaching
+  item that reads no pack, records no day and shows no streak — or the **home**: Aki, the
+  `RETO DEL DÍA` preview composed by the real compositor, the streak pill. A series is pushed from
+  there as a full-screen route with no navigation affordance. The first run completes when the item is
+  **solved**; leaving it, by the close control or a system back, returns to the welcome and sets
+  nothing. The streak is **earned within a session** — `DayLog` records
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **540 Flutter tests, green.**
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **622 Flutter tests, green.**
   Content is a **bundled 20-item JSON pack** (`app/assets/packs/starter.json`) read by
   `content/pack_reader.dart` — the one adapter in `content/`. An expired or malformed pack is
   refused where it is read. **Grading answers to the frozen contract**: `content/model/canon.dart` is

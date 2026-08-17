@@ -13,9 +13,12 @@ import '../../round/ui/round_screen.dart';
 /// **Aki is absent**, because the learner is solving. She is on `0.2` for the
 /// same rule.
 ///
-/// **It measures nothing.** The item is fixed, drawn from no pack, and no
-/// `DayLogStore` is passed — a streak that started before the player reached the
-/// home would be counting the tutorial.
+/// **It measures nothing**, and that has to be true of the number on screen as
+/// well as of the number in storage. The item is fixed, drawn from no pack, and
+/// no `DayLogStore` is passed — and because `RoundScreen` now counts only the day
+/// it actually recorded, the verdict reads `RACHA 0`, which is what the home
+/// behind it reads. It read `RACHA 1` first: a streak claimed on a player's very
+/// first result and contradicted one tap later.
 class FirstItemScreen extends StatelessWidget {
   const FirstItemScreen({
     super.key,

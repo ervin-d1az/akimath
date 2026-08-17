@@ -155,19 +155,55 @@ void main() {
       expect(_copy(tester), isNot(contains('correo')));
     });
 
-    testWidgets('no calibration screen is reachable',
+    testWidgets('nothing on the path promises to adapt to a level',
         (WidgetTester tester) async {
-      // D11: F2 ships `0.2` and `0.3`. `0.4` would promise a level this build
-      // cannot adapt to, so nothing on the path may name one.
+      // D11: F2 ships `0.2` and `0.3`. `0.4` would promise *"unos rápidos para
+      // acomodar tu nivel"* — a promise this build cannot keep.
+      //
+      // **Checked on every screen of the walk, not only the first.** The earlier
+      // version ran the loop before walking, so it only ever read the welcome's
+      // copy — and asserting `nivel` there would have passed while the teaching
+      // item's header says `Nivel 1` two taps later. `nivel` is therefore *not*
+      // in this list: the round's header prints the item's ladder step, which is
+      // a static readout and not a promise to adapt. Whether the tutorial should
+      // wear that header at all is `docs/decisions/OPEN.md` §5, undecided — so
+      // this asserts the promise words, which are decided.
+      const List<String> promises = <String>['calibra', 'acomodar', 'ajustar'];
+
       await _pump(tester);
-      for (final String word in <String>['nivel', 'calibra', 'acomodar']) {
-        expect(_copy(tester), isNot(contains(word)));
+      for (final String word in promises) {
+        expect(_copy(tester), isNot(contains(word)), reason: 'on 0.2');
       }
 
-      await _walkFirstRun(tester);
+      await tester.tap(find.text('Resolver uno'));
+      await tester.pumpAndSettle();
+      for (final String word in promises) {
+        expect(_copy(tester), isNot(contains(word)), reason: 'on 0.3');
+      }
+
+      for (final String id in <String>['1', '3', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+      for (final String word in promises) {
+        expect(_copy(tester), isNot(contains(word)), reason: 'on the verdict');
+      }
+
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
 
       expect(find.byType(HomeScreen), findsOneWidget,
           reason: 'something stood between the item and the home');
+    });
+
+    testWidgets('the words it looks for are words a screen could contain',
+        (WidgetTester tester) async {
+      // PROC-11's control. A list of words no Spanish copy would ever hold makes
+      // the test above pass forever. `_copy` is proven to see real copy, so the
+      // negatives above are negatives about the copy and not about the reader.
+      await _pump(tester);
+      expect(_copy(tester), contains('resolvemos'));
+      expect(_copy(tester), contains('aki'));
     });
   });
 
@@ -236,6 +272,68 @@ void main() {
         isNull,
         reason: 'leaving the item completed the first run',
       );
+    });
+
+    testWidgets('a system back does the same thing as the close control',
+        (WidgetTester tester) async {
+      // **The `PopScope` claim, asserted.** The teaching item is swapped in
+      // rather than pushed, so without it a system back at the root would quit
+      // the app while the visible close returned to the welcome — two controls,
+      // two meanings. The doc comment said they agree; this is what checks it.
+      await _pump(tester);
+      await tester.tap(find.text('Resolver uno'));
+      await tester.pumpAndSettle();
+      expect(find.byType(FirstItemScreen), findsOneWidget);
+
+      final NavigatorState navigator = tester.state(find.byType(Navigator));
+      final bool handled = await navigator.maybePop();
+      await tester.pumpAndSettle();
+
+      // `maybePop` reports whether the *request* was handled, not whether a
+      // route came off the stack: `doNotPop` is handled, and it is what keeps a
+      // first-run player inside the app instead of quitting it.
+      expect(handled, isTrue, reason: 'the back request went unhandled');
+      expect(find.byType(WelcomeScreen), findsOneWidget);
+      expect(
+        await SharedPreferencesAsync().getBool(OnboardingStore.key),
+        isNull,
+        reason: 'a system back completed the first run',
+      );
+    });
+
+    testWidgets('there is no skip control to complete the run with',
+        (WidgetTester tester) async {
+      // The flag-level half of the same defect: a tap on "Saltar este reto"
+      // reached `onComplete` and wrote the flag. The control is gone, and this
+      // asserts the consequence rather than its absence — a control renamed
+      // tomorrow still must not complete a first run.
+      await _pump(tester);
+      await tester.tap(find.text('Resolver uno'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Saltar este reto'), findsNothing);
+      expect(
+        await SharedPreferencesAsync().getBool(OnboardingStore.key),
+        isNull,
+      );
+    });
+
+    testWidgets('a system back on the welcome is not intercepted',
+        (WidgetTester tester) async {
+      // The control. `PopScope` applies only while solving — holding it on the
+      // welcome would make a first-run player unable to leave the app at all,
+      // which is the opposite failure.
+      await _pump(tester);
+
+      final NavigatorState navigator = tester.state(find.byType(Navigator));
+      final bool handled = await navigator.maybePop();
+      await tester.pumpAndSettle();
+
+      // Unhandled, so it bubbles to the platform and the app closes — which is
+      // what back at a root should do. This is also what makes the test above
+      // mean something: `true` there is a difference, not a constant.
+      expect(handled, isFalse, reason: 'the welcome intercepted a system back');
+      expect(find.byType(WelcomeScreen), findsOneWidget);
     });
   });
 }

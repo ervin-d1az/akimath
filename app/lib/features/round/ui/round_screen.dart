@@ -12,6 +12,7 @@ import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/icon_button_tile.dart';
 import '../../../design/widgets/keypad.dart';
 import '../../../design/widgets/spec/keypad_layout.dart';
+import '../../../design/widgets/spec/verdict.dart';
 import '../../home/data/day_log_store.dart';
 import '../policy/answer_draft.dart';
 import '../policy/grading.dart';
@@ -76,11 +77,16 @@ class RoundScreen extends StatefulWidget {
   /// even if a caller forgets to wire one.
   final VoidCallback? onClose;
 
-  /// Called instead of advancing, once every item has been answered.
+  /// Called instead of advancing, once the last item is behind the player.
   ///
   /// When null the round cycles — which is what a practice series does. The
   /// teaching item on `0.3` is the opposite: exactly one item, and finishing it
   /// continues the first run rather than offering another.
+  ///
+  /// *"Behind the player"* means **solved**: a wrong verdict's continue is
+  /// labelled `Intentar otro` and offers another go instead, and a one-item round
+  /// has no skip control at all. See `_next` for the defect that fixed the
+  /// meaning of this callback.
   final VoidCallback? onFinished;
 
   @override
@@ -100,12 +106,20 @@ class _RoundScreenState extends State<RoundScreen> {
       widget.items.isNotEmpty,
       'a round needs at least one item to play',
     );
+    // **Eagerly, here, and not as a `late` initializer.** A `late` field with an
+    // initializer evaluates it on first *read*, and nothing reads this while the
+    // item is on screen — the first read was inside `_submit`, *after* the finish
+    // instant had been captured. Every round's first item therefore reported a
+    // negative duration, which is every first verdict a player ever sees.
+    _startedAt = widget.now();
   }
 
   int _index = 0;
   AnswerDraft _draft = AnswerDraft.empty;
   VerdictSummary? _summary;
-  late DateTime _startedAt = widget.now();
+  /// When the current item appeared. Assigned in `initState`, not lazily — see
+  /// there for the defect that earned the comment.
+  late DateTime _startedAt;
 
   Item get _item => widget.items[_index];
 
@@ -132,23 +146,47 @@ class _RoundScreenState extends State<RoundScreen> {
   /// The streak counts today as played the moment an answer is submitted —
   /// right or wrong. A wrong answer never decrements it (Q7), and it does not
   /// fail to increment it either: the streak counts days practised.
+  ///
+  /// **Today counts only if today was recorded.** Appending `finishedAt`
+  /// unconditionally made a round with no `dayLog` — the teaching item — report
+  /// `RACHA 1` on its verdict while the home behind it read `0`, because the
+  /// home reads the store and the store had never been written. That is the
+  /// two-screens-one-morning contradiction `StreakPolicy` was fixed for, in the
+  /// other direction. The figure shown is now the figure the store will yield.
   void _submit() {
     final DateTime finishedAt = widget.now();
+    final DayLogStore? store = widget.dayLog;
     // Recorded before the verdict is built, and regardless of what it says.
-    unawaited(widget.dayLog?.record(finishedAt) ?? Future<void>.value());
+    unawaited(store?.record(finishedAt) ?? Future<void>.value());
     _summary = VerdictSummary(
       verdict: grade(_item, _draft.text),
       elapsed: finishedAt.difference(_startedAt),
       streakDays: streakLength(
-        attemptDays: <DateTime>[...widget.attemptDays, finishedAt],
+        attemptDays: <DateTime>[
+          ...widget.attemptDays,
+          if (store != null) finishedAt,
+        ],
         today: finishedAt,
       ),
     );
   }
 
+  /// Moves past the current item, or ends the round.
+  ///
+  /// **A wrong verdict's continue never ends it.** `_next` is the target of every
+  /// forward affordance here, and the verdict screen labels that button by
+  /// correctness: `Siguiente` on a win, **`Intentar otro`** on a slip — a request
+  /// for another go, not an acknowledgement. Bound to the verb rather than to the
+  /// event, `onFinished` inherited it, so the child who answered *wrong* — the one
+  /// who most needs the screen that teaches the answer format — was the one who
+  /// permanently lost it by tapping the button the app offered them. The first run
+  /// therefore completes when the item is **solved**, which is what
+  /// `req-first-run` says: *"from the welcome screen to a solved item"*.
   void _next() {
     final VoidCallback? finished = widget.onFinished;
-    if (finished != null && _index == widget.items.length - 1) {
+    final bool lastItem = _index == widget.items.length - 1;
+    final bool solved = _summary?.verdict == Verdict.correct;
+    if (finished != null && lastItem && solved) {
       finished();
       return;
     }
@@ -193,8 +231,18 @@ class _RoundScreenState extends State<RoundScreen> {
               _answerSlot(),
               const Spacer(),
               Keypad(layout: KeypadLayout.item, onKeyPressed: _onKey),
-              const SizedBox(height: BrandShape.space3),
-              BrandButton.text(label: 'Saltar este reto', onPressed: _next),
+              // **Skipping needs somewhere to skip to.** On a one-item round
+              // there is none, and the control did real damage: it routes to
+              // `_next`, which on the last item calls `onFinished` — so one tap
+              // on the teaching item's "Saltar este reto" completed the first
+              // run permanently with nothing ever solved, past a screen whose
+              // whole job is teaching the answer format. Derived from the items
+              // rather than passed in, so a one-item round cannot be built with
+              // the control by accident.
+              if (widget.items.length > 1) ...<Widget>[
+                const SizedBox(height: BrandShape.space3),
+                BrandButton.text(label: 'Saltar este reto', onPressed: _next),
+              ],
             ],
           ),
         ),

@@ -1,7 +1,9 @@
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/features/round/policy/answer_draft.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/design/math/spec/es_mx_number.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
+import 'package:akimath_app/design/widgets/stat_tile.dart';
 import 'package:akimath_app/design/widgets/verdict_ring.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:flutter/material.dart';
@@ -44,7 +46,201 @@ Future<void> _press(WidgetTester tester, String id) async {
   await tester.pump();
 }
 
+const List<Item> _twoItems = <Item>[
+  Item(
+    id: 't1',
+    prompt: <PromptToken>[
+      PromptToken.text('14'),
+      PromptToken.operator('×'),
+      PromptToken.text('3'),
+      PromptToken.operator('='),
+    ],
+    expected: '42',
+    ladderStep: 2,
+  ),
+  Item(
+    id: 't2',
+    prompt: <PromptToken>[
+      PromptToken.text('5'),
+      PromptToken.operator('+'),
+      PromptToken.text('1'),
+      PromptToken.operator('='),
+    ],
+    expected: '6',
+    ladderStep: 1,
+  ),
+];
+
+/// The figure a stat tile shows, found by its label.
+String _tileFigure(WidgetTester tester, String label) {
+  final Finder tile = find.ancestor(
+    of: find.text(label),
+    matching: find.byType(StatTile),
+  );
+  return tester
+      .widgetList<Text>(find.descendant(of: tile, matching: find.byType(Text)))
+      .map((Text t) => t.data ?? '')
+      .firstWhere((String text) => text != label);
+}
+
 void main() {
+  group('the time it reports is the time the player took', () {
+    testWidgets('the first item is timed from when it appeared',
+        (WidgetTester tester) async {
+      // **`late` with an initializer runs on first *read*.** `_startedAt` is not
+      // read while the item is on screen, so its first read was inside `_submit`
+      // — *after* the finish instant had been captured. Every round's first item
+      // therefore reported a negative duration, which is every first verdict a
+      // player ever sees: the tile read `−0,0 s`. Items 2..n were right, because
+      // `_next` assigns the field before the initializer can fire.
+      final List<DateTime> instants = <DateTime>[
+        DateTime(2026, 8, 17, 9, 0, 0),
+        DateTime(2026, 8, 17, 9, 0, 7, 400),
+      ];
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(items: _oneItem, now: () => instants.removeAt(0)),
+        ),
+      );
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+
+      expect(instants, isEmpty, reason: 'the clock was read a different number '
+          'of times than this test accounts for');
+      // Built through the formatter rather than typed: the figure carries a thin
+      // no-break space, and a literal here would compare invisibly-unequal.
+      final String figure = _tileFigure(tester, 'TIEMPO');
+      expect(figure, EsMxNumber.seconds(7.4, places: 1));
+      // Guards the degenerate case: comparing two calls of the same formatter
+      // would also pass if the formatter returned nothing.
+      expect(figure, isNotEmpty);
+      expect(figure, isNot(startsWith('−')), reason: 'a negative duration');
+    });
+
+    testWidgets('the second item is timed from when it appeared, not the first',
+        (WidgetTester tester) async {
+      // The control: the fix must not make every item share one start.
+      final List<DateTime> instants = <DateTime>[
+        DateTime(2026, 8, 17, 9, 0, 0), // item 1 shown
+        DateTime(2026, 8, 17, 9, 0, 3), // item 1 submitted
+        DateTime(2026, 8, 17, 9, 0, 30), // item 2 shown
+        DateTime(2026, 8, 17, 9, 0, 32), // item 2 submitted
+      ];
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(items: _twoItems, now: () => instants.removeAt(0)),
+        ),
+      );
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+      expect(_tileFigure(tester, 'TIEMPO'), EsMxNumber.seconds(3, places: 1));
+
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      for (final String id in <String>['6', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+
+      expect(_tileFigure(tester, 'TIEMPO'), EsMxNumber.seconds(2, places: 1));
+      expect(instants, isEmpty);
+    });
+  });
+
+  group('a series ends when it has an ending, and cycles when it does not', () {
+    testWidgets('onFinished fires on the last item and not before',
+        (WidgetTester tester) async {
+      // **The guard, asserted.** Every other test here passes one item, so
+      // `_index == items.length - 1` was never exercised: rewriting the body as
+      // `if (finished != null)` left the whole suite green while a real series
+      // would have ended after its first item.
+      int finished = 0;
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(items: _twoItems, onFinished: () => finished++),
+        ),
+      );
+
+      await _press(tester, '4');
+      await _press(tester, '2');
+      await _press(tester, 'submit');
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+
+      expect(finished, 0, reason: 'the series ended on its first item');
+      expect(find.text('Reto 2'), findsOneWidget);
+
+      await _press(tester, '6');
+      await _press(tester, 'submit');
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+
+      expect(finished, 1);
+    });
+
+    testWidgets('without onFinished the last item cycles back to the first',
+        (WidgetTester tester) async {
+      // The control: a practice series is endless, and this change must not have
+      // quietly ended it.
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        const MaterialApp(home: RoundScreen(items: _twoItems)),
+      );
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      for (final String id in <String>['6', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reto 1'), findsOneWidget);
+    });
+
+    testWidgets('a skip control appears only when there is another item',
+        (WidgetTester tester) async {
+      // One item has nowhere to skip to, and the control routed to `_next` —
+      // which on the last item calls `onFinished`. On the one-item tutorial that
+      // completed the first run with nothing solved.
+      await _pump(tester);
+      expect(find.text('Saltar este reto'), findsNothing);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: RoundScreen(items: _twoItems)),
+      );
+      expect(find.text('Saltar este reto'), findsOneWidget);
+
+      await tester.tap(find.text('Saltar este reto'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reto 2'), findsOneWidget);
+    });
+  });
+
   group('a player can answer an item', () {
     testWidgets('typing shows the answer and no verdict yet',
         (WidgetTester tester) async {

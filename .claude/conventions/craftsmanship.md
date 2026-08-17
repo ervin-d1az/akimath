@@ -4,7 +4,7 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Twenty-four rule IDs — counting `FUN-1a` as the carve-out it
+This book starts small on purpose. Twenty-seven rule IDs — counting `FUN-1a` as the carve-out it
 is rather than as a rule — every one of them describing code that is already on disk today, not
 a pattern we hope to have. It grows by **PROC-6** and no other way.
 
@@ -99,6 +99,16 @@ The one structural pattern the repo already commits to, on both sides of the sta
   test states the non-obvious **why** in one or two lines and never restates the code; three lines
   inside a body is the ceiling, and longer rationale belongs in the plan, `ARCHITECTURE.md`, or an
   ADR under `docs/adr/`.
+
+- **CMT-2** MUST: **a comment that states behaviour the code does not have is a defect**, and it is
+  fixed with the code in the same commit — a comment is not a softer artifact than the code above
+  which it sits. CMT-1 governs whether a comment should exist and what it may say; this one governs
+  whether it is true. Found in `f2-onboarding-first-run`, where three doc comments claimed the
+  first-run flag was *"set by answering, not by escaping"* and that answering was *"the only path
+  that completes the first run"*, while the skip control one row below the close control completed it
+  with nothing solved; and where `FirstItemScreen` said *"it measures nothing"* above a screen whose
+  verdict displayed `RACHA 1`. A reviewer reading a comment believes it, which is exactly why a false
+  one is worse than none: it retires the question.
 
 ## LANG — Language
 
@@ -311,7 +321,11 @@ credit.
   which form you used**: for a single file the checksum (or `diff -q <backup> <file>`), for a
   whole directory a checksum of the sorted file list — `find <dir> -type f | sort | xargs shasum
   -a 256` — compared before and after. PROC-5's tier-1b falsification step carries the mechanism;
-  this rule is why it has two branches. Found twice independently, in `f0-invariant-tests` (a
+  this rule is why it has two branches. **For a *tracked* file `git diff --quiet -- <file>` is
+  itself the proof** — the checksum is the substitute for the untracked case, not a replacement for
+  git. A ledger that reads "the file is versioned, so `shasum` is the proof, not `git diff`" has
+  inverted this rule; it was written that way once, in `f2-onboarding-first-run`, by an author who
+  had taken in only the rule's first sentence. Found twice independently, in `f0-invariant-tests` (a
   falsification step on a new test file) and in `f0-pack-contract` (a byte-determinism gate over
   an untracked `contract/`), which is what promoted it to a rule.
 
@@ -350,6 +364,15 @@ credit.
   The remedy is the same in every case: **state the mutation the test would catch, then make it.**
   When a test is the record of a defect that shipped, PROC-5's tier-1b falsification is not optional
   — invert the fix and watch that specific test go red.
+
+- **PROC-12** MUST: **the change satisfies its approved delta spec.** `CLAUDE.md` makes the
+  `#### Scenario:` blocks under `openspec/changes/<id>/specs/**` the acceptance criteria, and each one
+  names the test file that must cover it with a `→`. A scenario with no covering test, a `→` pointing
+  at a file that does not exist, or a `SHALL` the code does not meet is a **blocking** finding, and it
+  is citable as this rule. Added because a reviewer holding two real spec violations — a first run
+  completed with no item solved, against `req-first-run`; a tutorial displaying a streak, against
+  `req-teaching-item-unrated`'s *"contributing to no rating or streak"* — had to attach both to
+  PROC-11 to give them an ID at all.
 
 
 ---
