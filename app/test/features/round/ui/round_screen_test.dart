@@ -175,7 +175,7 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MaterialApp(
-          home: RoundScreen(items: _twoItems, onFinished: () => finished++),
+          home: RoundScreen(items: _twoItems, onFinished: (_) => finished++),
         ),
       );
 
@@ -211,7 +211,7 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MaterialApp(
-          home: RoundScreen(items: _twoItems, onFinished: () => finished++),
+          home: RoundScreen(items: _twoItems, onFinished: (_) => finished++),
         ),
       );
 

@@ -88,10 +88,33 @@ class RoundScreen extends StatefulWidget {
   /// `Intentar otro` and the only other item is this one. A multi-item round ends
   /// on its last item either way. A one-item round has no skip control at all.
   /// See `_next` for the two defects that fixed the meaning of this callback.
-  final VoidCallback? onFinished;
+  ///
+  /// It is handed how the round went, because the round is the only thing that
+  /// knows: it graded every answer and it holds the clock. A caller that does
+  /// not care ignores the argument, which is what the teaching item does.
+  final void Function(RoundOutcome outcome)? onFinished;
 
   @override
   State<RoundScreen> createState() => _RoundScreenState();
+}
+
+/// How a round went, handed to `onFinished`.
+///
+/// The round is the only thing that can say: it graded every answer and it held
+/// the clock. Passing it out beats a caller re-deriving it from verdicts it
+/// never saw.
+class RoundOutcome {
+  const RoundOutcome({
+    required this.correct,
+    required this.total,
+    required this.elapsed,
+  });
+
+  final int correct;
+  final int total;
+
+  /// The whole series, not the last item.
+  final Duration elapsed;
 }
 
 class _RoundScreenState extends State<RoundScreen> {
@@ -113,7 +136,15 @@ class _RoundScreenState extends State<RoundScreen> {
     // instant had been captured. Every round's first item therefore reported a
     // negative duration, which is every first verdict a player ever sees.
     _startedAt = widget.now();
+    _roundStartedAt = _startedAt;
   }
+
+  /// How many items were answered correctly, counted as they were graded.
+  int _correct = 0;
+
+  /// When the round itself began — not the current item. `_startedAt` is the
+  /// item's; a series wants the whole span.
+  late DateTime _roundStartedAt;
 
   int _index = 0;
   AnswerDraft _draft = AnswerDraft.empty;
@@ -159,8 +190,12 @@ class _RoundScreenState extends State<RoundScreen> {
     final DayLogStore? store = widget.dayLog;
     // Recorded before the verdict is built, and regardless of what it says.
     unawaited(store?.record(finishedAt) ?? Future<void>.value());
+    final Verdict verdict = grade(_item, _draft.text);
+    if (verdict == Verdict.correct) {
+      _correct += 1;
+    }
     _summary = VerdictSummary(
-      verdict: grade(_item, _draft.text),
+      verdict: verdict,
       elapsed: finishedAt.difference(_startedAt),
       streakDays: streakLength(
         attemptDays: <DateTime>[
@@ -192,12 +227,18 @@ class _RoundScreenState extends State<RoundScreen> {
   /// fired. Nothing ships that today (`HomeRoute` passes no `onFinished`), which
   /// is exactly why it needed closing before something does.
   void _next() {
-    final VoidCallback? finished = widget.onFinished;
+    final void Function(RoundOutcome)? finished = widget.onFinished;
     final bool lastItem = _index == widget.items.length - 1;
     final bool retryTheOnlyItem =
         widget.items.length == 1 && _summary?.verdict != Verdict.correct;
     if (finished != null && lastItem && !retryTheOnlyItem) {
-      finished();
+      finished(
+        RoundOutcome(
+          correct: _correct,
+          total: widget.items.length,
+          elapsed: widget.now().difference(_roundStartedAt),
+        ),
+      );
       return;
     }
 

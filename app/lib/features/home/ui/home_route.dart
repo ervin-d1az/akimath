@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../content/model/item.dart';
 import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../round/policy/series_plan.dart';
 import '../../round/policy/streak_policy.dart';
 import '../data/day_log_store.dart';
 import '../data/prefs_day_log_store.dart';
 import '../policy/day_log.dart';
 import '../../round/ui/round_screen.dart';
+import '../../round/ui/summary/series_summary_screen.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../shell/ui/skeleton_block.dart';
 import 'home_screen.dart';
@@ -93,14 +96,32 @@ class _HomeRouteState extends State<HomeRoute> {
     );
   }
 
+  /// Pushes a series, and brings the player back when it ends.
+  ///
+  /// **A series is five items and then it is over.** Before this, the round was
+  /// handed the whole pack with no ending and wrapped modulo its item list, so
+  /// it played forever — which is an exercise rather than a game.
+  /// `ARCHITECTURE.md` §9's definition of the first playable build is *"five
+  /// items played on a plane"*, and "played" needs an end.
+  ///
+  /// Which five is `seriesPlan`'s decision, made without a screen.
   Future<void> _startSeries(BuildContext context, Pack pack) async {
+    final List<Item> plan = seriesPlan(pack.items);
+    if (plan.isEmpty) {
+      // `Pack.fromJson` refuses an empty pack, so this is unreachable through
+      // the shipped one — but `RoundScreen` asserts a non-empty list and a
+      // caller has to be able to see that coming.
+      return;
+    }
+
     await Navigator.of(context).push(
       fullScreenSession<void>(
-        (BuildContext context) => RoundScreen(
-          items: pack.items,
+        (BuildContext sessionContext) => _SeriesSession(
+          items: plan,
           now: widget.now,
           attemptDays: _log.days,
           dayLog: _dayLog,
+          onDone: () => Navigator.of(sessionContext).maybePop(),
         ),
       ),
     );
@@ -155,4 +176,60 @@ class _HomeMessage extends StatelessWidget {
           child: Text(text, textAlign: TextAlign.center, style: BrandText.body()),
         ),
       );
+}
+
+/// The round, then its summary.
+///
+/// A tiny stateful holder rather than a second route: the summary needs the
+/// round's outcome, and pushing it would put a screen behind it that a player
+/// must never return to — the same reasoning that made the first run a swap
+/// rather than a push.
+class _SeriesSession extends StatefulWidget {
+  const _SeriesSession({
+    required this.items,
+    required this.now,
+    required this.attemptDays,
+    required this.dayLog,
+    required this.onDone,
+  });
+
+  final List<Item> items;
+  final DateTime Function() now;
+  final List<DateTime> attemptDays;
+  final DayLogStore dayLog;
+  final VoidCallback onDone;
+
+  @override
+  State<_SeriesSession> createState() => _SeriesSessionState();
+}
+
+class _SeriesSessionState extends State<_SeriesSession> {
+  RoundOutcome? _outcome;
+
+  @override
+  Widget build(BuildContext context) {
+    final RoundOutcome? outcome = _outcome;
+    if (outcome != null) {
+      return SeriesSummaryScreen(
+        result: SeriesResult(
+          correct: outcome.correct,
+          total: outcome.total,
+          elapsed: outcome.elapsed,
+          streakDays: streakLength(
+            attemptDays: <DateTime>[...widget.attemptDays, widget.now()],
+            today: widget.now(),
+          ),
+        ),
+        onDone: widget.onDone,
+      );
+    }
+
+    return RoundScreen(
+      items: widget.items,
+      now: widget.now,
+      attemptDays: widget.attemptDays,
+      dayLog: widget.dayLog,
+      onFinished: (RoundOutcome result) => setState(() => _outcome = result),
+    );
+  }
 }

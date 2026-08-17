@@ -71,7 +71,8 @@ class FirstItemScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return RoundScreen(
       items: const <Item>[teachingItem],
-      onFinished: onFinished,
+      // The tutorial does not report a score: one item, and nothing counts it.
+      onFinished: (_) => onFinished(),
       onClose: onBack,
       // No `dayLog`: the tutorial does not count towards a streak.
     );

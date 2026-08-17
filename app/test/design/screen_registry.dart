@@ -7,6 +7,7 @@ import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/shell/ui/app_shell.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
+import 'package:akimath_app/features/round/ui/summary/series_summary_screen.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
 import 'package:flutter/widgets.dart';
 
@@ -138,6 +139,20 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       ),
       onContinue: () {},
       onClose: () {},
+    ),
+  ),
+  RegisteredScreen(
+    label: 'series summary',
+    // Bare, like the round and the verdicts: it brings its own `Scaffold`,
+    // which is the shape `_SeriesSession` builds it in.
+    build: () => SeriesSummaryScreen(
+      result: const SeriesResult(
+        correct: 4,
+        total: 5,
+        elapsed: Duration(seconds: 47),
+        streakDays: 3,
+      ),
+      onDone: () {},
     ),
   ),
   RegisteredScreen(
