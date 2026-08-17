@@ -41,8 +41,12 @@ None. No existing spec's requirements change.
 - **New:** `app/lib/design/math/spec/{math_node,fraction_metrics,es_mx_number}.dart` and
   `app/lib/design/math/{math_view,expression_row,answer_slot,fraction_glyph}.dart`.
 - **New tests:** five files under `app/test/design/math/`.
-- **`app/lib/design/math/spec/` becomes a declared pure root** in
-  `app/test/architecture/pure_boundary_test.dart`, which today reports it absent.
+- **`app/lib/design/math/spec/` is covered by the existing pure root** — `pure_boundary_test.dart`
+  declares `design/**/spec/` as a glob, so nothing needed declaring; the count moved from 2 to 5.
+- **Modified: `app/test/architecture/literal_scan.dart` and `no_geometry_literal_test.dart`.**
+  `geometryGateRoots` gains `design/math/`. Without it the compositor is the one painted layer
+  `BrandShape` does not govern — `design/brand/` is excluded as the artwork layer and the math
+  adapter superficially resembles that carve-out without being it.
 - **No new dependency.** Font metrics are read from the already-bundled font files and injected as
   plain data, so nothing is added to `pubspec.yaml` and `req-icon-spec`'s allowlist is untouched
   (DEP-1).
