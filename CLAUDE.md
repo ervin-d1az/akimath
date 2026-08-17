@@ -62,8 +62,16 @@ OpenAPI half arrives with `f1-contract-emitter`.
   refused where it is read. **Grading answers to the frozen contract**: `content/model/canon.dart` is
   checked against `contract/fixtures/canon.golden.json` itself, 19 vectors in both modes, which is
   what stops the Dart and TypeScript canonicalisers drifting (R2).
-- **A scaffold.** `packages/server` routes one endpoint, `GET /health`, through a pure
-  `route()` function. 3 tests, green, 100% mutation score.
+- **A scaffold, plus the frozen schema.** `packages/server` routes one endpoint, `GET /health`,
+  through a pure `route()` function, and now also holds the database:
+  `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
+  append-only), the forward-only runner split pure/adapter as `src/migrate.ts` versus
+  `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
+  30-day figures) and the committed `schema.sql` snapshot. **45 tests, green, 95.31% mutation
+  score, 0 clones.** `pg@8.23.0` is the package's first runtime dependency, pinned exactly, its
+  DEP-1 audit recorded in `test/dependency-allowlist.test.ts`.
+  **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
+  run; leave it unset and 21 of the 45 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
@@ -71,8 +79,9 @@ OpenAPI half arrives with `f1-contract-emitter`.
   recorded normalisations, and `canon.golden.json`. 189 tests, green, 91.71% mutation score,
   0 clones. **Zod 4.4.3 is the repository's first runtime dependency**, pinned exactly
   because the determinism gate is byte-for-byte.
-- **Does not exist.** No database, no migrations, no auth, no API endpoints beyond health,
-  no dev environment, no deploy. Item generation, the keypad and the pack *builder* are all
+- **Does not exist.** No auth, no API endpoints beyond health, no dev environment, no deploy, and
+  **no database instance** — the schema and its migration exist, but nothing is provisioned to run
+  them against outside a local Postgres and CI's service container. Item generation, the keypad and the pack *builder* are all
   unwritten — the pack *format* is frozen, the packs are not built. **The math compositor is
   built**: `EsMxNumber`, `FractionMetrics`, `MathNode` (pure) and `MathView` + `FractionGlyph`
   (adapters) are landed and tested. `AnswerSlot` waits on `f0-dashed-border`. Spike B cleared its
@@ -83,7 +92,12 @@ OpenAPI half arrives with `f1-contract-emitter`.
   `packages/contract`, then `npm run emit`, `git add -A -- contract/` and
   `git diff --cached --exit-code -- contract/` — staged, because a bare `git diff` is blind to
   an artifact the author never committed), `spec` and `gate`.
-  ARCHITECTURE.md §8's other jobs — protected-paths, compliance, integration, mutation — are
+  `protected-paths` and `integration` landed with the schema: the first refuses an unattended edit
+  to `packages/server/migrations/**` or `schema.sql` unless a pull request carries the
+  `allow-protected-edit` label, and the second runs the database suites and the snapshot diff
+  against a **`postgres:17` service container** rather than ARCHITECTURE.md §8's ephemeral Neon
+  branch — a container needs no account, no project and no secret, and what those tests assert is
+  plain PostgreSQL behaviour. ARCHITECTURE.md §8's remaining jobs — compliance, mutation — are
   deliberately absent because the code they guard does not exist; `contract`'s own `oasdiff`
   half waits on `f1-contract-emitter`. `gate` is the intended required check and is **not
   registered on the `protect-main` ruleset yet**, so today CI is advisory on `main`.
@@ -104,8 +118,16 @@ flutter test
 
 # TypeScript — from packages/server/
 npm run verify        # tsc --noEmit && vitest run
-npm run mutation      # Stryker over src/, excluding main.ts and adapters/
+npm run mutation      # Stryker over src/, excluding main.ts, adapters/ and cli/
 npm run dry           # jscpd duplication
+npm run migrate       # apply migrations; needs MIGRATE_DATABASE_URL (the DIRECT string)
+npm run schema:dump   # regenerate schema.sql; the tree must not move afterwards
+npm run retention     # delete expired rows; needs RETENTION_DATABASE_URL
+
+# A database to run the above against, local:
+#   brew install postgresql@17 && brew services start postgresql@17
+#   createdb akimath_dev
+#   export TEST_DATABASE_URL=postgresql://localhost/akimath_dev
 
 # TypeScript — from packages/contract/
 npm run verify        # tsc --noEmit && vitest run

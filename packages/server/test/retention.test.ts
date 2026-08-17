@@ -77,7 +77,15 @@ describe("the figures live in exactly one module", () => {
     });
   }
 
-  it("400 and 30 appear in retention.ts and nowhere else in src/", () => {
+  // **Skipped under Stryker, on purpose.** This is a gate on the shape of the
+  // source, not on behaviour, and Stryker runs the suite against an
+  // instrumented copy of `src/` in a sandbox — every file it rewrites gains
+  // numeric mutant ids, so a bare-number search finds them and reports a
+  // duplication that exists only inside the mutation run. It runs on every
+  // `npm test`, which is where it belongs.
+  const underStryker = process.env.STRYKER_MUTATOR_RUNNER !== undefined;
+
+  it.skipIf(underStryker)("400 appears in retention.ts and nowhere else in src/", () => {
     const src = fileURLToPath(new URL("../src", import.meta.url));
     const files = sourceFiles(src);
 
@@ -90,13 +98,27 @@ describe("the figures live in exactly one module", () => {
         return false;
       }
       const contents = readFileSync(file, "utf8");
-      return /\b400\b/.test(contents) || /\b30\b/.test(contents);
+      // `400` only. `30` is a number ordinary code may legitimately hold, and a
+      // gate that forbids it everywhere is a gate someone disables; the 30 is
+      // protected by living in the same literal as the 400.
+      return /\b400\b/.test(contents);
     });
 
     expect(
       offenders.map((file) => path.relative(src, file)),
       "the retention figures are duplicated outside retention.ts",
     ).toEqual([]);
+  });
+
+  it.skipIf(underStryker)("RETENTION_DAYS is declared in exactly one file", () => {
+    const src = fileURLToPath(new URL("../src", import.meta.url));
+    const declaring = sourceFiles(src).filter((file) =>
+      /export const RETENTION_DAYS/.test(readFileSync(file, "utf8")),
+    );
+
+    expect(declaring.map((file) => path.basename(file))).toEqual([
+      "retention.ts",
+    ]);
   });
 
   it("the constant is what the function uses, not a second copy", () => {

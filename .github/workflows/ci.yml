@@ -90,6 +90,9 @@ jobs:
               - 'package.json'
               - 'pnpm-workspace.yaml'
               - '.github/workflows/ci.yml'
+            # `protected-paths` is unfiltered and needs no output; `integration`
+            # rides the `ts` filter above, because everything it exercises —
+            # migrations, schema.sql, the suites — lives under packages/server.
             contract:
               - 'packages/contract/**'
               - 'contract/**'
@@ -97,6 +100,63 @@ jobs:
             spec:
               - 'openspec/**'
               - '.github/workflows/ci.yml'
+
+  # ARCHITECTURE.md §8 job 1. Unfiltered, like `secrets`, because the whole point
+  # is that it cannot be dodged by a path filter.
+  #
+  # It did not exist until now because there was nothing to protect. A migration
+  # is the first artifact in this repository that is *history*: once applied
+  # anywhere, editing it desynchronises every database that ran it, and the
+  # runner refuses to start. §8's list is migrations, the schema snapshot, the
+  # contract artifacts and the workflows themselves; this job starts with the two
+  # this change creates and grows as the others acquire the same property.
+  #
+  # It does not block the edit. It requires that a human said the edit was
+  # intended, by putting `allow-protected-edit` on the pull request — an agent
+  # cannot add a label.
+  protected-paths:
+    name: protected-paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Refuse an unattended edit to a protected path
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "no base to compare against; nothing to check."
+            exit 0
+          fi
+          touched="$(git diff --name-only "$BASE" "$HEAD" -- \
+            'packages/server/migrations/**' \
+            'packages/server/schema.sql' || true)"
+          if [ -z "$touched" ]; then
+            echo "no protected path touched."
+            exit 0
+          fi
+          echo "protected paths touched:"
+          echo "$touched"
+          case ",$LABELS," in
+            *,allow-protected-edit,*)
+              echo "label allow-protected-edit is present; a human approved this."
+              ;;
+            *)
+              echo
+              echo "A migration is history once it has been applied: editing one"
+              echo "desynchronises every database that ran it, and the runner will"
+              echo "refuse to start. Add a new forward-only migration instead."
+              echo
+              echo "If the edit is genuinely intended, label the pull request"
+              echo "'allow-protected-edit'."
+              exit 1
+              ;;
+          esac
 
   # Unfiltered on purpose: a secret can land in any file, including the ones no
   # language job looks at. gitleaks-action scopes its scan to the commits in the
@@ -271,6 +331,72 @@ jobs:
   # The planning artifacts are code here: they are committed, and a malformed
   # change is a plan nobody can gate on. `validate --strict` is the same check
   # craftsman-lead runs before it lets BUILD start, so CI and the agent agree.
+  # ARCHITECTURE.md §8 job 7 is "ephemeral Neon branch (a separate akimath-ci
+  # project)". This runs a **postgres service container** instead, and the
+  # deviation is deliberate: a service container needs no account, no project and
+  # no secret, so the gate works on a fork and on day one. What these tests
+  # assert — grants, constraints, the catalogue, an idempotent job — is plain
+  # PostgreSQL behaviour, not Neon behaviour. The day something depends on the
+  # pooler or on autosuspend, that test wants a real Neon branch and this comment
+  # is where to say so.
+  #
+  # The image is pinned to the same major the schema was frozen against.
+  integration:
+    name: integration
+    needs: changes
+    if: needs.changes.outputs.ts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/server
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: akimath_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/akimath_ci
+      MIGRATE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/akimath_snapshot
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/server/package-lock.json
+      - run: npm ci
+
+      # The suites skip their database half when TEST_DATABASE_URL is absent, so
+      # this job is the only place they actually run. `npm test` in the `ts` job
+      # runs the pure half.
+      - name: The suites, against a real database
+        run: npm test
+
+      # The snapshot, on a database of its own so the suites' wiping cannot race
+      # it. `pg_dump` comes from the runner image; the client version is what the
+      # dump script normalises away, along with the random restrict key that
+      # would otherwise make every dump differ from the last.
+      - name: Apply the migrations to an empty database
+        run: |
+          PGPASSWORD=postgres createdb -h localhost -U postgres akimath_snapshot
+          npm run migrate
+
+      - name: The committed snapshot still matches what the migrations produce
+        run: |
+          npm run schema:dump
+          cd "$GITHUB_WORKSPACE"
+          git add -A -- packages/server/schema.sql
+          git diff --cached --exit-code -- packages/server/schema.sql
+
   spec:
     name: spec
     needs: changes
@@ -291,7 +417,7 @@ jobs:
   gate:
     name: gate
     if: always()
-    needs: [changes, secrets, dart, ts, contract, spec]
+    needs: [changes, protected-paths, secrets, dart, ts, contract, integration, spec]
     runs-on: ubuntu-latest
     # Two `echo` steps. If this one ever runs long, something is very wrong.
     timeout-minutes: 5
@@ -304,10 +430,12 @@ jobs:
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: |
           echo "changes=${{ needs.changes.result }}"
+          echo "protected-paths=${{ needs['protected-paths'].result }}"
           echo "secrets=${{ needs.secrets.result }}"
           echo "dart=${{ needs.dart.result }}"
           echo "ts=${{ needs.ts.result }}"
           echo "contract=${{ needs.contract.result }}"
+          echo "integration=${{ needs.integration.result }}"
           echo "spec=${{ needs.spec.result }}"
           exit 1
       - name: Report

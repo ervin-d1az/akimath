@@ -1,0 +1,53 @@
+# Retention — ARCHITECTURE.md decision #3: attempts live 400 days, diagnosis
+# events 30.
+#
+# A scheduled workflow rather than `pg_cron`: it is free, it is visible in the
+# same place as every other gate, and it needs no database extension. Whether
+# Neon offers `pg_cron` on the Free plan is unverified and is not assumed. If it
+# turns out to be available and preferable, moving is a deletion here and a
+# migration there.
+#
+# It runs under `retention_job` — the only role holding DELETE — from its own
+# credential, rather than borrowing the request path's.
+name: retention
+
+on:
+  schedule:
+    # 09:10 UTC daily. Not on the hour: every scheduled workflow on GitHub fires
+    # on the hour and the queue is long enough to skip runs.
+    - cron: "10 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Two overlapping runs would both try to delete the same rows. The second
+  # would delete nothing — the job is idempotent — but waiting is cheaper than
+  # finding that out.
+  group: retention
+  cancel-in-progress: false
+
+jobs:
+  retention:
+    name: retention
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # No credential, no run. Without this the job would "succeed" every night
+    # against nothing, which is the most expensive kind of green.
+    if: vars.RETENTION_ENABLED == 'true'
+    defaults:
+      run:
+        working-directory: packages/server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/server/package-lock.json
+      - run: npm ci
+      - name: Delete what has expired
+        env:
+          RETENTION_DATABASE_URL: ${{ secrets.RETENTION_DATABASE_URL }}
+        run: npm run retention

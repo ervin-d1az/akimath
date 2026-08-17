@@ -87,6 +87,12 @@ describe("a migration edited after it shipped stops the runner", () => {
 
     expect(plan.ok).toBe(false);
     expect(plan.ok === false && plan.error).toContain("0001_first.sql");
+    // And it says what to do instead. A refusal that names a file but not the
+    // remedy sends a reader to the git history to work out the rule.
+    expect(plan.ok === false && plan.error).toContain("forward-only");
+    // Both checksums, so a reader can see *what* changed without re-hashing.
+    expect(plan.ok === false && plan.error).toContain("EDITED");
+    expect(plan.ok === false && plan.error).toContain("aaa");
   });
 
   it("it refuses rather than re-applying or warning", () => {
@@ -123,6 +129,8 @@ describe("a migration edited after it shipped stops the runner", () => {
 
     expect(plan.ok).toBe(false);
     expect(plan.ok === false && plan.error).toContain("0001_first.sql");
+    expect(plan.ok === false && plan.error).toContain("not on disk");
+    expect(plan.ok === false && plan.error).toContain("restore the file");
   });
 });
 

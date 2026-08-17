@@ -10,3 +10,4 @@ tmp/
 # SwarmForge runtime state
 .swarmforge/
 .worktrees/
+reports/

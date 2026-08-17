@@ -16,7 +16,10 @@
     "coverage": "vitest run --coverage",
     "mutation": "stryker run",
     "dry": "jscpd src",
-    "verify": "npm run typecheck && npm run test"
+    "verify": "npm run typecheck && npm run test",
+    "migrate": "tsx src/cli/migrate.ts",
+    "retention": "tsx src/cli/retention.ts",
+    "schema:dump": "./scripts/dump-schema.sh"
   },
   "dependencies": {
     "pg": "8.23.0"

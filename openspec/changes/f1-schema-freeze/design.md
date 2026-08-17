@@ -161,6 +161,44 @@ the generic fallback the pack carries. Thirty days.
 The integration job gets **a separate CI Postgres project**, per `ARCHITECTURE.md` §8, so a CI run can
 never truncate anything a person is using.
 
+### D11 · CI uses a `postgres:17` service container, not an ephemeral Neon branch
+
+`ARCHITECTURE.md` §8 job 7 says "ephemeral Neon branch (a separate `akimath-ci` project)". This
+change runs a service container instead, and the deviation is deliberate rather than a shortcut: a
+container needs no account, no project and no secret, so the gate works on day one and on a fork,
+where a Neon branch needs a credential a fork cannot have.
+
+What these suites assert — grants, constraints, the catalogue, an idempotent job, a schema dump —
+is plain PostgreSQL behaviour. The day a test depends on the pooler, on autosuspend or on branch
+semantics, it wants a real Neon branch, and the comment above the job in `ci.yml` says so.
+
+### D12 · Three things only a real database could say
+
+Recorded because each was wrong in a way review would not have caught.
+
+- **The ledger cannot live in a migration.** `0001_initial.sql` created `schema_migrations` and so
+  did the runner, which has to create it before it can read it. A migration cannot create the table
+  that records whether that migration ran. The ledger belongs to the runner.
+- **Nothing granted `USAGE` on the schema.** A stock `public` grants it to PUBLIC, so the omission
+  was invisible until the test harness recreated the schema. A frozen schema should not lean on a
+  default it never wrote down, so the grant is now explicit.
+- **`pg_dump` is not deterministic out of the box.** Version 17.6+ opens with
+  `\restrict <random token>`, regenerated per run, so the snapshot differed from itself and the
+  diff gate would have failed on its first green build. `--restrict-key` pins it, and the two
+  version-header comments are stripped, because they churn on a patch bump and say nothing about
+  the schema. `scripts/dump-schema.sh` carries both, with the reason.
+
+### D13 · A three-way comparator had five unkillable mutants, so it became two-way
+
+The migration sort read `a.name < b.name ? -1 : a.name > b.name ? 1 : 0`. Five mutants survived,
+and every one of them differed from the original *only when two names are equal* — which cannot
+happen, because a filename is unique in a directory. Equivalent mutants are not a scoring problem;
+they are a branch nobody can reach. `(a, b) => (a.name > b.name ? 1 : -1)` says the same thing with
+no unreachable case, and the module went from 75% to 91.67%.
+
+Recorded because the temptation is to read the number and add a test. The report was right and the
+code was wrong.
+
 ## Risks / Trade-offs
 
 - **The `integration` job cannot run until a database exists** → every scenario that needs one is

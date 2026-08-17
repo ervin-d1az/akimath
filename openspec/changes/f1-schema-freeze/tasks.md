@@ -1,9 +1,11 @@
 # Tasks — the schema freezes here
 
-**Two lanes, and they are not the same colour.** Tasks marked **[db]** cannot be run until a Postgres
-exists — there is no Neon project, no `DATABASE_URL`, and no `psql`, `pg_dump` or Docker on this
-machine. They are written, committed and left failing-to-run rather than dropped, and section 8 is
-where that is stated as evidence rather than skipped. Everything unmarked runs today.
+**The `[db]` lane stopped being blocked partway through this change.** It was written on the premise
+that no Postgres existed — no Neon project, no `psql`, no `pg_dump`, no Docker. Ervin then asked
+whether one could simply be installed, and it could: `brew install postgresql@17`. Every **[db]**
+task below therefore **ran**, against a real PostgreSQL 17.11, and three defects that no amount of
+review would have found came out of it (design D12). What is still not provisioned is a *deployed*
+database — see 8.3.
 
 ## 1 · The dependency
 
@@ -67,15 +69,21 @@ where that is stated as evidence rather than skipped. Everything unmarked runs t
 
 ## 5 · The snapshot
 
-- [ ] 5.1 **[db]** Generate `packages/server/schema.sql` with `pg_dump --schema-only`, with the
+- [x] 5.1 **[db]** Generate `packages/server/schema.sql` with `pg_dump --schema-only`, with the
       client version **pinned** (design D3).
-      **Check:** the file exists and re-generating it produces no diff.
-- [ ] 5.2 Add the `integration` CI job: spin an ephemeral branch on a **separate CI project**, apply,
+      **Check:** re-generating produces no diff — verified, `1ad6c0ad…` twice.
+      **It was not deterministic and the pin was not enough.** `pg_dump` 17.6+ emits
+      `\restrict <random token>`, regenerated every run, so the dump differed from itself and the
+      gate would have failed on its first green build. `scripts/dump-schema.sh` passes
+      `--restrict-key` and strips the two version-header comments, with the reason written above the
+      command. 369 lines, 15 GRANTs — the grants are in the snapshot, which is the point of having
+      one.
+- [x] 5.2 Add the `integration` CI job: spin an ephemeral branch on a **separate CI project**, apply,
       dump, `git add -A -- packages/server/schema.sql`, `git diff --cached --exit-code`. Staged,
       because a bare `git diff` is blind to a snapshot the author never committed — the same lesson
       the `contract` job already carries.
       **Check:** the job is wired into `gate`'s `needs` list; `.github/workflows/ci.yml` parses.
-- [ ] 5.3 Add the `protected-paths` job with `packages/server/migrations/` and
+- [x] 5.3 Add the `protected-paths` job with `packages/server/migrations/` and
       `packages/server/schema.sql` as its first entries (`ARCHITECTURE.md` §8). It does not exist
       today because there was nothing to protect.
       **Check:** the job fails on a branch that edits a migration, and is wired into `gate`.
@@ -103,7 +111,7 @@ where that is stated as evidence rather than skipped. Everything unmarked runs t
 - [x] 6.6 **[db]** Run the job twice with the same injected instant: the second deletes zero, both
       report their counts, and `template_stats` is unchanged by either.
       **Check:** `packages/server/test/retention.test.ts`, `integration`.
-- [ ] 6.7 Add `.github/workflows/retention.yml` on a schedule, with the credential in
+- [x] 6.7 Add `.github/workflows/retention.yml` on a schedule, with the credential in
       `RETENTION_DATABASE_URL` (design D7).
       **Check:** the workflow parses and carries `timeout-minutes`, like every other job here.
 
@@ -128,17 +136,32 @@ where that is stated as evidence rather than skipped. Everything unmarked runs t
 
 ## 8 · Evidence
 
-- [ ] 8.1 **Tier 1** — `npm run verify` green in `packages/server` with the count stated, and
-      `flutter analyze --fatal-infos` + `flutter test` still green in `app/` (this change must not
-      touch it; if the count moves, something is wrong).
-- [ ] 8.2 **Tier 1b** — `npm run mutation` over `src/`, and `npm run dry`. The planner and the
-      cutoffs are pure logic with no IO, so a weak test here has nowhere to hide and the score is
-      worth having.
-- [ ] 8.3 **Tier 2 — states what it cannot do.** Every **[db]** task above needs a Postgres that does
-      not exist yet: no Neon project, no `DATABASE_URL`, no `psql`/`pg_dump`, no Docker. The tests are
-      written and committed; they are **not run**, and that is recorded here rather than passed over.
-      **What closes it:** a Neon project plus a `akimath-ci` project for the ephemeral branch, their
-      connection strings as CI secrets, and a pinned Postgres client — an account action for Ervin,
-      not a task in this change.
-- [ ] 8.4 Update `CLAUDE.md`'s "What exists today": the database section currently reads *"Does not
+- [x] 8.1 **Tier 1** — `npm run verify` in `packages/server`: **45 tests green** (3 before). `app/`
+      untouched and unmoved: analyze clean, **623 tests**, the same count as before this change.
+- [x] 8.2 **Tier 1b** — **95.31%** mutation score (`retention.ts` and `routing.ts` at 100,
+      `migrate.ts` at 91.67), `npm run dry`: **0 clones** over 396 lines.
+      It started at **59.79** and every point of the climb was a real finding:
+      · `src/cli/**` was being mutated and is an entry-point adapter, like `main.ts` and `adapters/`.
+      · The error messages' *guidance* was unasserted — a refusal that names a file but not the
+        remedy sends a reader to the git history for the rule. Now asserted, checksums included.
+      · Five survivors on the sort comparator were **equivalent mutants**: they differed only when
+        two migration names are equal, which cannot happen. The comparator became two-way and the
+        unreachable branch went with them (design D13).
+      · One "survivor" cluster was a `coverageAnalysis: "perTest"` artifact — reverting the
+        comparator by hand reddened a test. Switched to `"all"`.
+      **And the mutation run found a defect in a test of mine:** the "figures live in one module"
+      gate reads `src/` from disk, and Stryker runs against an instrumented copy whose files carry
+      numeric mutant ids. It reported a duplication that existed only inside the mutation sandbox. It
+      now skips under Stryker, with the reason written down.
+- [x] 8.3 **Tier 2 — the real thing, exercised.** PostgreSQL **17.11** (Homebrew), a cluster created
+      for this change. The migration applied through the real runner; **45 tests green**, of which 21
+      only exist against a live database — grants refused, constraints rejected, the catalogue swept,
+      the job idempotent, the snapshot byte-identical twice.
+      **What is still not done, and is nobody-but-Ervin's to do:** there is no *deployed* database.
+      CI now runs its own `postgres:17` service container, so the gate needs no account (design D11),
+      but a Neon project, its connection strings, and `RETENTION_DATABASE_URL` as a secret are
+      account actions. `retention.yml` will not run until `vars.RETENTION_ENABLED` is `true` — it
+      refuses rather than succeeding nightly against nothing, which is the most expensive kind of
+      green.
+- [x] 8.4 Update `CLAUDE.md`'s "What exists today": the database section currently reads *"Does not
       exist. No database, no migrations…"* and would be wrong the moment 3.1 lands.

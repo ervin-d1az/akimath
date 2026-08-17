@@ -68,7 +68,13 @@ export function planMigrations(inputs: MigrationInputs): MigrationPlan {
     // Sorted by name, because a directory read is not sorted and the order
     // files run in is the order they were written. Names are zero-padded so
     // lexicographic order is numeric order.
-    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    //
+    // Two-way and not three-way: a filename is unique in a directory, so there
+    // is no "equal" case to return 0 for. The three-way form left five
+    // surviving mutants that were all equivalent — they differed only when two
+    // names matched, which cannot happen. A comparator with an unreachable
+    // branch is a branch nobody can test.
+    .sort((a, b) => (a.name > b.name ? 1 : -1));
 
   return { ok: true, pending };
 }
