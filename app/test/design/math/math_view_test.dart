@@ -171,4 +171,106 @@ void main() {
       expect(tester.getRect(find.byType(ColoredBox)).height, 3);
     });
   });
+
+  group('the painted glyph lands where the layout put it', () {
+    testWidgets('a numeral box is the font\'s natural line, not a tight one',
+        (WidgetTester tester) async {
+      // Tier 2 found this: BrandText.numeral sets height: 1, which collapses
+      // the line box to the font size, while the spec models the font's own
+      // ascent plus descent (1.448em for Darumadrop). The glyph then sits
+      // wherever Flutter puts it inside the box the layout positioned, and the
+      // rule ends up nowhere near optically centred.
+      await tester.pumpWidget(
+        _host(const MathView(node: NumeralNode('3'), size: 76)),
+      );
+
+      const FontMetrics daruma = FontMetrics.darumadrop;
+      final double natural =
+          (daruma.ascentRatio + daruma.descentRatio) * 76;
+
+      expect(
+        tester.getRect(find.text('3')).height,
+        closeTo(natural, 0.5),
+        reason: 'the painted line box does not match the computed one',
+      );
+    });
+
+    testWidgets('the rule is optically centred in the rendered fraction',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _host(
+          const MathView(
+            node: FractionNode(
+              numerator: NumeralNode('1'),
+              denominator: NumeralNode('2'),
+            ),
+            size: 76,
+          ),
+        ),
+      );
+
+      const FontMetrics daruma = FontMetrics.darumadrop;
+      final Rect rule = tester.getRect(find.byType(ColoredBox));
+      final Rect numerator = tester.getRect(find.text('1'));
+      final Rect denominator = tester.getRect(find.text('2'));
+
+      // Ink extents, derived from the same metrics the layout used: a digit
+      // ends on the baseline and starts a cap height above it.
+      final double numeratorInkBottom =
+          numerator.top + daruma.ascentRatio * 76;
+      final double denominatorInkTop = denominator.top +
+          daruma.ascentRatio * 76 -
+          daruma.capHeightRatio * 76;
+
+      expect(
+        rule.top - numeratorInkBottom,
+        closeTo(denominatorInkTop - rule.bottom, 0.5),
+        reason: 'the rendered clearances above and below the rule differ',
+      );
+    });
+  });
+
+  group('a row separates its tokens', () {
+    testWidgets('adjacent children do not touch', (WidgetTester tester) async {
+      // Tier 2 found this too: with no gap, the rules of two adjacent
+      // fractions read as one continuous line straight through the `=`.
+      await tester.pumpWidget(
+        _host(
+          MathView(
+            node: RowNode(<MathNode>[
+              FractionNode(
+                numerator: const NumeralNode('3'),
+                denominator: const NumeralNode('4'),
+              ),
+              OperatorNode.of('+'),
+              FractionNode(
+                numerator: const NumeralNode('2'),
+                denominator: const NumeralNode('5'),
+              ),
+            ]),
+          ),
+        ),
+      );
+
+      // By element, not by widget: two rules of the same colour are equal by
+      // value and `find.byWidget` cannot tell them apart.
+      final List<Rect> rules = find
+          .byType(ColoredBox)
+          .evaluate()
+          .map((Element e) => e.renderObject! as RenderBox)
+          .map(
+            (RenderBox r) =>
+                r.localToGlobal(Offset.zero) & r.size,
+          )
+          .toList()
+        ..sort((Rect a, Rect b) => a.left.compareTo(b.left));
+
+      expect(rules, hasLength(2));
+      expect(
+        rules[1].left - rules[0].right,
+        greaterThan(8),
+        reason: 'two fraction rules run into each other',
+      );
+    });
+  });
 }

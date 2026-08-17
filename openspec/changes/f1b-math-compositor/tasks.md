@@ -169,18 +169,57 @@ the shipped TTFs rather than from the document — Darumadrop `OS/2.sxHeight` 43
 
 ## 4 · Evidence
 
-- [ ] 4.1 **Tier 1** — `flutter analyze --fatal-infos` clean and `flutter test` green, with the new
+- [x] 4.1 **Tier 1** — `flutter analyze --fatal-infos` clean and `flutter test` green, with the new
       total stated as a number, not as "all passing".
-      **Check:** the count, written here when it is known.
-- [ ] 4.2 **Tier 1b** — no Dart mutation harness is configured, so falsify instead: break one bar
-      thickness from 6 to 5 and confirm `fraction_metrics_test.dart` goes red; restore and confirm
-      the suite returns to its stated count. PROC-5's mechanism, which edits versioned code and is
-      not optional.
-      **Check:** the failing assertion quoted, and the restored count matching 4.1 exactly.
-- [ ] 4.3 **Tier 2** — this change is visual, so it **does apply**. The spike already answered the
+      **194 Flutter tests**, green, analyze clean. Baseline before this change was 135.
+      Gate coverage, all reporting non-zero: pure boundary `design/**/spec/ → 5 files`, colour
+      `lib/ minus design/tokens/ → 19 files`, geometry `design/math/ → 5 files`.
+- [x] 4.2 **Tier 1b** — no Dart mutation harness is configured, so falsify instead (PROC-5, which
+      edits versioned code and is not optional). **Three falsifications, not one**, because three
+      separate claims needed proving:
+      · **The metrics curve.** A step implementation was written first and run: it passes all three
+        stated rows and fails six assertions, sharpest being `Actual: 0.06072` against
+        `Expected: within 0.0079 of 0.07895` — the 23 % proportion collapse, as a number.
+      · **The adapter's scaling.** `size: scaler.scale(size)` → `size: size` produced
+        `Expected: a value greater than <6.0> / Actual: <6.0>`.
+      · **The natural line box.** Dropping `height: naturalLine` produced
+        `Expected: within <0.5> of <110.048> / Actual: <76.0>`.
+      Each restored by checksum afterwards; suite back to 194 every time.
+- [x] 4.3 **Tier 2** — this change is visual, so it **does apply**. The spike already answered the
       outline question, so this pass answers what the spike could not: render the worst-case
       expression through the **real** compositor at `textScaler` 1.0 **and** 1.3 and confirm the bar
-      holds its proportion at both — that is the defect finding 1 names, and a spike screenshot is
-      not evidence that the implementation fixed it.
-      **Check:** a screenshot, and confirmation that `main.dart` is restored afterwards by checksum
-      rather than by `git diff` — the untracked-file trap PROC-8 records.
+      holds its proportion at both.
+      **Done, and it earned its place — it found two defects every unit test had passed over.**
+      Evidence: `spike-b/tier2-before-fixes.png` and `spike-b/tier2-compositor.png`.
+
+      · **The glyphs were not where the layout put them.** `BrandText.numeral` sets `height: 1`,
+        collapsing the line box to the font size while the layout is built on the font's own
+        ascent-plus-descent — 1.448 em for Darumadrop. Every numeral sat 27 px high of its computed
+        baseline at 76 px, and the denominator painted **on top of** the rule.
+        **The first two tests written for it were circular and passed:** they measured
+        `getRect`, which returns the size the `Positioned` *forced*, not where the glyph landed.
+        The fix and the real test turned out to be the same change — stop forcing the leaf's box, so
+        the paragraph's own box is the spec's box and any disagreement becomes visible.
+      · **A row had no gaps at all.** With tokens edge to edge, the rules of two adjacent fractions
+        read as one continuous line straight through the `=`. The corpus states five gaps across its
+        eight expression rows — 8, 14, 16, 18, 20 — so the row now takes one, defaulting to 20 at
+        76 px and scaling. The top of the range rather than the middle, because a fraction's rule is
+        a bare rectangle with none of the side bearing a glyph carries, so it reads tighter than the
+        same spacing between two glyphs.
+
+      **Still tight, and recorded rather than smoothed over:** `=` beside a wide answer fraction is
+      the closest pair on the screen even at 20. A screen whose design shows more room should pass
+      its own gap; that is why the parameter exists and why the corpus has five values.
+- [x] 4.4 Confirm the harness left nothing behind.
+      **`lib/tier2_harness.dart` deleted; `lib/main.dart` restored and verified by checksum to
+      `fe251eb63266fea4d5254e5e37382275a92bddae1101d8606cca80aac5128800` (`diff -q` IDENTICAL).**
+      Checksum rather than `git diff`, which is blind to a file git never tracked (PROC-8).
+
+## 5 · What this change does not close
+
+- **`AnswerSlot`** waits on `f0-dashed-border`; its defining state is a dashed focus outline.
+- **`FractionGlyph`'s `struck` and editable-slot variants** belong to the changes that consume them.
+- **`ExpressionRow`** is deliberately not built: it would be `MathView(node: RowNode(...))` and
+  nothing more.
+- **`MathLayout`**, the general box engine, stays deferred (design D6). Spike B rendered a nested
+  fraction without it, which is the evidence for leaving it out rather than an excuse.

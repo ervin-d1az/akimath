@@ -71,11 +71,14 @@ class MathView extends StatelessWidget {
         Positioned(
           left: x,
           top: y,
-          width: box.width,
-          height: box.height,
+          // Deliberately unsized. Forcing the box to the spec's height makes
+          // the paragraph fill it while the glyph stays wherever its own line
+          // metrics put it — which is how a rule ends up nowhere near centred
+          // and no assertion on the forced rect can see it. Left free, the
+          // paragraph's own box *is* the spec's box, and any disagreement
+          // between the two becomes visible to a test.
           child: Text(
             leaf.text,
-            textAlign: TextAlign.center,
             // Already scaled: the spec was handed painted pixels and the
             // layout is built from them, so scaling again would double it.
             textScaler: TextScaler.noScaling,
@@ -110,13 +113,24 @@ class MathView extends StatelessWidget {
       MathTone.muted => BrandColors.muted,
     };
 
-    return switch (leaf.face) {
-      MathFace.display => BrandText.numeral(leaf.size).copyWith(color: color),
-      MathFace.textHeavy =>
-        BrandText.action(size: leaf.size, color: color).copyWith(
+    final FontMetrics metrics = MathMetrics.brand.forFace(leaf.face);
+
+    // The brand's text styles set `height: 1`, which is right for a headline
+    // and wrong here: it collapses the line box to the font size, while the
+    // layout is built on the font's own ascent plus descent. Restoring the
+    // natural ratio puts the baseline exactly where the spec said it is —
+    // Darumadrop's ascent alone is 1.16 em, so the difference is 27 px at 76
+    // and the denominator ends up sitting on the rule.
+    final double naturalLine = metrics.ascentRatio + metrics.descentRatio;
+
+    final TextStyle base = switch (leaf.face) {
+      MathFace.display => BrandText.numeral(leaf.size),
+      MathFace.textHeavy => BrandText.action(size: leaf.size).copyWith(
           fontWeight: FontWeight.w800,
           fontVariations: const <FontVariation>[FontVariation('wght', 800)],
         ),
     };
+
+    return base.copyWith(color: color, height: naturalLine);
   }
 }

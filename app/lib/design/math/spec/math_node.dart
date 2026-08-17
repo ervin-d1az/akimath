@@ -218,6 +218,24 @@ sealed class MathNode {
   /// that tracks how large the digits actually look.
   static const double _ruleGapInXHeights = 0.64;
 
+  /// Space between two tokens on a row, as a fraction of the numeral size.
+  ///
+  /// The corpus uses five gaps across its eight expression rows — 8, 14, 16,
+  /// 18 and 20 — so there is no single right answer, only a right default. This
+  /// resolves to **20** at 76 px and scales with the numerals. A row that needs
+  /// one of the others passes it.
+  ///
+  /// The top of the range rather than the middle, for a reason Tier 2 made
+  /// visible: a fraction's rule is a bare rectangle spanning its whole box,
+  /// with none of the side bearing a glyph carries. A fraction therefore reads
+  /// tighter against its neighbour than two glyphs of the same spacing do, and
+  /// `=` beside a wide answer fraction is the worst instance of it.
+  ///
+  /// Zero is not an option, and that is a Tier 2 finding rather than a
+  /// preference: with no gap the rules of two adjacent fractions read as one
+  /// continuous line straight through the `=` between them.
+  static const double _rowGapRatio = 20 / 76;
+
   /// How much the numerator and denominator shrink relative to their parent.
   ///
   /// Applies only to a fraction nested inside another. A flat fraction's parts
@@ -388,11 +406,17 @@ sealed class MathNode {
         .map((MathBox b) => b.height - b.axis)
         .reduce((double a, double b) => a > b ? a : b);
 
+    final double gap = node.gap ?? size * _rowGapRatio;
+
     final List<PlacedBox> placed = <PlacedBox>[];
     double x = 0;
     for (final MathBox box in boxes) {
       placed.add(PlacedBox(box: box, dx: x, dy: axis - box.axis));
-      x += box.width;
+      x += box.width + gap;
+    }
+    // The last child adds no trailing gap.
+    if (placed.isNotEmpty) {
+      x -= gap;
     }
 
     return MathBox(
@@ -456,7 +480,10 @@ final class FractionNode extends MathNode {
 
 /// Operands and operators on one line.
 final class RowNode extends MathNode {
-  const RowNode(this.children);
+  const RowNode(this.children, {this.gap});
 
   final List<MathNode> children;
+
+  /// Space between tokens. Null takes the default, which scales with the size.
+  final double? gap;
 }
