@@ -88,6 +88,16 @@ control test asserts a launch that *did not* finish still opens on the welcome.
       · **Launch 2, unmodified HEAD** — opens straight on the home, on the flag the app itself wrote.
         Streak `0`, so nothing recorded a day.
 
+      · **Re-shot from the final build** (`c5c47ef`), after the fixes, so the four observations are
+        one sequence rather than four builds described as one.
+
+      **`simctl uninstall` does not clear the flag.** On a simulator the app's `NSUserDefaults` plist
+      sits at `data/Library/Preferences/com.akimath.akimathApp.plist` — the device-wide preferences
+      directory, *outside* the app's container — so uninstalling and reinstalling still opens on the
+      home. That looks exactly like a broken gate and is not one; a genuinely fresh first run needs
+      `xcrun simctl spawn <udid> defaults delete com.akimath.akimathApp`. Recorded because the next
+      person to check this will otherwise file the bug I nearly filed.
+
       **What was not driven, and why.** The tap-through from `0.2` to a submitted answer is not
       automated here: `osascript` has no assistive access on this machine (`-1719`), `simctl` has no
       tap operation, and `idb` is not installed. `0.3` was reached by temporarily rooting `main.dart`

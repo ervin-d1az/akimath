@@ -148,8 +148,11 @@ Also seen on the device and deliberately not changed: the teaching item wears th
   the streak (1), the wrong-verdict continue (2), the lazy start instant (2), the skip control (3).
   Restored from a backup copy and proved byte-identical with `diff -q` — the file is tracked *and*
   had uncommitted work on it, so neither `git checkout` nor a bare `git diff` was usable.
-- Tier 2 — iPhone 17 simulator: both screens, the write observed in the simulator's own defaults, and
-  an unmodified second launch opening on the home.
+- Tier 2 — iPhone 17 simulator, re-shot from the final build: both screens, the write observed in the
+  simulator's own defaults, and an unmodified second launch opening on the home.
+  **One trap worth knowing:** `simctl uninstall` does *not* clear the flag — the plist lives at
+  `data/Library/Preferences/`, outside the app container — so a reinstall still opens on the home.
+  A fresh first run needs `simctl spawn <udid> defaults delete com.akimath.akimathApp`.
 
 ## Still open
 
