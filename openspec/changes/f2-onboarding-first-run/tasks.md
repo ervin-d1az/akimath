@@ -65,5 +65,34 @@ control test asserts a launch that *did not* finish still opens on the welcome.
         the home*.
       · `markComplete()` made a no-op → **7 tests red**, across the flow and the store.
       Checksum after restoring: `be68329c…` — the same file that was hashed before the first edit.
-- [ ] 4.3 **Tier 2** — the two screens on the iPhone 17, and a **second launch going straight to the
-      home**, which is the whole point and needs two launches to show.
+- [x] 4.3 **Tier 2** — iPhone 17 simulator (`92FD8A62`), debug build installed with `simctl`.
+      · **Launch 1, fresh install** — `0.2` renders: Aki at 200, the bubble, the tagline, one green
+        action. Fonts real, nothing clipped.
+      · **`0.3`** — `5 + 8 =` at 76 px in Darumadrop, the pink dashed slot, the close control, the
+        keypad, `Saltar este reto`. **The `=` is not clipped**, which is the face fix holding against
+        real fonts rather than against the test stand-in's ratios.
+      · **The write, on real storage** — the app's own `OnboardingStore.markComplete()` run on device;
+        `simctl spawn defaults read` then shows `"akimath.onboarding_complete.v1" = 1`. The key is
+        stored **unprefixed**: `SharedPreferencesAsync` adds no `flutter.`, which is the one thing
+        about this plugin the in-memory backend could not have told us.
+      · **Launch 2, unmodified HEAD** — opens straight on the home, on the flag the app itself wrote.
+        Streak `0`, so nothing recorded a day.
+
+      **What was not driven, and why.** The tap-through from `0.2` to a submitted answer is not
+      automated here: `osascript` has no assistive access on this machine (`-1719`), `simctl` has no
+      tap operation, and `idb` is not installed. `0.3` was reached by temporarily rooting `main.dart`
+      at it — a versioned-code edit, restored and verified by `shasum -a 256` (PROC-8), as was the
+      write probe. Making this mechanical wants `integration_test`, which is a dev dependency and a
+      decision of its own rather than a line in this change.
+
+**Found by Tier 2, and the suite could not have found it.** The teaching item was `7 + 6`, which is
+`add-1` — the starter pack's **first** item, so the home previews it as `RETO DEL DÍA` and
+`Empezar la serie` opens with it. A new player solved it in the tutorial and met it twice on the next
+screen. Invisible to every test: this screen is handed its item and the home tests are handed a
+fixture, so the two never met. It is now `5 + 8`, and
+`app/test/features/onboarding/ui/teaching_item_test.dart` reads the **real** pack and fails on any
+collision — falsified by putting `7 + 6` back (1 test red), restored by checksum. It reports the 20
+items it compared, so a pack that read as empty cannot pass it silently (PROC-10).
+
+One thing seen on the device and **not** changed: the teaching item wears the series' `Reto 1` /
+`Nivel 1` header. Recorded as `docs/decisions/OPEN.md` §5 rather than decided in a session.

@@ -42,14 +42,22 @@ class FirstItemScreen extends StatelessWidget {
   ///
   /// Fixed rather than fetched: a tutorial that varied between installs would be
   /// a tutorial nobody could support, and drawing it from the pack would tempt
-  /// someone to rate it. `7 + 6` is reachable for the youngest audience and
-  /// still needs the keypad rather than a guess.
+  /// someone to rate it. Single-digit operands are reachable for the youngest
+  /// audience, and a two-digit answer is the point — it is what teaches that
+  /// digits accumulate and that backspace takes one away.
+  ///
+  /// **It must not be an item the starter pack holds.** It was `7 + 6`, which is
+  /// `add-1` — the pack's *first* item, so it is what the home previews as
+  /// `RETO DEL DÍA` and what `Empezar la serie` opens with. A new player solved
+  /// it in the tutorial and then met it twice more on the next screen. Nothing in
+  /// the suite could see that: the tests hand this screen its item and the home
+  /// tests hand the home a fixture. Two launches on a simulator showed it at once.
   static const Item teachingItem = Item(
     id: 'teaching',
     prompt: <PromptToken>[
-      PromptToken.text('7'),
+      PromptToken.text('5'),
       PromptToken.operator('+'),
-      PromptToken.text('6'),
+      PromptToken.text('8'),
       PromptToken.operator('='),
     ],
     expected: '13',

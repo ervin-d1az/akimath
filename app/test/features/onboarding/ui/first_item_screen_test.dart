@@ -98,14 +98,14 @@ void main() {
         (WidgetTester tester) async {
       await _pump(tester);
 
-      expect(_promptGlyphs(tester), <String>['7', '+', '6', '=']);
+      expect(_promptGlyphs(tester), <String>['5', '+', '8', '=']);
       // The answer is typed, never shown.
       expect(_promptGlyphs(tester), isNot(contains('13')));
     });
 
     testWidgets('13 is what it grades as right', (WidgetTester tester) async {
       // The other half of "it is the teaching item": the expected answer. A
-      // screen showing `7 + 6` and grading against something else would satisfy
+      // screen showing `5 + 8` and grading against something else would satisfy
       // the assertion above.
       await _pump(tester);
       for (final String id in <String>['1', '3', 'submit']) {

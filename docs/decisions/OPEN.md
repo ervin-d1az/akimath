@@ -69,3 +69,25 @@ make one of them import across a feature boundary either way, and the churn buys
 
 **What has to be decided.** Whether to follow the plan and take the cross-feature import, or amend
 the plan. Worth settling before a third consumer appears.
+
+---
+
+## 5 · The teaching item wears the series' header
+
+**Today.** `0.3 Primer reto` composes `RoundScreen`, so it inherits the whole item shell — including
+`Reto 1` in the middle and `Nivel 1` on the right.
+
+**Why that is the interim.** Composing the round is the point: a second solve screen would be a
+second place to keep the keypad, the answer slot and the verdict in agreement. Suppressing the header
+means a third parameter on a shared widget, for chrome, on the strength of one screen's taste.
+
+**What has to be decided.** Whether the tutorial should show them at all. `Reto 1` counts a series of
+one, and `Nivel 1` names a ladder step on the one screen where the player has no ladder yet — D11
+kept `0.4` out of F2 precisely so nothing would promise a level this build cannot adapt to, and a
+static `Nivel 1` is a milder version of the same claim. Against that: it is the same header the very
+next screen shows, so hiding it makes the tutorial teach a shell the app does not have.
+
+**Cost of leaving it.** Cosmetic, and visible only on the first run.
+
+**Found by:** the Tier 2 pass of 2026-08-17, on the simulator. No test could see it — the design
+gates assert overflow and shadows, not what the chrome claims.
