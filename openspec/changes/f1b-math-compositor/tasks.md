@@ -35,23 +35,39 @@ the shipped TTFs rather than from the document — Darumadrop `OS/2.sxHeight` 43
 
 ## 1 · `EsMxNumber` — the smallest piece, and the one every screen needs
 
-- [ ] 1.1 Write `app/test/design/math/spec/es_mx_number_test.dart` covering all three scenarios of
+- [x] 1.1 Write `app/test/design/math/spec/es_mx_number_test.dart` covering all three scenarios of
       `req-number-format`: `integer(1180)` → `1 180` with **U+202F**, `seconds(4.2, places: 1)` →
       `4,2 s`, `ratio` → `3 / 9`, and `deltaParts` returning a sign run and a digit run.
       **Check:** `flutter test` — three new failures, and the separator assertion compares code
       points, not rendered width.
-- [ ] 1.2 Write `app/lib/design/math/spec/es_mx_number.dart` until they pass. No Flutter import.
+      **Done.** Seen failing first — `Undefined name 'EsMxNumber'` across every call. The separator
+      assertion reads `codeUnits, contains(0x202F)` and additionally forbids U+0020, because the two
+      render almost identically and an equality check on a literal proves nothing a reader can see.
+- [x] 1.2 Write `app/lib/design/math/spec/es_mx_number.dart` until they pass. No Flutter import.
       **Check:** `flutter test` green; `grep -c "package:flutter" es_mx_number.dart` returns 0.
-- [ ] 1.3 Assert U+2212 across **every** entry point that can emit a negative, not only `deltaParts`.
+      **Done.** 22 tests green; the grep returns **0**.
+- [x] 1.3 Assert U+2212 across **every** entry point that can emit a negative, not only `deltaParts`.
       **Check:** the test enumerates the module's public surface and fails if a new entry point is
       added without a minus-sign assertion.
+      **Done.** The module publishes `negatableEntryPoints`; the test asserts its own coverage set
+      equals it, so a formatter added without a minus assertion fails rather than passing silently.
+- [x] 1.4 **Widened while implementing, and worth naming rather than burying:** D8 picked U+202F for
+      thousands because a plain space wraps `1 180` into `1` / `180` inside a 48 px pill at
+      `textScaler` 1.3. That reasoning is not specific to thousands — the unit in `4,2 s`, the slash
+      in `3 / 9` and the cross in `6 × 6` all sit in the same pills and tiles. Every space the module
+      emits is therefore U+202F, asserted once over the whole surface rather than per formatter.
+      **Check:** `no output can wrap mid-value` iterates all ten formatters and forbids U+0020.
 
 ## 2 · The pure layout
 
-- [ ] 2.1 Add `design/math/spec/` as a declared root in
-      `app/test/architecture/pure_boundary_test.dart`.
-      **Check:** the gate reports the root **absent** (0 files) before task 2.5 — absent, not passing.
-      That distinction is the point of `f0-invariant-tests`.
+- [x] 2.1 ~~Add `design/math/spec/` as a declared root in
+      `app/test/architecture/pure_boundary_test.dart`.~~ **Nothing to add — this task's premise was
+      wrong.** `f0-invariant-tests` wrote the root as the glob `design/**/spec/`, not as a list of
+      directories, so `design/math/spec/` was already inside it the moment the directory existed.
+      **Check:** the gate's own report reads `design/**/spec/ → 3 files` where it read 2 before this
+      change, and `no file under a pure root reaches a forbidden URI today` is green. The new module
+      was covered without anyone remembering to declare it — which is the argument for a glob over a
+      list, and it is worth recording because the next spec root will be free too.
 - [ ] 2.2 Write `app/test/design/math/spec/fraction_metrics_test.dart` asserting the three measured
       rows: 76 → (6, 58), 46 → (4, 36), 22 → (3, 26).
       **Check:** `flutter test` — three failures. Assert the pairs, not a formula (design D3).
