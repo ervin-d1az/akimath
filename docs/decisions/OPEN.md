@@ -78,8 +78,13 @@ the plan. Worth settling before a third consumer appears.
 `Reto 1` in the middle and `Nivel 1` on the right.
 
 **Why that is the interim.** Composing the round is the point: a second solve screen would be a
-second place to keep the keypad, the answer slot and the verdict in agreement. Suppressing the header
-means a third parameter on a shared widget, for chrome, on the strength of one screen's taste.
+second place to keep the keypad, the answer slot and the verdict in agreement.
+
+**And the cost is now lower than this entry first recorded.** It said suppressing the header would
+mean a third parameter on a shared widget. It would not: the skip control was removed from one-item
+rounds by deriving it from `items.length`, and the header could be derived the same way — a round of
+one has no series to count and no ladder to place the player on. That makes this a question about what
+the tutorial should *say*, which is still design's, rather than a question about what it would cost.
 
 **What has to be decided.** Whether the tutorial should show them at all. `Reto 1` counts a series of
 one, and `Nivel 1` names a ladder step on the one screen where the player has no ladder yet — D11

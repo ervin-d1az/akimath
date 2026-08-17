@@ -196,6 +196,44 @@ void main() {
       expect(finished, 1);
     });
 
+    testWidgets('a wrong last answer ends a multi-item series, not a one-item one',
+        (WidgetTester tester) async {
+      // **The asymmetry, and it is the whole point of the rule.** On a one-item
+      // round the only "another one" `Intentar otro` can offer is *this* one, so
+      // a wrong verdict must not end it. With more items the button offers a
+      // genuinely different item, and the last item ends the round either way —
+      // otherwise a series a player keeps failing wraps to item 1 forever and
+      // `onFinished` never fires.
+      int finished = 0;
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(items: _twoItems, onFinished: () => finished++),
+        ),
+      );
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reto 2'), findsOneWidget);
+
+      // Wrong on the last item.
+      for (final String id in <String>['9', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Intentar otro'));
+      await tester.pumpAndSettle();
+
+      expect(finished, 1, reason: 'the series wrapped back to its first item');
+      expect(find.text('Reto 1'), findsNothing);
+    });
+
     testWidgets('without onFinished the last item cycles back to the first',
         (WidgetTester tester) async {
       // The control: a practice series is endless, and this change must not have

@@ -83,10 +83,11 @@ class RoundScreen extends StatefulWidget {
   /// teaching item on `0.3` is the opposite: exactly one item, and finishing it
   /// continues the first run rather than offering another.
   ///
-  /// *"Behind the player"* means **solved**: a wrong verdict's continue is
-  /// labelled `Intentar otro` and offers another go instead, and a one-item round
-  /// has no skip control at all. See `_next` for the defect that fixed the
-  /// meaning of this callback.
+  /// *"Behind the player"* is not quite *"answered"*: a **one-item** round never
+  /// ends on a wrong verdict, because its continue button is labelled
+  /// `Intentar otro` and the only other item is this one. A multi-item round ends
+  /// on its last item either way. A one-item round has no skip control at all.
+  /// See `_next` for the two defects that fixed the meaning of this callback.
   final VoidCallback? onFinished;
 
   @override
@@ -173,20 +174,29 @@ class _RoundScreenState extends State<RoundScreen> {
 
   /// Moves past the current item, or ends the round.
   ///
-  /// **A wrong verdict's continue never ends it.** `_next` is the target of every
-  /// forward affordance here, and the verdict screen labels that button by
-  /// correctness: `Siguiente` on a win, **`Intentar otro`** on a slip — a request
+  /// **On a one-item round, a wrong verdict's continue never ends it.** `_next` is
+  /// the target of every forward affordance here, and the verdict screen labels
+  /// that button by correctness: `Siguiente` on a win, **`Intentar otro`** on a slip — a request
   /// for another go, not an acknowledgement. Bound to the verb rather than to the
   /// event, `onFinished` inherited it, so the child who answered *wrong* — the one
   /// who most needs the screen that teaches the answer format — was the one who
   /// permanently lost it by tapping the button the app offered them. The first run
   /// therefore completes when the item is **solved**, which is what
   /// `req-first-run` says: *"from the welcome screen to a solved item"*.
+  ///
+  /// **That rule belongs to a one-item round only.** On one item the only
+  /// *"another one"* the button can offer is this one again. With more items it
+  /// offers a genuinely different one, and the last item ends the round either
+  /// way — the first version of this guard applied `solved` to every round, so a
+  /// series whose last answer was wrong wrapped to item 1 and `onFinished` never
+  /// fired. Nothing ships that today (`HomeRoute` passes no `onFinished`), which
+  /// is exactly why it needed closing before something does.
   void _next() {
     final VoidCallback? finished = widget.onFinished;
     final bool lastItem = _index == widget.items.length - 1;
-    final bool solved = _summary?.verdict == Verdict.correct;
-    if (finished != null && lastItem && solved) {
+    final bool retryTheOnlyItem =
+        widget.items.length == 1 && _summary?.verdict != Verdict.correct;
+    if (finished != null && lastItem && !retryTheOnlyItem) {
       finished();
       return;
     }

@@ -132,4 +132,9 @@ One thing seen on the device and **not** changed: the teaching item wears the se
       `late DateTime _startedAt = widget.now()` evaluates on first *read*, which was inside `_submit`
       after the finish instant. Every round's first item reported a **negative** duration — the tile
       read `−7,4 s`. Now assigned in `initState`.
-- [x] 5.4 Suite 610 → **622**, analyze clean.
+- [x] 5.4 One fix needed a second pass. Scoping *"a wrong answer does not end the round"* to every
+      round meant a **multi-item** series with `onFinished` wrapped to item 1 on a wrong last answer
+      and never finished. The rule belongs to a one-item round, where the only *"another one"* is this
+      one; with more items the button offers a different item. Unshipped (`HomeRoute` passes no
+      `onFinished`) and unasserted in both directions until now.
+- [x] 5.5 Suite 610 → **623**, analyze clean.

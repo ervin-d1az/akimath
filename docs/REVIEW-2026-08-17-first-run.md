@@ -143,7 +143,7 @@ Also seen on the device and deliberately not changed: the teaching item wears th
 ## Evidence
 
 - `flutter analyze --fatal-infos` — *No issues found!*
-- `flutter test` — **622 green** (610 before the fixes, 571 before the change).
+- `flutter test` — **623 green** (610 before the fixes, 571 before the change).
 - Tier 1b, four falsifications on `round_screen.dart`, each reddening only its own tests:
   the streak (1), the wrong-verdict continue (2), the lazy start instant (2), the skip control (3).
   Restored from a backup copy and proved byte-identical with `diff -q` — the file is tracked *and*
@@ -153,6 +153,18 @@ Also seen on the device and deliberately not changed: the teaching item wears th
   **One trap worth knowing:** `simctl uninstall` does *not* clear the flag — the plist lives at
   `data/Library/Preferences/`, outside the app container — so a reinstall still opens on the home.
   A fresh first run needs `simctl spawn <udid> defaults delete com.akimath.akimathApp`.
+
+## One fix needed a second pass
+
+Scoping the "a wrong answer does not end it" rule to *every* round was too wide. On a **multi-item**
+series with `onFinished`, a wrong last answer then fell through to `(_index + 1) % length` — wrapping
+to item 1, so the series restarted instead of ending and `onFinished` never fired. The rule belongs to
+a one-item round, where the only *"another one"* `Intentar otro` can offer is this one again; with more
+items the button offers a different item and the last one ends the round either way.
+
+Nothing shipped it — `HomeRoute` passes no `onFinished` — and the two-item tests only ever answered
+correctly, so the path was unasserted in both directions. It is asserted now, and falsifying the
+scoping reddens exactly that test.
 
 ## Still open
 
