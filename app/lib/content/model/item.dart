@@ -151,6 +151,26 @@ final class HiddenOperationStimulus extends Stimulus {
   final int queryInput;
 }
 
+/// Growing dot figures with one of them missing.
+///
+/// The only family whose stimulus is not a number: the learner counts the
+/// dots, finds the rule the counts follow, and answers with the count of the
+/// figure that is blank. **How the dots are arranged is the app's decision** —
+/// the payload carries counts only — which is why `figurateLayout` and not this
+/// type is where the puzzle actually lives.
+final class FigurateStimulus extends Stimulus {
+  const FigurateStimulus({required this.dotCounts, required this.unknownIndex});
+
+  /// Each figure's dot count in order, including the hidden one's.
+  ///
+  /// **Strictly increasing.** A flat or falling run has no figurate rule to
+  /// find, which is `figures_not_increasing` in the frozen validator.
+  final List<int> dotCounts;
+
+  /// Which figure is blank. Always a valid index into [dotCounts].
+  final int unknownIndex;
+}
+
 class Item {
   const Item({
     required this.id,

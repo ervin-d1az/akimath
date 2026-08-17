@@ -32,6 +32,8 @@ String _prompt(Item item) => switch (item.stimulus) {
         'analogy: ${terms.join(' ')}',
       HiddenOperationStimulus(:final int queryInput) =>
         'machine: $queryInput',
+      FigurateStimulus(:final List<int> dotCounts) =>
+        'figurate: ${dotCounts.join(' ')}',
     };
 
 void main() {

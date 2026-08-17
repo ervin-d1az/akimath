@@ -1313,6 +1313,247 @@
           "query_input": 13
         }
       }
+    },
+    {
+      "id": "fig-1",
+      "ladder_step": 3,
+      "answer": "10",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            }
+          ],
+          "unknown_index": 3
+        }
+      }
+    },
+    {
+      "id": "fig-2",
+      "ladder_step": 4,
+      "answer": "16",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 4
+            },
+            {
+              "dots": 9
+            },
+            {
+              "dots": 16
+            }
+          ],
+          "unknown_index": 3
+        }
+      }
+    },
+    {
+      "id": "fig-3",
+      "ladder_step": 4,
+      "answer": "15",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            },
+            {
+              "dots": 15
+            }
+          ],
+          "unknown_index": 3
+        }
+      }
+    },
+    {
+      "id": "fig-4",
+      "ladder_step": 2,
+      "answer": "6",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            }
+          ],
+          "unknown_index": 2
+        }
+      }
+    },
+    {
+      "id": "fig-5",
+      "ladder_step": 3,
+      "answer": "9",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 4
+            },
+            {
+              "dots": 9
+            }
+          ],
+          "unknown_index": 2
+        }
+      }
+    },
+    {
+      "id": "fig-6",
+      "ladder_step": 5,
+      "answer": "21",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            },
+            {
+              "dots": 15
+            },
+            {
+              "dots": 21
+            }
+          ],
+          "unknown_index": 3
+        }
+      }
+    },
+    {
+      "id": "fig-7",
+      "ladder_step": 5,
+      "answer": "25",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 4
+            },
+            {
+              "dots": 9
+            },
+            {
+              "dots": 16
+            },
+            {
+              "dots": 25
+            }
+          ],
+          "unknown_index": 3
+        }
+      }
+    },
+    {
+      "id": "fig-8",
+      "ladder_step": 4,
+      "answer": "3",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            }
+          ],
+          "unknown_index": 1
+        }
+      }
+    },
+    {
+      "id": "fig-9",
+      "ladder_step": 5,
+      "answer": "9",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 4
+            },
+            {
+              "dots": 9
+            },
+            {
+              "dots": 16
+            }
+          ],
+          "unknown_index": 2
+        }
+      }
+    },
+    {
+      "id": "fig-10",
+      "ladder_step": 4,
+      "answer": "3",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            }
+          ],
+          "unknown_index": 0
+        }
+      }
     }
   ]
 }

@@ -53,6 +53,7 @@ Stimulus readStimulus(Object? raw, {required String itemId}) {
     'matrix' => _matrix(payload, itemId),
     'analogy' => _analogy(payload, itemId),
     'hiddenOperation' => _hiddenOperation(payload, itemId),
+    'figurate' => _figurate(payload, itemId),
     // Unknown kinds throw rather than degrading to something drawable: an item
     // rendered as a different question is worse than an item refused. A kind
     // the contract froze but the app has not built yet lands here too, which
@@ -254,6 +255,40 @@ Stimulus _hiddenOperation(Map<String, dynamic> payload, String itemId) {
   }
 
   return HiddenOperationStimulus(examples: examples, queryInput: queryInput);
+}
+
+/// Growing dot figures with one of them missing.
+///
+/// **The counts must strictly increase**, which is `figures_not_increasing` in
+/// the frozen validator. It is checked here and not merely trusted because a
+/// flat run — 3, 3, 3 — has no rule to find and no wrong answer, and a falling
+/// one contradicts the word *growing* the family is named for.
+Stimulus _figurate(Map<String, dynamic> payload, String itemId) {
+  final Object? raw = payload['figures'];
+  // Three or four. Two figures fix no rule, and a fifth is a box the 390 px
+  // row has no width for.
+  if (raw is! List || raw.length < 3 || raw.length > 4) {
+    throw FormatException(
+      'item "$itemId" needs three or four figures; two fix no rule',
+    );
+  }
+  final List<int> dotCounts = <int>[
+    for (final Object? figure in raw) _pairSide(figure, 'dots', itemId),
+  ];
+  for (int i = 0; i < dotCounts.length; i++) {
+    if (dotCounts[i] < 1) {
+      throw FormatException('item "$itemId" has a figure of ${dotCounts[i]} dots');
+    }
+    if (i > 0 && dotCounts[i] <= dotCounts[i - 1]) {
+      throw FormatException(
+        'item "$itemId" has figures ${dotCounts.join(", ")}, which do not grow',
+      );
+    }
+  }
+  return FigurateStimulus(
+    dotCounts: dotCounts,
+    unknownIndex: requireUnknownIndex(payload, dotCounts.length, itemId),
+  );
 }
 
 /// Which tile is blank, bounded against the run it indexes.

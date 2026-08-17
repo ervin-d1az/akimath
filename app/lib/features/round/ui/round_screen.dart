@@ -19,6 +19,7 @@ import '../policy/grading.dart';
 import '../policy/prompt_layout.dart';
 import '../policy/streak_policy.dart';
 import 'stimulus/analogy_view.dart';
+import 'stimulus/figurate_view.dart';
 import 'stimulus/hidden_operation_view.dart';
 import 'stimulus/matrix_view.dart';
 import 'stimulus/number_series_view.dart';
@@ -362,6 +363,11 @@ class _RoundScreenState extends State<RoundScreen> {
           :final int queryInput
         ) =>
           HiddenOperationView(examples: examples, queryInput: queryInput),
+        FigurateStimulus(
+          :final List<int> dotCounts,
+          :final int unknownIndex
+        ) =>
+          FigurateView(dotCounts: dotCounts, unknownIndex: unknownIndex),
       },
     );
   }

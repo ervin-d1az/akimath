@@ -166,15 +166,27 @@ const ScanRoot colorGateRoot = ScanRoot(
 /// it looks like the artwork case and is not. The compositor composes tokens
 /// the way `design/widgets/` does; its geometry comes from `FractionMetrics`
 /// and an injected x-height, never from a number typed while reading a mock.
-/// Its `spec/` half is covered too and stays clean by having nothing to say
-/// about offsets — it returns a `Rect` it computed.
+///
+/// **`figurate_layout.dart` is the one file excluded, and the exclusion is a
+/// file rather than its directory.** It is the artwork case that arrived inside
+/// a spec root: it answers "where do the dots of a figurate number go" and
+/// returns positions in a unit box, so the `Offset` it constructs holds two
+/// numbers it just computed from a count — the same standing as the `Rect`
+/// `FractionMetrics` returns, which this gate has never objected to. What the
+/// gate is actually protecting is that a *shadow* offset comes from
+/// `BrandShape`, and there is no shadow within reach of that file. Excluding
+/// the directory instead would have taken `math_node.dart` and
+/// `es_mx_number.dart` out with it for no reason.
 ///
 /// `design/painting/` is in scope for the same reason: it is where a border
 /// moves when it stops being a `BoxDecoration`, and a painted outline is no
 /// less governed by `BrandShape` than a decorated one.
 const List<ScanRoot> geometryGateRoots = <ScanRoot>[
   ScanRoot(prefix: 'design/widgets/'),
-  ScanRoot(prefix: 'design/math/'),
+  ScanRoot(
+    prefix: 'design/math/',
+    excluding: <String>['design/math/spec/figurate_layout.dart'],
+  ),
   ScanRoot(prefix: 'design/painting/'),
   ScanRoot(prefix: 'features/'),
 ];

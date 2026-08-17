@@ -84,6 +84,29 @@ const BoxShadow shadow = BoxShadow(
       );
     });
 
+    test('exclude the figurate layout, and nothing else beside it', () {
+      // The one file out of `design/math/`, and the test that keeps the
+      // exclusion a file rather than a directory. Widening it to
+      // `design/math/spec/` would silently take the compositor's own spec half
+      // with it, which is the failure mode an exclusion invites.
+      expect(
+        selectFilesIn(geometryGateRoots, const <String>[
+          'design/math/spec/figurate_layout.dart',
+        ]),
+        isEmpty,
+        reason: 'it returns positions it computed, not a shadow offset',
+      );
+      expect(
+        selectFilesIn(geometryGateRoots, const <String>[
+          'design/math/spec/math_node.dart',
+          'design/math/spec/fraction_metrics.dart',
+          'design/math/spec/es_mx_number.dart',
+        ]),
+        hasLength(3),
+        reason: 'the rest of the compositor spec stays governed',
+      );
+    });
+
     test('leave the artwork layer alone', () {
       // aki_spec.dart holds 95 of these and every one of them is correct.
       expect(

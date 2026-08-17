@@ -26,6 +26,7 @@ const Set<String> _readable = <String>{
   'matrix',
   'analogy',
   'hiddenOperation',
+  'figurate',
 };
 
 /// Frozen in the contract, not yet built here.
@@ -33,9 +34,7 @@ const Set<String> _readable = <String>{
 /// These are not skipped. Each is asserted to be *refused*, with a message that
 /// says so, because a family the app cannot draw must fail where the pack is
 /// read and not halfway through a round.
-const Set<String> _pending = <String>{
-  'figurate',
-};
+const Set<String> _pending = <String>{};
 
 Map<String, dynamic> _read(String name) {
   final File file = File('$_fixtureDir/$name');
@@ -261,6 +260,51 @@ void main() {
         ),
         returnsNormally,
       );
+    });
+
+    test('figurate yields the dot counts the fixture declares', () {
+      final Map<String, dynamic> stimulus = _stimulusOf(_read('figurate.json'));
+      final Map<String, dynamic> payload =
+          stimulus['payload'] as Map<String, dynamic>;
+      final List<dynamic> figures = payload['figures'] as List<dynamic>;
+
+      final FigurateStimulus parsed =
+          readStimulus(stimulus, itemId: 'fig') as FigurateStimulus;
+
+      expect(parsed.dotCounts, <int>[
+        for (final dynamic f in figures) (f as Map<String, dynamic>)['dots'] as int,
+      ]);
+      expect(parsed.unknownIndex, payload['unknown_index']);
+    });
+
+    test('figures must grow, and there must be three or four', () {
+      Object? read(List<int> dots) => readStimulus(
+            <String, dynamic>{
+              'kind': 'figurate',
+              'payload': <String, dynamic>{
+                'figures': <Map<String, dynamic>>[
+                  for (final int d in dots) <String, dynamic>{'dots': d},
+                ],
+                'unknown_index': 0,
+              },
+            },
+            itemId: 'fig',
+          );
+
+      expect(() => read(<int>[1, 3, 6]), returnsNormally);
+      expect(() => read(<int>[1, 3, 6, 10]), returnsNormally);
+
+      // `figures_not_increasing`: a flat run has no rule to find and so no
+      // wrong answer, and a falling one contradicts the word the family is
+      // named for.
+      expect(() => read(<int>[1, 3, 3]), throwsA(isA<FormatException>()));
+      expect(() => read(<int>[6, 3, 1]), throwsA(isA<FormatException>()));
+      expect(() => read(<int>[3, 3, 3]), throwsA(isA<FormatException>()));
+
+      expect(() => read(<int>[1, 3]), throwsA(isA<FormatException>()));
+      expect(() => read(<int>[1, 3, 6, 10, 15]), throwsA(isA<FormatException>()));
+      // A figure of no dots is not a figure.
+      expect(() => read(<int>[0, 3, 6]), throwsA(isA<FormatException>()));
     });
 
     test('arithmetic flattens the frozen term pair into drawable tokens', () {

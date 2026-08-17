@@ -148,6 +148,20 @@ const List<Item> registryMachineItems = <Item>[
   ),
 ];
 
+/// A figurate item for the gates: four boxes, the largest carrying 21 dots,
+/// which is the densest figure the shipped pack draws.
+const List<Item> registryFigurateItems = <Item>[
+  Item(
+    id: 'registry-figurate',
+    stimulus: FigurateStimulus(
+      dotCounts: <int>[6, 10, 15, 21],
+      unknownIndex: 3,
+    ),
+    expected: '21',
+    ladderStep: 5,
+  ),
+];
+
 final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'character sheet',
@@ -210,6 +224,13 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // The fifth stimulus family, and the tallest prompt the round draws: four
     // rows and a rule between them.
     build: () => const RoundScreen(items: registryMachineItems),
+  ),
+  RegisteredScreen(
+    label: 'round · figurate',
+    // The sixth and last frozen family. Its dots are painted rather than laid
+    // out as text, so it is the one registered screen whose prompt the overflow
+    // gate measures as a fixed box.
+    build: () => const RoundScreen(items: registryFigurateItems),
   ),
   RegisteredScreen(
     label: 'round · matrix',
