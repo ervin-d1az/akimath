@@ -75,13 +75,24 @@ final class RegisteredScreen {
 const List<Item> registryRoundItems = <Item>[
   Item(
     id: 'registry',
-    prompt: <PromptToken>[
+    stimulus: ArithmeticStimulus(<PromptToken>[
       PromptToken.fraction(numerator: '3', denominator: '4'),
       PromptToken.operator('+'),
       PromptToken.fraction(numerator: '2', denominator: '4'),
       PromptToken.operator('='),
-    ],
+    ]),
     expected: '5/4',
+    ladderStep: 3,
+  ),
+];
+
+/// A number-series item for the gates. Five terms and a three-digit one, which
+/// is the widest a series in the shipped pack gets.
+const List<Item> registrySeriesItems = <Item>[
+  Item(
+    id: 'registry-series',
+    stimulus: NumberSeriesStimulus(<String>['2', '6', '18', '54', '162']),
+    expected: '486',
     ladderStep: 3,
   ),
 ];
@@ -128,6 +139,14 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'round',
     build: () => const RoundScreen(items: registryRoundItems),
+  ),
+  RegisteredScreen(
+    label: 'round · number series',
+    // The second stimulus family, registered so it inherits the shadow,
+    // overflow and text-style gates the arithmetic one already has. A family
+    // that draws itself but is not registered is a family whose first overflow
+    // report comes from a player.
+    build: () => const RoundScreen(items: registrySeriesItems),
   ),
   RegisteredScreen(
     label: 'verdict · acierto',

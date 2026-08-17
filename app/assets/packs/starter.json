@@ -481,6 +481,147 @@
           "glyph": "="
         }
       ]
+    },
+    {
+      "id": "ser-1",
+      "ladder_step": 1,
+      "answer": "10",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "2",
+          "4",
+          "6",
+          "8"
+        ]
+      }
+    },
+    {
+      "id": "ser-2",
+      "ladder_step": 1,
+      "answer": "25",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "5",
+          "10",
+          "15",
+          "20"
+        ]
+      }
+    },
+    {
+      "id": "ser-3",
+      "ladder_step": 2,
+      "answer": "13",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "1",
+          "4",
+          "7",
+          "10"
+        ]
+      }
+    },
+    {
+      "id": "ser-4",
+      "ladder_step": 2,
+      "answer": "48",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "3",
+          "6",
+          "12",
+          "24"
+        ]
+      }
+    },
+    {
+      "id": "ser-5",
+      "ladder_step": 2,
+      "answer": "60",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "100",
+          "90",
+          "80",
+          "70"
+        ]
+      }
+    },
+    {
+      "id": "ser-6",
+      "ladder_step": 3,
+      "answer": "25",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "1",
+          "4",
+          "9",
+          "16"
+        ]
+      }
+    },
+    {
+      "id": "ser-7",
+      "ladder_step": 3,
+      "answer": "162",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "2",
+          "6",
+          "18",
+          "54"
+        ]
+      }
+    },
+    {
+      "id": "ser-8",
+      "ladder_step": 3,
+      "answer": "8",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "1",
+          "1",
+          "2",
+          "3",
+          "5"
+        ]
+      }
+    },
+    {
+      "id": "ser-9",
+      "ladder_step": 4,
+      "answer": "4",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "64",
+          "32",
+          "16",
+          "8"
+        ]
+      }
+    },
+    {
+      "id": "ser-10",
+      "ladder_step": 4,
+      "answer": "47",
+      "stimulus": {
+        "kind": "numberSeries",
+        "terms": [
+          "2",
+          "5",
+          "11",
+          "23"
+        ]
+      }
     }
   ]
 }

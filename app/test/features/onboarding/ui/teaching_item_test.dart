@@ -4,19 +4,30 @@ import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// The prompt as one comparable string.
+/// What the player reads, as one comparable string.
 ///
 /// `PromptToken` has no `==`, and giving it one for a test's benefit would put
-/// equality semantics on a model that has no use for them. Four lines here are
-/// cheaper and say exactly what is being compared: the glyphs a player reads.
-String _prompt(Item item) => item.prompt.map((PromptToken token) {
-      return switch (token) {
-        TextToken(:final String value) => value,
-        OperatorToken(:final String glyph) => glyph,
-        FractionToken(:final String numerator, :final String denominator) =>
-          '$numerator/$denominator',
-      };
-    }).join(' ');
+/// equality semantics on a model that has no use for them. A few lines here are
+/// cheaper and say exactly what is being compared: the glyphs on screen.
+///
+/// **Total over the sealed type, not a cast.** It cast every item to arithmetic
+/// until the pack gained number-series items, at which point it threw — and a
+/// collision gate that dies on the first new family is a gate that gets deleted
+/// rather than fixed. A series and an expression can never collide anyway; the
+/// prefix says so rather than the cast assuming it.
+String _prompt(Item item) => switch (item.stimulus) {
+      ArithmeticStimulus(:final List<PromptToken> prompt) =>
+        prompt.map((PromptToken token) {
+          return switch (token) {
+            TextToken(:final String value) => value,
+            OperatorToken(:final String glyph) => glyph,
+            FractionToken(:final String numerator, :final String denominator) =>
+              '$numerator/$denominator',
+          };
+        }).join(' '),
+      NumberSeriesStimulus(:final List<String> terms) =>
+        'series: ${terms.join(' ')}',
+    };
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -12,12 +12,12 @@ import 'package:flutter_test/flutter_test.dart';
 const List<Item> _oneItem = <Item>[
   Item(
     id: 't1',
-    prompt: <PromptToken>[
+    stimulus: ArithmeticStimulus(<PromptToken>[
       PromptToken.text('14'),
       PromptToken.operator('×'),
       PromptToken.text('3'),
       PromptToken.operator('='),
-    ],
+    ]),
     expected: '42',
     ladderStep: 2,
   ),
@@ -49,23 +49,23 @@ Future<void> _press(WidgetTester tester, String id) async {
 const List<Item> _twoItems = <Item>[
   Item(
     id: 't1',
-    prompt: <PromptToken>[
+    stimulus: ArithmeticStimulus(<PromptToken>[
       PromptToken.text('14'),
       PromptToken.operator('×'),
       PromptToken.text('3'),
       PromptToken.operator('='),
-    ],
+    ]),
     expected: '42',
     ladderStep: 2,
   ),
   Item(
     id: 't2',
-    prompt: <PromptToken>[
+    stimulus: ArithmeticStimulus(<PromptToken>[
       PromptToken.text('5'),
       PromptToken.operator('+'),
       PromptToken.text('1'),
       PromptToken.operator('='),
-    ],
+    ]),
     expected: '6',
     ladderStep: 1,
   ),

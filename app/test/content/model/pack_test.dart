@@ -32,6 +32,22 @@ Map<String, dynamic> _packJson({
   };
 }
 
+/// One number-series item, with everything overridable so each rejection can
+/// break exactly one thing and leave the rest valid.
+Map<String, dynamic> _seriesItem({
+  Object? terms = const <String>['2', '4', '6'],
+  String kind = 'numberSeries',
+  Object? alsoPrompt,
+}) {
+  return <String, dynamic>{
+    'id': 'ser',
+    'ladder_step': 1,
+    'answer': '8',
+    'stimulus': <String, dynamic>{'kind': kind, 'terms': terms},
+    'prompt': ?alsoPrompt,
+  };
+}
+
 void main() {
   group('a pack is read from its declared shape', () {
     test('it yields the declared item count and each item s payload', () {
@@ -43,10 +59,10 @@ void main() {
       final Item item = pack.items.single;
       expect(item.id, 'a1');
       expect(item.expected, '5/4');
-      expect(item.prompt, hasLength(4));
-      expect(item.prompt.first, isA<FractionToken>());
-      expect(item.prompt[1], isA<OperatorToken>());
-      expect(item.prompt[2], isA<TextToken>());
+      expect((item.stimulus as ArithmeticStimulus).prompt, hasLength(4));
+      expect((item.stimulus as ArithmeticStimulus).prompt.first, isA<FractionToken>());
+      expect((item.stimulus as ArithmeticStimulus).prompt[1], isA<OperatorToken>());
+      expect((item.stimulus as ArithmeticStimulus).prompt[2], isA<TextToken>());
     });
 
     test('difficulty comes from the pack and is never computed here', () {
@@ -136,6 +152,108 @@ void main() {
         () => Pack.fromJson(_packJson(items: <Map<String, dynamic>>[])),
         throwsA(isA<FormatException>()),
       );
+    });
+  });
+
+  group('a number-series item is read as its own stimulus', () {
+    test('its terms arrive in order and the answer is not among them', () {
+      final Pack pack = Pack.fromJson(
+        _packJson(items: <Map<String, dynamic>>[_seriesItem()]),
+      );
+
+      final Stimulus stimulus = pack.items.single.stimulus;
+      expect(stimulus, isA<NumberSeriesStimulus>());
+      expect((stimulus as NumberSeriesStimulus).terms, <String>['2', '4', '6']);
+      // The hole is drawn by the view, so the answer must not be a term. A pack
+      // that shipped it would show the player what to type.
+      expect(stimulus.terms, isNot(contains(pack.items.single.expected)));
+    });
+
+    test('an item declaring both a prompt and a stimulus throws', () {
+      // Not a preference. Whichever the reader picked, the other would be a
+      // question the author wrote and nobody ever sees.
+      expect(
+        () => Pack.fromJson(
+          _packJson(
+            items: <Map<String, dynamic>>[
+              _seriesItem(
+                alsoPrompt: <Map<String, dynamic>>[
+                  <String, dynamic>{'kind': 'text', 'value': '8'},
+                ],
+              ),
+            ],
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('an item declaring neither throws', () {
+      expect(
+        () => Pack.fromJson(
+          _packJson(
+            items: <Map<String, dynamic>>[
+              <String, dynamic>{'id': 'ser', 'ladder_step': 1, 'answer': '8'},
+            ],
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('an unknown stimulus kind throws rather than drawing something else', () {
+      expect(
+        () => Pack.fromJson(
+          _packJson(
+            items: <Map<String, dynamic>>[_seriesItem(kind: 'hologram')],
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('two terms are refused and three are accepted', () {
+      // Both sides of the boundary, so the rule cannot be widened *or*
+      // tightened in silence. Two terms fit infinitely many rules, so a series
+      // of two has no wrong answer — and therefore no right one.
+      expect(
+        () => Pack.fromJson(
+          _packJson(
+            items: <Map<String, dynamic>>[
+              _seriesItem(terms: const <String>['2', '4']),
+            ],
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+        reason: 'two terms imply no third',
+      );
+      expect(
+        () => Pack.fromJson(
+          _packJson(
+            items: <Map<String, dynamic>>[
+              _seriesItem(terms: const <String>['2', '4', '6']),
+            ],
+          ),
+        ),
+        returnsNormally,
+        reason: 'three terms are the shortest series that means anything',
+      );
+    });
+
+    test('terms that are not a list, or not strings, throw', () {
+      for (final Object? terms in <Object?>[
+        null,
+        'onetwothree',
+        const <Object>['2', 4, '6'],
+      ]) {
+        expect(
+          () => Pack.fromJson(
+            _packJson(items: <Map<String, dynamic>>[_seriesItem(terms: terms)]),
+          ),
+          throwsA(isA<FormatException>()),
+          reason: 'terms $terms was accepted',
+        );
+      }
     });
   });
 

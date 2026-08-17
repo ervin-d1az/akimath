@@ -18,6 +18,7 @@ import '../policy/answer_draft.dart';
 import '../policy/grading.dart';
 import '../policy/prompt_layout.dart';
 import '../policy/streak_policy.dart';
+import 'stimulus/number_series_view.dart';
 import 'verdict/verdict_screen.dart';
 
 /// The round: an item, an answer slot, a keypad, a verdict.
@@ -329,13 +330,22 @@ class _RoundScreenState extends State<RoundScreen> {
     );
   }
 
+  /// The stimulus, drawn by whichever renderer its kind names.
+  ///
+  /// **Exhaustive over the sealed type**, so a seventh family is a compile
+  /// error here rather than a screen that silently draws nothing. That is the
+  /// whole reason `Stimulus` is sealed: `packages/contract` froze six kinds and
+  /// the app ships them one at a time.
   Widget _prompt() {
     return FittedBox(
       fit: BoxFit.scaleDown,
-      child: MathView(node: nodeFor(_item)),
+      child: switch (_item.stimulus) {
+        ArithmeticStimulus() => MathView(node: nodeFor(_item)),
+        NumberSeriesStimulus(:final List<String> terms) =>
+          NumberSeriesView(terms: terms),
+      },
     );
   }
-
 
   Widget _answerSlot() {
     return Row(

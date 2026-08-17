@@ -8,11 +8,11 @@ void main() {
     test('each token kind maps to its node', () {
       const Item item = Item(
         id: 'i',
-        prompt: <PromptToken>[
+        stimulus: ArithmeticStimulus(<PromptToken>[
           PromptToken.fraction(numerator: '3', denominator: '4'),
           PromptToken.operator('+'),
           PromptToken.text('1'),
-        ],
+        ]),
         expected: '7/4',
         ladderStep: 1,
       );
@@ -34,9 +34,9 @@ void main() {
       // green.
       const Item item = Item(
         id: 'i',
-        prompt: <PromptToken>[
+        stimulus: ArithmeticStimulus(<PromptToken>[
           PromptToken.fraction(numerator: '3', denominator: '4'),
-        ],
+        ]),
         expected: '3/4',
         ladderStep: 1,
       );
@@ -51,12 +51,12 @@ void main() {
     test('the token order is preserved', () {
       const Item item = Item(
         id: 'i',
-        prompt: <PromptToken>[
+        stimulus: ArithmeticStimulus(<PromptToken>[
           PromptToken.text('9'),
           PromptToken.operator('−'),
           PromptToken.text('4'),
           PromptToken.operator('='),
-        ],
+        ]),
         expected: '5',
         ladderStep: 1,
       );
@@ -72,10 +72,10 @@ void main() {
     test('an operator defaults to the face D7 gives it', () {
       const Item item = Item(
         id: 'i',
-        prompt: <PromptToken>[
+        stimulus: ArithmeticStimulus(<PromptToken>[
           PromptToken.operator('+'),
           PromptToken.operator('='),
-        ],
+        ]),
         expected: '1',
         ladderStep: 1,
       );
@@ -89,7 +89,7 @@ void main() {
     test('a solidus in a prompt is refused rather than drawn inline', () {
       const Item item = Item(
         id: 'i',
-        prompt: <PromptToken>[PromptToken.operator('/')],
+        stimulus: ArithmeticStimulus(<PromptToken>[PromptToken.operator('/')]),
         expected: '1',
         ladderStep: 1,
       );

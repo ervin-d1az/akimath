@@ -9,12 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 const Item _preview = Item(
   id: 'p1',
-  prompt: <PromptToken>[
+  stimulus: ArithmeticStimulus(<PromptToken>[
     PromptToken.fraction(numerator: '3', denominator: '4'),
     PromptToken.operator('+'),
     PromptToken.fraction(numerator: '2', denominator: '4'),
     PromptToken.operator('='),
-  ],
+  ]),
   expected: '5/4',
   ladderStep: 3,
 );

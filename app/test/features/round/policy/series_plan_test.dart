@@ -4,12 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 Item item(String id) => Item(
       id: id,
-      prompt: <PromptToken>[
+      stimulus: ArithmeticStimulus(<PromptToken>[
         PromptToken.text('1'),
         PromptToken.operator('+'),
         PromptToken.text('1'),
         PromptToken.operator('='),
-      ],
+      ]),
       expected: '2',
       ladderStep: 1,
     );

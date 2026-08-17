@@ -75,20 +75,78 @@ class Pack {
       );
     }
 
-    final Object? rawPrompt = entry['prompt'];
-    if (rawPrompt is! List || rawPrompt.isEmpty) {
-      throw FormatException('item "${entry['id']}" has no prompt');
-    }
-
     return Item(
       id: _requireString(entry, 'id'),
       expected: answer,
       // Difficulty travels with the item. Rating never runs in Dart.
       ladderStep: _requireInt(entry, 'ladder_step'),
-      prompt: <PromptToken>[
-        for (final Object? token in rawPrompt) _token(token),
-      ],
+      stimulus: _stimulus(entry),
     );
+  }
+
+  /// What the item asks.
+  ///
+  /// **An item carries exactly one of `prompt` or `stimulus`, never both and
+  /// never neither.** `prompt` is the arithmetic shorthand the format shipped
+  /// with and it stays, because rewriting twenty authored items to say
+  /// `{"kind": "arithmetic"}` around the same token list buys nothing. Refusing
+  /// *both* is what keeps that from becoming a silent default: an item with a
+  /// `stimulus` the reader does not understand must not quietly fall back to a
+  /// `prompt` that happens to also be there.
+  static Stimulus _stimulus(Map<String, dynamic> entry) {
+    final Object? rawPrompt = entry['prompt'];
+    final Object? rawStimulus = entry['stimulus'];
+
+    if (rawPrompt != null && rawStimulus != null) {
+      throw FormatException(
+        'item "${entry['id']}" carries both a prompt and a stimulus; '
+        'it asks one question, so it declares one',
+      );
+    }
+
+    if (rawStimulus != null) {
+      if (rawStimulus is! Map<String, dynamic>) {
+        throw FormatException('item "${entry['id']}" has a malformed stimulus');
+      }
+      return switch (rawStimulus['kind']) {
+        'numberSeries' => NumberSeriesStimulus(
+            _requireTerms(entry, rawStimulus),
+          ),
+        // Unknown kinds throw rather than degrading to something drawable: an
+        // item rendered as a different question is worse than an item refused.
+        final Object? kind => throw FormatException(
+            'item "${entry['id']}" has unknown stimulus kind "$kind"',
+          ),
+      };
+    }
+
+    if (rawPrompt is! List || rawPrompt.isEmpty) {
+      throw FormatException('item "${entry['id']}" has no prompt');
+    }
+    return ArithmeticStimulus(<PromptToken>[
+      for (final Object? token in rawPrompt) _token(token),
+    ]);
+  }
+
+  static List<String> _requireTerms(
+    Map<String, dynamic> entry,
+    Map<String, dynamic> stimulus,
+  ) {
+    final Object? terms = stimulus['terms'];
+    // Two terms cannot establish a pattern, so a series of fewer is a series
+    // with no right answer.
+    if (terms is! List || terms.length < 3) {
+      throw FormatException(
+        'item "${entry['id']}" needs at least three terms to imply a fourth',
+      );
+    }
+    return <String>[
+      for (final Object? term in terms)
+        if (term is String)
+          term
+        else
+          throw FormatException('item "${entry['id']}" has a non-string term'),
+    ];
   }
 
   static PromptToken _token(Object? raw) {

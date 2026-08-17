@@ -57,12 +57,12 @@ class FirstItemScreen extends StatelessWidget {
   /// tests hand the home a fixture. Two launches on a simulator showed it at once.
   static const Item teachingItem = Item(
     id: 'teaching',
-    prompt: <PromptToken>[
+    stimulus: ArithmeticStimulus(<PromptToken>[
       PromptToken.text('5'),
       PromptToken.operator('+'),
       PromptToken.text('8'),
       PromptToken.operator('='),
-    ],
+    ]),
     expected: '13',
     ladderStep: 1,
   );

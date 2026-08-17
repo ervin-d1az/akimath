@@ -10,11 +10,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// answer, on a device, with no error anywhere.
 const Item _threeQuarters = Item(
   id: 'demo-1',
-  prompt: <PromptToken>[
+  stimulus: ArithmeticStimulus(<PromptToken>[
     PromptToken.fraction(numerator: '3', denominator: '4'),
     PromptToken.operator('+'),
     PromptToken.fraction(numerator: '2', denominator: '4'),
-  ],
+  ]),
   expected: '5/4',
   ladderStep: 3,
 );
@@ -53,7 +53,7 @@ void main() {
       // player's side — which is the whole shape of the contract.
       const Item negative = Item(
         id: 'demo-2',
-        prompt: <PromptToken>[PromptToken.text('2 − 9')],
+        stimulus: ArithmeticStimulus(<PromptToken>[PromptToken.text('2 − 9')]),
         expected: '-7',
         ladderStep: 1,
       );
@@ -84,7 +84,7 @@ void main() {
       // at grading time rather than grading correctly by accident.
       const Item broken = Item(
         id: 'broken',
-        prompt: <PromptToken>[PromptToken.text('1 + 1')],
+        stimulus: ArithmeticStimulus(<PromptToken>[PromptToken.text('1 + 1')]),
         expected: ' 002 ',
         ladderStep: 1,
       );
