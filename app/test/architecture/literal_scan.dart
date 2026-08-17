@@ -168,9 +168,14 @@ const ScanRoot colorGateRoot = ScanRoot(
 /// and an injected x-height, never from a number typed while reading a mock.
 /// Its `spec/` half is covered too and stays clean by having nothing to say
 /// about offsets — it returns a `Rect` it computed.
+///
+/// `design/painting/` is in scope for the same reason: it is where a border
+/// moves when it stops being a `BoxDecoration`, and a painted outline is no
+/// less governed by `BrandShape` than a decorated one.
 const List<ScanRoot> geometryGateRoots = <ScanRoot>[
   ScanRoot(prefix: 'design/widgets/'),
   ScanRoot(prefix: 'design/math/'),
+  ScanRoot(prefix: 'design/painting/'),
   ScanRoot(prefix: 'features/'),
 ];
 

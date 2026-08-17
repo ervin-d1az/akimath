@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../painting/dashed_border_painter.dart';
+import '../painting/spec/dash_spec.dart';
 import '../tokens/tokens.dart';
 
 /// The one primitive every surface in the app is built from.
@@ -21,6 +23,8 @@ class CandySurface extends StatelessWidget {
     this.minHeight,
     this.alignment,
     this.clip = false,
+    this.borderDash,
+    this.borderColor = BrandColors.ink,
   });
 
   /// A card: generous radius, the largest shadow.
@@ -103,10 +107,23 @@ class CandySurface extends StatelessWidget {
   /// spill past the corners.
   final bool clip;
 
+  /// When set, the outline is **dashed** with this pattern and the solid border
+  /// is not drawn at all — not drawn underneath it.
+  ///
+  /// This is the shape half of BRD-1: solid means right, dashed means wrong,
+  /// and the distinction has to survive a reader who cannot separate green from
+  /// coral. It also moves the border into a `CustomPainter`, which is why this
+  /// change widens the no-blur gate in the same merge (D22).
+  final DashSpec? borderDash;
+
+  /// The outline's colour, solid or dashed.
+  final Color borderColor;
+
   @override
   Widget build(BuildContext context) {
     final BorderRadius radius = BorderRadius.circular(borderRadius);
     final AlignmentGeometry? align = alignment;
+    final DashSpec? dash = borderDash;
 
     // Container.alignment expands to its constraints, which turns a pill into a
     // full-width bar. Aligning with a factor on the unconstrained axes keeps
@@ -130,7 +147,9 @@ class CandySurface extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: radius,
-        border: Border.all(color: BrandColors.ink, width: borderWidth),
+        border: borderDash != null
+            ? null
+            : Border.all(color: borderColor, width: borderWidth),
         boxShadow: <BoxShadow>[
           BoxShadow(
             color: BrandColors.ink,
@@ -140,7 +159,17 @@ class CandySurface extends StatelessWidget {
           ),
         ],
       ),
-      child: body,
+      child: dash == null
+          ? body
+          : CustomPaint(
+              foregroundPainter: DashedBorderPainter(
+                dash: dash,
+                color: borderColor,
+                strokeWidth: borderWidth,
+                radius: borderRadius,
+              ),
+              child: body,
+            ),
     );
   }
 }
