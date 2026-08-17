@@ -49,5 +49,7 @@ already on disk, with its verification restated rather than re-derived.
 - [x] 4.2 **Tier 1b** — the deadline was falsified rather than assumed: each of the four hook paths
       above was exercised with a stub, and each produced the stated exit code and message. A clock
       that has never fired is not evidence that it fires.
-- [ ] 4.3 **Tier 2** — does not apply. No endpoint, no screen, nothing observable to a player.
+- [x] 4.3 **Tier 2** — does not apply. No endpoint, no screen, nothing observable to a player.
       Stated rather than skipped (PROC-5).
+      **Closed 2026-08-17.** The task text *was* the evidence and the box was simply never ticked;
+      nothing about the change became observable in the meantime.

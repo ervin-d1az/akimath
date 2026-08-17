@@ -60,11 +60,26 @@ TDD throughout: each test is written and **seen failing** before the widget that
       `Offset(3, 5)` and confirm `no_geometry_literal_test.dart` goes red; restore and confirm the
       suite returns to 5.1's count exactly.
       **Check:** the failing assertion quoted, and the restored count matching.
-- [ ] 5.3 **Tier 2** — this change is interactive and visual, so it applies: press a primary button,
-      a keypad-style tile and a text action on the iPhone 17 simulator and confirm the travel reads
-      as sinking rather than sliding.
-      **Check:** a screenshot or a written observation per control, and `main.dart` restored
-      afterwards **by checksum** — `git diff` is blind to an untracked harness file (PROC-8).
+- [ ] 5.3 **Tier 2** — **the resting half is evidenced; the travel is not, and the reason is tooling.**
+      · **`evidence/controls-resting.png`, iPhone 17, 2026-08-17.** All four control kinds the change
+        owns, at real device density: primary button shadow (4,6), keypad key (3,5), `IconButtonTile`
+        (3,4) at 48×48, and the text action with **no shadow at all** — which is `PressEffect.none`
+        being a decision rather than an omission (DR-5). Every shadow is hard: no blur, no spread, no
+        elevation, judged on the device rather than in a widget test.
+      · **The travel — NOT obtained.** Capturing a *pressed* control needs a press, and this session
+        cannot produce one: no assistive access for `osascript` (`-1719`), no `simctl tap`, no `idb`.
+        A synthetic `PointerDownEvent` drives the pressed state under `flutter test` and did nothing
+        in the device build. The first version of the harness drew a `PRESIONADO` column that came out
+        **pixel-identical** to `REPOSO` — measured, not eyeballed — so it was rewritten to claim only
+        what it shows. A screenshot whose own label is wrong is worse than a missing screenshot.
+      · Tier 1 does cover the travel: `pressable_surface_test.dart` and
+        `icon_button_tile_test.dart` press with `startGesture` and assert the offset and the vanished
+        shadow. What is missing is the device judgement — *does it read as sinking rather than
+        sliding* — which is the one thing a widget test cannot answer.
+      **What closes it:** a human pressing each control on the simulator, or `integration_test` —
+      `docs/decisions/OPEN.md` §7. The harness that produced the resting shot was deleted and
+      `main.dart` verified clean with `git diff --quiet` (tracked file — PROC-8's git branch, not its
+      checksum branch).
 - [x] 5.4 Record DR-6's six sub-48 controls as still-red-by-design where the plan can find them, so
       the next reader does not read six failures as six defects.
       **Check:** the list named in this change's directory, not in a scratch file.

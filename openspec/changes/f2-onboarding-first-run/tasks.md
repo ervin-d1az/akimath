@@ -88,8 +88,12 @@ control test asserts a launch that *did not* finish still opens on the welcome.
       · **Launch 2, unmodified HEAD** — opens straight on the home, on the flag the app itself wrote.
         Streak `0`, so nothing recorded a day.
 
-      · **Re-shot from the final build** (`c5c47ef`), after the fixes, so the four observations are
-        one sequence rather than four builds described as one.
+      · **Re-shot from the final build**, after the fixes, so the four observations are one sequence
+        rather than four builds described as one. **Committed, not just described:**
+        `evidence/02-bienvenida.png`, `evidence/03-primer-reto.png`,
+        `evidence/second-launch-home.png`. The first `0.3` shot was discarded — it still showed
+        `Saltar este reto`, which the review round removed, so it pictured a screen that no longer
+        ships.
 
       **`simctl uninstall` does not clear the flag.** On a simulator the app's `NSUserDefaults` plist
       sits at `data/Library/Preferences/com.akimath.akimathApp.plist` — the device-wide preferences

@@ -19,7 +19,13 @@
 - [x] 2.1 **Tier 1** — analyze clean, suite green, the total as a number.
 - [x] 2.2 **Tier 1b** — falsify (PROC-5): give `wrong` the same outline as `correct` and confirm the
       greyscale test goes red; restore by checksum.
-- [ ] 2.3 **Tier 2** — lands with the first screen that shows a verdict.
+- [x] 2.3 **Tier 2** — lands with the first screen that shows a verdict. **It landed, 2026-08-16.**
+      `f2-core-loop` task 5.8 ran it: `openspec/changes/f2-core-loop/evidence/verdict-acierto.png` and
+      `verdict-error.png`, iPhone 17 — *"solid ring with a check against dashed ring with an alert, so
+      the verdict is readable with the hue stripped (BRD-1)"*. That is this task's criterion exactly.
+      Ticked 2026-08-17: a Tier 2 deferred **across** changes has no owner, so it sat done and unticked
+      for a day. The lesson is the pointer, not the screenshot — a task deferred to another change
+      should name that change, so closing it is somebody's job.
 
 ---
 

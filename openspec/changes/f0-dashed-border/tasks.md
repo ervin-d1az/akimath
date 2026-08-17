@@ -69,11 +69,18 @@ invariant silently stops covering the components that carry BRD-1.
       confirm `dash_spec_test.dart` goes red; restore and confirm the suite returns to 5.1's count
       exactly.
       **Check:** the failing assertion quoted, and the restored count matching.
-- [ ] 5.4 **Tier 2** — applies: render a focused answer slot and a cage on the iPhone 17 simulator and
-      confirm the dash reads as dashed at the drawn size, and that the cage outline does not sit on
-      the hairline.
-      **Check:** a screenshot, and `main.dart` restored afterwards **by checksum** — `git diff` is
-      blind to an untracked harness file (PROC-8).
+- [x] 5.4 **Tier 2** — **the slot half is done; the cage half has no subject yet.**
+      · **Focused answer slot — verified on the iPhone 17, twice.**
+        `openspec/changes/f2-core-loop/evidence/round-playable.png` (2026-08-16) and
+        `openspec/changes/f2-onboarding-first-run/evidence/03-primer-reto.png` (2026-08-17) both show
+        it on a shipped screen at real device density: `DashSpec.locked`'s `9 9` reads unmistakably as
+        dashed at the drawn size, in pink, with no gap collapsing at the corners.
+      · **Cage — deferred to `f6-puzzles`, stated rather than skipped (PROC-5).** `CageOutline` exists
+        in `design/painting/spec/` and **no widget draws a cage**: `DashedBorderPainter` has no cage
+        caller anywhere in `app/lib/`. There is nothing on a screen to photograph, so the honest
+        record is a deferral with an owner rather than an open box with none — which is exactly the
+        failure mode task 2.3 of `f0-verdict` just cost a day to.
+      No harness was needed for the half that was done, because the answer slot ships on two screens.
 
 ---
 

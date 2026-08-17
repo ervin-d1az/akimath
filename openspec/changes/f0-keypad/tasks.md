@@ -41,8 +41,22 @@ TDD throughout: each test is written and **seen failing** before the code that s
 - [x] 3.2 **Tier 1b** — falsify (PROC-5): change the negate key's codepoint from U+2212 to U+002D and
       confirm the layout test goes red; restore by checksum and confirm the count returns.
       **Check:** the failing assertion quoted, and the restored count matching.
-- [ ] 3.3 **Tier 2** — applies: press the item pad on the iPhone 17 simulator and confirm the keys
-      travel and the pad fits. `main.dart` restored by checksum afterwards (PROC-8).
+- [ ] 3.3 **Tier 2** — **half done, and the open half is blocked on tooling, not on work.**
+      · **The pad fits — verified on the iPhone 17, twice.**
+        `openspec/changes/f2-core-loop/evidence/round-playable.png` and
+        `openspec/changes/f2-onboarding-first-run/evidence/03-primer-reto.png`: the 4×4 item pad at
+        real density, sixteen keys with the `a/b` fraction face, the backspace and submit glyphs, no
+        clipping and no overflow at 390×844. The resting geometry of a single key — shadow (3,5) — is
+        `openspec/changes/f0-pressable-surface/evidence/controls-resting.png`.
+      · **"The keys travel" — NOT obtained.** It needs a finger, and this session cannot produce one:
+        `osascript` has no assistive access on this machine (`-1719`), `simctl` has no tap operation,
+        and `idb` is not installed. A synthetic `PointerDownEvent` through `GestureBinding` **does**
+        drive the pressed state under `flutter test` — verified, the shadow goes from 1 to 0 — and had
+        no effect in the device build, with nothing on the device console to say why. Three attempts,
+        then stopped.
+      **What closes it:** a human tapping the pad on the simulator, or `integration_test` — see
+      `docs/decisions/OPEN.md` §7, where the dependency is now an open decision rather than a
+      per-change aside, because it blocks two tasks.
 
 ---
 
