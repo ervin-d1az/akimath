@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../content/model/item.dart';
@@ -8,6 +10,7 @@ import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/keypad.dart';
 import '../../../design/widgets/spec/keypad_layout.dart';
+import '../../home/data/day_log_store.dart';
 import '../policy/answer_draft.dart';
 import '../policy/grading.dart';
 import '../policy/prompt_layout.dart';
@@ -32,6 +35,7 @@ class RoundScreen extends StatefulWidget {
     required this.items,
     this.now = DateTime.now,
     this.attemptDays = const <DateTime>[],
+    this.dayLog,
   });
 
   final List<Item> items;
@@ -45,11 +49,14 @@ class RoundScreen extends StatefulWidget {
   final DateTime Function() now;
 
   /// The days the player has practised, for the streak.
-  ///
-  /// Passed in rather than read: persistence is `DayLogStore`'s job and does
-  /// not exist yet, so today the caller supplies what it knows. The policy that
-  /// counts them is pure either way.
   final List<DateTime> attemptDays;
+
+  /// Where today gets recorded when an answer is submitted.
+  ///
+  /// Optional so a test can play a round without one. When present, submitting
+  /// records the day — **right or wrong**, because the streak counts days
+  /// practised and not days won.
+  final DayLogStore? dayLog;
 
   @override
   State<RoundScreen> createState() => _RoundScreenState();
@@ -102,6 +109,8 @@ class _RoundScreenState extends State<RoundScreen> {
   /// fail to increment it either: the streak counts days practised.
   void _submit() {
     final DateTime finishedAt = widget.now();
+    // Recorded before the verdict is built, and regardless of what it says.
+    unawaited(widget.dayLog?.record(finishedAt) ?? Future<void>.value());
     _summary = VerdictSummary(
       verdict: grade(_item, _draft.text),
       elapsed: finishedAt.difference(_startedAt),

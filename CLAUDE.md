@@ -47,7 +47,9 @@ OpenAPI half arrives with `f1-contract-emitter`.
   **no bottom navigation** — `visibleTabs` returns nothing while one root exists, so the bar is
   absent by rule rather than by omission. The app opens on the **home** — Aki, the `RETO DEL DÍA`
   preview composed by the real compositor, the streak pill — and a series is pushed as a full-screen
-  route with no navigation affordance. **513 Flutter tests, green.**
+  route with no navigation affordance. The streak is **earned within a session** — `DayLog` records
+  the day on submit and the home re-reads it — but does **not survive a relaunch**: persisting needs
+  a storage plugin, and that is an open DEP-1 decision. **532 Flutter tests, green.**
   Content is a **bundled 20-item JSON pack** (`app/assets/packs/starter.json`) read by
   `content/pack_reader.dart` — the one adapter in `content/`. An expired or malformed pack is
   refused where it is read. **Grading answers to the frozen contract**: `content/model/canon.dart` is

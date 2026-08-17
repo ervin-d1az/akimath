@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:akimath_app/content/pack_reader.dart';
+import 'package:akimath_app/features/home/data/day_log_store.dart';
+import 'package:akimath_app/features/home/policy/day_log.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
@@ -52,7 +54,7 @@ Future<void> _pump(
   WidgetTester tester, {
   String source = _pack,
   Duration delay = Duration.zero,
-  List<DateTime> attemptDays = const <DateTime>[],
+  DayLogStore? dayLog,
 }) async {
   tester.view
     ..physicalSize = const Size(390, 844)
@@ -64,7 +66,7 @@ Future<void> _pump(
       home: HomeRoute(
         reader: PackReader(bundle: _FakeBundle(source, delay: delay)),
         now: () => DateTime(2026, 8, 16),
-        attemptDays: attemptDays,
+        dayLog: dayLog,
       ),
     ),
   );
@@ -84,7 +86,11 @@ void main() {
         (WidgetTester tester) async {
       await _pump(
         tester,
-        attemptDays: <DateTime>[DateTime(2026, 8, 15), DateTime(2026, 8, 16)],
+        dayLog: InMemoryDayLogStore(
+          DayLog.empty
+              .recording(DateTime(2026, 8, 15))
+              .recording(DateTime(2026, 8, 16)),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -161,6 +167,68 @@ void main() {
 
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.byType(RoundScreen), findsNothing);
+    });
+  });
+
+  group('playing records the day', () {
+    testWidgets('the streak rises after a series without relaunching',
+        (WidgetTester tester) async {
+      // The whole point of the store: the home re-reads it when the series
+      // ends rather than holding a number it computed once.
+      final DayLogStore store = InMemoryDayLogStore(
+        DayLog.empty.recording(DateTime(2026, 8, 15)),
+      );
+
+      await _pump(tester, dayLog: store);
+      await tester.pumpAndSettle();
+      expect(find.text('1'), findsOneWidget, reason: 'yesterday alone');
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      // Answer the item.
+      for (final String id in <String>['4', '2', 'submit']) {
+        await tester.tap(
+          find.byWidgetPredicate(
+            (Widget w) => w is KeypadKeyView && w.data.id == id,
+          ),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      Navigator.of(tester.element(find.byType(RoundScreen))).pop();
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('2'),
+        findsOneWidget,
+        reason: 'today was not recorded, or the home did not re-read',
+      );
+    });
+
+    testWidgets('a wrong answer records the day just the same',
+        (WidgetTester tester) async {
+      // The streak counts days practised, not days won.
+      final DayLogStore store = InMemoryDayLogStore();
+
+      await _pump(tester, dayLog: store);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      for (final String id in <String>['9', 'submit']) {
+        await tester.tap(
+          find.byWidgetPredicate(
+            (Widget w) => w is KeypadKeyView && w.data.id == id,
+          ),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect((await store.read()).days, hasLength(1));
     });
   });
 }

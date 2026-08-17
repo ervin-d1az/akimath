@@ -4,6 +4,8 @@ import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../round/policy/streak_policy.dart';
+import '../data/day_log_store.dart';
+import '../policy/day_log.dart';
 import '../../round/ui/round_screen.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../shell/ui/skeleton_block.dart';
@@ -23,15 +25,18 @@ class HomeRoute extends StatefulWidget {
     super.key,
     this.reader = const PackReader(),
     this.now = DateTime.now,
-    this.attemptDays = const <DateTime>[],
+    this.dayLog,
   });
 
   final PackReader reader;
   final DateTime Function() now;
 
-  /// Days already practised. Persistence is `DayLogStore`'s job and does not
-  /// exist yet, so today the caller supplies what it knows.
-  final List<DateTime> attemptDays;
+  /// Where the days practised are kept.
+  ///
+  /// Defaults to an in-memory store, which is the honest default while no
+  /// persistent one exists: the streak is true within a session and starts over
+  /// on relaunch, rather than being a number nothing backs.
+  final DayLogStore? dayLog;
 
   @override
   State<HomeRoute> createState() => _HomeRouteState();
@@ -39,6 +44,21 @@ class HomeRoute extends StatefulWidget {
 
 class _HomeRouteState extends State<HomeRoute> {
   late final Future<Pack> _pack = widget.reader.load();
+  late final DayLogStore _dayLog = widget.dayLog ?? InMemoryDayLogStore();
+  DayLog _log = DayLog.empty;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshLog();
+  }
+
+  Future<void> _refreshLog() async {
+    final DayLog log = await _dayLog.read();
+    if (mounted) {
+      setState(() => _log = log);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +82,7 @@ class _HomeRouteState extends State<HomeRoute> {
           child: HomeScreen(
             preview: pack.items.first,
             streakDays: streakLength(
-              attemptDays: widget.attemptDays,
+              attemptDays: _log.days,
               today: widget.now(),
             ),
             onStart: () => _startSeries(context, pack),
@@ -72,16 +92,20 @@ class _HomeRouteState extends State<HomeRoute> {
     );
   }
 
-  void _startSeries(BuildContext context, Pack pack) {
-    Navigator.of(context).push(
+  Future<void> _startSeries(BuildContext context, Pack pack) async {
+    await Navigator.of(context).push(
       fullScreenSession<void>(
         (BuildContext context) => RoundScreen(
           items: pack.items,
           now: widget.now,
-          attemptDays: widget.attemptDays,
+          attemptDays: _log.days,
+          dayLog: _dayLog,
         ),
       ),
     );
+    // The series may have recorded today. Re-read rather than assume: the store
+    // is the source of truth and the screen holds only what it last read.
+    await _refreshLog();
   }
 }
 
