@@ -52,6 +52,7 @@ Stimulus readStimulus(Object? raw, {required String itemId}) {
     'numberSeries' => _numberSeries(payload, itemId),
     'matrix' => _matrix(payload, itemId),
     'analogy' => _analogy(payload, itemId),
+    'hiddenOperation' => _hiddenOperation(payload, itemId),
     // Unknown kinds throw rather than degrading to something drawable: an item
     // rendered as a different question is worse than an item refused. A kind
     // the contract froze but the app has not built yet lands here too, which
@@ -217,6 +218,42 @@ int _pairSide(Object? pair, String side, String itemId) {
     throw FormatException('item "$itemId" has a malformed pair');
   }
   return _requireInt(pair, side, itemId);
+}
+
+/// Worked examples and the one that is left to the learner.
+///
+/// **The query may not repeat an example's input.** That is
+/// `query_repeats_example` in the frozen validator and it is not pedantry: the
+/// answer would already be on the screen, so the item would grade a reading
+/// exercise. It is checked on the *input* rather than the output, because two
+/// inputs mapping to the same output is ordinary (`x²` does it) while one input
+/// appearing twice makes the query redundant.
+Stimulus _hiddenOperation(Map<String, dynamic> payload, String itemId) {
+  final Object? raw = payload['examples'];
+  // Two or three. One example fixes no operation at all, and a fourth is a row
+  // the screen has no height for once the query and its rule are drawn.
+  if (raw is! List || raw.length < 2 || raw.length > 3) {
+    throw FormatException(
+      'item "$itemId" needs two or three worked examples; one fixes no rule',
+    );
+  }
+  final List<({int input, int output})> examples = <({int input, int output})>[
+    for (final Object? example in raw)
+      (
+        input: _pairSide(example, 'input', itemId),
+        output: _pairSide(example, 'output', itemId),
+      ),
+  ];
+
+  final int queryInput = _requireInt(payload, 'query_input', itemId);
+  if (examples.any((({int input, int output}) e) => e.input == queryInput)) {
+    throw FormatException(
+      'item "$itemId" queries $queryInput, which is already a worked example — '
+      'its answer would be on the screen',
+    );
+  }
+
+  return HiddenOperationStimulus(examples: examples, queryInput: queryInput);
 }
 
 /// Which tile is blank, bounded against the run it indexes.

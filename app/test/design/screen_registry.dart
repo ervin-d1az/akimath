@@ -130,6 +130,24 @@ const List<Item> registryAnalogyItems = <Item>[
   ),
 ];
 
+/// A function machine for the gates: three examples and three-digit outputs,
+/// which is the tallest *and* widest this family gets.
+const List<Item> registryMachineItems = <Item>[
+  Item(
+    id: 'registry-machine',
+    stimulus: HiddenOperationStimulus(
+      examples: <({int input, int output})>[
+        (input: 10, output: 100),
+        (input: 25, output: 250),
+        (input: 32, output: 320),
+      ],
+      queryInput: 40,
+    ),
+    expected: '400',
+    ladderStep: 4,
+  ),
+];
+
 final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'character sheet',
@@ -186,6 +204,12 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // The fourth stimulus family, and the widest prompt the round draws: four
     // tiles and a bridge on one line.
     build: () => const RoundScreen(items: registryAnalogyItems),
+  ),
+  RegisteredScreen(
+    label: 'round · function machine',
+    // The fifth stimulus family, and the tallest prompt the round draws: four
+    // rows and a rule between them.
+    build: () => const RoundScreen(items: registryMachineItems),
   ),
   RegisteredScreen(
     label: 'round · matrix',

@@ -19,6 +19,7 @@ import '../policy/grading.dart';
 import '../policy/prompt_layout.dart';
 import '../policy/streak_policy.dart';
 import 'stimulus/analogy_view.dart';
+import 'stimulus/hidden_operation_view.dart';
 import 'stimulus/matrix_view.dart';
 import 'stimulus/number_series_view.dart';
 import 'verdict/verdict_screen.dart';
@@ -356,6 +357,11 @@ class _RoundScreenState extends State<RoundScreen> {
           MatrixView(cells: cells, size: size, unknownIndex: unknownIndex),
         AnalogyStimulus(:final List<int> terms, :final int unknownIndex) =>
           AnalogyView(terms: terms, unknownIndex: unknownIndex),
+        HiddenOperationStimulus(
+          :final List<({int input, int output})> examples,
+          :final int queryInput
+        ) =>
+          HiddenOperationView(examples: examples, queryInput: queryInput),
       },
     );
   }

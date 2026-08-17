@@ -30,6 +30,8 @@ String _prompt(Item item) => switch (item.stimulus) {
       MatrixStimulus(:final List<int> cells) => 'matrix: ${cells.join(' ')}',
       AnalogyStimulus(:final List<int> terms) =>
         'analogy: ${terms.join(' ')}',
+      HiddenOperationStimulus(:final int queryInput) =>
+        'machine: $queryInput',
     };
 
 void main() {

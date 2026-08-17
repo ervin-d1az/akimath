@@ -25,6 +25,7 @@ const Set<String> _readable = <String>{
   'numberSeries',
   'matrix',
   'analogy',
+  'hiddenOperation',
 };
 
 /// Frozen in the contract, not yet built here.
@@ -33,7 +34,6 @@ const Set<String> _readable = <String>{
 /// says so, because a family the app cannot draw must fail where the pack is
 /// read and not halfway through a round.
 const Set<String> _pending = <String>{
-  'hiddenOperation',
   'figurate',
 };
 
@@ -195,6 +195,72 @@ void main() {
       expect(() => read(1), throwsA(isA<FormatException>()));
       expect(() => read(2), returnsNormally);
       expect(() => read(3), throwsA(isA<FormatException>()));
+    });
+
+    test('hiddenOperation yields the examples and the query', () {
+      final Map<String, dynamic> stimulus =
+          _stimulusOf(_read('hiddenOperation.json'));
+      final Map<String, dynamic> payload =
+          stimulus['payload'] as Map<String, dynamic>;
+      final List<dynamic> examples = payload['examples'] as List<dynamic>;
+
+      final HiddenOperationStimulus parsed =
+          readStimulus(stimulus, itemId: 'fn') as HiddenOperationStimulus;
+
+      expect(parsed.examples, hasLength(examples.length));
+      expect(parsed.examples.first.input,
+          (examples.first as Map<String, dynamic>)['input']);
+      expect(parsed.examples.first.output,
+          (examples.first as Map<String, dynamic>)['output']);
+      expect(parsed.queryInput, payload['query_input']);
+    });
+
+    test('a machine needs two or three examples, and a fresh query', () {
+      Object? read({int count = 2, int query = 99}) => readStimulus(
+            <String, dynamic>{
+              'kind': 'hiddenOperation',
+              'payload': <String, dynamic>{
+                'examples': <Map<String, dynamic>>[
+                  for (int i = 1; i <= count; i++)
+                    <String, dynamic>{'input': i, 'output': i * 3},
+                ],
+                'query_input': query,
+              },
+            },
+            itemId: 'fn',
+          );
+
+      // One example fixes no operation — `2 › 7` is `+5` and `×3+1` at once.
+      expect(() => read(count: 1), throwsA(isA<FormatException>()));
+      expect(() => read(count: 2), returnsNormally);
+      expect(() => read(count: 3), returnsNormally);
+      expect(() => read(count: 4), throwsA(isA<FormatException>()));
+
+      // `query_repeats_example`: the answer would already be on the screen.
+      expect(() => read(query: 1), throwsA(isA<FormatException>()));
+      expect(() => read(query: 2), throwsA(isA<FormatException>()));
+    });
+
+    test('two examples sharing an output is ordinary, not a rejection', () {
+      // The repeat rule is about *inputs*. `x²` maps 2 and -2 to the same
+      // output, and refusing that would rule out a whole class of rules the
+      // family exists to teach.
+      expect(
+        () => readStimulus(
+          <String, dynamic>{
+            'kind': 'hiddenOperation',
+            'payload': <String, dynamic>{
+              'examples': <Map<String, dynamic>>[
+                <String, dynamic>{'input': 2, 'output': 4},
+                <String, dynamic>{'input': -2, 'output': 4},
+              ],
+              'query_input': 3,
+            },
+          },
+          itemId: 'sq',
+        ),
+        returnsNormally,
+      );
     });
 
     test('arithmetic flattens the frozen term pair into drawable tokens', () {

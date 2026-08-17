@@ -130,6 +130,27 @@ final class AnalogyStimulus extends Stimulus {
   final int unknownIndex;
 }
 
+/// The function machine: worked examples in, one query to answer.
+///
+/// The only family with no `unknown_index`, because the hole is always the
+/// query's output — that *is* the question. Two examples is the floor and the
+/// reason is arithmetic: one example fixes no operation, since `2 › 7` is `+5`
+/// and `×3+1` at the same time.
+final class HiddenOperationStimulus extends Stimulus {
+  const HiddenOperationStimulus({
+    required this.examples,
+    required this.queryInput,
+  });
+
+  /// The worked pairs, two or three of them, in the order the pack lists them.
+  final List<({int input, int output})> examples;
+
+  /// The input the learner transforms. Never one of the examples' inputs — the
+  /// reader refuses that payload (`query_repeats_example`), because a query
+  /// whose answer is already on screen is not a question.
+  final int queryInput;
+}
+
 class Item {
   const Item({
     required this.id,
