@@ -106,18 +106,22 @@ void main() {
       );
     });
 
-    testWidgets('the next press after a verdict moves on',
+    testWidgets('continuing from the verdict returns an empty draft',
         (WidgetTester tester) async {
       await _pump(tester);
       await _press(tester, '4');
       await _press(tester, '2');
       await _press(tester, 'submit');
-      expect(find.byType(VerdictRing), findsOneWidget);
 
-      // The press that dismisses a verdict is consumed, not typed: a player
-      // reaching for the pad after seeing a result should not seed the next
-      // answer with whatever they happened to hit.
-      await _press(tester, '7');
+      // A verdict is its own screen now, so the keypad is not on it — a player
+      // reaching for the pad after a result cannot seed the next answer with
+      // whatever they happen to hit, because there is nothing to hit.
+      expect(find.byType(VerdictRing), findsOneWidget);
+      expect(find.byType(Keypad), findsNothing);
+
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+
       expect(find.byType(VerdictRing), findsNothing);
       expect(_answer(tester).trim(), isEmpty, reason: 'the draft did not reset');
     });

@@ -41,7 +41,9 @@ OpenAPI half arrives with `f1-contract-emitter`.
   takes an answer, a verdict comes back. On top of the brand layer sit the math compositor
   (`design/math/`), the press primitives, the dashed outline, the verdict encoding, the keypad,
   and `features/round/` with its three pure policies, plus the stat readouts — tiles, both pill
-  sizes, the counter chip and the baseline meter. **431 Flutter tests, green.**
+  sizes, the counter chip and the baseline meter — and the two verdict screens, `03 Acierto` and
+  `04 Error`, which show time and streak and **no rating**: F2 has no server, so nothing on them is
+  a figure sync could later contradict. **467 Flutter tests, green.**
   Content is a **bundled 20-item JSON pack** (`app/assets/packs/starter.json`) read by
   `content/pack_reader.dart` — the one adapter in `content/`. An expired or malformed pack is
   refused where it is read. **Grading answers to the frozen contract**: `content/model/canon.dart` is

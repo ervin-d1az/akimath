@@ -1,7 +1,9 @@
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
+import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
+import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
 import 'package:flutter/widgets.dart';
 
 /// A surface the design gates pump a screen at.
@@ -95,5 +97,27 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'round',
     build: () => const RoundScreen(items: registryRoundItems),
+  ),
+  RegisteredScreen(
+    label: 'verdict · acierto',
+    build: () => VerdictScreen(
+      summary: const VerdictSummary(
+        verdict: Verdict.correct,
+        elapsed: Duration(milliseconds: 4200),
+        streakDays: 7,
+      ),
+      onContinue: () {},
+    ),
+  ),
+  RegisteredScreen(
+    label: 'verdict · error',
+    build: () => VerdictScreen(
+      summary: const VerdictSummary(
+        verdict: Verdict.wrong,
+        elapsed: Duration(milliseconds: 12800),
+        streakDays: 1,
+      ),
+      onContinue: () {},
+    ),
   ),
 ];

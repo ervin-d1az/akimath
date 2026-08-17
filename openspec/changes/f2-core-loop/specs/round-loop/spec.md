@@ -71,3 +71,64 @@ missing-`Material` fallback style, which paints a yellow double underline under 
 - **WHEN** a registered screen is pumped
 - **THEN** no text inherits a decorated fallback style
   → `app/test/design/screen_text_style_test.dart`
+
+### Requirement: req-quiet-timing · Time is measured and never displayed while solving
+
+The system SHALL record elapsed time per item from an injected clock, SHALL render no timer while an
+item is on screen, and SHALL show the recorded time on the verdict screen as a measurement.
+
+#### Scenario: No clock is visible at any point
+- **WHEN** the item screen and either verdict screen are rendered
+- **THEN** no text matching a running clock appears, and the verdict's figure reads `4,2 s`
+  → `app/test/features/round/ui/round_screen_test.dart`,
+    `app/test/features/round/ui/verdict/verdict_screen_test.dart`
+
+### Requirement: req-verdict-copy · A verdict names the reasoning, never the failure
+
+The system SHALL NOT render the words *incorrecto*, *error*, *fallaste* or *mal* on either verdict
+screen, and SHALL show Aki stooping rather than disappointed.
+
+#### Scenario: Neither mood scolds
+- **WHEN** each verdict screen is rendered
+- **THEN** none of the four words appears, and the wrong screen still renders copy of its own
+  → `app/test/features/round/ui/verdict/verdict_screen_test.dart`
+
+#### Scenario: The wrong answer costs only the tail curl
+- **WHEN** the wrong verdict is rendered
+- **THEN** Aki is in the `slip` pose, whose curl is already growing back
+  → `app/test/features/round/ui/verdict/verdict_screen_test.dart`
+
+### Requirement: req-verdict-two-tiles · A verdict shows time and streak, and no rating
+
+The system SHALL render exactly two stat tiles on a verdict screen — elapsed time and the local
+streak — and SHALL render no rating and no placeholder for one while no server exists.
+
+#### Scenario: Two tiles, and nothing sync can contradict
+- **WHEN** either verdict screen is rendered
+- **THEN** exactly two tiles appear, labelled TIEMPO and RACHA, and no rating figure is present
+  → `app/test/features/round/ui/verdict/verdict_screen_test.dart`
+
+### Requirement: req-error-band-overflow · Aki's error band does not clip her art
+
+The system SHALL let the error pose overflow its band upward rather than clipping it.
+
+#### Scenario: The error verdict renders whole
+- **WHEN** the error verdict is pumped at 390×844
+- **THEN** Aki's art renders at full width and no overflow is reported
+  → `app/test/features/round/ui/verdict/verdict_screen_test.dart`,
+    `app/test/design/screen_overflow_test.dart`
+
+### Requirement: req-streak-local · The streak is a local calendar fact
+
+The system SHALL compute the streak on the device from the days it recorded, taking today as an
+argument, and a wrong answer SHALL NOT decrement it.
+
+#### Scenario: Yesterday still counts
+- **WHEN** the player practised yesterday but has not yet practised today
+- **THEN** the streak is unbroken
+  → `app/test/features/round/policy/streak_policy_test.dart`
+
+#### Scenario: The policy reads no clock of its own
+- **WHEN** the same attempts are counted against two different todays
+- **THEN** the two results differ
+  → `app/test/features/round/policy/streak_policy_test.dart`

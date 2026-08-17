@@ -8,11 +8,11 @@ import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/keypad.dart';
 import '../../../design/widgets/spec/keypad_layout.dart';
-import '../../../design/widgets/spec/verdict.dart';
-import '../../../design/widgets/verdict_ring.dart';
 import '../policy/answer_draft.dart';
-import '../policy/prompt_layout.dart';
 import '../policy/grading.dart';
+import '../policy/prompt_layout.dart';
+import '../policy/streak_policy.dart';
+import 'verdict/verdict_screen.dart';
 
 /// The round: an item, an answer slot, a keypad, a verdict.
 ///
@@ -27,9 +27,29 @@ import '../policy/grading.dart';
 /// that reads the bundled pack, so nothing here touches an `AssetBundle` — and
 /// a test plays a round by handing over a one-item list.
 class RoundScreen extends StatefulWidget {
-  const RoundScreen({super.key, required this.items});
+  const RoundScreen({
+    super.key,
+    required this.items,
+    this.now = DateTime.now,
+    this.attemptDays = const <DateTime>[],
+  });
 
   final List<Item> items;
+
+  /// The clock, injected.
+  ///
+  /// Time is measured here and shown only on the verdict screen — never while
+  /// an item is on screen (`req-quiet-timing`, and `CLAUDE.md`'s "no visible
+  /// timer"). Taking the clock as a parameter is what lets that be tested by
+  /// handing it two instants rather than by waiting.
+  final DateTime Function() now;
+
+  /// The days the player has practised, for the streak.
+  ///
+  /// Passed in rather than read: persistence is `DayLogStore`'s job and does
+  /// not exist yet, so today the caller supplies what it knows. The policy that
+  /// counts them is pure either way.
+  final List<DateTime> attemptDays;
 
   @override
   State<RoundScreen> createState() => _RoundScreenState();
@@ -52,25 +72,19 @@ class _RoundScreenState extends State<RoundScreen> {
 
   int _index = 0;
   AnswerDraft _draft = AnswerDraft.empty;
-  Verdict? _verdict;
+  VerdictSummary? _summary;
+  late DateTime _startedAt = widget.now();
 
   Item get _item => widget.items[_index];
 
   void _onKey(KeypadKey key) {
-    // A verdict is showing: the next press moves on rather than editing an
-    // answer that has already been judged.
-    if (_verdict != null) {
-      _next();
-      return;
-    }
-
     setState(() {
       switch (key.id) {
         case 'backspace':
           _draft = _draft.backspace();
         case 'submit':
           if (_draft.canSubmit) {
-            _verdict = grade(_item, _draft.text);
+            _submit();
           }
         default:
           final String? emits = key.emits;
@@ -81,16 +95,39 @@ class _RoundScreenState extends State<RoundScreen> {
     });
   }
 
+  /// Judges the answer and builds what the verdict screen shows.
+  ///
+  /// The streak counts today as played the moment an answer is submitted —
+  /// right or wrong. A wrong answer never decrements it (Q7), and it does not
+  /// fail to increment it either: the streak counts days practised.
+  void _submit() {
+    final DateTime finishedAt = widget.now();
+    _summary = VerdictSummary(
+      verdict: grade(_item, _draft.text),
+      elapsed: finishedAt.difference(_startedAt),
+      streakDays: streakLength(
+        attemptDays: <DateTime>[...widget.attemptDays, finishedAt],
+        today: finishedAt,
+      ),
+    );
+  }
+
   void _next() {
     setState(() {
       _index = (_index + 1) % widget.items.length;
       _draft = AnswerDraft.empty;
-      _verdict = null;
+      _summary = null;
+      _startedAt = widget.now();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final VerdictSummary? summary = _summary;
+    if (summary != null) {
+      return VerdictScreen(summary: summary, onContinue: _next);
+    }
+
     // Scaffold, not a bare ColoredBox: without a Material ancestor Flutter
     // falls back to a DefaultTextStyle that paints a yellow double underline
     // under every run of text. It is a debug marker, it looks like a defect,
@@ -141,23 +178,15 @@ class _RoundScreenState extends State<RoundScreen> {
 
 
   Widget _answerSlot() {
-    final Verdict? verdict = _verdict;
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         CandySurface(
-          // Pink dashed while the player is typing — a focus affordance, never
-          // a verdict (BrandColorRole.focus). Once judged, the outline carries
-          // the verdict's own pattern.
-          borderDash: verdict == null || verdict.outline == VerdictOutline.dashed
-              ? DashSpec.locked
-              : null,
-          borderColor: switch (verdict) {
-            null => BrandColorRole.focus.color,
-            Verdict.correct => BrandColorRole.success.color,
-            Verdict.wrong => BrandColorRole.error.color,
-          },
+          // Pink dashed throughout: a focus affordance, never a verdict
+          // (BrandColorRole.focus). A judged answer leaves this screen
+          // entirely, so the slot has no verdict state to carry.
+          borderDash: DashSpec.locked,
+          borderColor: BrandColorRole.focus.color,
           borderWidth: BrandShape.borderWidth,
           borderRadius: BrandShape.radiusSlot,
           shadowOffset: Offset.zero,
@@ -191,10 +220,6 @@ class _RoundScreenState extends State<RoundScreen> {
             ),
           ),
         ),
-        if (verdict != null) ...<Widget>[
-          const SizedBox(width: BrandShape.space4),
-          VerdictRing(verdict),
-        ],
       ],
     );
   }
