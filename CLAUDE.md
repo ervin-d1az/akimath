@@ -67,11 +67,11 @@ OpenAPI half arrives with `f1-contract-emitter`.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only), the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **45 tests, green, 95.31% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **46 tests, green, 95.31% mutation
   score, 0 clones.** `pg@8.23.0` is the package's first runtime dependency, pinned exactly, its
   DEP-1 audit recorded in `test/dependency-allowlist.test.ts`.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 21 of the 45 report as skipped rather than passing quietly.
+  run; leave it unset and 21 of the 46 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the

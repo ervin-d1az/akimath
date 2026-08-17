@@ -136,7 +136,7 @@ database — see 8.3.
 
 ## 8 · Evidence
 
-- [x] 8.1 **Tier 1** — `npm run verify` in `packages/server`: **45 tests green** (3 before). `app/`
+- [x] 8.1 **Tier 1** — `npm run verify` in `packages/server`: **46 tests green** (3 before). `app/`
       untouched and unmoved: analyze clean, **623 tests**, the same count as before this change.
 - [x] 8.2 **Tier 1b** — **95.31%** mutation score (`retention.ts` and `routing.ts` at 100,
       `migrate.ts` at 91.67), `npm run dry`: **0 clones** over 396 lines.
@@ -154,7 +154,7 @@ database — see 8.3.
       numeric mutant ids. It reported a duplication that existed only inside the mutation sandbox. It
       now skips under Stryker, with the reason written down.
 - [x] 8.3 **Tier 2 — the real thing, exercised.** PostgreSQL **17.11** (Homebrew), a cluster created
-      for this change. The migration applied through the real runner; **45 tests green**, of which 21
+      for this change. The migration applied through the real runner; **46 tests green**, of which 21
       only exist against a live database — grants refused, constraints rejected, the catalogue swept,
       the job idempotent, the snapshot byte-identical twice.
       **What is still not done, and is nobody-but-Ervin's to do:** there is no *deployed* database.

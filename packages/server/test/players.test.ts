@@ -48,6 +48,15 @@ describeWithDatabase("a player carries a band and never a name", () => {
     }
   });
 
+  // The one table excluded from the sweep below, and the assertion that keeps it
+  // one. An exclusion list nobody counts is how the second exclusion gets added
+  // without anybody deciding to.
+  const SWEEP_EXCLUSIONS = ["schema_migrations"] as const;
+
+  it("exactly one table is excused from the personal-data sweep", () => {
+    expect(SWEEP_EXCLUSIONS).toEqual(["schema_migrations"]);
+  });
+
   it("no column anywhere stores a name or a date of birth", async () => {
     // Enumerated over the whole schema rather than over `players`, because the
     // rule is about the schema and the next table is where it would break.
@@ -59,8 +68,9 @@ describeWithDatabase("a player carries a band and never a name", () => {
       // holds a filename. It is excluded by name rather than by loosening the
       // pattern, so the pattern stays blunt enough to catch a real one.
       `SELECT table_name, column_name FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name <> 'schema_migrations'
+        WHERE table_schema = 'public' AND table_name <> ALL($1::text[])
         ORDER BY table_name, column_name`,
+      [SWEEP_EXCLUSIONS],
     );
 
     expect(result.rows.length).toBeGreaterThan(0);

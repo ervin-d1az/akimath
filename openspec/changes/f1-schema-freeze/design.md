@@ -182,6 +182,14 @@ Recorded because each was wrong in a way review would not have caught.
 - **Nothing granted `USAGE` on the schema.** A stock `public` grants it to PUBLIC, so the omission
   was invisible until the test harness recreated the schema. A frozen schema should not lean on a
   default it never wrote down, so the grant is now explicit.
+
+  **Verified not to widen anything, because it is frozen and a `REVOKE` on `public` later is the
+  kind of migration that breaks a running request path.** The schema ACL on a stock database is
+  `pg_database_owner=UC/pg_database_owner` plus `=U/pg_database_owner` — the owner with usage and
+  create, PUBLIC with usage. After this migration it is those two entries **unchanged**, plus
+  `app_request=U` and `retention_job=U`. Two named roles, `USAGE` only, no `CREATE`, and nothing
+  removed. The grant is redundant on a stock database exactly as the comment claims, and
+  load-bearing only where `public` was recreated.
 - **`pg_dump` is not deterministic out of the box.** Version 17.6+ opens with
   `\restrict <random token>`, regenerated per run, so the snapshot differed from itself and the
   diff gate would have failed on its first green build. `--restrict-key` pins it, and the two
