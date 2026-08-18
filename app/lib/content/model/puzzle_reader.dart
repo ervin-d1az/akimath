@@ -12,6 +12,7 @@
 /// right and both are wrong.
 library;
 
+import 'word_grid.dart';
 import 'puzzle.dart';
 
 /// Every kind the frozen format declares, in the order `puzzle/index.ts` lists
@@ -46,6 +47,7 @@ Puzzle readPuzzle(Object? raw, {required String puzzleId}) {
     'killer' => _killer(payload, tutorial, reference, puzzleId),
     'magicSquare' => _magicSquare(payload, tutorial, reference, puzzleId),
     'kakuro' => _kakuro(payload, tutorial, reference, puzzleId),
+    'wordSearch' => _wordSearch(payload, tutorial, reference, puzzleId),
     // A kind the contract froze but this build has no renderer for lands here.
     // Refused where the pack is read: the alternative is a player opening a
     // card and meeting a blank board.
@@ -80,6 +82,65 @@ Puzzle _kenken(
   return KenKenPuzzle(
     board: board,
     cages: cages,
+    tutorialSteps: tutorial,
+    referenceSheet: reference,
+  );
+}
+
+Puzzle _wordSearch(
+  Map<String, dynamic> payload,
+  List<String> tutorial,
+  List<String> reference,
+  String id,
+) {
+  final Object? rawGrid = payload['grid'];
+  if (rawGrid is! List || rawGrid.length < 3 || rawGrid.length > 8) {
+    throw FormatException('puzzle "$id" needs three to eight rows of letters');
+  }
+  final List<String> grid = <String>[
+    for (final Object? row in rawGrid)
+      if (row is List)
+        String.fromCharCodes(<int>[
+          for (final Object? letter in row)
+            if (letter is String && letter.length == 1)
+              letter.runes.first
+            else
+              throw FormatException('puzzle "$id" has a cell that is not one letter'),
+        ])
+      else
+        throw FormatException('puzzle "$id" has a malformed row'),
+  ];
+  // Rectangular, or a trace's arithmetic has no width to rely on.
+  if (grid.any((String row) => row.length != grid.first.length) ||
+      grid.first.isEmpty) {
+    throw FormatException('puzzle "$id" has rows of different lengths');
+  }
+
+  final Object? rawWords = payload['words'];
+  if (rawWords is! List || rawWords.isEmpty || rawWords.length > 8) {
+    throw FormatException('puzzle "$id" needs one to eight words');
+  }
+  final List<String> words = <String>[
+    for (final Object? word in rawWords)
+      if (word is String && word.length >= 3 && word.length <= 8)
+        word
+      else
+        throw FormatException('puzzle "$id" has a word of the wrong length'),
+  ];
+
+  // **A word that is not in the grid can never be claimed**, so the puzzle
+  // could never be finished. This one *is* the reader's: it is a scan of a
+  // grid of at most sixty-four letters, not a search for a solution, which is
+  // why word search takes no exception in the parity gate.
+  for (final String word in words) {
+    if (!containsWord(grid, word)) {
+      throw FormatException('puzzle "$id" hides "$word" nowhere in its grid');
+    }
+  }
+
+  return WordSearchPuzzle(
+    grid: grid,
+    words: words,
     tutorialSteps: tutorial,
     referenceSheet: reference,
   );

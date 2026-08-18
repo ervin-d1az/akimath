@@ -18,9 +18,10 @@ const Set<String> _readable = <String>{
   'killer',
   'magicSquare',
   'kakuro',
+  'wordSearch',
 };
 
-const Set<String> _pending = <String>{'wordSearch'};
+const Set<String> _pending = <String>{};
 
 /// Kinds whose frozen rejection row carries a fault **no reader can see**.
 ///
@@ -594,11 +595,68 @@ void main() {
     });
   });
 
+  group('a word search is letters and words', () {
+    test('its grid and words come through', () {
+      final WordSearchPuzzle puzzle =
+          readPuzzle(_envelope(_read('wordSearch.json')), puzzleId: 'w1')
+              as WordSearchPuzzle;
+
+      expect(puzzle.grid.first, 'SUMAX');
+      expect(puzzle.words, <String>['SUMA', 'CERO']);
+    });
+
+    test('a word its grid does not hide is refused', () {
+      // That word can never be claimed, so the puzzle could never be finished.
+      // This one *is* the reader's: a scan of at most sixty-four letters, not
+      // a search for a solution — which is why this kind takes no exception.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'wordSearch',
+          'payload': <String, dynamic>{
+            'grid': <List<String>>[
+              <String>['S', 'U', 'M', 'A'],
+              <String>['C', 'Y', 'Z', 'W'],
+              <String>['E', 'D', 'F', 'G'],
+            ],
+            'words': <String>['RESTA'],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'missing'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a ragged grid is refused', () {
+      // A trace's arithmetic has no width to rely on otherwise.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'wordSearch',
+          'payload': <String, dynamic>{
+            'grid': <List<String>>[
+              <String>['S', 'U', 'M', 'A'],
+              <String>['C', 'Y', 'Z'],
+              <String>['E', 'D', 'F', 'G'],
+            ],
+            'words': <String>['SUMA'],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'ragged'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
   group('the excuse cannot spread quietly', () {
     test('only kinds named as needing a search are excused', () {
       // A kind excused without being listed is a kind that stopped being
       // checked and nobody noticed.
       expect(_rejectionNeedsASearch.keys, everyElement(isIn(_readable)));
+      // Word search's `word_not_found` is a scan of a small grid, not a search
+      // for a solution — so it takes no exception, which is what shows the one
+      // Kakuro earned was about solving and not about convenience.
+      expect(_rejectionNeedsASearch, isNot(contains('wordSearch')));
       expect(_rejectionNeedsASearch, hasLength(1),
           reason: 'a second exception should be a deliberate edit, not a habit');
     });

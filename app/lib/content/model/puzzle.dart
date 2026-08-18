@@ -126,6 +126,16 @@ sealed class Puzzle {
 
   /// The rules, available while playing. es-MX, from the pack.
   final List<String> referenceSheet;
+}
+
+/// A puzzle played on the shared square.
+///
+/// **Four of the five, and the fifth is not one.** `board` used to live on
+/// `Puzzle` with a word search throwing from it — a supertype promising
+/// something one subtype cannot give, which the type system is perfectly able
+/// to express instead.
+sealed class BoardPuzzle extends Puzzle {
+  const BoardPuzzle({required super.tutorialSteps, required super.referenceSheet});
 
   PuzzleBoard get board;
 }
@@ -135,7 +145,7 @@ sealed class Puzzle {
 /// KenKen and Killer both are, and the screen takes this rather than either —
 /// what it needs is a board and some cages, and naming a concrete kind would
 /// make every new caged format a change to the screen.
-sealed class CagedPuzzle extends Puzzle {
+sealed class CagedPuzzle extends BoardPuzzle {
   const CagedPuzzle({required super.tutorialSteps, required super.referenceSheet});
 
   List<Cage> get cages;
@@ -154,6 +164,25 @@ final class KenKenPuzzle extends CagedPuzzle {
 
   @override
   final List<Cage> cages;
+}
+
+/// A rectangle of letters and the words hidden in it.
+///
+/// The one format with no board: no solution grid, no cages, and no digits — so
+/// no keypad either.
+final class WordSearchPuzzle extends Puzzle {
+  const WordSearchPuzzle({
+    required this.grid,
+    required this.words,
+    required super.tutorialSteps,
+    required super.referenceSheet,
+  });
+
+  /// One string per row, each character a cell.
+  final List<String> grid;
+
+  /// The words to find, upper case.
+  final List<String> words;
 }
 
 /// A stretch of cells that must total its clue, with no digit repeated inside
@@ -175,7 +204,7 @@ class Run {
 ///
 /// Its cells hold **1 to 9 whatever the board's size** — a third domain rule
 /// after `size` and `size²`, which is why the board declares one.
-final class KakuroPuzzle extends Puzzle {
+final class KakuroPuzzle extends BoardPuzzle {
   const KakuroPuzzle({
     required this.board,
     required this.runs,
@@ -193,7 +222,7 @@ final class KakuroPuzzle extends Puzzle {
 ///
 /// The one format with no cages, and the one whose cells hold 1 to `size²`
 /// rather than 1 to `size` — which is the assumption the two caged formats hid.
-final class MagicSquarePuzzle extends Puzzle {
+final class MagicSquarePuzzle extends BoardPuzzle {
   const MagicSquarePuzzle({
     required this.board,
     required this.rowTargets,

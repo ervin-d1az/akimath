@@ -10,12 +10,14 @@ import '../data/day_log_store.dart';
 import '../data/prefs_day_log_store.dart';
 import '../data/series_cursor_store.dart';
 import '../policy/day_log.dart';
+import '../policy/puzzle_menu.dart';
 import '../policy/series_families.dart';
 import '../../round/ui/round_screen.dart';
 import '../../round/ui/summary/series_summary_screen.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../../content/model/puzzle.dart';
 import '../../puzzle/ui/puzzle_screen.dart';
+import '../../puzzle/ui/word_search_screen.dart';
 import '../../shell/ui/skeleton_block.dart';
 import 'home_screen.dart';
 
@@ -118,11 +120,16 @@ class _HomeRouteState extends State<HomeRoute> {
             todaysFamilies: seriesFamilies(
               seriesPlan(pack.items, from: _itemsServed),
             ),
-            // Null when the pack carries none, which makes the card absent
-            // rather than disabled.
-            onPuzzle: pack.puzzles.isEmpty
-                ? null
-                : () => _startPuzzle(context, pack.puzzles.first),
+            // Every puzzle the pack carries, named by the pure menu. Empty
+            // when it carries none, which makes the section absent rather
+            // than disabled.
+            puzzles: <PuzzleOption>[
+              for (final Puzzle puzzle in pack.puzzles)
+                PuzzleOption(
+                  label: puzzleName(puzzle),
+                  onOpen: () => _startPuzzle(context, puzzle),
+                ),
+            ],
             onStart: () => _startSeries(context, pack),
           ),
         );
@@ -136,19 +143,30 @@ class _HomeRouteState extends State<HomeRoute> {
   /// is a longer commitment than five items, so a bottom bar underneath it
   /// would be an invitation to abandon one halfway.
   Future<void> _startPuzzle(BuildContext context, Puzzle puzzle) async {
-    if (puzzle is! KenKenPuzzle) {
-      // `readPuzzle` refuses a kind this build cannot draw, so this is
-      // unreachable through the shipped pack — and a caller still has to be
-      // able to see it coming.
-      return;
-    }
     await Navigator.of(context).push(
       fullScreenSession<void>(
-        (BuildContext sessionContext) => PuzzleScreen(
-          puzzle: puzzle,
-          onClose: () => Navigator.of(sessionContext).pop(),
-          onSolved: () => Navigator.of(sessionContext).pop(),
-        ),
+        (BuildContext sessionContext) {
+          void leave() => Navigator.of(sessionContext).pop();
+          // **Exhaustive over the sealed type**, so a sixth format outside
+          // `BoardPuzzle` is a compile error rather than a screen that never
+          // opens. It replaced an `is! KenKenPuzzle` guard that returned
+          // silently for everything else — which left four of the five shipped
+          // formats unreachable from the home.
+          return switch (puzzle) {
+            WordSearchPuzzle() => WordSearchScreen(
+                puzzle: puzzle,
+                onClose: leave,
+                onSolved: leave,
+              ),
+            // Every numeric board is the same screen: it takes the board, the
+            // pad and the entry policy from the puzzle itself.
+            BoardPuzzle() => PuzzleScreen(
+                puzzle: puzzle,
+                onClose: leave,
+                onSolved: leave,
+              ),
+          };
+        },
       ),
     );
   }

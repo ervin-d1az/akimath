@@ -7,6 +7,7 @@ import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
+import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/shell/ui/app_shell.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
@@ -225,6 +226,19 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
           'Parejas',
           'Máquina',
         ],
+        // All five, because all five ship. A home registered with none was
+        // walking a screen the app stopped building the moment the pack
+        // carried a puzzle, and the section is the tallest thing on it.
+        puzzles: <PuzzleOption>[
+          for (final String label in <String>[
+            'KenKen',
+            'Suma con jaulas',
+            'Cuadro mágico',
+            'Kakuro',
+            'Sopa de letras',
+          ])
+            PuzzleOption(label: label, onOpen: () {}),
+        ],
         onStart: () {},
       ),
     ),
@@ -365,6 +379,38 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         ],
         tutorialSteps: const <String>['Cada tramo suma su pista.'],
         referenceSheet: const <String>['Solo se usan los dígitos del 1 al 9.'],
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · word search 8x8',
+    // The largest grid the format admits, with the most words it admits, each
+    // of them running in a different one of the eight directions. Nothing
+    // denser can arrive, so if this fits at 1.3 every word search fits.
+    build: () => WordSearchScreen(
+      puzzle: const WordSearchPuzzle(
+        grid: <String>[
+          'NUMERODG',
+          'ANECEDAQ',
+          'KIRKXDTX',
+          'WDHEOHIZ',
+          'FAOBSAMH',
+          'LDLRMTHP',
+          'JEVUEVAQ',
+          'KXSRWCHP',
+        ],
+        words: <String>[
+          'NUMERO',
+          'DECENA',
+          'UNIDAD',
+          'MITAD',
+          'RESTA',
+          'DOBLE',
+          'SUMA',
+          'CERO',
+        ],
+        tutorialSteps: <String>['Encuentra las palabras escondidas.'],
+        referenceSheet: <String>['Las palabras van en ocho direcciones.'],
       ),
     ),
   ),

@@ -31,7 +31,9 @@ class PuzzleScreen extends StatefulWidget {
   /// Any caged puzzle. Naming a concrete kind here would make every new caged
   /// format a change to this screen.
   /// Any puzzle the board can draw.
-  final Puzzle puzzle;
+  /// Any puzzle played on the shared square. A word search is not one, and
+  /// the type says so rather than a getter throwing.
+  final BoardPuzzle puzzle;
 
   /// Leaves the puzzle. Defaults to popping, so a pushed board always has an
   /// exit even if a caller forgets to wire one — the same rule the round

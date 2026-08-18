@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
     required this.onStart,
     this.weekMarks = const <bool>[false, false, false, false, false, false, false],
     this.todaysFamilies = const <String>[],
-    this.onPuzzle,
+    this.puzzles = const <PuzzleOption>[],
   });
 
   /// The item whose expression the card previews.
@@ -53,12 +53,16 @@ class HomeScreen extends StatelessWidget {
   /// same plan that will serve them.
   final List<String> todaysFamilies;
 
-  /// Opens the day's puzzle, or null when the pack carries none.
+  /// Every puzzle the pack carries, named and openable, in pack order.
   ///
-  /// **Null means the card is absent, not disabled.** A card a player can see
-  /// and cannot open is a promise the screen has no way to keep — the same
+  /// **Empty means the section is absent, not disabled.** A card a player can
+  /// see and cannot open is a promise the screen has no way to keep — the same
   /// reasoning that keeps the rating off this screen entirely.
-  final VoidCallback? onPuzzle;
+  ///
+  /// All of them rather than the first: the pack ships five formats and a home
+  /// that opened one of them left the other four unreachable in a build that
+  /// draws all five.
+  final List<PuzzleOption> puzzles;
 
   /// Aki's band on the home is 150, against the verdict screens' 182.
   static const double _akiWidth = 150;
@@ -84,8 +88,8 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: BrandShape.space4),
           _challengeCard(),
           const SizedBox(height: BrandShape.space4),
-          if (onPuzzle != null) ...<Widget>[
-            _puzzleCard(),
+          if (puzzles.isNotEmpty) ...<Widget>[
+            ..._puzzleSection(),
             const SizedBox(height: BrandShape.space4),
           ],
           if (todaysFamilies.isNotEmpty) ...<Widget>[
@@ -100,14 +104,26 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// `PUZZLE DEL DÍA` — the card F2 deferred to F6.
+  /// `ROMPECABEZAS` — the section F2 deferred to F6.
   ///
-  /// It names the kind rather than only the word "puzzle", because a KenKen and
-  /// a word search are different amounts of evening and a player deciding
-  /// whether to start one should know which.
-  Widget _puzzleCard() {
+  /// One card per puzzle, each naming its kind rather than only the word
+  /// "rompecabezas", because a KenKen and a sopa de letras are different
+  /// amounts of evening and a player deciding whether to start one should know
+  /// which. The eyebrow is printed once above them, not on every card.
+  List<Widget> _puzzleSection() {
+    return <Widget>[
+      Text('ROMPECABEZAS', style: BrandText.eyebrow()),
+      const SizedBox(height: BrandShape.space2),
+      for (final PuzzleOption option in puzzles) ...<Widget>[
+        _puzzleCard(option),
+        const SizedBox(height: BrandShape.space2),
+      ],
+    ];
+  }
+
+  Widget _puzzleCard(PuzzleOption option) {
     return GestureDetector(
-      onTap: onPuzzle,
+      onTap: option.onOpen,
       behavior: HitTestBehavior.opaque,
       child: CandySurface(
         borderRadius: BrandShape.radiusCardMedium,
@@ -117,17 +133,7 @@ class HomeScreen extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text('PUZZLE DEL DÍA', style: BrandText.eyebrow()),
-                  const SizedBox(height: 2),
-                  Text('KenKen', style: BrandText.cardTitle()),
-                ],
-              ),
-            ),
+            Expanded(child: Text(option.label, style: BrandText.cardTitle())),
             const BrandIcon(BrandGlyph.forward, size: 22),
           ],
         ),
@@ -179,4 +185,18 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One openable puzzle on the home.
+///
+/// The name comes from `puzzleMenu`, which is pure and tested on its own; this
+/// carries it and the callback together so the screen never has to hold two
+/// lists in step by index.
+class PuzzleOption {
+  const PuzzleOption({required this.label, required this.onOpen});
+
+  /// What the card reads, from `puzzleName`.
+  final String label;
+
+  final VoidCallback onOpen;
 }

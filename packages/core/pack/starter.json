@@ -2733,6 +2733,111 @@
         "Los tramos van hacia la derecha y hacia abajo.",
         "Solo se usan los dígitos del 1 al 9."
       ]
+    },
+    {
+      "kind": "wordSearch",
+      "payload": {
+        "grid": [
+          [
+            "N",
+            "U",
+            "M",
+            "E",
+            "R",
+            "O",
+            "D",
+            "G"
+          ],
+          [
+            "A",
+            "N",
+            "E",
+            "C",
+            "E",
+            "D",
+            "A",
+            "Q"
+          ],
+          [
+            "K",
+            "I",
+            "R",
+            "K",
+            "X",
+            "D",
+            "T",
+            "X"
+          ],
+          [
+            "W",
+            "D",
+            "H",
+            "E",
+            "O",
+            "H",
+            "I",
+            "Z"
+          ],
+          [
+            "F",
+            "A",
+            "O",
+            "B",
+            "S",
+            "A",
+            "M",
+            "H"
+          ],
+          [
+            "L",
+            "D",
+            "L",
+            "R",
+            "M",
+            "T",
+            "H",
+            "P"
+          ],
+          [
+            "J",
+            "E",
+            "V",
+            "U",
+            "E",
+            "V",
+            "A",
+            "Q"
+          ],
+          [
+            "K",
+            "X",
+            "S",
+            "R",
+            "W",
+            "C",
+            "H",
+            "P"
+          ]
+        ],
+        "words": [
+          "NUMERO",
+          "DECENA",
+          "UNIDAD",
+          "MITAD",
+          "RESTA",
+          "DOBLE",
+          "SUMA",
+          "CERO"
+        ]
+      },
+      "tutorial_steps": [
+        "Arrastra el dedo de la primera letra a la última.",
+        "Una palabra puede ir en cualquiera de las ocho direcciones."
+      ],
+      "reference_sheet": [
+        "Las palabras se leen en línea recta, nunca dan vuelta.",
+        "Tacha la lista: terminas cuando no queda ninguna."
+      ]
     }
   ]
 }
