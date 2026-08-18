@@ -7,6 +7,7 @@ import 'package:akimath_app/features/home/data/day_log_store.dart';
 import 'package:akimath_app/features/home/policy/day_log.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/home/policy/puzzle_menu.dart';
+import 'package:akimath_app/features/home/policy/puzzle_of_day.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_board_view.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
@@ -163,16 +164,29 @@ Future<void> _reachEveryPuzzle(WidgetTester tester) async {
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
+  final DateTime today = DateTime(2026, 8, 16);
   final Pack pack = await PackReader().load();
   expect(pack.puzzles, isNotEmpty, reason: 'the shipped pack carries no puzzle');
 
+  // **The cards the home actually draws**, which is one per format rather than
+  // one per board. That every *board* is offered on some day is a different
+  // question, and `pack_variety_test` answers it over a fortnight — walking all
+  // eleven here would open the same four screens eleven times and call it
+  // coverage.
+  final List<Puzzle> offered = puzzlesOfDay(pack.puzzles, today: today);
+  expect(
+    offered.map(puzzleKindOf).toSet(),
+    pack.puzzles.map(puzzleKindOf).toSet(),
+    reason: 'a format the pack carries reaches no card',
+  );
+
   await tester.pumpWidget(
-    MaterialApp(home: HomeRoute(now: () => DateTime(2026, 8, 16))),
+    MaterialApp(home: HomeRoute(now: () => today)),
   );
   await tester.pumpAndSettle();
 
   final Set<String> reached = <String>{};
-  for (final Puzzle puzzle in pack.puzzles) {
+  for (final Puzzle puzzle in offered) {
     final String label = puzzleName(puzzle);
     final Finder card = find.text(label);
     await tester.scrollUntilVisible(card, 120);
@@ -200,8 +214,8 @@ Future<void> _reachEveryPuzzle(WidgetTester tester) async {
   }
 
   // ignore: avoid_print
-  print('  puzzle reachability · ${pack.puzzles.length} shipped '
-      '→ ${reached.length} kinds reachable');
+  print('  puzzle reachability · ${pack.puzzles.length} boards, '
+      '${offered.length} offered today → ${reached.length} kinds reachable');
 }
 
 void main() {

@@ -87,9 +87,18 @@ function main(): void {
     throw cause;
   }
 
+  // Counted per kind rather than listed: a pack carrying four KenKens used to
+  // print "kenken" four times, which reads as a bug in the report rather than
+  // as content.
+  const perKind = new Map<string, number>();
+  for (const kind of report.puzzleKinds) {
+    perKind.set(kind, (perKind.get(kind) ?? 0) + 1);
+  }
   const puzzles = report.puzzleKinds.length === 0
     ? "no puzzles"
-    : `${report.puzzleKinds.length} puzzles (${report.puzzleKinds.join(", ")})`;
+    : `${report.puzzleKinds.length} puzzles (${[...perKind.entries()]
+        .map(([kind, n]) => `${kind} ${n}`)
+        .join(", ")})`;
   const families = [...report.byFamily.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([kind, n]) => `${kind} ${n}`)

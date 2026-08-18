@@ -13,6 +13,7 @@ import '../data/prefs_day_log_store.dart';
 import '../data/series_cursor_store.dart';
 import '../policy/day_log.dart';
 import '../policy/puzzle_menu.dart';
+import '../policy/puzzle_of_day.dart';
 import '../policy/series_families.dart';
 import '../../round/ui/round_screen.dart';
 import '../../round/ui/summary/series_summary_screen.dart';
@@ -122,11 +123,14 @@ class _HomeRouteState extends State<HomeRoute> {
             todaysFamilies: seriesFamilies(
               seriesPlan(pack.items, from: _itemsServed),
             ),
-            // Every puzzle the pack carries, named by the pure menu. Empty
-            // when it carries none, which makes the section absent rather
-            // than disabled.
+            // **One card per format**, not one per board: the pack may carry
+            // three KenKens, and three cards reading `KenKen` are three cards
+            // a player cannot choose between. Which board each opens is the
+            // day's, from a pure policy. Empty when the pack carries none,
+            // which makes the section absent rather than disabled.
             puzzles: <PuzzleOption>[
-              for (final Puzzle puzzle in pack.puzzles)
+              for (final Puzzle puzzle
+                  in puzzlesOfDay(pack.puzzles, today: widget.now()))
                 PuzzleOption(
                   label: puzzleName(puzzle),
                   onOpen: () => _startPuzzle(context, puzzle),
