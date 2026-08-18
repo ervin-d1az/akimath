@@ -57,7 +57,12 @@ function main(): void {
     JSON.parse(readFileSync(DECLARATION, "utf8")),
   );
 
-  const skillIds = new Set(declaration.sources.map((source) => source.skillId));
+  // Puzzles belong to no skill, so only the item sources contribute one.
+  const skillIds = new Set(
+    declaration.sources.flatMap((source) =>
+      source.kind === "puzzles" ? [] : [source.skillId],
+    ),
+  );
 
   const { pack, report } = buildPack(declaration, {
     registry: CORE_REGISTRY,
@@ -87,6 +92,9 @@ function main(): void {
     throw cause;
   }
 
+  const puzzles = report.puzzleKinds.length === 0
+    ? "no puzzles"
+    : `${report.puzzleKinds.length} puzzles (${report.puzzleKinds.join(", ")})`;
   const families = [...report.byFamily.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([kind, n]) => `${kind} ${n}`)
@@ -95,7 +103,8 @@ function main(): void {
   console.log(
     `pack: ${pack.items.length} items (${report.generated} generated, ` +
       `${report.authored} authored) — ${families}\n` +
-      `      ${report.diagnosed} carry distractors, ${pack.items.length - report.diagnosed} do not`,
+      `      ${report.diagnosed} carry distractors, ${pack.items.length - report.diagnosed} do not\n` +
+      `      ${puzzles}`,
   );
 }
 

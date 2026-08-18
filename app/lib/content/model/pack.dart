@@ -15,6 +15,8 @@ library;
 import '../../design/math/spec/math_node.dart';
 import 'canon.dart';
 import 'item.dart';
+import 'puzzle.dart';
+import 'puzzle_reader.dart';
 import 'stimulus_reader.dart';
 
 class Pack {
@@ -23,6 +25,7 @@ class Pack {
     required this.issuedAt,
     required this.expiresAt,
     required this.items,
+    this.puzzles = const <Puzzle>[],
   });
 
   /// Parses a decoded pack.
@@ -43,6 +46,12 @@ class Pack {
       items: <Item>[
         for (final Object? entry in rawItems) _item(entry),
       ],
+      // Optional: the app's own fixture format predates puzzles and the many
+      // packs that carry none stay valid.
+      puzzles: <Puzzle>[
+        for (final Object? entry in (json['puzzles'] as List<dynamic>?) ?? const <Object?>[])
+          readPuzzle(entry, puzzleId: 'puzzle'),
+      ],
     );
   }
 
@@ -50,6 +59,9 @@ class Pack {
   final DateTime issuedAt;
   final DateTime expiresAt;
   final List<Item> items;
+
+  /// The boards this pack carries. Empty is ordinary.
+  final List<Puzzle> puzzles;
 
   /// Whether this pack has expired **at the moment the caller names**.
   ///

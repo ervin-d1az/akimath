@@ -14,6 +14,8 @@ import '../policy/series_families.dart';
 import '../../round/ui/round_screen.dart';
 import '../../round/ui/summary/series_summary_screen.dart';
 import '../../shell/ui/app_shell.dart';
+import '../../../content/model/puzzle.dart';
+import '../../puzzle/ui/puzzle_screen.dart';
 import '../../shell/ui/skeleton_block.dart';
 import 'home_screen.dart';
 
@@ -116,10 +118,38 @@ class _HomeRouteState extends State<HomeRoute> {
             todaysFamilies: seriesFamilies(
               seriesPlan(pack.items, from: _itemsServed),
             ),
+            // Null when the pack carries none, which makes the card absent
+            // rather than disabled.
+            onPuzzle: pack.puzzles.isEmpty
+                ? null
+                : () => _startPuzzle(context, pack.puzzles.first),
             onStart: () => _startSeries(context, pack),
           ),
         );
       },
+    );
+  }
+
+  /// Pushes the day's board, as a full-screen session.
+  ///
+  /// The same shape a series gets, and the argument is stronger here: a puzzle
+  /// is a longer commitment than five items, so a bottom bar underneath it
+  /// would be an invitation to abandon one halfway.
+  Future<void> _startPuzzle(BuildContext context, Puzzle puzzle) async {
+    if (puzzle is! KenKenPuzzle) {
+      // `readPuzzle` refuses a kind this build cannot draw, so this is
+      // unreachable through the shipped pack — and a caller still has to be
+      // able to see it coming.
+      return;
+    }
+    await Navigator.of(context).push(
+      fullScreenSession<void>(
+        (BuildContext sessionContext) => PuzzleScreen(
+          puzzle: puzzle,
+          onClose: () => Navigator.of(sessionContext).pop(),
+          onSolved: () => Navigator.of(sessionContext).pop(),
+        ),
+      ),
     );
   }
 

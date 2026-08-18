@@ -34,7 +34,19 @@ export interface AuthoredSource {
   readonly skillId: number;
 }
 
-export type Source = TemplateSource | AuthoredSource;
+/// Puzzles read from a hand-authored file.
+///
+/// **Boards are authored, never generated** — `CLAUDE.md` says so and the
+/// reason is where the work goes: proving a board has exactly one solution is a
+/// search, and it belongs here, once, rather than on a phone before a player
+/// can start.
+export interface PuzzleSource {
+  readonly kind: "puzzles";
+  /** Relative to the declaration, like an authored item source. */
+  readonly path: string;
+}
+
+export type Source = TemplateSource | AuthoredSource | PuzzleSource;
 
 export interface Declaration {
   readonly packSalt: string;
@@ -133,7 +145,11 @@ function requireInstant(from: Record<string, unknown>, field: string): string {
 
 function parseSource(value: unknown, index: number): Source {
   const raw = object(value, `sources[${index}]`);
-  const skillId = requireInt(raw, "skill_id", 1, Number.MAX_SAFE_INTEGER);
+  // Read lazily: a puzzle source belongs to no skill, and demanding one would
+  // be inventing a field the pack format does not have for puzzles.
+  const skillId = raw["kind"] === "puzzles"
+    ? 0
+    : requireInt(raw, "skill_id", 1, Number.MAX_SAFE_INTEGER);
 
   switch (raw["kind"]) {
     case "template":
@@ -150,8 +166,13 @@ function parseSource(value: unknown, index: number): Source {
       };
     case "authored":
       return { kind: "authored", path: requireString(raw, "path"), skillId };
+    case "puzzles":
+      return { kind: "puzzles", path: requireString(raw, "path") };
     default:
-      return fail("kind", `must be "template" or "authored", not ${JSON.stringify(raw["kind"])}`);
+      return fail(
+        "kind",
+        `must be "template", "authored" or "puzzles", not ${JSON.stringify(raw["kind"])}`,
+      );
   }
 }
 

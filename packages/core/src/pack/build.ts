@@ -11,6 +11,7 @@ import { rederive, type TemplateRegistry } from "../registry.js";
 import type { Declaration } from "./declaration.js";
 import { predictDistractors } from "./distractors.js";
 import { liftAuthored, readAuthoredFile } from "./lift.js";
+import { readPuzzleFile } from "./puzzles.js";
 import { seedAt } from "./seeds.js";
 
 /**
@@ -57,6 +58,8 @@ export interface BuildReport {
   readonly authored: number;
   readonly diagnosed: number;
   readonly byFamily: ReadonlyMap<string, number>;
+  /** Which puzzles were carried, so an empty list is visible not assumed. */
+  readonly puzzleKinds: readonly string[];
 }
 
 export interface BuildResult {
@@ -144,6 +147,7 @@ export function buildPack(
   inputs: BuildInputs,
 ): BuildResult {
   const items: Item[] = [];
+  const puzzles: Pack["puzzles"] = [];
   let generated = 0;
   let authored = 0;
 
@@ -156,6 +160,15 @@ export function buildPack(
           fromTemplate(declaration, inputs.registry, source, generated, inputs.misconceptions),
         );
         generated += 1;
+      }
+      continue;
+    }
+    if (source.kind === "puzzles") {
+      // Carried through as authored, not transformed: the frozen envelope is
+      // what the file already holds, and rewriting it here would be a second
+      // opinion about a format this package does not own.
+      for (const puzzle of readPuzzleFile(inputs.readAuthored(source.path))) {
+        puzzles.push(puzzle);
       }
       continue;
     }
@@ -191,7 +204,7 @@ export function buildPack(
       diagnosis: inputs.fallbacks.get(skill_id) as DiagnosisCopy,
     })),
     items,
-    puzzles: [],
+    puzzles,
   };
 
   // **Validated here, before anything is written.** The CLI cannot be the only
@@ -216,6 +229,7 @@ export function buildPack(
       authored,
       diagnosed: items.filter((item) => item.diagnosis !== null).length,
       byFamily,
+      puzzleKinds: puzzles.map((puzzle) => puzzle.kind),
     },
   };
 }
