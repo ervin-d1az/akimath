@@ -2,13 +2,12 @@ import 'package:flutter/widgets.dart';
 
 import '../../../content/model/item.dart';
 import '../../../design/brand/aki.dart';
-import '../../../design/math/math_view.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/speech_bubble.dart';
 import '../../../design/widgets/stat_pill.dart';
-import '../../round/policy/prompt_layout.dart';
+import '../../round/ui/stimulus/stimulus_view.dart';
 
 /// `Inicio actualizado`, reduced to what F2 can source.
 ///
@@ -102,12 +101,12 @@ class HomeScreen extends StatelessWidget {
         children: <Widget>[
           Text('RETO DEL DÍA', style: BrandText.eyebrow()),
           const SizedBox(height: BrandShape.space3),
-          // The real compositor, not a picture of one: the preview is the same
-          // widget the round draws, so it cannot drift from the item it shows.
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: MathView(node: nodeFor(preview), size: 46),
-          ),
+          // **The same renderer the round uses**, not a picture of one, so the
+          // preview cannot drift from the item it shows — and so a day whose
+          // first item is a series draws a series instead of throwing. It used
+          // to call `nodeFor` directly, which throws on anything that is not an
+          // expression.
+          StimulusView(stimulus: preview.stimulus),
         ],
       ),
     );

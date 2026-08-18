@@ -1,14 +1,14 @@
 ## 1. Stop the home crashing on the day's item
 
-- [ ] 1.1 Red → green: a home whose preview is a number series renders it instead of throwing.
-- [ ] 1.2 Extract the round's stimulus dispatch so the home and the round draw a family the same
+- [x] 1.1 Red → green: a home whose preview is a number series renders it instead of throwing.
+- [x] 1.2 Extract the round's stimulus dispatch so the home and the round draw a family the same
       way, and the sealed switch lives once (design D5).
 
 ## 2. The week strip
 
-- [ ] 2.1 Red → green: a pure `weekMarks(attemptDays, today)` returning seven marks ending on today,
+- [x] 2.1 Red → green: a pure `weekMarks(attemptDays, today)` returning seven marks ending on today,
       each played or not.
-- [ ] 2.2 Red → green: the boundaries — nothing played, every day played, a gap in the middle, a
+- [x] 2.2 Red → green: the boundaries — nothing played, every day played, a gap in the middle, a
       streak longer than seven days, and a day recorded in the future.
 - [ ] 2.3 Red → green: the strip widget draws seven marks, and played differs from unplayed by shape
       as well as fill (BRD-1).

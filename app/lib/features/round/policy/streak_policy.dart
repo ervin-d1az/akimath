@@ -53,6 +53,45 @@ int streakLength({
   return length;
 }
 
+/// How many days the strip shows. A week, and not the streak's length.
+///
+/// A strip that grew with the streak would reflow the home every morning and
+/// could never show a gap — and the gap is the fact a total cannot carry. The
+/// number beside it carries anything longer.
+const int weekWindow = 7;
+
+/// Which of the last [weekWindow] days were played, oldest first, ending today.
+///
+/// **Pure**, and deliberately in this file rather than beside the widget that
+/// draws it: it needs the same calendar arithmetic [streakLength] does, and a
+/// second copy of that arithmetic is exactly how the Tijuana defect below gets
+/// reintroduced somewhere new.
+///
+/// The same two normalisations apply, for the same reasons: a repeated day
+/// counts once, and a day after [today] is ignored rather than trusted.
+List<bool> weekMarks({
+  required List<DateTime> attemptDays,
+  required DateTime today,
+}) {
+  final DateTime end = _startOfDay(today);
+
+  final Set<DateTime> played = <DateTime>{
+    for (final DateTime attempt in attemptDays)
+      if (!_startOfDay(attempt).isAfter(end)) _startOfDay(attempt),
+  };
+
+  final List<bool> marks = <bool>[];
+  DateTime cursor = end;
+  for (int i = 0; i < weekWindow; i++) {
+    marks.add(played.contains(cursor));
+    cursor = _previousDay(cursor);
+  }
+  // Built backwards from today, then reversed: walking forwards would need a
+  // "next day" that `_previousDay`'s component arithmetic does not provide, and
+  // adding one is how the two directions drift apart across a transition.
+  return marks.reversed.toList(growable: false);
+}
+
 /// The calendar day before [day], as local midnight.
 ///
 /// **Component arithmetic, never `subtract(Duration(days: 1))`.** A `Duration`

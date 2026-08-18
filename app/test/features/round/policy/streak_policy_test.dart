@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 DateTime day(int y, int m, int d) => DateTime(y, m, d);
 
 void main() {
+  _weekMarksTests();
+
   group('a streak counts consecutive local calendar days', () {
     test('playing today after yesterday continues the streak', () {
       expect(
@@ -214,6 +216,106 @@ void main() {
           reason: 'grace path wrong at $today',
         );
       }
+    });
+  });
+}
+
+void _weekMarksTests() {
+  group('the week strip marks which of the last seven days were played', () {
+    DateTime day(int d) => DateTime(2026, 3, d);
+
+    test('it is always seven marks, ending on today', () {
+      expect(weekMarks(attemptDays: <DateTime>[], today: day(15)), hasLength(7));
+    });
+
+    test('nothing played is seven unplayed marks', () {
+      // The band must not disappear when it has nothing to say, or the layout
+      // moves under a player on their first morning.
+      expect(weekMarks(attemptDays: <DateTime>[], today: day(15)), everyElement(isFalse));
+    });
+
+    test('every day played is seven played marks', () {
+      expect(
+        weekMarks(attemptDays: <DateTime>[for (int d = 9; d <= 15; d++) day(d)], today: day(15)),
+        everyElement(isTrue),
+      );
+    });
+
+    test('a gap in the middle is visible, which is the point', () {
+      // A total cannot say *which* day was missed. That is the fact the strip
+      // exists to carry.
+      expect(
+        weekMarks(attemptDays: <DateTime>[day(13), day(15)], today: day(15)),
+        <bool>[false, false, false, false, true, false, true],
+      );
+    });
+
+    test('today is the last mark and the oldest day is the first', () {
+      expect(weekMarks(attemptDays: <DateTime>[day(9)], today: day(15)).first, isTrue);
+      expect(weekMarks(attemptDays: <DateTime>[day(15)], today: day(15)).last, isTrue);
+    });
+
+    test('a streak longer than a week still draws seven', () {
+      expect(
+        weekMarks(attemptDays: <DateTime>[for (int d = 1; d <= 15; d++) day(d)], today: day(15)),
+        hasLength(7),
+      );
+    });
+
+    test('a day older than the window does not leak in', () {
+      expect(weekMarks(attemptDays: <DateTime>[day(8)], today: day(15)), everyElement(isFalse));
+    });
+
+    test('a day in the future is ignored, not trusted', () {
+      // The same rule `streakLength` follows: a clock that jumped forward and
+      // back must not mint days.
+      expect(
+        weekMarks(attemptDays: <DateTime>[day(16), day(20)], today: day(15)),
+        everyElement(isFalse),
+      );
+    });
+
+    test('a time of day inside a counted day is ignored', () {
+      expect(
+        weekMarks(
+          attemptDays: <DateTime>[DateTime(2026, 3, 15, 23, 59)],
+          today: DateTime(2026, 3, 15, 0, 1),
+        ).last,
+        isTrue,
+      );
+    });
+
+    test('the same day twice counts once and shifts nothing', () {
+      expect(
+        weekMarks(attemptDays: <DateTime>[day(15), day(15)], today: day(15)),
+        <bool>[false, false, false, false, false, false, true],
+      );
+    });
+
+    test('it crosses a daylight-saving boundary without losing a day', () {
+      // **Vacuous in a zone without DST**, like the group above — CI runs this
+      // file a second time under `TZ=America/Tijuana`, and without that run the
+      // bug is invisible here.
+      //
+      // **Today is the 9th, not the 8th.** Tijuana springs forward at 02:00 on
+      // 2026-03-08, so a walk that starts on the 8th never crosses the
+      // transition and a `Duration` step looks correct. Starting on the 9th,
+      // 24 hours before local midnight lands at 23:00 on the 7th and the day
+      // is simply missed — which is the morning the incident describes.
+      expect(
+        weekMarks(
+          attemptDays: <DateTime>[for (int d = 3; d <= 9; d++) DateTime(2026, 3, d)],
+          today: DateTime(2026, 3, 9),
+        ),
+        everyElement(isTrue),
+      );
+    });
+
+    test('it crosses a month boundary', () {
+      expect(
+        weekMarks(attemptDays: <DateTime>[DateTime(2026, 2, 28)], today: DateTime(2026, 3, 2)),
+        <bool>[false, false, false, false, true, false, false],
+      );
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:akimath_app/design/math/math_view.dart';
 import 'package:akimath_app/design/widgets/speech_bubble.dart';
 import 'package:akimath_app/design/widgets/stat_pill.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
+import 'package:akimath_app/features/shell/ui/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -44,6 +45,55 @@ Iterable<String> _copy(WidgetTester tester) => tester
     .where((String s) => s.isNotEmpty);
 
 void main() {
+  group('the preview draws whatever family the day begins with', () {
+    // `HomeRoute` hands over `pack.items.first`, and the pack is interleaved:
+    // which family lands first is a content decision, not a code one. The card
+    // called `nodeFor`, which throws on anything that is not an expression, so
+    // reordering the pack would have crashed the home on launch.
+    const Map<String, Stimulus> families = <String, Stimulus>{
+      'series': NumberSeriesStimulus(terms: <int>[2, 4, 6, 8], unknownIndex: 3),
+      'matrix': MatrixStimulus(cells: <int>[1, 2, 2, 4], size: 2, unknownIndex: 3),
+      'analogy': AnalogyStimulus(terms: <int>[2, 4, 5, 10], unknownIndex: 3),
+      'machine': HiddenOperationStimulus(
+        examples: <({int input, int output})>[
+          (input: 2, output: 7),
+          (input: 5, output: 16),
+        ],
+        queryInput: 9,
+      ),
+      'figurate': FigurateStimulus(dotCounts: <int>[1, 3, 6], unknownIndex: 2),
+    };
+
+    for (final MapEntry<String, Stimulus> family in families.entries) {
+      testWidgets('a ${family.key} preview renders', (WidgetTester tester) async {
+        tester.view
+          ..physicalSize = const Size(390, 844)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: AppShell(
+              child: HomeScreen(
+                preview: Item(
+                  id: family.key,
+                  stimulus: family.value,
+                  expected: '8',
+                  ladderStep: 2,
+                ),
+                streakDays: 3,
+                onStart: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
+
   group('the home offers today\'s series and nothing it cannot source', () {
     testWidgets('the five elements F2 can source are present',
         (WidgetTester tester) async {
