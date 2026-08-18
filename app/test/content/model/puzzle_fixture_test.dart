@@ -13,13 +13,31 @@ import 'package:flutter_test/flutter_test.dart';
 /// is asserted to be *refused* rather than skipped.
 const String _dir = '../contract/fixtures/puzzle';
 
-const Set<String> _readable = <String>{'kenken'};
-
-const Set<String> _pending = <String>{
-  'kakuro',
+const Set<String> _readable = <String>{
+  'kenken',
   'killer',
   'magicSquare',
+  'kakuro',
   'wordSearch',
+};
+
+const Set<String> _pending = <String>{};
+
+/// Kinds whose frozen rejection row carries a fault **no reader can see**.
+///
+/// The gate asserted that the reader refuses every rejection row, and that held
+/// for three formats by luck of which faults their fixtures carry. Kakuro's is
+/// `solution_not_unique`, which cannot be detected without solving the board —
+/// and `no_puzzle_generation_test` exists precisely to keep solving off the
+/// device.
+///
+/// So the exception is named with its reason rather than the kind being quietly
+/// dropped from the loop, which is the same code with the justification lost.
+/// Every kind **not** named here is still required to refuse, so excusing a
+/// second one is a visible edit (design D1).
+const Map<String, String> _rejectionNeedsASearch = <String, String>{
+  'kakuro': 'solution_not_unique — only a solver can see it, and the builder is '
+      'where the solver lives',
 };
 
 Map<String, dynamic> _read(String name) {
@@ -102,9 +120,220 @@ void main() {
     });
   });
 
+  group('a killer is cages and sums', () {
+    test('its cages carry a target and no operation', () {
+      final KillerPuzzle puzzle =
+          readPuzzle(_envelope(_read('killer.json')), puzzleId: 'k1')
+              as KillerPuzzle;
+
+      expect(puzzle.cages, isNotEmpty);
+      for (final Cage cage in puzzle.cages) {
+        expect(cage.operation, isNull,
+            reason: 'a killer cage asks for a sum by naming nothing');
+        expect(cage.target, greaterThan(0));
+      }
+    });
+
+    test('its cages cover the board exactly once', () {
+      final KillerPuzzle puzzle =
+          readPuzzle(_envelope(_read('killer.json')), puzzleId: 'k1')
+              as KillerPuzzle;
+      final List<Cell> covered =
+          puzzle.cages.expand((Cage c) => c.cells).toList();
+      final int fillable =
+          puzzle.board.size * puzzle.board.size - puzzle.board.blocked.length;
+
+      expect(covered, hasLength(fillable));
+      expect(covered.toSet(), hasLength(fillable));
+    });
+
+    test('a killer cage naming an operation is refused', () {
+      // `KillerPayloadSchema` has no such field. Ignoring one would draw a
+      // board that says less than its content claims, and would let the two
+      // readers disagree about what a killer is.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'killer',
+          'payload': <String, dynamic>{
+            'board': <String, dynamic>{
+              'size': 3,
+              'blocked': <Object>[],
+              'given': <Object>[],
+              'solution': <List<int>>[
+                <int>[1, 2, 3],
+                <int>[2, 3, 1],
+                <int>[3, 1, 2],
+              ],
+            },
+            'cages': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'cells': <Map<String, int>>[
+                  for (int row = 0; row < 3; row++)
+                    for (int col = 0; col < 3; col++)
+                      <String, int>{'row': row, 'col': col},
+                ],
+                'target': 18,
+                'operation': '+',
+              },
+            ],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'op'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a kenken cage without an operation is still refused', () {
+      // The other half of D1: the model is permissive and the readers are
+      // strict, so making `operation` optional must not let KenKen lose one.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'kenken',
+          'payload': <String, dynamic>{
+            'board': <String, dynamic>{
+              'size': 3,
+              'blocked': <Object>[],
+              'given': <Object>[],
+              'solution': <List<int>>[
+                <int>[1, 2, 3],
+                <int>[2, 3, 1],
+                <int>[3, 1, 2],
+              ],
+            },
+            'cages': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'cells': <Map<String, int>>[
+                  for (int row = 0; row < 3; row++)
+                    for (int col = 0; col < 3; col++)
+                      <String, int>{'row': row, 'col': col},
+                ],
+                'target': 18,
+              },
+            ],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'noop'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
+  group('a magic square is lines and totals', () {
+    test('it holds one to size squared, not one to size', () {
+      // The assumption the two caged formats hid. Deriving the domain from the
+      // board's size would refuse every digit above 3 here — which is every
+      // digit a 3×3 magic square is made of.
+      final MagicSquarePuzzle puzzle =
+          readPuzzle(_envelope(_read('magicSquare.json')), puzzleId: 'm1')
+              as MagicSquarePuzzle;
+
+      expect(puzzle.board.size, 3);
+      expect(puzzle.board.highestValue, 9);
+    });
+
+    test('a caged board still holds one to its size', () {
+      final KenKenPuzzle kenken =
+          readPuzzle(_envelope(_read('kenken.json')), puzzleId: 'k1')
+              as KenKenPuzzle;
+      expect(kenken.board.highestValue, 3);
+    });
+
+    test('its targets come through, one per line', () {
+      final MagicSquarePuzzle puzzle =
+          readPuzzle(_envelope(_read('magicSquare.json')), puzzleId: 'm1')
+              as MagicSquarePuzzle;
+
+      expect(puzzle.rowTargets, <int>[15, 15, 15]);
+      expect(puzzle.columnTargets, <int>[15, 15, 15]);
+    });
+
+    test('a board the pad cannot express is refused', () {
+      // A 4×4 needs sixteen values and the pad offers nine — seven of them
+      // could never be typed. Not a hard board: an unplayable one.
+      Object? read(int size) => readPuzzle(<String, dynamic>{
+            'kind': 'magicSquare',
+            'payload': <String, dynamic>{
+              'board': <String, dynamic>{
+                'size': size,
+                'blocked': <Object>[],
+                'given': <Object>[],
+                'solution': <List<int>>[
+                  for (int row = 0; row < size; row++)
+                    <int>[for (int col = 0; col < size; col++) row * size + col + 1],
+                ],
+              },
+              'row_targets': <int>[for (int i = 0; i < size; i++) 15],
+              'column_targets': <int>[for (int i = 0; i < size; i++) 15],
+            },
+            'tutorial_steps': <String>['x'],
+            'reference_sheet': <String>['y'],
+          }, puzzleId: 'big');
+
+      expect(() => read(3), returnsNormally, reason: 'nine is what the pad has');
+      for (final int size in <int>[4, 5, 6]) {
+        expect(() => read(size), throwsA(isA<FormatException>()),
+            reason: 'a $size square needs ${size * size} values');
+      }
+    });
+
+    test('a six-square KenKen is still fine — the limit is the domain', () {
+      // The rule is about what a player can type, not how big a board is.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'kenken',
+          'payload': <String, dynamic>{
+            'board': <String, dynamic>{
+              'size': 6,
+              'blocked': <Object>[],
+              'given': <Object>[],
+              'solution': <List<int>>[
+                for (int row = 0; row < 6; row++)
+                  <int>[for (int col = 0; col < 6; col++) (row + col) % 6 + 1],
+              ],
+            },
+            'cages': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'cells': <Map<String, int>>[
+                  for (int row = 0; row < 6; row++)
+                    for (int col = 0; col < 6; col++)
+                      <String, int>{'row': row, 'col': col},
+                ],
+                'operation': '+',
+                'target': 126,
+              },
+            ],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'big6'),
+        returnsNormally,
+      );
+    });
+
+    test('a targets list of the wrong length is refused', () {
+      // The frozen rejection row is exactly this — `solution_shape` with four
+      // column targets on a three square.
+      final Map<String, dynamic> fixture = _read('magicSquare.rejected.json');
+      expect(
+        () => readPuzzle(_envelope(fixture['pack'] as Map<String, dynamic>),
+            puzzleId: 'm1'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
   group('the reader refuses the rejection row', () {
-    test('kenken is refused', () {
-      final Map<String, dynamic> fixture = _read('kenken.rejected.json');
+    for (final String kind in _readable) {
+    test('$kind is refused', () {
+      final String? excused = _rejectionNeedsASearch[kind];
+      if (excused != null) {
+        // ignore: avoid_print
+        print('  puzzle parity · $kind\'s rejection row is the builder\'s: $excused');
+        return;
+      }
+      final Map<String, dynamic> fixture = _read('$kind.rejected.json');
       final Map<String, dynamic> envelope =
           _envelope(fixture['pack'] as Map<String, dynamic>);
 
@@ -115,6 +344,7 @@ void main() {
             'accepted, so the two stacks disagree about a valid board',
       );
     });
+    }
   });
 
   group('a malformed board is refused where it is read', () {
@@ -205,6 +435,239 @@ void main() {
             puzzleId: 'gap'),
         throwsA(isA<FormatException>()),
       );
+    });
+  });
+
+  group('a kakuro is runs and sums', () {
+    test('its cells hold one to nine, whatever the board\'s size', () {
+      // A third domain rule, after `size` and `size²`. A 3×3 Kakuro accepts a
+      // 9 where a 3×3 KenKen stops at 3.
+      final KakuroPuzzle puzzle =
+          readPuzzle(_envelope(_read('kakuro.json')), puzzleId: 'k1')
+              as KakuroPuzzle;
+
+      expect(puzzle.board.size, 3);
+      expect(puzzle.board.highestValue, 9);
+    });
+
+    test('its runs carry cells and a sum, across and down', () {
+      final KakuroPuzzle puzzle =
+          readPuzzle(_envelope(_read('kakuro.json')), puzzleId: 'k1')
+              as KakuroPuzzle;
+
+      expect(puzzle.runs, isNotEmpty);
+      expect(puzzle.runs.any((Run r) => r.isAcross), isTrue);
+      expect(puzzle.runs.any((Run r) => !r.isAcross), isTrue);
+      for (final Run run in puzzle.runs) {
+        expect(run.cells.length, greaterThanOrEqualTo(2));
+        expect(run.sum, greaterThan(0));
+      }
+    });
+
+    test('every fillable cell is in at least one run', () {
+      // A cell no clue constrains is solvable only by guessing.
+      final KakuroPuzzle puzzle =
+          readPuzzle(_envelope(_read('kakuro.json')), puzzleId: 'k1')
+              as KakuroPuzzle;
+      final Set<Cell> covered = <Cell>{
+        for (final Run run in puzzle.runs) ...run.cells,
+      };
+      for (final Cell cell in puzzle.board.openCells) {
+        expect(covered, contains(cell), reason: '$cell is in no run');
+      }
+    });
+
+    /// A valid 3×3 Kakuro, with the runs overridable so each case breaks one
+    /// thing and leaves the rest sound.
+    Object? readKakuro(List<Map<String, dynamic>> runs) => readPuzzle(
+          <String, dynamic>{
+            'kind': 'kakuro',
+            'payload': <String, dynamic>{
+              'board': <String, dynamic>{
+                'size': 3,
+                'blocked': <Map<String, int>>[
+                  <String, int>{'row': 0, 'col': 0},
+                ],
+                'given': <Object>[],
+                'solution': <List<int>>[
+                  <int>[0, 1, 3],
+                  <int>[4, 2, 9],
+                  <int>[6, 8, 5],
+                ],
+              },
+              'runs': runs,
+            },
+            'tutorial_steps': <String>['x'],
+            'reference_sheet': <String>['y'],
+          },
+          puzzleId: 'runs',
+        );
+
+    List<Map<String, dynamic>> soundRuns() => <Map<String, dynamic>>[
+          <String, dynamic>{
+            'cells': <Map<String, int>>[
+              <String, int>{'row': 0, 'col': 1},
+              <String, int>{'row': 0, 'col': 2},
+            ],
+            'sum': 4,
+          },
+          for (int row = 1; row < 3; row++)
+            <String, dynamic>{
+              'cells': <Map<String, int>>[
+                for (int col = 0; col < 3; col++)
+                  <String, int>{'row': row, 'col': col},
+              ],
+              'sum': 15,
+            },
+        ];
+
+    test('a fillable cell in no run is refused', () {
+      // A cell no clue constrains is solvable only by guessing, which is not
+      // the game. Nothing fed this until the falsification pass.
+      final List<Map<String, dynamic>> short = soundRuns()..removeLast();
+      expect(() => readKakuro(short), throwsA(isA<FormatException>()));
+      expect(() => readKakuro(soundRuns()), returnsNormally);
+    });
+
+    test('a run of one cell is refused', () {
+      // `z.array(CellSchema).min(2)`. A run of one is a given, not a run, and
+      // it has no direction — so the clue renderer could not place it either.
+      //
+      // **Added to the sound runs, not substituted for one.** Replacing a
+      // two-cell run left a cell in no run, so the coverage check fired and
+      // the test passed without the length rule being involved at all — it was
+      // green with that rule deleted.
+      final List<Map<String, dynamic>> extra = soundRuns()
+        ..add(<String, dynamic>{
+          'cells': <Map<String, int>>[
+            <String, int>{'row': 0, 'col': 1},
+          ],
+          'sum': 4,
+        });
+      expect(() => readKakuro(extra), throwsA(isA<FormatException>()));
+    });
+
+    test('a sum no distinct digits could reach is refused', () {
+      // Two distinct digits from 1..9 sum to between 3 and 17. Constant time —
+      // whether a *particular* sum works given the crossing runs is the
+      // builder's, and deciding that here would be solving.
+      Object? read(int sum) => readPuzzle(<String, dynamic>{
+            'kind': 'kakuro',
+            'payload': <String, dynamic>{
+              'board': <String, dynamic>{
+                'size': 3,
+                'blocked': <Map<String, int>>[
+                  <String, int>{'row': 0, 'col': 0},
+                ],
+                'given': <Object>[],
+                'solution': <List<int>>[
+                  <int>[0, 1, 3],
+                  <int>[4, 2, 9],
+                  <int>[6, 8, 5],
+                ],
+              },
+              'runs': <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'cells': <Map<String, int>>[
+                    <String, int>{'row': 0, 'col': 1},
+                    <String, int>{'row': 0, 'col': 2},
+                  ],
+                  'sum': sum,
+                },
+                for (int row = 1; row < 3; row++)
+                  <String, dynamic>{
+                    'cells': <Map<String, int>>[
+                      for (int col = 0; col < 3; col++)
+                        <String, int>{'row': row, 'col': col},
+                    ],
+                    'sum': 15,
+                  },
+              ],
+            },
+            'tutorial_steps': <String>['x'],
+            'reference_sheet': <String>['y'],
+          }, puzzleId: 'sum');
+
+      expect(() => read(2), throwsA(isA<FormatException>()), reason: 'below 1+2');
+      expect(() => read(18), throwsA(isA<FormatException>()), reason: 'above 9+8');
+      expect(() => read(3), returnsNormally);
+      expect(() => read(17), returnsNormally);
+    });
+  });
+
+  group('a word search is letters and words', () {
+    test('its grid and words come through', () {
+      final WordSearchPuzzle puzzle =
+          readPuzzle(_envelope(_read('wordSearch.json')), puzzleId: 'w1')
+              as WordSearchPuzzle;
+
+      expect(puzzle.grid.first, 'SUMAX');
+      expect(puzzle.words, <String>['SUMA', 'CERO']);
+    });
+
+    test('a word its grid does not hide is refused', () {
+      // That word can never be claimed, so the puzzle could never be finished.
+      // This one *is* the reader's: a scan of at most sixty-four letters, not
+      // a search for a solution — which is why this kind takes no exception.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'wordSearch',
+          'payload': <String, dynamic>{
+            'grid': <List<String>>[
+              <String>['S', 'U', 'M', 'A'],
+              <String>['C', 'Y', 'Z', 'W'],
+              <String>['E', 'D', 'F', 'G'],
+            ],
+            'words': <String>['RESTA'],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'missing'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a ragged grid is refused', () {
+      // A trace's arithmetic has no width to rely on otherwise.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'wordSearch',
+          'payload': <String, dynamic>{
+            'grid': <List<String>>[
+              <String>['S', 'U', 'M', 'A'],
+              <String>['C', 'Y', 'Z'],
+              <String>['E', 'D', 'F', 'G'],
+            ],
+            'words': <String>['SUMA'],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'ragged'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
+  group('the excuse cannot spread quietly', () {
+    test('only kinds named as needing a search are excused', () {
+      // A kind excused without being listed is a kind that stopped being
+      // checked and nobody noticed.
+      expect(_rejectionNeedsASearch.keys, everyElement(isIn(_readable)));
+      // Word search's `word_not_found` is a scan of a small grid, not a search
+      // for a solution — so it takes no exception, which is what shows the one
+      // Kakuro earned was about solving and not about convenience.
+      expect(_rejectionNeedsASearch, isNot(contains('wordSearch')));
+      expect(_rejectionNeedsASearch, hasLength(1),
+          reason: 'a second exception should be a deliberate edit, not a habit');
+    });
+
+    test('every excuse carries a reason', () {
+      for (final MapEntry<String, String> excuse
+          in _rejectionNeedsASearch.entries) {
+        expect(excuse.value, isNotEmpty, reason: excuse.key);
+        expect(excuse.value.length, greaterThan(20),
+            reason: '"${excuse.key}" needs a reason, not a word');
+      }
     });
   });
 

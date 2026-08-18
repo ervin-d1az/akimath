@@ -1,10 +1,15 @@
 import 'dart:convert';
 
+import 'package:akimath_app/content/model/pack.dart';
+import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/features/home/data/day_log_store.dart';
 import 'package:akimath_app/features/home/policy/day_log.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
+import 'package:akimath_app/features/home/policy/puzzle_menu.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
+import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
+import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
 import 'package:akimath_app/features/shell/ui/skeleton_block.dart';
@@ -74,6 +79,60 @@ Future<void> _pump(
       ),
     ),
   );
+}
+
+/// Every puzzle the shipped pack carries, opened from the home for real.
+///
+/// **The gate the `pack.puzzles.first` defect walked past.** Four of the five
+/// shipped formats were unreachable and every suite was green, because nothing
+/// asked the question this asks: not "does the screen render" but "can a player
+/// get to it". It reports a count and fails at zero (PROC-10), so a pack that
+/// stopped carrying puzzles could not make it vacuously true.
+Future<void> _reachEveryPuzzle(WidgetTester tester) async {
+  tester.view
+    ..physicalSize = const Size(390, 844)
+    ..devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+
+  final Pack pack = await PackReader().load();
+  expect(pack.puzzles, isNotEmpty, reason: 'the shipped pack carries no puzzle');
+
+  await tester.pumpWidget(
+    MaterialApp(home: HomeRoute(now: () => DateTime(2026, 8, 16))),
+  );
+  await tester.pumpAndSettle();
+
+  final Set<String> reached = <String>{};
+  for (final Puzzle puzzle in pack.puzzles) {
+    final String label = puzzleName(puzzle);
+    final Finder card = find.text(label);
+    await tester.scrollUntilVisible(card, 120);
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+
+    // A word search takes letters and every other format takes digits, so the
+    // two are different screens and picking the wrong one is a real mistake a
+    // `findsWidgets`-style assertion would miss.
+    final Type screen =
+        puzzle is WordSearchPuzzle ? WordSearchScreen : PuzzleScreen;
+    expect(
+      find.byType(screen),
+      findsOneWidget,
+      reason: '"$label" did not open its screen',
+    );
+    reached.add(puzzle.runtimeType.toString());
+
+    await tester.tap(find.byWidgetPredicate(
+      (Widget w) => w is Semantics && w.properties.label == 'Salir',
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('ROMPECABEZAS'), findsOneWidget,
+        reason: 'leaving "$label" did not come back to the home');
+  }
+
+  // ignore: avoid_print
+  print('  puzzle reachability · ${pack.puzzles.length} shipped '
+      '→ ${reached.length} kinds reachable');
 }
 
 void main() {
@@ -250,6 +309,11 @@ void main() {
         reason: 'the verdict screen has no way out',
       );
     });
+  });
+
+  group('every shipped puzzle can be started', () {
+    testWidgets('each one opens from the home and comes back',
+        _reachEveryPuzzle);
   });
 
   group('playing records the day', () {

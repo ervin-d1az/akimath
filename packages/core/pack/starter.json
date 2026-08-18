@@ -2432,6 +2432,412 @@
         "Ningún número se repite en su fila ni en su columna.",
         "Una jaula de una sola celda ya trae su número."
       ]
+    },
+    {
+      "kind": "killer",
+      "payload": {
+        "board": {
+          "size": 3,
+          "blocked": [],
+          "given": [],
+          "solution": [
+            [
+              1,
+              2,
+              3
+            ],
+            [
+              2,
+              3,
+              1
+            ],
+            [
+              3,
+              1,
+              2
+            ]
+          ]
+        },
+        "cages": [
+          {
+            "cells": [
+              {
+                "row": 0,
+                "col": 0
+              },
+              {
+                "row": 1,
+                "col": 0
+              }
+            ],
+            "target": 3
+          },
+          {
+            "cells": [
+              {
+                "row": 0,
+                "col": 1
+              },
+              {
+                "row": 0,
+                "col": 2
+              }
+            ],
+            "target": 5
+          },
+          {
+            "cells": [
+              {
+                "row": 1,
+                "col": 1
+              },
+              {
+                "row": 2,
+                "col": 1
+              }
+            ],
+            "target": 4
+          },
+          {
+            "cells": [
+              {
+                "row": 1,
+                "col": 2
+              },
+              {
+                "row": 2,
+                "col": 2
+              }
+            ],
+            "target": 3
+          },
+          {
+            "cells": [
+              {
+                "row": 2,
+                "col": 0
+              }
+            ],
+            "target": 3
+          }
+        ]
+      },
+      "tutorial_steps": [
+        "Cada fila y cada columna llevan 1, 2 y 3 una sola vez.",
+        "La esquina de cada jaula dice cuánto suman sus celdas."
+      ],
+      "reference_sheet": [
+        "Las jaulas piden una suma; no traen signo.",
+        "Ningún número se repite en su fila ni en su columna."
+      ]
+    },
+    {
+      "kind": "magicSquare",
+      "payload": {
+        "board": {
+          "size": 3,
+          "blocked": [],
+          "given": [
+            {
+              "row": 0,
+              "col": 0
+            },
+            {
+              "row": 0,
+              "col": 1
+            },
+            {
+              "row": 1,
+              "col": 0
+            }
+          ],
+          "solution": [
+            [
+              2,
+              7,
+              6
+            ],
+            [
+              9,
+              5,
+              1
+            ],
+            [
+              4,
+              3,
+              8
+            ]
+          ]
+        },
+        "row_targets": [
+          15,
+          15,
+          15
+        ],
+        "column_targets": [
+          15,
+          15,
+          15
+        ]
+      },
+      "tutorial_steps": [
+        "Cada fila y cada columna llegan al número de su ficha.",
+        "Ningún número se repite en todo el cuadro."
+      ],
+      "reference_sheet": [
+        "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
+        "Se usan los números del 1 al 9, uno por celda."
+      ]
+    },
+    {
+      "kind": "kakuro",
+      "payload": {
+        "board": {
+          "size": 3,
+          "blocked": [
+            {
+              "row": 0,
+              "col": 0
+            }
+          ],
+          "given": [
+            {
+              "row": 1,
+              "col": 0
+            },
+            {
+              "row": 1,
+              "col": 1
+            }
+          ],
+          "solution": [
+            [
+              0,
+              1,
+              3
+            ],
+            [
+              4,
+              2,
+              9
+            ],
+            [
+              6,
+              8,
+              5
+            ]
+          ]
+        },
+        "runs": [
+          {
+            "cells": [
+              {
+                "row": 0,
+                "col": 1
+              },
+              {
+                "row": 0,
+                "col": 2
+              }
+            ],
+            "sum": 4
+          },
+          {
+            "cells": [
+              {
+                "row": 1,
+                "col": 0
+              },
+              {
+                "row": 1,
+                "col": 1
+              },
+              {
+                "row": 1,
+                "col": 2
+              }
+            ],
+            "sum": 15
+          },
+          {
+            "cells": [
+              {
+                "row": 2,
+                "col": 0
+              },
+              {
+                "row": 2,
+                "col": 1
+              },
+              {
+                "row": 2,
+                "col": 2
+              }
+            ],
+            "sum": 19
+          },
+          {
+            "cells": [
+              {
+                "row": 1,
+                "col": 0
+              },
+              {
+                "row": 2,
+                "col": 0
+              }
+            ],
+            "sum": 10
+          },
+          {
+            "cells": [
+              {
+                "row": 0,
+                "col": 1
+              },
+              {
+                "row": 1,
+                "col": 1
+              },
+              {
+                "row": 2,
+                "col": 1
+              }
+            ],
+            "sum": 11
+          },
+          {
+            "cells": [
+              {
+                "row": 0,
+                "col": 2
+              },
+              {
+                "row": 1,
+                "col": 2
+              },
+              {
+                "row": 2,
+                "col": 2
+              }
+            ],
+            "sum": 17
+          }
+        ]
+      },
+      "tutorial_steps": [
+        "Cada tramo suma el número de su pista.",
+        "Dentro de un tramo no se repite ningún dígito."
+      ],
+      "reference_sheet": [
+        "Los tramos van hacia la derecha y hacia abajo.",
+        "Solo se usan los dígitos del 1 al 9."
+      ]
+    },
+    {
+      "kind": "wordSearch",
+      "payload": {
+        "grid": [
+          [
+            "N",
+            "U",
+            "M",
+            "E",
+            "R",
+            "O",
+            "D",
+            "G"
+          ],
+          [
+            "A",
+            "N",
+            "E",
+            "C",
+            "E",
+            "D",
+            "A",
+            "Q"
+          ],
+          [
+            "K",
+            "I",
+            "R",
+            "K",
+            "X",
+            "D",
+            "T",
+            "X"
+          ],
+          [
+            "W",
+            "D",
+            "H",
+            "E",
+            "O",
+            "H",
+            "I",
+            "Z"
+          ],
+          [
+            "F",
+            "A",
+            "O",
+            "B",
+            "S",
+            "A",
+            "M",
+            "H"
+          ],
+          [
+            "L",
+            "D",
+            "L",
+            "R",
+            "M",
+            "T",
+            "H",
+            "P"
+          ],
+          [
+            "J",
+            "E",
+            "V",
+            "U",
+            "E",
+            "V",
+            "A",
+            "Q"
+          ],
+          [
+            "K",
+            "X",
+            "S",
+            "R",
+            "W",
+            "C",
+            "H",
+            "P"
+          ]
+        ],
+        "words": [
+          "NUMERO",
+          "DECENA",
+          "UNIDAD",
+          "MITAD",
+          "RESTA",
+          "DOBLE",
+          "SUMA",
+          "CERO"
+        ]
+      },
+      "tutorial_steps": [
+        "Arrastra el dedo de la primera letra a la última.",
+        "Una palabra puede ir en cualquiera de las ocho direcciones."
+      ],
+      "reference_sheet": [
+        "Las palabras se leen en línea recta, nunca dan vuelta.",
+        "Tacha la lista: terminas cuando no queda ninguna."
+      ]
     }
   ]
 }

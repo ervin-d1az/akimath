@@ -19,6 +19,7 @@ class KeypadKeyView extends StatelessWidget {
     required this.onPressed,
     required this.height,
     required this.iconSize,
+    this.available = true,
   });
 
   final KeypadKey data;
@@ -26,8 +27,37 @@ class KeypadKeyView extends StatelessWidget {
   final double height;
   final double iconSize;
 
+  /// Whether this key can do anything where it is being shown.
+  ///
+  /// **A pad is frozen at a size the format chose, and a board is not.** The
+  /// 5×2 pad offers nine digits; a 3×3 board holds three. The six that cannot
+  /// act used to look identical to the three that can and simply did nothing —
+  /// which is the thing the preferences screen already argues against, a
+  /// control that cannot act being worse than an absent one.
+  ///
+  /// Dimmed rather than removed: taking keys away would move every remaining
+  /// one and make a 3×3's pad a different shape from a 6×6's.
+  final bool available;
+
   @override
   Widget build(BuildContext context) {
+    if (!available) {
+      // Not a `PressableSurface`: an unavailable key must not travel under a
+      // thumb, because travel is the app's whole language for "that did
+      // something".
+      return Opacity(
+        opacity: 0.35,
+        child: IgnorePointer(
+          child: PressableSurface(
+            onPressed: () {},
+            height: height,
+            borderRadius: BrandShape.radiusPill,
+            shadow: BrandShape.shadowTile,
+            child: Center(child: _face()),
+          ),
+        ),
+      );
+    }
     return PressableSurface(
       onPressed: () => onPressed(data),
       height: height,
@@ -74,10 +104,15 @@ class Keypad extends StatelessWidget {
     super.key,
     required this.layout,
     required this.onKeyPressed,
+    this.unavailable = const <String>{},
   });
 
   final KeypadLayout layout;
   final ValueChanged<KeypadKey> onKeyPressed;
+
+  /// Key ids that cannot act here. Empty by default, so the round — whose pad
+  /// has no such notion — passes nothing and is unchanged.
+  final Set<String> unavailable;
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +133,7 @@ class Keypad extends StatelessWidget {
                   onPressed: onKeyPressed,
                   height: layout.keyHeight,
                   iconSize: layout.iconSize,
+                  available: !unavailable.contains(rowKeys[c].id),
                 ),
               ),
             ],

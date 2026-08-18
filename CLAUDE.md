@@ -58,19 +58,21 @@ OpenAPI half arrives with `f1-contract-emitter`.
   and `features/round/` with its three pure policies, plus the stat readouts — tiles, both pill
   sizes, the counter chip and the baseline meter — and the two verdict screens, `03 Acierto` and
   `04 Error`, which show time and streak and **no rating**: F2 has no server, so nothing on them is
-  a figure sync could later contradict. `features/shell/` is the frame: cream, a banner slot, and
-  **no bottom navigation** — `visibleTabs` returns nothing while one root exists, so the bar is
-  absent by rule rather than by omission. The app opens on **`FirstRunGate`**, which reads one
+  a figure sync could later contradict. `features/shell/` is the frame: cream, a banner slot, and a
+  **bottom bar with two roots** — `Inicio` and `Ajustes`. `visibleTabs` returns nothing while one
+  root exists, so the bar was absent by rule rather than by omission, and it appeared when
+  preferences did. The app opens on **`FirstRunGate`**, which reads one
   boolean and shows either the first run — `0.2 Bienvenida`, then `0.3 Primer reto`, a fixed teaching
   item that reads no pack, records no day and shows no streak — or the **home**: Aki, the
-  `RETO DEL DÍA` preview composed by the real compositor, the streak pill. A series is pushed from
+  `RETO DEL DÍA` preview composed by the real compositor, the week strip, and
+  `ROMPECABEZAS` — **one card per puzzle the pack carries**, named by the pure `puzzleMenu`. A series is pushed from
   there as a full-screen route with no navigation affordance. The first run completes when the item is
   **solved**; leaving it, by the close control or a system back, returns to the welcome and sets
   nothing. The streak is **earned within a session** — `DayLog` records
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **805 Flutter tests, green.**
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1046 Flutter tests, green.**
   **All six frozen stimulus families draw and grade** — arithmetic, number series, matrix,
   analogy, the function machine and figurate. `content/model/stimulus_reader.dart` holds the six
   hand-written parsers and `test/content/model/stimulus_fixture_test.dart` checks each against
@@ -86,6 +88,17 @@ OpenAPI half arrives with `f1-contract-emitter`.
   inside the first ten items and no more than two of a kind in any series. **Grading answers to the frozen contract**: `content/model/canon.dart` is
   checked against `contract/fixtures/canon.golden.json` itself, 19 vectors in both modes, which is
   what stops the Dart and TypeScript canonicalisers drifting (R2).
+  **All five frozen puzzle formats draw and grade** — KenKen, Killer, the magic square, Kakuro
+  and the sopa de letras. `content/model/puzzle_reader.dart` parses them and
+  `test/content/model/puzzle_fixture_test.dart` reports *5 frozen kinds → 5 readable, 0 pending*,
+  with one exception named rather than hidden: Kakuro's `solution_not_unique` is the builder's,
+  because only a solver can see it. Four share `PuzzleScreen` — a board, a keypad sized by
+  `PuzzleBoard.highestValue`, and the pure entry policy; the sopa de letras has its own screen
+  because it has no keypad, and its drag is resolved by `letterAt` rather than by a detector per
+  cell. **Every one of them is reachable**: `home_route_test.dart` walks the shipped pack, opens
+  each puzzle from the home and comes back, reporting *5 shipped → 5 kinds reachable*. That gate
+  exists because the home once held `pack.puzzles.first` behind an `is! KenKenPuzzle` guard, and
+  four of the five formats were unreachable with every suite green.
 - **A scaffold, plus the frozen schema.** `packages/server` routes one endpoint, `GET /health`,
   through a pure `route()` function, and now also holds the database:
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
@@ -108,11 +121,14 @@ OpenAPI half arrives with `f1-contract-emitter`.
   `aws-us-east-1`, PostgreSQL 18.4) with both migrations applied, its connection strings in
   `packages/server/.env.local`, which is gitignored. `MIGRATE_DATABASE_URL` is the direct string and
   `DATABASE_URL` the pooled one; **`TEST_DATABASE_URL` is deliberately not set there**, because the
-  harness drops and recreates the public schema on every run. Item generation, the keypad and the pack *builder* are all
-  unwritten — the pack *format* is frozen, the packs are not built. **The math compositor is
+  harness drops and recreates the public schema on every run. **The pack builder is written**: `packages/core`'s
+  `src/pack/` lifts authored items and template-generated ones into one pack, and
+  `npm run build:pack` emits `packages/core/pack/starter.json` — 80 items across six families and
+  5 puzzles, byte-identical on a second run, which is what makes the CI diff mean something.
+  Item generation beyond the one template family is still unwritten. **The math compositor is
   built**: `EsMxNumber`, `FractionMetrics`, `MathNode` (pure) and `MathView` + `FractionGlyph`
-  (adapters) are landed and tested. `AnswerSlot` waits on `f0-dashed-border`. Spike B cleared its
-  criterion on 2026-08-16 — see `openspec/changes/f1b-math-compositor/spike-b/`.
+  (adapters) are landed and tested. Spike B cleared its criterion on 2026-08-16 — see
+  `openspec/changes/f1b-math-compositor/spike-b/`.
 - **CI exists, narrowed to the code that exists.** `.github/workflows/ci.yml` runs `changes`,
   `secrets` (gitleaks), `dart` (`flutter analyze --fatal-infos`, `flutter test`), `ts`
   (`npm run typecheck`, `npm test` in `packages/server`), `contract` (the same two in
@@ -135,7 +151,8 @@ OpenAPI half arrives with `f1-contract-emitter`.
   `^6.0.3`. **The root scripts do not run.** Use the per-stack commands below.
 
 Work is tracked by the phase vocabulary in ARCHITECTURE.md §9 (`F0`…`F8`). There is no
-ticket tracker. We are in **F0**.
+ticket tracker. F0 through F2 are done and **F6's five puzzle formats are all playable**; the
+server side is still at the scaffold, so the next phase with code behind it is **F3**.
 
 ## Commands
 
@@ -164,6 +181,7 @@ npm run verify        # tsc --noEmit && vitest run
 npm run mutation      # Stryker over src/, excluding adapters/ and index.ts
 npm run dry           # jscpd duplication (src/templates/** is excused — see its README)
 npm run emit          # rewrite golden/; the tree must not move afterwards
+npm run build:pack    # rebuild pack/starter.json from content/ and the authored asset
 
 # TypeScript — from packages/contract/
 npm run verify        # tsc --noEmit && vitest run

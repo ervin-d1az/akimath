@@ -7,6 +7,7 @@ import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
+import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/shell/ui/app_shell.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
@@ -171,7 +172,7 @@ const List<Item> registryFigurateItems = <Item>[
 /// is the board's rim and its label sits in the corner, which is the cheapest
 /// arrangement that still exercises every part of the renderer.
 KenKenPuzzle registryKenKen(int size) => KenKenPuzzle(
-      board: PuzzleBoard(
+      board: PuzzleBoard.caged(
         size: size,
         blocked: const <Cell>{},
         given: const <Cell>{},
@@ -224,6 +225,19 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
           'Cuadros',
           'Parejas',
           'Máquina',
+        ],
+        // All five, because all five ship. A home registered with none was
+        // walking a screen the app stopped building the moment the pack
+        // carried a puzzle, and the section is the tallest thing on it.
+        puzzles: <PuzzleOption>[
+          for (final String label in <String>[
+            'KenKen',
+            'Suma con jaulas',
+            'Cuadro mágico',
+            'Kakuro',
+            'Sopa de letras',
+          ])
+            PuzzleOption(label: label, onOpen: () {}),
         ],
         onStart: () {},
       ),
@@ -288,6 +302,117 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // The largest board the format admits — the tightest layout in the app, so
     // it is measured rather than assumed to fit.
     build: () => PuzzleScreen(puzzle: registryKenKen(6)),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · killer 3x3',
+    // The second caged format on the same board, registered so the label rule
+    // — a sum cage shows no operation — is measured and not merely tested.
+    build: () => PuzzleScreen(
+      puzzle: KillerPuzzle(
+        board: registryKenKen(3).board,
+        cages: <Cage>[
+          Cage(
+            cells: <Cell>[
+              for (int row = 0; row < 3; row++)
+                for (int col = 0; col < 3; col++) Cell(row: row, col: col),
+            ],
+            target: 18,
+          ),
+        ],
+        tutorialSteps: const <String>['Cada jaula pide una suma.'],
+        referenceSheet: const <String>['Las jaulas no traen signo.'],
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · magic square 3x3',
+    // The only format with a margin, and therefore the widest board on screen.
+    build: () => PuzzleScreen(
+      // Not `const`: `Cell` overrides `==`, so a constant set of them is a
+      // compile error — the analyzer is right that constant set semantics and a
+      // custom equality do not mix.
+      puzzle: MagicSquarePuzzle(
+        board: PuzzleBoard(
+          size: 3,
+          blocked: const <Cell>{},
+          // The *set* cannot be const because `Cell` overrides `==`; the
+          // element still can.
+          given: <Cell>{const Cell(row: 0, col: 0)},
+          solution: const <List<int>>[
+            <int>[2, 7, 6],
+            <int>[9, 5, 1],
+            <int>[4, 3, 8],
+          ],
+          highestValue: 9,
+        ),
+        rowTargets: const <int>[15, 15, 15],
+        columnTargets: const <int>[15, 15, 15],
+        tutorialSteps: const <String>['Cada línea llega a su número.'],
+        referenceSheet: const <String>['Se usan los números del 1 al 9, uno por celda.'],
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · kakuro 3x3',
+    // Clues inside the grid rather than in a margin, and a cell that carries
+    // two of them — the densest a cell gets.
+    build: () => PuzzleScreen(
+      puzzle: KakuroPuzzle(
+        board: PuzzleBoard(
+          size: 3,
+          blocked: <Cell>{const Cell(row: 0, col: 0)},
+          given: <Cell>{const Cell(row: 1, col: 0)},
+          solution: const <List<int>>[
+            <int>[0, 1, 3],
+            <int>[4, 2, 9],
+            <int>[6, 8, 5],
+          ],
+          highestValue: 9,
+        ),
+        runs: const <Run>[
+          Run(cells: <Cell>[Cell(row: 0, col: 1), Cell(row: 0, col: 2)], sum: 4),
+          Run(cells: <Cell>[Cell(row: 1, col: 0), Cell(row: 1, col: 1), Cell(row: 1, col: 2)], sum: 15),
+          Run(cells: <Cell>[Cell(row: 2, col: 0), Cell(row: 2, col: 1), Cell(row: 2, col: 2)], sum: 19),
+          Run(cells: <Cell>[Cell(row: 1, col: 0), Cell(row: 2, col: 0)], sum: 10),
+          Run(cells: <Cell>[Cell(row: 0, col: 1), Cell(row: 1, col: 1), Cell(row: 2, col: 1)], sum: 11),
+          Run(cells: <Cell>[Cell(row: 0, col: 2), Cell(row: 1, col: 2), Cell(row: 2, col: 2)], sum: 17),
+        ],
+        tutorialSteps: const <String>['Cada tramo suma su pista.'],
+        referenceSheet: const <String>['Solo se usan los dígitos del 1 al 9.'],
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · word search 8x8',
+    // The largest grid the format admits, with the most words it admits, each
+    // of them running in a different one of the eight directions. Nothing
+    // denser can arrive, so if this fits at 1.3 every word search fits.
+    build: () => WordSearchScreen(
+      puzzle: const WordSearchPuzzle(
+        grid: <String>[
+          'NUMERODG',
+          'ANECEDAQ',
+          'KIRKXDTX',
+          'WDHEOHIZ',
+          'FAOBSAMH',
+          'LDLRMTHP',
+          'JEVUEVAQ',
+          'KXSRWCHP',
+        ],
+        words: <String>[
+          'NUMERO',
+          'DECENA',
+          'UNIDAD',
+          'MITAD',
+          'RESTA',
+          'DOBLE',
+          'SUMA',
+          'CERO',
+        ],
+        tutorialSteps: <String>['Encuentra las palabras escondidas.'],
+        referenceSheet: <String>['Las palabras van en ocho direcciones.'],
+      ),
+    ),
   ),
   RegisteredScreen(
     label: 'preferences',

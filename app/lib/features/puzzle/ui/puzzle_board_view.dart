@@ -23,6 +23,9 @@ class PuzzleBoardView extends StatelessWidget {
     required this.entry,
     required this.cages,
     required this.onTapCell,
+    this.rowTargets = const <int>[],
+    this.columnTargets = const <int>[],
+    this.runs = const <Run>[],
   });
 
   final PuzzleEntry entry;
@@ -32,8 +35,72 @@ class PuzzleBoardView extends StatelessWidget {
 
   final ValueChanged<Cell> onTapCell;
 
+  /// What each line must total, for the formats that ask. Empty for caged
+  /// boards, which draw no margin at all — so a magic square and a KenKen show
+  /// the same grid at the same size, and only one has labels beside it.
+  final List<int> rowTargets;
+  final List<int> columnTargets;
+
+  /// The runs whose sums are clued on the board. Empty for every format but
+  /// Kakuro.
+  final List<Run> runs;
+
   @override
   Widget build(BuildContext context) {
+    if (rowTargets.isEmpty && columnTargets.isEmpty) {
+      return _grid();
+    }
+    // The margin is space *around* an unchanged square: `cellRect` is untouched
+    // and the grid keeps the size it would have had.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        // **`IntrinsicHeight`**, so the row-target column has a height to divide.
+        // Without it the margin's `Expanded`s are handed unbounded height — the
+        // grid's height comes from its own aspect ratio, which the row does not
+        // know until it has laid the grid out.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(child: _grid()),
+              _margin(rowTargets, vertical: true),
+            ],
+          ),
+        ),
+        Row(
+          children: <Widget>[
+            Expanded(child: _margin(columnTargets, vertical: false)),
+            const SizedBox(width: _marginExtent),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// How much room a line of targets takes.
+  static const double _marginExtent = 28;
+
+  /// The targets down the right or along the bottom.
+  Widget _margin(List<int> targets, {required bool vertical}) {
+    final List<Widget> labels = <Widget>[
+      for (final int target in targets)
+        Expanded(
+          child: Center(
+            child: Text('$target', style: BrandText.eyebrow(size: 11)),
+          ),
+        ),
+    ];
+    return SizedBox(
+      width: vertical ? _marginExtent : null,
+      height: vertical ? null : _marginExtent,
+      child: vertical
+          ? Column(children: labels)
+          : Row(children: labels),
+    );
+  }
+
+  Widget _grid() {
     // Square, and sized by the narrower axis of whatever it is given — the same
     // rule `cellRect` follows, so the two cannot disagree about how big a cell
     // is.
@@ -64,6 +131,31 @@ class PuzzleBoardView extends StatelessWidget {
     );
   }
 
+  /// The clues a cell begins, if any.
+  ///
+  /// **Anchored to the run's own first cell** rather than a preceding blocked
+  /// cell (design D2). Newspaper Kakuro splits the two sums into the black
+  /// square before a run; the frozen format does not promise one exists — the
+  /// golden fixture has a run starting at column 0 with nothing to its left.
+  ///
+  /// A cell may begin both an across and a down run, and both are shown: one
+  /// that hid the other would hide a constraint the player needs.
+  ({String? across, String? down}) _cluesAt(Cell cell) {
+    String? across;
+    String? down;
+    for (final Run run in runs) {
+      if (run.cells.first != cell) {
+        continue;
+      }
+      if (run.isAcross) {
+        across = '${run.sum}';
+      } else {
+        down = '${run.sum}';
+      }
+    }
+    return (across: across, down: down);
+  }
+
   Widget _positioned(Rect box, int row, int col, Map<Cell, Cage> cageOf) {
     final Cell cell = Cell(row: row, col: col);
     final Rect rect =
@@ -81,12 +173,24 @@ class PuzzleBoardView extends StatelessWidget {
         edges: cage == null ? null : _edgesFor(cage, cell),
         // Only the cage's anchor carries the target, so a five-cell cage shows
         // its sum once rather than five times.
-        target: cage != null && _isAnchor(cage, cell)
-            ? '${cage.target}${cage.cells.length == 1 ? '' : cage.operation}'
-            : null,
+        target: cage != null && _isAnchor(cage, cell) ? _label(cage) : null,
+        clues: _cluesAt(cell),
         onTap: () => onTapCell(cell),
       ),
     );
+  }
+
+  /// What a cage's corner says.
+  ///
+  /// The target always; the operation only when the format named one and there
+  /// is more than one cell to combine. A Killer cage asks for a sum and says so
+  /// by saying nothing, and `3+` on a single cell is not a sum in any format.
+  String _label(Cage cage) {
+    final String? operation = cage.operation;
+    if (operation == null || cage.cells.length == 1) {
+      return '${cage.target}';
+    }
+    return '${cage.target}$operation';
   }
 
   CageEdges? _edgesFor(Cage cage, Cell cell) {
@@ -115,6 +219,7 @@ class _Cell extends StatelessWidget {
     required this.entry,
     required this.edges,
     required this.target,
+    required this.clues,
     required this.onTap,
   });
 
@@ -122,6 +227,10 @@ class _Cell extends StatelessWidget {
   final PuzzleEntry entry;
   final CageEdges? edges;
   final String? target;
+
+  /// The run sums this cell begins, along and down.
+  final ({String? across, String? down}) clues;
+
   final VoidCallback onTap;
 
   PuzzleCellKind get _kind {
@@ -167,6 +276,26 @@ class _Cell extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.all(2),
                   child: Text(target!, style: BrandText.eyebrow(size: 10)),
+                ),
+              // Across at the top, down at the bottom-left — the directions
+              // they read in, so the pairing needs no legend.
+              if (clues.across != null)
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Text('${clues.across}→',
+                        style: BrandText.eyebrow(size: 9)),
+                  ),
+                ),
+              if (clues.down != null)
+                Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Text('${clues.down}↓',
+                        style: BrandText.eyebrow(size: 9)),
+                  ),
                 ),
               if (value != null)
                 Center(

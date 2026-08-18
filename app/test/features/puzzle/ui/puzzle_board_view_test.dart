@@ -14,7 +14,7 @@ PuzzleBoard _board({
   Set<Cell> blocked = const <Cell>{},
   Set<Cell> given = const <Cell>{},
 }) =>
-    PuzzleBoard(size: 3, blocked: blocked, given: given, solution: _solution);
+    PuzzleBoard.caged(size: 3, blocked: blocked, given: given, solution: _solution);
 
 /// One cage over the whole board, so every cell is covered without the test
 /// having to describe five of them.
@@ -144,6 +144,27 @@ void main() {
       expect(find.text('1+'), findsNothing);
     });
 
+    testWidgets('a killer cage shows its target and no operation',
+        (WidgetTester tester) async {
+      // A `+` there would be a claim `KillerPayloadSchema` does not make: a
+      // killer cage asks for a sum by naming nothing.
+      await _pump(
+        tester,
+        cages: <Cage>[
+          Cage(
+            cells: <Cell>[
+              for (int row = 0; row < 3; row++)
+                for (int col = 0; col < 3; col++) Cell(row: row, col: col),
+            ],
+            target: 18,
+          ),
+        ],
+      );
+
+      expect(find.text('18'), findsOneWidget);
+      expect(find.text('18+'), findsNothing);
+    });
+
     testWidgets('two cages label two different cells',
         (WidgetTester tester) async {
       await _pump(
@@ -169,6 +190,148 @@ void main() {
 
       expect(find.textContaining('6+'), findsOneWidget);
       expect(find.textContaining('12×'), findsOneWidget);
+    });
+  });
+
+  group('a line may say what it must total', () {
+    testWidgets('each target is shown once, against its own line',
+        (WidgetTester tester) async {
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 330,
+                child: PuzzleBoardView(
+                  entry: PuzzleEntry.of(_board()),
+                  cages: const <Cage>[],
+                  // Six distinct numbers, though a real magic square's are
+                  // all the same — a repeated target is indistinguishable from
+                  // a target drawn twice, which is the failure this is for.
+                  rowTargets: const <int>[11, 12, 13],
+                  columnTargets: const <int>[21, 22, 23],
+                  onTapCell: (Cell cell) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final String target in <String>['11', '12', '13', '21', '22', '23']) {
+        expect(find.text(target), findsOneWidget, reason: target);
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a board with no targets gives its grid the whole width',
+        (WidgetTester tester) async {
+      // **Measured, not looked for.** Asserting that no target text appears
+      // cannot fail when the target list is empty — the margin renders nothing
+      // either way. The difference that is real is the grid's width.
+      Future<double> gridWidth({required bool withTargets}) async {
+        tester.view
+          ..physicalSize = const Size(390, 844)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 330,
+                  child: PuzzleBoardView(
+                    entry: PuzzleEntry.of(_board()),
+                    cages: const <Cage>[],
+                    rowTargets: withTargets ? const <int>[11, 12, 13] : const <int>[],
+                    columnTargets:
+                        withTargets ? const <int>[21, 22, 23] : const <int>[],
+                    onTapCell: (Cell cell) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        return tester.getSize(find.byType(AspectRatio)).width;
+      }
+
+      final double bare = await gridWidth(withTargets: false);
+      final double withMargin = await gridWidth(withTargets: true);
+
+      expect(bare, 330, reason: 'a caged board uses the whole width');
+      expect(withMargin, lessThan(bare),
+          reason: 'a margin has to come out of somewhere');
+    });
+  });
+
+  group('a run says what it must total, where it starts', () {
+    Future<void> pumpRuns(WidgetTester tester, List<Run> runs) async {
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 330,
+                child: PuzzleBoardView(
+                  entry: PuzzleEntry.of(_board()),
+                  cages: const <Cage>[],
+                  runs: runs,
+                  onTapCell: (Cell cell) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('an across run is clued on its first cell',
+        (WidgetTester tester) async {
+      await pumpRuns(tester, const <Run>[
+        Run(cells: <Cell>[Cell(row: 0, col: 0), Cell(row: 0, col: 1)], sum: 7),
+      ]);
+      expect(find.text('7→'), findsOneWidget);
+    });
+
+    testWidgets('a cell starting two runs shows both',
+        (WidgetTester tester) async {
+      // One that hid the other would hide a constraint the player needs.
+      await pumpRuns(tester, const <Run>[
+        Run(cells: <Cell>[Cell(row: 0, col: 0), Cell(row: 0, col: 1)], sum: 7),
+        Run(cells: <Cell>[Cell(row: 0, col: 0), Cell(row: 1, col: 0)], sum: 12),
+      ]);
+
+      expect(find.text('7→'), findsOneWidget);
+      expect(find.text('12↓'), findsOneWidget);
+    });
+
+    testWidgets('a run starting at the edge is still clued',
+        (WidgetTester tester) async {
+      // A Kakuro's clues do not always have a blocked cell to live in — the
+      // frozen golden has a run starting at column 0 with nothing to its left.
+      await pumpRuns(tester, const <Run>[
+        Run(cells: <Cell>[Cell(row: 2, col: 0), Cell(row: 2, col: 1)], sum: 9),
+      ]);
+      expect(find.text('9→'), findsOneWidget);
+    });
+
+    testWidgets('a board with no runs shows no clue',
+        (WidgetTester tester) async {
+      await _pump(tester);
+      expect(find.textContaining('→'), findsNothing);
+      expect(find.textContaining('↓'), findsNothing);
     });
   });
 
@@ -242,7 +405,7 @@ void main() {
       // format stops at six.
       await _pump(
         tester,
-        entry: PuzzleEntry.of(PuzzleBoard(
+        entry: PuzzleEntry.of(PuzzleBoard.caged(
           size: 6,
           blocked: const <Cell>{},
           given: const <Cell>{},

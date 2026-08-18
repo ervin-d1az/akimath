@@ -23,7 +23,7 @@ const Item _preview = Item(
 Future<void> _pump(
   WidgetTester tester, {
   VoidCallback? onStart,
-  VoidCallback? onPuzzle,
+  List<PuzzleOption> puzzles = const <PuzzleOption>[],
   int streakDays = 7,
   List<bool>? weekMarks,
   List<String> todaysFamilies = const <String>['Cuentas', 'Series'],
@@ -42,7 +42,7 @@ Future<void> _pump(
           weekMarks: weekMarks ??
               const <bool>[true, true, true, true, true, true, true],
           todaysFamilies: todaysFamilies,
-          onPuzzle: onPuzzle,
+          puzzles: puzzles,
           onStart: onStart ?? () {},
         ),
       ),
@@ -56,28 +56,50 @@ Iterable<String> _copy(WidgetTester tester) => tester
     .where((String s) => s.isNotEmpty);
 
 void main() {
-  group('the day\'s puzzle', () {
-    testWidgets('is offered when the pack carries one',
+  group('the puzzles the pack carries', () {
+    testWidgets('every one of them gets a card, named',
         (WidgetTester tester) async {
-      bool opened = false;
-      await _pump(tester, onPuzzle: () => opened = true);
-
-      expect(find.text('PUZZLE DEL DÍA'), findsOneWidget);
-      // Named, because a KenKen and a word search are different amounts of
+      // Named, because a KenKen and a sopa de letras are different amounts of
       // evening and a player deciding whether to start one should know which.
-      expect(find.text('KenKen'), findsOneWidget);
+      final List<String> opened = <String>[];
+      await _pump(tester, puzzles: <PuzzleOption>[
+        PuzzleOption(label: 'KenKen', onOpen: () => opened.add('KenKen')),
+        PuzzleOption(
+          label: 'Sopa de letras',
+          onOpen: () => opened.add('Sopa de letras'),
+        ),
+      ]);
 
-      await tester.tap(find.text('PUZZLE DEL DÍA'));
-      await tester.pumpAndSettle();
-      expect(opened, isTrue);
+      expect(find.text('ROMPECABEZAS'), findsOneWidget);
+      expect(find.text('KenKen'), findsOneWidget);
+      expect(find.text('Sopa de letras'), findsOneWidget);
     });
 
-    testWidgets('is absent, not disabled, when the pack carries none',
+    testWidgets('each card opens its own puzzle, not the first',
+        (WidgetTester tester) async {
+      // The defect this replaced: the home held `pack.puzzles.first` and every
+      // other format in the pack was unreachable.
+      final List<String> opened = <String>[];
+      await _pump(tester, puzzles: <PuzzleOption>[
+        PuzzleOption(label: 'KenKen', onOpen: () => opened.add('KenKen')),
+        PuzzleOption(
+          label: 'Sopa de letras',
+          onOpen: () => opened.add('Sopa de letras'),
+        ),
+      ]);
+
+      await tester.tap(find.text('Sopa de letras'));
+      await tester.pumpAndSettle();
+      expect(opened, <String>['Sopa de letras']);
+    });
+
+    testWidgets('the section is absent, not disabled, when it carries none',
         (WidgetTester tester) async {
       // A card a player can see and cannot open is a promise the screen has no
       // way to keep.
       await _pump(tester);
-      expect(find.text('PUZZLE DEL DÍA'), findsNothing);
+      expect(find.text('ROMPECABEZAS'), findsNothing);
+      expect(find.text('KenKen'), findsNothing);
     });
   });
 
@@ -180,7 +202,7 @@ void main() {
         isNot(contains('TUS HABILIDADES')),
         reason: 'the skills row is dropped by choosing Inicio actualizado',
       );
-      expect(all, isNot(contains('PUZZLE')));
+      expect(all, isNot(contains('ROMPECABEZAS')));
       expect(find.byType(BottomNavigationBar), findsNothing);
     });
   });
