@@ -502,6 +502,16 @@
               }
             },
             "description": "No such resource."
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "That method is not routed here."
           }
         },
         "summary": "Submit a session's attempts and receive their verdicts."
@@ -550,6 +560,16 @@
               }
             },
             "description": "No such resource."
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "That method is not routed here."
           }
         },
         "summary": "The next item to show, already rendered."
@@ -591,6 +611,16 @@
               }
             },
             "description": "No such resource."
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "That method is not routed here."
           }
         },
         "summary": "Erase the player and everything recorded about them."
@@ -637,6 +667,16 @@
               }
             },
             "description": "No such resource."
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "That method is not routed here."
           }
         },
         "summary": "The current player."
@@ -685,6 +725,16 @@
               }
             },
             "description": "No such resource."
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "That method is not routed here."
           }
         },
         "summary": "Recent series and puzzles."
@@ -733,6 +783,16 @@
               }
             },
             "description": "No such resource."
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "That method is not routed here."
           }
         },
         "summary": "The player's rating per skill."
@@ -792,6 +852,16 @@
               }
             },
             "description": "No such resource."
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "That method is not routed here."
           }
         },
         "summary": "An issued offline pack."
@@ -860,6 +930,16 @@
               }
             },
             "description": "No such resource."
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "That method is not routed here."
           }
         },
         "summary": "Attach a locally-minted player to the current account."
