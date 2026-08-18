@@ -241,8 +241,8 @@ class _Cell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final PuzzleCellVisual visual = resolvePuzzleCell(_kind);
     final bool selected = entry.selected == cell;
+    final PuzzleCellVisual visual = resolvePuzzleCell(_kind, selected: selected);
     final int? value = entry.valueAt(cell);
     final CageEdges? outline = edges;
 
@@ -301,18 +301,24 @@ class _Cell extends StatelessWidget {
                 Center(
                   child: Text('$value', style: BrandText.numeral(22)),
                 ),
-              // **Selection is a ring, not a wash.** A tinted fill would be a
-              // hue difference and nothing else; a border survives with the
-              // hue gone (BRD-1).
+              // **The ring is inset, and the fill does the shouting.** Drawn
+              // flush it landed exactly on the cage's outline — same ink, same
+              // 3 px — so a cell enclosed by its cage showed no selection at
+              // all. The inset makes it a second line a player can see beside
+              // the first, and it is still a *shape* difference, which is what
+              // BRD-1 asks of a state a reader cannot get by hue.
               if (selected)
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: BrandColors.ink,
-                      width: BrandShape.borderWidth,
+                Padding(
+                  padding: const EdgeInsets.all(BrandShape.borderWidth),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: BrandColors.ink,
+                        width: BrandShape.borderWidth,
+                      ),
                     ),
+                    child: const SizedBox.expand(),
                   ),
-                  child: const SizedBox.expand(),
                 ),
             ],
           ),
