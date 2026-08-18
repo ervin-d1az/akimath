@@ -38,6 +38,21 @@ Future<void> _pump(
 }
 
 void main() {
+  group('nothing between two numbers reads as arithmetic', () {
+    testWidgets('the machine joins them with an arrow, not a chevron',
+        (WidgetTester tester) async {
+      // `2 › 4` is indistinguishable from `2 > 4`, which is false — and this is
+      // the one screen where a player is being asked to read a relationship off
+      // the numbers in front of them.
+      await _pump(tester);
+
+      expect(find.text('›'), findsNothing);
+      expect(find.text('>'), findsNothing);
+      expect(find.text('→'), findsWidgets);
+    });
+  });
+
+
   group('the machine shows its workings and one question', () {
     testWidgets('both examples are drawn whole', (WidgetTester tester) async {
       await _pump(tester);

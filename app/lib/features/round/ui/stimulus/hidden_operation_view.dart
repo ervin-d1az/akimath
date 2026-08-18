@@ -92,7 +92,7 @@ class HiddenOperationView extends StatelessWidget {
             width: size * 0.7,
             child: Center(
               child: BrandIcon(
-                BrandGlyph.forward,
+                BrandGlyph.mapsTo,
                 size: size * 0.62,
                 color: BrandColors.ink,
               ),

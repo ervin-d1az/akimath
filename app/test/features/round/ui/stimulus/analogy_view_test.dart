@@ -31,6 +31,21 @@ Future<void> _pump(
 }
 
 void main() {
+  group('nothing between two numbers reads as arithmetic', () {
+    testWidgets('the analogy joins them with an arrow, not a chevron',
+        (WidgetTester tester) async {
+      // `2 › 4` is indistinguishable from `2 > 4`, which is false — and this is
+      // the one screen where a player is being asked to read a relationship off
+      // the numbers in front of them.
+      await _pump(tester, unknownIndex: 3);
+
+      expect(find.text('›'), findsNothing);
+      expect(find.text('>'), findsNothing);
+      expect(find.text('→'), findsWidgets);
+    });
+  });
+
+
   group('an analogy draws four terms and a bridge', () {
     testWidgets('three values, one hole, one bridge',
         (WidgetTester tester) async {

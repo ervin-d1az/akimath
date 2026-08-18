@@ -45,6 +45,7 @@ class BrandIcon extends StatelessWidget {
     BrandGlyph.close: '✕',
     BrandGlyph.back: '‹',
     BrandGlyph.forward: '›',
+    BrandGlyph.mapsTo: '→',
     BrandGlyph.pause: '‖',
     BrandGlyph.undo: '↺',
     BrandGlyph.hint: '?',
