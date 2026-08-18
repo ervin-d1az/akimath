@@ -1,17 +1,17 @@
 ## 1. Read a puzzle
 
-- [ ] 1.1 Red → green: the Dart puzzle model and reader for KenKen, driven from
+- [x] 1.1 Red → green: the Dart puzzle model and reader for KenKen, driven from
       `contract/fixtures/puzzle/` — golden parses, rejection row refused.
-- [ ] 1.2 Red → green: a kind the app cannot draw is refused where the pack is read, and the gate
+- [x] 1.2 Red → green: a kind the app cannot draw is refused where the pack is read, and the gate
       reports how many kinds are readable and how many are pending.
 - [ ] 1.3 Red → green: the pack reader carries puzzles through to the model.
 
 ## 2. The board's geometry, pure
 
-- [ ] 2.1 Red → green: cell rectangles for sizes 3 through 6 inside a given box.
-- [ ] 2.2 Red → green: a cage's outline from its cells — shared edges are interior, the rest is the
+- [x] 2.1 Red → green: cell rectangles for sizes 3 through 6 inside a given box.
+- [x] 2.2 Red → green: a cage's outline from its cells — shared edges are interior, the rest is the
       border. Cover an L, a single cell and a disjoint pair.
-- [ ] 2.3 Red → green: where a cage's target label anchors, and that two cages never anchor on the
+- [x] 2.3 Red → green: where a cage's target label anchors, and that two cages never anchor on the
       same cell.
 
 ## 3. The board, drawn
