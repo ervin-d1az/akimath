@@ -113,6 +113,11 @@ describe("the batch reports what it spent", () => {
     const batch = generateCagedBatch({ kind: "killer", size: 5, count: 3, firstSeed: 1n }, COPY);
 
     expect(Object.keys(batch.report.refused).length).toBeGreaterThan(0);
+    // Named, not merely counted: "the squares keep repeating a digit inside a
+    // cage" and "the solver found two answers" are different problems with
+    // different fixes, and a single generic tag would hide which one is
+    // happening.
+    expect(batch.report.refused).toHaveProperty('repeated_digit_in_cage');
     const refusedTotal = Object.values(batch.report.refused).reduce((a, b) => a + b, 0);
     expect(batch.report.attempts).toBe(batch.report.accepted + refusedTotal);
   });
