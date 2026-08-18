@@ -1,6 +1,7 @@
 import { parsePuzzle, type PuzzleEnvelope, type PuzzleRejectionTag } from "@akimath/contract";
 
 import { cagedCandidate, type CagedKind } from "./caged.js";
+import { magicSquareCandidate } from "./magic-square.js";
 import { wordSearchCandidate } from "./word-search.js";
 
 /**
@@ -71,6 +72,25 @@ export function generateWordSearchBatch(
       ? "no_word_fits_the_grid"
       : { kind: candidate.kind, payload: candidate.payload as Record<string, unknown> };
   });
+}
+
+/**
+ * A batch of magic squares, every one accepted by the frozen contract.
+ *
+ * Takes no vocabulary and no kind: the format has one shape and one size knob.
+ */
+export function generateMagicSquareBatch(
+  request: SizedRequest,
+  copy: PuzzleCopy,
+): Batch {
+  return collectBatch(request.count, request.firstSeed, copy, (seed) =>
+    magicSquareCandidate(seed, request.size));
+}
+
+export interface SizedRequest {
+  readonly size: number;
+  readonly count: number;
+  readonly firstSeed: bigint;
 }
 
 export interface WordSearchRequest {

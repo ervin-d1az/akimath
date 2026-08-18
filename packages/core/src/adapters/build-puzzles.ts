@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   generateCagedBatch,
+  generateMagicSquareBatch,
   generateWordSearchBatch,
   type Batch,
   type PuzzleCopy,
@@ -26,9 +27,9 @@ import type { CagedKind } from "../puzzles/caged.js";
 const CAGED_KINDS: readonly CagedKind[] = ["kenken", "killer"];
 
 /** Every kind this generator can build. */
-type BuildableKind = CagedKind | "wordSearch";
+type BuildableKind = CagedKind | "wordSearch" | "magicSquare";
 
-const KINDS: readonly BuildableKind[] = [...CAGED_KINDS, "wordSearch"];
+const KINDS: readonly BuildableKind[] = [...CAGED_KINDS, "wordSearch", "magicSquare"];
 
 /**
  * The words a sopa de letras may hide.
@@ -88,6 +89,16 @@ const COPY: Readonly<Record<BuildableKind, PuzzleCopy>> = Object.freeze({
       "Tacha la lista: terminas cuando no queda ninguna.",
     ],
   },
+  magicSquare: {
+    tutorialSteps: [
+      "Cada fila y cada columna llegan al número de su ficha.",
+      "Ningún número se repite en todo el cuadro.",
+    ],
+    referenceSheet: [
+      "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
+      "Se usan los números del 1 al total de casillas.",
+    ],
+  },
 });
 
 function requireKind(raw: string): BuildableKind {
@@ -106,6 +117,25 @@ function requirePositive(name: string, raw: string): number {
   return value;
 }
 
+function switchKind(
+  kind: BuildableKind,
+  size: number,
+  count: number,
+  firstSeed: bigint,
+): Batch {
+  switch (kind) {
+    case "wordSearch":
+      return generateWordSearchBatch(
+        { size, count, firstSeed, vocabulary: VOCABULARY },
+        COPY[kind],
+      );
+    case "magicSquare":
+      return generateMagicSquareBatch({ size, count, firstSeed }, COPY[kind]);
+    default:
+      return generateCagedBatch({ kind, size, count, firstSeed }, COPY[kind]);
+  }
+}
+
 function main(): void {
   const kind = requireKind(flag("kind", "kenken"));
   const size = requirePositive("size", flag("size", "4"));
@@ -113,12 +143,7 @@ function main(): void {
   const firstSeed = BigInt(flag("seed", "1"));
   const out = path.resolve(flag("out", `puzzles-${kind}-${size}.json`));
 
-  const batch: Batch = kind === "wordSearch"
-    ? generateWordSearchBatch(
-        { size, count, firstSeed, vocabulary: VOCABULARY },
-        COPY[kind],
-      )
-    : generateCagedBatch({ kind, size, count, firstSeed }, COPY[kind]);
+  const batch: Batch = switchKind(kind, size, count, firstSeed);
 
   // **Written through a temporary file**, for the reason `build-pack.ts`
   // records: `> out` truncates before the producer has run, so a refusal used
