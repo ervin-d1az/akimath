@@ -205,6 +205,45 @@ describe("every endpoint the documents name is described", () => {
     );
   });
 
+  it("every operation declares every error the server can return", () => {
+    // The router answers 400, 401, 404 and 405, and a status it can emit that
+    // the contract does not describe is exactly the drift this document exists
+    // to prevent. 405 belongs to a *path* rather than an operation — a request
+    // that matched the path and no operation on it — so the conventional
+    // spelling declares it on all of them.
+    const operations = NODES.filter(
+      ({ node }) => typeof node === "object" && node !== null && "responses" in node,
+    );
+    expect(operations.length).toBeGreaterThan(0);
+
+    for (const { path, node } of operations) {
+      const responses = (node as { responses: Record<string, unknown> }).responses;
+      for (const status of ["400", "401", "404", "405"]) {
+        expect(Object.keys(responses), `\${path} is missing \${status}`).toContain(status);
+      }
+    }
+  });
+
+  it("every error response is the frozen Error shape", () => {
+    // Not merely present: a 405 declared with no body, or with some other
+    // schema, would let the router answer off-contract while this file said it
+    // could not.
+    for (const { node } of NODES) {
+      if (typeof node !== "object" || node === null || !("responses" in node)) {
+        continue;
+      }
+      const responses = (node as { responses: Record<string, unknown> }).responses;
+      for (const [status, response] of Object.entries(responses)) {
+        if (!status.startsWith("4") && !status.startsWith("5")) {
+          continue;
+        }
+        expect(JSON.stringify(response)).toContain(
+          '"$ref":"#/components/schemas/Error"',
+        );
+      }
+    }
+  });
+
   it("every operation has an operationId, and they are unique", () => {
     // ADR 0001 records that the rejected generator discarded these in favour of
     // path-derived names. The hand-written client uses them, so they have to be

@@ -35,6 +35,11 @@ const errors = {
   "400": { description: "The request was malformed.", ...(json(ref("Error")) as object) },
   "401": { description: "No valid session.", ...(json(ref("Error")) as object) },
   "404": { description: "No such resource.", ...(json(ref("Error")) as object) },
+  // A response to a request that matched a *path* and no operation on it, so it
+  // belongs to none of them and is declared on all of them — the conventional
+  // OpenAPI workaround. Declared rather than assumed, because the router
+  // returns it and a status the contract does not describe is drift.
+  "405": { description: "That method is not routed here.", ...(json(ref("Error")) as object) },
 };
 
 export function buildOpenApiDocument(): unknown {
