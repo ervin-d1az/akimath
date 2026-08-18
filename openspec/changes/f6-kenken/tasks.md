@@ -16,18 +16,18 @@
 
 ## 3. The board, drawn
 
-- [ ] 3.1 Red → green: blocked, given and open cells are told apart without hue.
-- [ ] 3.2 Red → green: selection — tapping an open cell selects it, a given or blocked one does not.
-- [ ] 3.3 Red → green: no open cell shows its solution value, swept with a reported count.
-- [ ] 3.4 Red → green: a 6×6 board keeps every cell above the minimum touch target at 390 px.
+- [x] 3.1 Red → green: blocked, given and open cells are told apart without hue.
+- [x] 3.2 Red → green: selection — tapping an open cell selects it, a given or blocked one does not.
+- [x] 3.3 Red → green: no open cell shows its solution value, swept with a reported count.
+- [x] 3.4 Red → green: a 6×6 board keeps every cell above the minimum touch target at 390 px.
 
 ## 4. Entry and grading
 
-- [ ] 4.1 Red → green: pure entry — apply, replace, clear, ignore with nothing selected, refuse a
+- [x] 4.1 Red → green: pure entry — apply, replace, clear, ignore with nothing selected, refuse a
       digit outside the domain.
-- [ ] 4.2 Red → green: solved only when every open cell matches the solution; full-but-wrong and
+- [x] 4.2 Red → green: solved only when every open cell matches the solution; full-but-wrong and
       partial are both unsolved.
-- [ ] 4.3 Red → green: the board marks no individual cell wrong (design D4).
+- [x] 4.3 Red → green: the board marks no individual cell wrong (design D4).
 
 ## 5. The puzzle screen
 
