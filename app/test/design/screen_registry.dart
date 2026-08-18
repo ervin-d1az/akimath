@@ -4,6 +4,7 @@ import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
+import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/shell/ui/app_shell.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
@@ -185,6 +186,14 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       child: HomeScreen(
         preview: registryRoundItems.single,
         streakDays: 7,
+        weekMarks: const <bool>[true, true, false, true, true, true, true],
+        todaysFamilies: const <String>[
+          'Cuentas',
+          'Series',
+          'Cuadros',
+          'Parejas',
+          'Máquina',
+        ],
         onStart: () {},
       ),
     ),
@@ -238,6 +247,22 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // registered is a family whose first overflow report comes from a player —
     // and a grid is the tallest prompt the round has had to hold.
     build: () => const RoundScreen(items: registryMatrixItems),
+  ),
+  RegisteredScreen(
+    label: 'preferences',
+    // The second root, and the reason the app has a bar at all. In the shell,
+    // because that is the only way it renders.
+    build: () => const AppShell(
+      child: PreferencesScreen(daysPractised: 12, streakDays: 5),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'preferences · nothing played',
+    // A player on their first launch. Zero rather than a dash or a gap, so the
+    // screen has no state in which it says nothing.
+    build: () => const AppShell(
+      child: PreferencesScreen(daysPractised: 0, streakDays: 0),
+    ),
   ),
   RegisteredScreen(
     label: 'verdict · acierto',

@@ -2,13 +2,13 @@ import 'package:flutter/widgets.dart';
 
 import '../../../content/model/item.dart';
 import '../../../design/brand/aki.dart';
-import '../../../design/math/math_view.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/speech_bubble.dart';
-import '../../../design/widgets/stat_pill.dart';
-import '../../round/policy/prompt_layout.dart';
+import 'bands/family_row.dart';
+import 'bands/week_strip.dart';
+import '../../round/ui/stimulus/stimulus_view.dart';
 
 /// `Inicio actualizado`, reduced to what F2 can source.
 ///
@@ -32,6 +32,8 @@ class HomeScreen extends StatelessWidget {
     required this.preview,
     required this.streakDays,
     required this.onStart,
+    this.weekMarks = const <bool>[false, false, false, false, false, false, false],
+    this.todaysFamilies = const <String>[],
   });
 
   /// The item whose expression the card previews.
@@ -42,12 +44,24 @@ class HomeScreen extends StatelessWidget {
 
   final VoidCallback onStart;
 
+  /// Seven days, oldest first, ending today — from `weekMarks`.
+  final List<bool> weekMarks;
+
+  /// The families the next series will draw — from `seriesFamilies` over the
+  /// same plan that will serve them.
+  final List<String> todaysFamilies;
+
   /// Aki's band on the home is 150, against the verdict screens' 182.
   static const double _akiWidth = 150;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    // **It scrolls** (design D2). Two bands, Aki, the card and the button do
+    // not fit 844 px at `textScaler` 1.3, and shrinking them until they do
+    // would be making the screen worse for exactly the readers who chose large
+    // text. The order puts the button above the fold at 1.0, so nobody has to
+    // scroll to start.
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(
         horizontal: BrandShape.space4,
         vertical: BrandShape.space3,
@@ -55,21 +69,19 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Align(
-            alignment: Alignment.centerRight,
-            child: StatPill(
-              child: Text('$streakDays', style: BrandText.numeral(22)),
-            ),
-          ),
-          const Spacer(),
+          WeekStrip(marks: weekMarks, streakDays: streakDays),
+          const SizedBox(height: BrandShape.space4),
           _band(),
-          const SizedBox(height: BrandShape.space5),
+          const SizedBox(height: BrandShape.space4),
           _challengeCard(),
-          const Spacer(),
-          BrandButton.primary(
-            label: 'Empezar la serie',
-            onPressed: onStart,
-          ),
+          const SizedBox(height: BrandShape.space4),
+          if (todaysFamilies.isNotEmpty) ...<Widget>[
+            FamilyRow(families: todaysFamilies),
+            const SizedBox(height: BrandShape.space4),
+          ],
+          // Last, so nothing sits below the thing the screen is asking for.
+          BrandButton.primary(label: 'Empezar la serie', onPressed: onStart),
+          const SizedBox(height: BrandShape.space3),
         ],
       ),
     );
@@ -95,18 +107,25 @@ class HomeScreen extends StatelessWidget {
       borderRadius: BrandShape.radiusCardMedium,
       padding: const EdgeInsets.symmetric(
         horizontal: BrandShape.space4,
-        vertical: BrandShape.space4,
+        vertical: BrandShape.space3,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Text('RETO DEL DÍA', style: BrandText.eyebrow()),
           const SizedBox(height: BrandShape.space3),
-          // The real compositor, not a picture of one: the preview is the same
-          // widget the round draws, so it cannot drift from the item it shows.
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: MathView(node: nodeFor(preview), size: 46),
+          // **The same renderer the round uses**, not a picture of one, so the
+          // preview cannot drift from the item it shows — and so a day whose
+          // first item is a series draws a series instead of throwing. It used
+          // to call `nodeFor` directly, which throws on anything that is not an
+          // expression.
+          // Capped, because the compositor sizes an expression to fill what it
+          // is given and a fraction is two lines tall — uncapped it made the
+          // card half the screen and pushed everything else into a scroll
+          // nobody should need on a phone at ordinary text size.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 116),
+            child: StimulusView(stimulus: preview.stimulus),
           ),
         ],
       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../home/ui/home_route.dart';
-import '../../shell/ui/app_shell.dart';
+import '../../splash/splash_screen.dart';
 import '../data/onboarding_store.dart';
 import 'onboarding_flow.dart';
 
@@ -16,13 +16,28 @@ import 'onboarding_flow.dart';
 /// and a first-run player sees the home flash before the welcome; guess
 /// *incomplete* and a returning player sees the welcome flash before the home —
 /// which is the worse of the two, because it looks like lost progress. So the
-/// gate shows the frame it is honest about: cream, empty, and gone.
+/// gate shows the frame it is honest about, which is the splash: it says the app
+/// is starting and claims nothing about which screen is coming.
 class FirstRunGate extends StatefulWidget {
   const FirstRunGate({
     super.key,
     this.store = const OnboardingStore(),
     this.home = const HomeRoute(),
+    this.splashFloor = defaultSplashFloor,
   });
+
+  /// How long the splash stays up even when there is nothing left to wait for.
+  ///
+  /// **A floor, not a delay.** Reading one boolean from `shared_preferences`
+  /// takes a few milliseconds, so without this the splash is a flicker between
+  /// the system launch image and the first real screen — which reads as a
+  /// glitch rather than as a brand. The app is not made slower: the flag is
+  /// read *while* this elapses, and a slow read simply outlasts it.
+  ///
+  /// Injectable because every widget test would otherwise pay it.
+  static const Duration defaultSplashFloor = Duration(milliseconds: 1100);
+
+  final Duration splashFloor;
 
   final OnboardingStore store;
 
@@ -48,9 +63,13 @@ class _FirstRunGateState extends State<FirstRunGate> {
   }
 
   Future<void> _load() async {
-    final bool complete = await widget.store.isComplete();
+    // Both at once, so the floor and the read overlap rather than add up.
+    final List<Object?> both = await Future.wait(<Future<Object?>>[
+      widget.store.isComplete(),
+      Future<void>.delayed(widget.splashFloor),
+    ]);
     if (mounted) {
-      setState(() => _complete = complete);
+      setState(() => _complete = both.first as bool);
     }
   }
 
@@ -71,7 +90,11 @@ class _FirstRunGateState extends State<FirstRunGate> {
   Widget build(BuildContext context) {
     final bool? complete = _complete;
     if (complete == null) {
-      return const AppShell(child: SizedBox.expand());
+      // **The splash, which until now was built and reachable from nowhere.**
+      // This is the frame the gate was already honest about — it knows only
+      // that it does not yet know — and an empty cream rectangle was the
+      // placeholder standing in for a treatment that existed the whole time.
+      return const SplashScreen(variant: SplashVariant.brandGreen);
     }
     return complete
         ? widget.home

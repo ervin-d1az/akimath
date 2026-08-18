@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../content/model/item.dart';
-import '../../../design/math/math_view.dart';
 import '../../../design/painting/spec/dash_spec.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
@@ -16,13 +15,8 @@ import '../../../design/widgets/spec/verdict.dart';
 import '../../home/data/day_log_store.dart';
 import '../policy/answer_draft.dart';
 import '../policy/grading.dart';
-import '../policy/prompt_layout.dart';
 import '../policy/streak_policy.dart';
-import 'stimulus/analogy_view.dart';
-import 'stimulus/figurate_view.dart';
-import 'stimulus/hidden_operation_view.dart';
-import 'stimulus/matrix_view.dart';
-import 'stimulus/number_series_view.dart';
+import 'stimulus/stimulus_view.dart';
 import 'verdict/verdict_screen.dart';
 
 /// The round: an item, an answer slot, a keypad, a verdict.
@@ -341,35 +335,10 @@ class _RoundScreenState extends State<RoundScreen> {
   /// whole reason `Stimulus` is sealed: `packages/contract` froze six kinds and
   /// the app ships them one at a time.
   Widget _prompt() {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: switch (_item.stimulus) {
-        ArithmeticStimulus() => MathView(node: nodeFor(_item)),
-        NumberSeriesStimulus(
-          :final List<int> terms,
-          :final int unknownIndex
-        ) =>
-          NumberSeriesView(terms: terms, unknownIndex: unknownIndex),
-        MatrixStimulus(
-          :final List<int> cells,
-          :final int size,
-          :final int unknownIndex
-        ) =>
-          MatrixView(cells: cells, size: size, unknownIndex: unknownIndex),
-        AnalogyStimulus(:final List<int> terms, :final int unknownIndex) =>
-          AnalogyView(terms: terms, unknownIndex: unknownIndex),
-        HiddenOperationStimulus(
-          :final List<({int input, int output})> examples,
-          :final int queryInput
-        ) =>
-          HiddenOperationView(examples: examples, queryInput: queryInput),
-        FigurateStimulus(
-          :final List<int> dotCounts,
-          :final int unknownIndex
-        ) =>
-          FigurateView(dotCounts: dotCounts, unknownIndex: unknownIndex),
-      },
-    );
+    // The dispatch lives in `StimulusView`, shared with the home's preview
+    // card. Two switches over one sealed type is how the two screens end up
+    // drawing different ideas of a matrix.
+    return StimulusView(stimulus: _item.stimulus);
   }
 
   Widget _answerSlot() {
