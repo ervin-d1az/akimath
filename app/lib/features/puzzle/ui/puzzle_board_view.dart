@@ -25,6 +25,7 @@ class PuzzleBoardView extends StatelessWidget {
     required this.onTapCell,
     this.rowTargets = const <int>[],
     this.columnTargets = const <int>[],
+    this.runs = const <Run>[],
   });
 
   final PuzzleEntry entry;
@@ -39,6 +40,10 @@ class PuzzleBoardView extends StatelessWidget {
   /// the same grid at the same size, and only one has labels beside it.
   final List<int> rowTargets;
   final List<int> columnTargets;
+
+  /// The runs whose sums are clued on the board. Empty for every format but
+  /// Kakuro.
+  final List<Run> runs;
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +131,31 @@ class PuzzleBoardView extends StatelessWidget {
     );
   }
 
+  /// The clues a cell begins, if any.
+  ///
+  /// **Anchored to the run's own first cell** rather than a preceding blocked
+  /// cell (design D2). Newspaper Kakuro splits the two sums into the black
+  /// square before a run; the frozen format does not promise one exists — the
+  /// golden fixture has a run starting at column 0 with nothing to its left.
+  ///
+  /// A cell may begin both an across and a down run, and both are shown: one
+  /// that hid the other would hide a constraint the player needs.
+  ({String? across, String? down}) _cluesAt(Cell cell) {
+    String? across;
+    String? down;
+    for (final Run run in runs) {
+      if (run.cells.first != cell) {
+        continue;
+      }
+      if (run.isAcross) {
+        across = '${run.sum}';
+      } else {
+        down = '${run.sum}';
+      }
+    }
+    return (across: across, down: down);
+  }
+
   Widget _positioned(Rect box, int row, int col, Map<Cell, Cage> cageOf) {
     final Cell cell = Cell(row: row, col: col);
     final Rect rect =
@@ -144,6 +174,7 @@ class PuzzleBoardView extends StatelessWidget {
         // Only the cage's anchor carries the target, so a five-cell cage shows
         // its sum once rather than five times.
         target: cage != null && _isAnchor(cage, cell) ? _label(cage) : null,
+        clues: _cluesAt(cell),
         onTap: () => onTapCell(cell),
       ),
     );
@@ -188,6 +219,7 @@ class _Cell extends StatelessWidget {
     required this.entry,
     required this.edges,
     required this.target,
+    required this.clues,
     required this.onTap,
   });
 
@@ -195,6 +227,10 @@ class _Cell extends StatelessWidget {
   final PuzzleEntry entry;
   final CageEdges? edges;
   final String? target;
+
+  /// The run sums this cell begins, along and down.
+  final ({String? across, String? down}) clues;
+
   final VoidCallback onTap;
 
   PuzzleCellKind get _kind {
@@ -240,6 +276,26 @@ class _Cell extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.all(2),
                   child: Text(target!, style: BrandText.eyebrow(size: 10)),
+                ),
+              // Across at the top, down at the bottom-left — the directions
+              // they read in, so the pairing needs no legend.
+              if (clues.across != null)
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Text('${clues.across}→',
+                        style: BrandText.eyebrow(size: 9)),
+                  ),
+                ),
+              if (clues.down != null)
+                Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Text('${clues.down}↓',
+                        style: BrandText.eyebrow(size: 9)),
+                  ),
                 ),
               if (value != null)
                 Center(

@@ -339,6 +339,36 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
+    label: 'puzzle · kakuro 3x3',
+    // Clues inside the grid rather than in a margin, and a cell that carries
+    // two of them — the densest a cell gets.
+    build: () => PuzzleScreen(
+      puzzle: KakuroPuzzle(
+        board: PuzzleBoard(
+          size: 3,
+          blocked: <Cell>{const Cell(row: 0, col: 0)},
+          given: <Cell>{const Cell(row: 1, col: 0)},
+          solution: const <List<int>>[
+            <int>[0, 1, 3],
+            <int>[4, 2, 9],
+            <int>[6, 8, 5],
+          ],
+          highestValue: 9,
+        ),
+        runs: const <Run>[
+          Run(cells: <Cell>[Cell(row: 0, col: 1), Cell(row: 0, col: 2)], sum: 4),
+          Run(cells: <Cell>[Cell(row: 1, col: 0), Cell(row: 1, col: 1), Cell(row: 1, col: 2)], sum: 15),
+          Run(cells: <Cell>[Cell(row: 2, col: 0), Cell(row: 2, col: 1), Cell(row: 2, col: 2)], sum: 19),
+          Run(cells: <Cell>[Cell(row: 1, col: 0), Cell(row: 2, col: 0)], sum: 10),
+          Run(cells: <Cell>[Cell(row: 0, col: 1), Cell(row: 1, col: 1), Cell(row: 2, col: 1)], sum: 11),
+          Run(cells: <Cell>[Cell(row: 0, col: 2), Cell(row: 1, col: 2), Cell(row: 2, col: 2)], sum: 17),
+        ],
+        tutorialSteps: const <String>['Cada tramo suma su pista.'],
+        referenceSheet: const <String>['Solo se usan los dígitos del 1 al 9.'],
+      ),
+    ),
+  ),
+  RegisteredScreen(
     label: 'preferences',
     // The second root, and the reason the app has a bar at all. In the shell,
     // because that is the only way it renders.

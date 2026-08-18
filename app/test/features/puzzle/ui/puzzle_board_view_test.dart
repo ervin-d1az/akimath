@@ -271,6 +271,70 @@ void main() {
     });
   });
 
+  group('a run says what it must total, where it starts', () {
+    Future<void> pumpRuns(WidgetTester tester, List<Run> runs) async {
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 330,
+                child: PuzzleBoardView(
+                  entry: PuzzleEntry.of(_board()),
+                  cages: const <Cage>[],
+                  runs: runs,
+                  onTapCell: (Cell cell) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('an across run is clued on its first cell',
+        (WidgetTester tester) async {
+      await pumpRuns(tester, const <Run>[
+        Run(cells: <Cell>[Cell(row: 0, col: 0), Cell(row: 0, col: 1)], sum: 7),
+      ]);
+      expect(find.text('7→'), findsOneWidget);
+    });
+
+    testWidgets('a cell starting two runs shows both',
+        (WidgetTester tester) async {
+      // One that hid the other would hide a constraint the player needs.
+      await pumpRuns(tester, const <Run>[
+        Run(cells: <Cell>[Cell(row: 0, col: 0), Cell(row: 0, col: 1)], sum: 7),
+        Run(cells: <Cell>[Cell(row: 0, col: 0), Cell(row: 1, col: 0)], sum: 12),
+      ]);
+
+      expect(find.text('7→'), findsOneWidget);
+      expect(find.text('12↓'), findsOneWidget);
+    });
+
+    testWidgets('a run starting at the edge is still clued',
+        (WidgetTester tester) async {
+      // A Kakuro's clues do not always have a blocked cell to live in — the
+      // frozen golden has a run starting at column 0 with nothing to its left.
+      await pumpRuns(tester, const <Run>[
+        Run(cells: <Cell>[Cell(row: 2, col: 0), Cell(row: 2, col: 1)], sum: 9),
+      ]);
+      expect(find.text('9→'), findsOneWidget);
+    });
+
+    testWidgets('a board with no runs shows no clue',
+        (WidgetTester tester) async {
+      await _pump(tester);
+      expect(find.textContaining('→'), findsNothing);
+      expect(find.textContaining('↓'), findsNothing);
+    });
+  });
+
   group('only open cells respond', () {
     testWidgets('tapping an open cell selects it', (WidgetTester tester) async {
       PuzzleEntry entry = PuzzleEntry.of(_board());
