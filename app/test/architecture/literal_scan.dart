@@ -278,3 +278,30 @@ int _lineAt(String source, int offset) =>
 
 String _collapseWhitespace(String matched) =>
     matched.replaceAll(RegExp(r'\s+'), '');
+
+/// A store held by a screen that should only report.
+///
+/// **Scoped to `features/puzzle/`, and the scope is the decision.** The two
+/// puzzle screens commit differently — a value on a board, a word claimed —
+/// so the moment a day is recorded differs while the *rule* does not. Putting
+/// the store in both would put one IO decision in two places, free to diverge
+/// the first time either screen changed. They report `onPractised`; the route
+/// records.
+///
+/// **`RoundScreen` does take a store, and this gate deliberately does not cover
+/// it.** There is one round screen, so the duplication argument does not apply
+/// to it, and moving its store out is a change with its own reasoning and its
+/// own tests — folding it in here would hide this one inside it. A gate scoped
+/// to where the rule holds is worth more than a gate with a named violator in
+/// its allowlist.
+const List<ScanRoot> storeFreeScreenRoots = <ScanRoot>[
+  ScanRoot(prefix: 'features/puzzle/'),
+];
+
+final List<LiteralPattern> storePatterns = <LiteralPattern>[
+  LiteralPattern('DayLogStore', r'(?<![A-Za-z0-9_$])DayLogStore(?![A-Za-z0-9_$])'),
+  LiteralPattern(
+    'SeriesCursorStore',
+    r'(?<![A-Za-z0-9_$])SeriesCursorStore(?![A-Za-z0-9_$])',
+  ),
+];

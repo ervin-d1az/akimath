@@ -8,6 +8,7 @@ import 'package:akimath_app/features/home/policy/day_log.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/home/policy/puzzle_menu.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
+import 'package:akimath_app/features/puzzle/ui/puzzle_board_view.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
@@ -54,6 +55,74 @@ const String _pack = '''
         {"kind": "text", "value": "7"},
         {"kind": "operator", "glyph": "="}
       ]
+    }
+  ]
+}
+''';
+
+/// The same pack with two puzzles: one of each screen.
+///
+/// A hand-written pack rather than the shipped asset, because these tests are
+/// about *recording* and not about what ships — and `rootBundle` is a global
+/// whose cache outlives a test, which is a dependency worth not having.
+const String _puzzlePack = '''
+{
+  "pack_version": 1,
+  "pack_id": "test",
+  "issued_at": "2026-08-01T00:00:00Z",
+  "expires_at": "2099-01-01T00:00:00Z",
+  "items": [
+    {
+      "id": "a1",
+      "ladder_step": 2,
+      "answer": "42",
+      "prompt": [
+        {"kind": "text", "value": "6"},
+        {"kind": "operator", "glyph": "×"},
+        {"kind": "text", "value": "7"},
+        {"kind": "operator", "glyph": "="}
+      ]
+    }
+  ],
+  "puzzles": [
+    {
+      "kind": "kenken",
+      "payload": {
+        "board": {
+          "size": 3,
+          "blocked": [],
+          "given": [],
+          "solution": [[1, 2, 3], [2, 3, 1], [3, 1, 2]]
+        },
+        "cages": [
+          {
+            "cells": [
+              {"row": 0, "col": 0}, {"row": 0, "col": 1}, {"row": 0, "col": 2},
+              {"row": 1, "col": 0}, {"row": 1, "col": 1}, {"row": 1, "col": 2},
+              {"row": 2, "col": 0}, {"row": 2, "col": 1}, {"row": 2, "col": 2}
+            ],
+            "operation": "+",
+            "target": 18
+          }
+        ]
+      },
+      "tutorial_steps": ["Cada fila lleva 1, 2 y 3."],
+      "reference_sheet": ["No se repite en su fila ni en su columna."]
+    },
+    {
+      "kind": "wordSearch",
+      "payload": {
+        "grid": [
+          ["S", "U", "M", "A"],
+          ["C", "Y", "Z", "W"],
+          ["E", "D", "F", "G"],
+          ["R", "H", "I", "J"],
+          ["O", "K", "L", "N"]
+        ],
+        "words": ["SUMA", "CERO"]
+      },
+      "tutorial_steps": ["Arrastra de la primera letra a la última."],
+      "reference_sheet": ["Las palabras van en ocho direcciones."]
     }
   ]
 }
@@ -314,6 +383,102 @@ void main() {
   group('every shipped puzzle can be started', () {
     testWidgets('each one opens from the home and comes back',
         _reachEveryPuzzle);
+  });
+
+  group('working on a puzzle records the day', () {
+    /// Opens the named puzzle and returns the tester to it. The home scrolls,
+    /// so the card has to be brought into view first.
+    Future<void> openPuzzle(WidgetTester tester, String label) async {
+      final Finder card = find.text(label);
+      await tester.scrollUntilVisible(card, 120);
+      await tester.tap(card);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> leavePuzzle(WidgetTester tester) async {
+      await tester.tap(find.byWidgetPredicate(
+        (Widget w) => w is Semantics && w.properties.label == 'Salir',
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> typeOnTheBoard(WidgetTester tester) async {
+      await tester.tap(find.byType(PuzzleBoardView));
+      await tester.pump();
+      await tester.tap(find.byWidgetPredicate(
+        (Widget w) => w is KeypadKeyView && w.data.id == '1',
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the streak rises after a board without relaunching',
+        (WidgetTester tester) async {
+      // The gap this closes: five quick items earned a day and twenty minutes
+      // on a KenKen earned nothing.
+      final DayLogStore store = InMemoryDayLogStore(DayLog.empty);
+      await _pump(tester, source: _puzzlePack, dayLog: store);
+      await tester.pumpAndSettle();
+      expect(find.text('0 DÍAS'), findsOneWidget);
+
+      await openPuzzle(tester, 'KenKen');
+      await typeOnTheBoard(tester);
+      await leavePuzzle(tester);
+
+      expect(find.text('1 DÍA'), findsOneWidget);
+    });
+
+    testWidgets('the streak rises after a word claimed',
+        (WidgetTester tester) async {
+      final DayLogStore store = InMemoryDayLogStore(DayLog.empty);
+      await _pump(tester, source: _puzzlePack, dayLog: store);
+      await tester.pumpAndSettle();
+
+      await openPuzzle(tester, 'Sopa de letras');
+      // SUMA runs along the top row. The grid hides a second word, so claiming
+      // this one is practice without also finishing the puzzle — which would
+      // pop the screen and make the assertion about solving instead.
+      final TestGesture gesture =
+          await tester.startGesture(tester.getCenter(find.text('S')));
+      for (final String letter in <String>['U', 'M', 'A']) {
+        await gesture.moveTo(tester.getCenter(find.text(letter)));
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
+      await leavePuzzle(tester);
+
+      expect(find.text('1 DÍA'), findsOneWidget);
+    });
+
+    testWidgets('opening one and leaving records nothing',
+        (WidgetTester tester) async {
+      // Opening a screen is not practice, and a card that paid a streak day
+      // for a tap would make the number meaningless.
+      final DayLogStore store = InMemoryDayLogStore(DayLog.empty);
+      await _pump(tester, source: _puzzlePack, dayLog: store);
+      await tester.pumpAndSettle();
+
+      await openPuzzle(tester, 'KenKen');
+      await leavePuzzle(tester);
+
+      expect(find.text('0 DÍAS'), findsOneWidget);
+      expect((await store.read()).days, isEmpty);
+    });
+
+    testWidgets('a series and a puzzle on the same day count once',
+        (WidgetTester tester) async {
+      // `DayLog` holds days and never moments, so this is the store's property
+      // — asserted through both surfaces, because that is where it would break.
+      final DayLogStore store = InMemoryDayLogStore(DayLog.empty);
+      await _pump(tester, source: _puzzlePack, dayLog: store);
+      await tester.pumpAndSettle();
+
+      await openPuzzle(tester, 'KenKen');
+      await typeOnTheBoard(tester);
+      await leavePuzzle(tester);
+
+      expect(find.text('1 DÍA'), findsOneWidget);
+      expect((await store.read()).days, hasLength(1));
+    });
   });
 
   group('playing records the day', () {

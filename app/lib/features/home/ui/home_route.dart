@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../content/model/item.dart';
@@ -147,6 +149,11 @@ class _HomeRouteState extends State<HomeRoute> {
       fullScreenSession<void>(
         (BuildContext sessionContext) {
           void leave() => Navigator.of(sessionContext).pop();
+          // **The route records, the screens report** (design D3). The two
+          // formats commit differently — a value on a board, a word claimed —
+          // and the same IO decision written into both screens would be free
+          // to diverge the first time one of them changed.
+          void practised() => unawaited(_dayLog.record(widget.now()));
           // **Exhaustive over the sealed type**, so a sixth format outside
           // `BoardPuzzle` is a compile error rather than a screen that never
           // opens. It replaced an `is! KenKenPuzzle` guard that returned
@@ -157,6 +164,7 @@ class _HomeRouteState extends State<HomeRoute> {
                 puzzle: puzzle,
                 onClose: leave,
                 onSolved: leave,
+                onPractised: practised,
               ),
             // Every numeric board is the same screen: it takes the board, the
             // pad and the entry policy from the puzzle itself.
@@ -164,11 +172,17 @@ class _HomeRouteState extends State<HomeRoute> {
                 puzzle: puzzle,
                 onClose: leave,
                 onSolved: leave,
+                onPractised: practised,
               ),
           };
         },
       ),
     );
+    // The puzzle may have recorded today. Re-read rather than add a day to what
+    // this screen holds: the store is the source of truth, and a screen that
+    // increments locally is how it ends up showing a figure the store would not
+    // yield.
+    await _refreshLog();
   }
 
   /// Pushes a series, and brings the player back when it ends.

@@ -24,11 +24,22 @@ class WordSearchScreen extends StatefulWidget {
     required this.puzzle,
     this.onClose,
     this.onSolved,
+    this.onPractised,
   });
 
   final WordSearchPuzzle puzzle;
   final VoidCallback? onClose;
   final VoidCallback? onSolved;
+
+  /// Called once, the first time a word is claimed.
+  ///
+  /// **A successful claim, not any trace** (design D2). A line that spells
+  /// nothing is this format's analogue of a gesture that was never submitted,
+  /// not of a wrong answer: the player has asserted nothing about the puzzle.
+  ///
+  /// The screen reports; the route records. It holds no store, for the reason
+  /// `PuzzleScreen.onPractised` gives.
+  final VoidCallback? onPractised;
 
   @override
   State<WordSearchScreen> createState() => _WordSearchScreenState();
@@ -39,6 +50,7 @@ class _WordSearchScreenState extends State<WordSearchScreen> {
       WordSearchProgress(puzzle: widget.puzzle);
   List<Cell> _trace = <Cell>[];
   bool _reported = false;
+  bool _practised = false;
   bool _rulesOpen = false;
 
   int get _columns => widget.puzzle.grid.first.length;
@@ -52,10 +64,15 @@ class _WordSearchScreenState extends State<WordSearchScreen> {
 
   void _release() {
     final WordSearchProgress next = _progress.claim(_trace);
+    final bool claimed = next.found.length > _progress.found.length;
     setState(() {
       _progress = next;
       _trace = <Cell>[];
     });
+    if (!_practised && claimed) {
+      _practised = true;
+      widget.onPractised?.call();
+    }
     if (!_reported && next.isSolved) {
       _reported = true;
       widget.onSolved?.call();
