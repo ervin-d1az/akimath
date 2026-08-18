@@ -61,12 +61,12 @@
 
 ## 6. The CLI and the artifact
 
-- [ ] 6.1 Red → green: the builder refuses to write a pack the frozen validator rejects, reporting
+- [x] 6.1 Red → green: the builder refuses to write a pack the frozen validator rejects, reporting
       the tag and exiting non-zero (req-builder-refuses-invalid).
-- [ ] 6.2 Red → green: output is written to a temporary path and moved into place only after
+- [x] 6.2 Red → green: output is written to a temporary path and moved into place only after
       validation, so a failed build leaves any previous artifact untouched.
-- [ ] 6.3 Add `npm run build:pack` and emit the committed artifact.
-- [ ] 6.4 Add the emit-and-diff step to the `core` CI job, staged before comparison the way the
+- [x] 6.3 Add `npm run build:pack` and emit the committed artifact.
+- [x] 6.4 Add the emit-and-diff step to the `core` CI job, staged before comparison the way the
       `contract` job already does it (req-builder-artifact-committed).
 
 ## 7. Evidence

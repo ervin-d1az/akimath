@@ -1,0 +1,21 @@
+{
+  "pack_salt": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+  "seed_base": "1000",
+  "issued_at": "2026-08-18T00:00:00.000Z",
+  "expires_at": "2026-11-18T00:00:00.000Z",
+  "sources": [
+    {
+      "kind": "authored",
+      "path": "../../../app/assets/packs/starter.json",
+      "skill_id": 1
+    },
+    {
+      "kind": "template",
+      "template_id": "arith.integer.subtract",
+      "template_version": 2,
+      "ladder_step": 3,
+      "count": 10,
+      "skill_id": 1
+    }
+  ]
+}

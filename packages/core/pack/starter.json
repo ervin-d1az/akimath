@@ -1,0 +1,2332 @@
+{
+  "pack_format_version": 1,
+  "pack_salt": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+  "issued_at": "2026-08-18T00:00:00.000Z",
+  "expires_at": "2026-11-18T00:00:00.000Z",
+  "skill_nodes": [
+    {
+      "skill_id": 1,
+      "state": "available"
+    }
+  ],
+  "skill_fallbacks": [
+    {
+      "skill_id": 1,
+      "diagnosis": {
+        "misconception": "no_specific_diagnosis",
+        "steps": [
+          "Lee otra vez el reto, sin prisa.",
+          "Rehaz la cuenta paso por paso.",
+          "Comprueba el resultado antes de enviarlo."
+        ],
+        "explain": "Repasa el reto con calma: vuelve a leer los números, rehaz la cuenta paso por paso y compara lo que te salió con lo que pedía el reto."
+      }
+    }
+  ],
+  "items": [
+    {
+      "skill_id": 1,
+      "ladder_step": 1,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "+",
+          "left": {
+            "num": 7,
+            "den": 1
+          },
+          "right": {
+            "num": 6,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "1805e3332067e547850b358798b2b4d8a307ce105151b9e837b37b6e49a0b3fe"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 2,
+              "right": 4
+            },
+            {
+              "left": 5,
+              "right": 10
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "63242bff5699b4baf65b36cb91cf2576182591c90b0ada950db2c81891aeb978"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "63242bff5699b4baf65b36cb91cf2576182591c90b0ada950db2c81891aeb978"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 2,
+              "output": 7
+            },
+            {
+              "input": 7,
+              "output": 12
+            }
+          ],
+          "query_input": 10
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "4d39addafab96546a14fad4b8c4341067010511cc7b399a5b87bd10c874cd928"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 2,
+          "cells": [
+            1,
+            2,
+            3,
+            6
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "6a321c88dcb5dc3b11608b53a5a74046353a3bdaf225716468950be7d052c8c4"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 1,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "unknown_index": 4
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "63242bff5699b4baf65b36cb91cf2576182591c90b0ada950db2c81891aeb978"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "+",
+          "left": {
+            "num": 28,
+            "den": 1
+          },
+          "right": {
+            "num": 14,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "d02675b3790287adf013d945ed6428df33353d880e39c9b65328e47893629cbb"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 1,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 15,
+            "den": 1
+          },
+          "right": {
+            "num": 9,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "6a321c88dcb5dc3b11608b53a5a74046353a3bdaf225716468950be7d052c8c4"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 3,
+              "right": 6
+            },
+            {
+              "left": 7,
+              "right": 14
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "e2ceef913b21d03e83e2ab2a0b177b177ab29affb0bd05df27d49c8c63b561bd"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 4
+            },
+            {
+              "dots": 9
+            },
+            {
+              "dots": 16
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "0167ba4f4f71f15498fd6baa2408962bd85082c4d318c1e845be2d7ac7048250"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 2,
+              "output": 6
+            },
+            {
+              "input": 4,
+              "output": 12
+            }
+          ],
+          "query_input": 7
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "ac4bfbe0f8307882d364b5810663b2dd019051b3ca452047d74f188b5dede212"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 2,
+          "cells": [
+            2,
+            4,
+            5,
+            10
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "63242bff5699b4baf65b36cb91cf2576182591c90b0ada950db2c81891aeb978"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 1,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            5,
+            10,
+            15,
+            20,
+            25
+          ],
+          "unknown_index": 2
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "4d39addafab96546a14fad4b8c4341067010511cc7b399a5b87bd10c874cd928"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 8,
+            "den": 1
+          },
+          "right": {
+            "num": 15,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "ea24fac08259a1a1a370bb1e138d4def1710d6b9f5a2e6bc42f105f6a7b08bde"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "×",
+          "left": {
+            "num": 6,
+            "den": 1
+          },
+          "right": {
+            "num": 7,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "d02675b3790287adf013d945ed6428df33353d880e39c9b65328e47893629cbb"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 10,
+              "right": 5
+            },
+            {
+              "left": 8,
+              "right": 4
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "bbd4422b5fdd2bab5a5c747b901b52842415227dae62fcce93329dd52a3ef663"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            },
+            {
+              "dots": 15
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "4d39addafab96546a14fad4b8c4341067010511cc7b399a5b87bd10c874cd928"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 1,
+              "output": 3
+            },
+            {
+              "input": 4,
+              "output": 9
+            },
+            {
+              "input": 6,
+              "output": 13
+            }
+          ],
+          "query_input": 9
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "e31959147283241d3e917bb5209f4c7077fb1451391dd1e652d28e2b0fba7e05"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 2,
+          "cells": [
+            10,
+            20,
+            30,
+            60
+          ],
+          "unknown_index": 2
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "dc8139f12da55d2bb99724c8aeae7610ea724d5f7955c90870973612b77eac79"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            1,
+            4,
+            7,
+            10,
+            13
+          ],
+          "unknown_index": 4
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "1805e3332067e547850b358798b2b4d8a307ce105151b9e837b37b6e49a0b3fe"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "×",
+          "left": {
+            "num": 14,
+            "den": 1
+          },
+          "right": {
+            "num": 3,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "d02675b3790287adf013d945ed6428df33353d880e39c9b65328e47893629cbb"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "×",
+          "left": {
+            "num": 12,
+            "den": 1
+          },
+          "right": {
+            "num": 12,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "9e6bdac4e80f7769894d597ef51dae90417a712e500af2a3e93020ad0329a283"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 2,
+              "right": 5
+            },
+            {
+              "left": 6,
+              "right": 9
+            }
+          ],
+          "unknown_index": 1
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "46d40eb621d202ea1548ff90e646b009e904f8064d52d01c00222ae3c9751d8e"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            }
+          ],
+          "unknown_index": 2
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "6a321c88dcb5dc3b11608b53a5a74046353a3bdaf225716468950be7d052c8c4"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 10,
+              "output": 6
+            },
+            {
+              "input": 15,
+              "output": 11
+            }
+          ],
+          "query_input": 22
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8b1527681a1b7b4f63cb15e0f714fdf79bb941d7c5848cb66a57c2096330cd7b"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 3,
+          "cells": [
+            1,
+            2,
+            3,
+            2,
+            4,
+            6,
+            3,
+            6,
+            9
+          ],
+          "unknown_index": 8
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8df1c1b4287c4ca37524c3d4ecdef2eb04d41eb397d13ce36cc679ee2045236a"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            3,
+            6,
+            12,
+            24,
+            48
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "5f1cc05f0c8b45caac6d40d9ac23b260fee7074dc7957af8a774f5869a91cdd1"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "÷",
+          "left": {
+            "num": 96,
+            "den": 1
+          },
+          "right": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "5f1cc05f0c8b45caac6d40d9ac23b260fee7074dc7957af8a774f5869a91cdd1"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "÷",
+          "left": {
+            "num": 144,
+            "den": 1
+          },
+          "right": {
+            "num": 12,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "9da906ed607d4db43ab7bd202270f2c321d92e0171d496abf66a71b988499d46"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 4,
+              "right": 16
+            },
+            {
+              "left": 5,
+              "right": 25
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "eaf998bbf5684d057c5e1d7dd07f0c4e5ff77a152e097562c85b16f9c5b066c4"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 4
+            },
+            {
+              "dots": 9
+            }
+          ],
+          "unknown_index": 2
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8df1c1b4287c4ca37524c3d4ecdef2eb04d41eb397d13ce36cc679ee2045236a"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 2,
+              "output": 4
+            },
+            {
+              "input": 3,
+              "output": 9
+            },
+            {
+              "input": 5,
+              "output": 25
+            }
+          ],
+          "query_input": 7
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "fecfce66b66e2a11557cea73473540b25782edf5d500549feab9f9e86f164a51"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 3,
+          "cells": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "unknown_index": 4
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "46d40eb621d202ea1548ff90e646b009e904f8064d52d01c00222ae3c9751d8e"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            100,
+            90,
+            80,
+            70,
+            60
+          ],
+          "unknown_index": 0
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "a1441dc4e504469d38301cd416b70d14699ff08228891b66b3a1489cefcdb823"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "÷",
+          "left": {
+            "num": 81,
+            "den": 1
+          },
+          "right": {
+            "num": 9,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8df1c1b4287c4ca37524c3d4ecdef2eb04d41eb397d13ce36cc679ee2045236a"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "+",
+          "left": {
+            "num": 3,
+            "den": 4
+          },
+          "right": {
+            "num": 2,
+            "den": 4
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "31eaa48818834a6b32ec5861deb95ee3927118048d38dd1fd5d193185f63e7ca"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 12,
+              "right": 4
+            },
+            {
+              "left": 21,
+              "right": 7
+            }
+          ],
+          "unknown_index": 2
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "ac4bfbe0f8307882d364b5810663b2dd019051b3ca452047d74f188b5dede212"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 5,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            },
+            {
+              "dots": 15
+            },
+            {
+              "dots": 21
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "ac4bfbe0f8307882d364b5810663b2dd019051b3ca452047d74f188b5dede212"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 2,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 3,
+              "output": 30
+            },
+            {
+              "input": 8,
+              "output": 80
+            }
+          ],
+          "query_input": 12
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "5a1c2e4c3fa19944814b57c2765c1e3741f2e373437bc04bd23b7e97233128ab"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 5,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 3,
+          "cells": [
+            2,
+            4,
+            6,
+            4,
+            8,
+            12,
+            6,
+            12,
+            18
+          ],
+          "unknown_index": 5
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "9da906ed607d4db43ab7bd202270f2c321d92e0171d496abf66a71b988499d46"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            1,
+            4,
+            9,
+            16,
+            25
+          ],
+          "unknown_index": 2
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8df1c1b4287c4ca37524c3d4ecdef2eb04d41eb397d13ce36cc679ee2045236a"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "+",
+          "left": {
+            "num": 1,
+            "den": 5
+          },
+          "right": {
+            "num": 3,
+            "den": 5
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "87e3e56191e8884a711bcc654d4405b1936e4cbe3054a0a99599385b82fc834d"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 5,
+            "den": 8
+          },
+          "right": {
+            "num": 1,
+            "den": 8
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "e0429f806c494445eb1d001db98e02abca39f832580373082c8eb48571a1a185"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 1,
+              "right": 10
+            },
+            {
+              "left": 4,
+              "right": 40
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "1911e0e536b1950de9c2cfe86161c26a18862176829ec2bcb97a795356fb2416"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 5,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 4
+            },
+            {
+              "dots": 9
+            },
+            {
+              "dots": 16
+            },
+            {
+              "dots": 25
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "eaf998bbf5684d057c5e1d7dd07f0c4e5ff77a152e097562c85b16f9c5b066c4"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 2,
+              "output": 6
+            },
+            {
+              "input": 5,
+              "output": 18
+            },
+            {
+              "input": 6,
+              "output": 22
+            }
+          ],
+          "query_input": 9
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "dcf49a35532f0ca47a9b9b7e2b8318feb9f954d6d38655fc201d56ffd80a444a"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 5,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 3,
+          "cells": [
+            5,
+            10,
+            15,
+            10,
+            20,
+            30,
+            15,
+            30,
+            45
+          ],
+          "unknown_index": 0
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "46d40eb621d202ea1548ff90e646b009e904f8064d52d01c00222ae3c9751d8e"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            2,
+            6,
+            18,
+            54,
+            162
+          ],
+          "unknown_index": 4
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "f29982be1e21a023cf28c57d757b19d4757ff451ac3126d16231e21b7379b1ef"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 7,
+            "den": 9
+          },
+          "right": {
+            "num": 2,
+            "den": 9
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "628899959a6753abd5b9fb726687a86aaf2dd838ce275026cd5769a668042c7c"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "+",
+          "left": {
+            "num": 1,
+            "den": 2
+          },
+          "right": {
+            "num": 1,
+            "den": 3
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "46e7ad1f047791d40c2ad8e6bcdbb0359434effcd5ea67bb1fd94d22c0524e76"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 5,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 9,
+              "right": 3
+            },
+            {
+              "left": 25,
+              "right": 5
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "46d40eb621d202ea1548ff90e646b009e904f8064d52d01c00222ae3c9751d8e"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            }
+          ],
+          "unknown_index": 1
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "0ca6a930edb340cdbcb551f7c37a488bb18f734e342e7d4a3245ec705aed66ee"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 8,
+              "output": 4
+            },
+            {
+              "input": 14,
+              "output": 7
+            }
+          ],
+          "query_input": 20
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "63242bff5699b4baf65b36cb91cf2576182591c90b0ada950db2c81891aeb978"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 6,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 3,
+          "cells": [
+            1,
+            3,
+            9,
+            2,
+            6,
+            18,
+            3,
+            9,
+            27
+          ],
+          "unknown_index": 7
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8df1c1b4287c4ca37524c3d4ecdef2eb04d41eb397d13ce36cc679ee2045236a"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            1,
+            1,
+            2,
+            3,
+            5,
+            8
+          ],
+          "unknown_index": 5
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "53b9fba0adb46bb8ae149653af8c818aec976a83f9dbfca71e583f6ec4c40f30"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 5,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "+",
+          "left": {
+            "num": 2,
+            "den": 3
+          },
+          "right": {
+            "num": 1,
+            "den": 4
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "43c6cfba5afa091363fc79b7c18656e2edaf344b5f06d09bae2f55b2835e326c"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 5,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 3,
+            "den": 4
+          },
+          "right": {
+            "num": 1,
+            "den": 6
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "4f9b0824ca19929ed72a825510168a6f7b1f582bf0a3ac56557f97a92dd7040b"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 7,
+              "right": 14
+            },
+            {
+              "left": 11,
+              "right": 22
+            }
+          ],
+          "unknown_index": 0
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8b28f72ad4c98ae785199ef630a300f2fe2a845dc06c9904e9378d7ded224e6b"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 5,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 1
+            },
+            {
+              "dots": 4
+            },
+            {
+              "dots": 9
+            },
+            {
+              "dots": 16
+            }
+          ],
+          "unknown_index": 2
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8df1c1b4287c4ca37524c3d4ecdef2eb04d41eb397d13ce36cc679ee2045236a"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 5,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 1,
+              "output": 2
+            },
+            {
+              "input": 3,
+              "output": 10
+            },
+            {
+              "input": 4,
+              "output": 17
+            }
+          ],
+          "query_input": 6
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "118225c3020b3b026e85fd19af97e85c8ae95e4f6d49a38d4fccb798692be69d"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 3,
+          "cells": [
+            9,
+            8,
+            7,
+            6,
+            5,
+            4,
+            3,
+            2,
+            1
+          ],
+          "unknown_index": 4
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "46d40eb621d202ea1548ff90e646b009e904f8064d52d01c00222ae3c9751d8e"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            64,
+            32,
+            16,
+            8,
+            4
+          ],
+          "unknown_index": 1
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "fbd67243a5921d623d627768046486f8340ca38129a6efc09d19263422c90e9f"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "+",
+          "left": {
+            "num": 1,
+            "den": 2
+          },
+          "right": {
+            "num": 2,
+            "den": 5
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "fa78f2a23a65f325f8f64bc6beee65f9c5405f1ccc86e2ceaf19c15b3bca56f9"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "×",
+          "left": {
+            "num": 2,
+            "den": 1
+          },
+          "right": {
+            "num": 3,
+            "den": 4
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "a6d53d342f8303acaa075c3e66feffdaf9ba43fcdf16646687b28a753dd21e98"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 6,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "analogy",
+        "payload": {
+          "pairs": [
+            {
+              "left": 2,
+              "right": 8
+            },
+            {
+              "left": 3,
+              "right": 27
+            }
+          ],
+          "unknown_index": 3
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "355b37821a2268eb6a696452ab9f40f16e760b55b8f217bd40dae7af161696eb"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "figurate",
+        "payload": {
+          "figures": [
+            {
+              "dots": 3
+            },
+            {
+              "dots": 6
+            },
+            {
+              "dots": 10
+            }
+          ],
+          "unknown_index": 0
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "0ca6a930edb340cdbcb551f7c37a488bb18f734e342e7d4a3245ec705aed66ee"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "hiddenOperation",
+        "payload": {
+          "examples": [
+            {
+              "input": 4,
+              "output": 16
+            },
+            {
+              "input": 9,
+              "output": 11
+            }
+          ],
+          "query_input": 13
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8b28f72ad4c98ae785199ef630a300f2fe2a845dc06c9904e9378d7ded224e6b"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 6,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "matrix",
+        "payload": {
+          "size": 3,
+          "cells": [
+            1,
+            4,
+            9,
+            4,
+            16,
+            36,
+            9,
+            36,
+            81
+          ],
+          "unknown_index": 8
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8a91aef026c52c3ed0732b36282bd5a9c71edc90d8ab5e89b9525d7f4e3fc159"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "numberSeries",
+        "payload": {
+          "terms": [
+            2,
+            5,
+            11,
+            23,
+            47
+          ],
+          "unknown_index": 4
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "959f596a93e41679ecd8722b6cb730620534e8e5a137f77831340fd3064d4bc4"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 4,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "×",
+          "left": {
+            "num": 3,
+            "den": 1
+          },
+          "right": {
+            "num": 2,
+            "den": 5
+          }
+        }
+      },
+      "answer": {
+        "shape": "fraction",
+        "digest": "c508bc9fdee1e67375667e90359a631f54f705cac7506b1feadcd29fa411bbbc"
+      },
+      "diagnosis": null
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 17,
+            "den": 1
+          },
+          "right": {
+            "num": 26,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "3a1a193ba12c93bdcd9381d3f64eb9ad7d61530c5e157a1708fb990807468a28"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "8df1c1b4287c4ca37524c3d4ecdef2eb04d41eb397d13ce36cc679ee2045236a",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "2ce1afae8e8004126fefc126844e04ed19de28c4639128fb52ebe9023790bdce",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 17,
+            "den": 1
+          },
+          "right": {
+            "num": 5,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "1dac8eb75546b65d28fc40d7e139e66e8f4d25a9906d3b2b414a860739be420f"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "97d6e0b22bb71ca494756013c699fd66ceedb7ed8ebcb48038f0f37332904e62",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "caf0f54d1e6234d667da58da01d1cd1e7e19370af2036e2b58b52607dccbac7b",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 16,
+            "den": 1
+          },
+          "right": {
+            "num": 3,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "7776d7ce5886dc227900c670c59017d80bff63419edd01f847ca7789efcbe203"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "06f4ac0371e0c922c3b2949724d4c975942aa8643c600755bc769563fe531e78",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "e31959147283241d3e917bb5209f4c7077fb1451391dd1e652d28e2b0fba7e05",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 5,
+            "den": 1
+          },
+          "right": {
+            "num": 23,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "9b867504e884854e698c3526539f1a19edf5e99ba9b52adc19533594876f8767"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "8b1527681a1b7b4f63cb15e0f714fdf79bb941d7c5848cb66a57c2096330cd7b",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "260f4be848f57a51b9cf9ec27b4d718795f15798d012f22a5f3267a8e3d6b130",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 15,
+            "den": 1
+          },
+          "right": {
+            "num": 2,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "7776d7ce5886dc227900c670c59017d80bff63419edd01f847ca7789efcbe203"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "06f4ac0371e0c922c3b2949724d4c975942aa8643c600755bc769563fe531e78",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "902fb713b861581ce9faf80d6e89ed5433252d7636cd3770fe099e0042ef7004",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 20,
+            "den": 1
+          },
+          "right": {
+            "num": 20,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "8f5dbfae1fd76f6c1aecf2dcc5a9d5fc855cb2a0a9454a451edb5fea3b36f921"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "646ee462373a629c40862fe49db072c54fb922b545a67ce507bf28af89b68c68",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "1911e0e536b1950de9c2cfe86161c26a18862176829ec2bcb97a795356fb2416",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 6,
+            "den": 1
+          },
+          "right": {
+            "num": 12,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "2d44ae163652ef54a9c23478d6ebf1dfe359492b424f7bee2846ad0db14e3e18"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "6a321c88dcb5dc3b11608b53a5a74046353a3bdaf225716468950be7d052c8c4",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "8b1527681a1b7b4f63cb15e0f714fdf79bb941d7c5848cb66a57c2096330cd7b",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 14,
+            "den": 1
+          },
+          "right": {
+            "num": 16,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "61aa98ce70ce3cbfa847a66b34ee8be7c75aeb08ad1c95aca20e121074503851"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "abef3541cfa59b050d3c31f63357583598a4baa430d3b79a08517f3273408401",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "dc8139f12da55d2bb99724c8aeae7610ea724d5f7955c90870973612b77eac79",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 17,
+            "den": 1
+          },
+          "right": {
+            "num": 16,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "e5672cb04e56f610fbc0065af7ce9cf95ac72caeda42a15fdbaee482ffb567c6"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "dd52edc45f9e18e8096838e7bc6ce883dcd6d721b058f7df553f23f181a7bbf3",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "0cfaa488473fb5e25da2c413eb00e72bad7c68eb06ca9d54b1518e8be2de7dbb",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "skill_id": 1,
+      "ladder_step": 3,
+      "keypad": "item",
+      "stimulus": {
+        "kind": "arithmetic",
+        "payload": {
+          "operator": "-",
+          "left": {
+            "num": 25,
+            "den": 1
+          },
+          "right": {
+            "num": 20,
+            "den": 1
+          }
+        }
+      },
+      "answer": {
+        "shape": "integer",
+        "digest": "983aa2dc622ac41f2cebb5fc21fcb1e89fca7fbf5c2cf89256b24e090c2c254b"
+      },
+      "diagnosis": {
+        "diagnosis_version": 1,
+        "distractors": [
+          {
+            "digest": "ad04dd962090a70e13f1e660757a2cc20561a8739251ce6f21241336035e6d84",
+            "diagnosis": {
+              "misconception": "subtracted_in_reverse",
+              "steps": [
+                "Fíjate en cuál número va primero.",
+                "Quita el segundo al primero, en ese orden."
+              ],
+              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+            }
+          },
+          {
+            "digest": "45e845726e789d555c2f85fecd6f070e719a5275379994269f3ac49a2da02ec0",
+            "diagnosis": {
+              "misconception": "added_instead_of_subtracting",
+              "steps": [
+                "Mira el signo que hay entre los dos números.",
+                "Si es −, quita en vez de juntar."
+              ],
+              "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "puzzles": []
+}
