@@ -31,22 +31,24 @@ A wrong answer SHALL produce steps to show, whether or not a distractor anticipa
 
 ### Requirement: req-the-match-is-canonical · How it was typed does not matter
 
-Both the typed answer and the distractor's key SHALL be canonicalised before they are compared.
+The typed answer SHALL be canonicalised before it is compared, and the distractor's key SHALL be
+required to be storage-canonical at load.
 
-#### Scenario: The same number typed differently
+#### Scenario: The keypad's minus and the author's
 
-- **WHEN** a player types a form that differs from the distractor's key only in canonical
-  spelling
-- **THEN** the distractor still matches, because `content/model/canon.dart` is what decides two
-  answers are the same number and a diagnosis that skipped it would silently miss
+- **WHEN** a player types `−9` with the keypad's U+2212 and the pack keys the distractor by the
+  ASCII `-9` an author typed
+- **THEN** it matches, because learner mode folds the one to the other — without it every
+  distractor on a negative answer is dead
   → `app/test/features/round/policy/diagnose_test.dart`
 
-#### Scenario: A distractor authored in a non-canonical form
+#### Scenario: A key that is not storage-canonical
 
-- **WHEN** the pack keys a distractor by a form the canonicaliser rewrites
-- **THEN** it still matches, because content is hand-written and holding an author to canonical
-  spelling is a rule nothing enforces
-  → `app/test/features/round/policy/diagnose_test.dart`
+- **WHEN** the pack keys a distractor by a form storage mode refuses
+- **THEN** the pack is refused at load, naming the item — rather than the lookup quietly
+  canonicalising it, which would be an identity nothing can observe for every key that *is*
+  canonical
+  → `app/test/content/pack_reader_test.dart`
 
 ### Requirement: req-the-right-answer-is-never-diagnosed · Nothing to explain
 

@@ -1,6 +1,7 @@
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/content/model/pack.dart';
 import 'package:akimath_app/content/pack_reader.dart';
+import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/features/home/policy/puzzle_of_day.dart';
 import 'package:akimath_app/features/round/policy/series_plan.dart';
@@ -141,6 +142,40 @@ void main() {
         final List<String> kinds = today.map(puzzleKindOf).toList();
 
         expect(kinds.toSet(), hasLength(kinds.length), reason: 'day $day: $kinds');
+      }
+    });
+  });
+
+  group('the pack can say something about a wrong answer', () {
+    test('it carries the copy, including the fallback', () {
+      // The screen degrades to a bare "Casi." without it, which is the state
+      // `ARCHITECTURE.md` §9 names as F1.5 having failed.
+      expect(pack.fallbackDiagnosis, isNotNull);
+      expect(pack.fallbackDiagnosis!.steps, isNotEmpty);
+    });
+
+    test('some items anticipate a wrong answer, and the count is reported', () {
+      // Most will not — the fallback is the common case by design — but zero
+      // would mean the distractor half never ships and nothing would say so.
+      final List<Item> anticipating =
+          pack.items.where((Item i) => i.distractors.isNotEmpty).toList();
+      final Set<String> named = <String>{
+        for (final Item item in anticipating)
+          for (final Diagnosis copy in item.distractors.values)
+            copy.steps.first,
+      };
+
+      expect(anticipating, isNotEmpty);
+      // ignore: avoid_print
+      print('  pack diagnosis · ${anticipating.length} of ${pack.items.length} '
+          'items anticipate a wrong answer, across ${named.length} misconceptions');
+    });
+
+    test('no item explains its own answer away', () {
+      // The reader refuses one, so this is the shipped pack agreeing with it.
+      for (final Item item in pack.items) {
+        expect(item.distractors.keys, isNot(contains(item.expected)),
+            reason: 'item ${item.id}');
       }
     });
   });

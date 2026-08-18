@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../content/model/diagnosis.dart';
 import '../../../../design/brand/aki.dart';
 import '../../../../design/icons/brand_icon.dart';
 import '../../../../design/math/spec/es_mx_number.dart';
@@ -22,6 +23,7 @@ class VerdictSummary {
     required this.verdict,
     required this.elapsed,
     required this.streakDays,
+    this.diagnosis,
   });
 
   final Verdict verdict;
@@ -31,6 +33,13 @@ class VerdictSummary {
 
   /// A local calendar fact, from `StreakPolicy`.
   final int streakDays;
+
+  /// What to say about *this* wrong answer, from `diagnose`.
+  ///
+  /// Null on a correct answer, and null for a pack that declares no
+  /// misconceptions — which is every pack written before they existed, and
+  /// which leaves the screen exactly as it was.
+  final Diagnosis? diagnosis;
 }
 
 /// `03 Acierto` and `04 Error`, which are one screen with two moods.
@@ -86,18 +95,45 @@ class VerdictScreen extends StatelessWidget {
                   child: const BrandIcon(BrandGlyph.close, size: 22),
                 ),
               ),
-              const Spacer(),
-              _band(),
-              const SizedBox(height: BrandShape.space4),
-              VerdictRing(summary.verdict),
-              const SizedBox(height: BrandShape.space3),
-              Text(
-                _correct ? '¡Bien hecho!' : 'Casi. Mira cómo va.',
-                style: BrandText.cardTitle(size: 22),
+              // **It scrolls, and the button does not.** Four steps of
+              // diagnosis at `textScaler` 1.3 overflow by 78 px, and shrinking
+              // the copy until it fits would make the screen worse for exactly
+              // the readers who chose large text — the home's design D2, in the
+              // one other place the argument applies. The middle stays centred
+              // when there is room, so the common case looks as it did.
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints:
+                            BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            _band(),
+                            const SizedBox(height: BrandShape.space4),
+                            VerdictRing(summary.verdict),
+                            const SizedBox(height: BrandShape.space3),
+                            Text(
+                              _correct ? '¡Bien hecho!' : 'Casi. Mira cómo va.',
+                              style: BrandText.cardTitle(size: 22),
+                            ),
+                            if (_steps.isNotEmpty) ...<Widget>[
+                              const SizedBox(height: BrandShape.space3),
+                              _stepList(),
+                            ],
+                            const SizedBox(height: BrandShape.space5),
+                            _tiles(),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
-              const SizedBox(height: BrandShape.space5),
-              _tiles(),
-              const Spacer(),
+              const SizedBox(height: BrandShape.space3),
+              // Last, so nothing sits below the thing the screen is asking for.
               BrandButton.primary(
                 label: _correct ? 'Siguiente' : 'Intentar otro',
                 onPressed: onContinue,
@@ -106,6 +142,27 @@ class VerdictScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// The steps to show, if any. A correct answer never has them.
+  List<String> get _steps =>
+      _correct ? const <String>[] : (summary.diagnosis?.steps ?? const <String>[]);
+
+  /// **The steps, not the paragraph** (design D4). `explain` says the same
+  /// thing at length, and a screen printing both asks a player to read it
+  /// twice.
+  Widget _stepList() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        for (final String step in _steps)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Text('· $step', style: BrandText.caption()),
+          ),
+      ],
     );
   }
 

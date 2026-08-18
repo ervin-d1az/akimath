@@ -6,6 +6,8 @@
 /// not the model.
 library;
 
+import 'diagnosis.dart';
+
 /// A piece of a rendered prompt.
 ///
 /// **The prompt travels rendered** (`ARCHITECTURE.md` §4): the client is handed
@@ -177,6 +179,7 @@ class Item {
     required this.stimulus,
     required this.expected,
     required this.ladderStep,
+    this.distractors = const <String, Diagnosis>{},
   });
 
   final String id;
@@ -192,4 +195,18 @@ class Item {
 
   /// Difficulty comes from the pack and is **never computed in Dart**.
   final int ladderStep;
+
+  /// Wrong answers this item anticipates, and what to say about each.
+  ///
+  /// **Keyed by the answer, not by a digest** (design D1). The frozen format
+  /// keys by `HMAC(canonical answer)` so that the correct answer is not the one
+  /// missing from a readable list — an argument that does not apply here,
+  /// because this format carries [expected] in plaintext and the answer is
+  /// already in the file. It starts applying when the app reads the frozen pack
+  /// at F4, and the keying changes with it.
+  ///
+  /// The keys are resolved to copy by `PackReader`, so an id naming a
+  /// misconception the pack does not define fails at load rather than showing
+  /// an empty screen later.
+  final Map<String, Diagnosis> distractors;
 }

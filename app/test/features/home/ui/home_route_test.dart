@@ -46,6 +46,12 @@ const String _pack = '''
   "pack_id": "test",
   "issued_at": "2026-08-01T00:00:00Z",
   "expires_at": "2099-01-01T00:00:00Z",
+  "misconceptions": {
+    "no_specific_diagnosis": {
+      "steps": ["Lee otra vez el reto, sin prisa."],
+      "explain": "Repasa el reto con calma."
+    }
+  },
   "items": [
     {
       "id": "a1",
@@ -73,6 +79,12 @@ const String _puzzlePack = '''
   "pack_id": "test",
   "issued_at": "2026-08-01T00:00:00Z",
   "expires_at": "2099-01-01T00:00:00Z",
+  "misconceptions": {
+    "no_specific_diagnosis": {
+      "steps": ["Lee otra vez el reto, sin prisa."],
+      "explain": "Repasa el reto con calma."
+    }
+  },
   "items": [
     {
       "id": "a1",
@@ -638,6 +650,48 @@ void main() {
       final PuzzleSolvedScreen screen =
           tester.widget<PuzzleSolvedScreen>(find.byType(PuzzleSolvedScreen));
       expect(screen.elapsed, const Duration(minutes: 3, seconds: 20));
+    });
+  });
+
+  group('a wrong answer in a real round is told why', () {
+    testWidgets('the fallback steps reach the screen',
+        (WidgetTester tester) async {
+      // End to end, because every piece of this can be right on its own and
+      // still not be wired: the pack carries the copy, the route hands it to
+      // the round, the round asks `diagnose`, and the verdict screen draws it.
+      await _pump(tester, source: _puzzlePack);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      for (final String id in <String>['1', 'submit']) {
+        await tester.tap(find.byWidgetPredicate(
+          (Widget w) => w is KeypadKeyView && w.data.id == id,
+        ));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Lee otra vez el reto'), findsOneWidget);
+    });
+
+    testWidgets('a right answer is told nothing', (WidgetTester tester) async {
+      await _pump(tester, source: _puzzlePack);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await tester.tap(find.byWidgetPredicate(
+          (Widget w) => w is KeypadKeyView && w.data.id == id,
+        ));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Lee otra vez el reto'), findsNothing);
     });
   });
 

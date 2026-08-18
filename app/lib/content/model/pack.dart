@@ -12,6 +12,7 @@
 /// bundled and played entirely on one device.
 library;
 
+import 'diagnosis.dart';
 import '../../design/math/spec/math_node.dart';
 import 'canon.dart';
 import 'item.dart';
@@ -26,6 +27,7 @@ class Pack {
     required this.expiresAt,
     required this.items,
     this.puzzles = const <Puzzle>[],
+    this.fallbackDiagnosis,
   });
 
   /// Parses a decoded pack.
@@ -39,13 +41,19 @@ class Pack {
       throw const FormatException('a pack must declare a non-empty items list');
     }
 
+    // The copy once per pack, keyed by the same misconception ids the builder
+    // uses (design D2). Seventy items each carrying four lines of es-MX would
+    // be most of the file.
+    final Map<String, Diagnosis> misconceptions = _misconceptions(json);
+
     return Pack(
       id: _requireString(json, 'pack_id'),
       issuedAt: _requireTime(json, 'issued_at'),
       expiresAt: _requireTime(json, 'expires_at'),
       items: <Item>[
-        for (final Object? entry in rawItems) _item(entry),
+        for (final Object? entry in rawItems) _item(entry, misconceptions),
       ],
+      fallbackDiagnosis: misconceptions[fallbackMisconception],
       // Optional: the app's own fixture format predates puzzles and the many
       // packs that carry none stay valid.
       puzzles: <Puzzle>[
@@ -63,13 +71,128 @@ class Pack {
   /// The boards this pack carries. Empty is ordinary.
   final List<Puzzle> puzzles;
 
+  /// What `04 Error` says when no distractor anticipated the answer.
+  ///
+  /// **Null when the pack declares no misconceptions at all**, which keeps the
+  /// field optional and every pack written before this valid — such a pack
+  /// simply leaves the error screen as bare as it was.
+  final Diagnosis? fallbackDiagnosis;
+
   /// Whether this pack has expired **at the moment the caller names**.
   ///
   /// `now` is a parameter and not a clock read, which is what lets expiry be
   /// tested by handing it two dates rather than by faking time.
   bool isExpiredAt(DateTime now) => !now.isBefore(expiresAt);
 
-  static Item _item(Object? entry) {
+  /// The id every pack carrying diagnoses must define.
+  ///
+  /// The same one `packages/core/content/misconceptions.json` uses, so the copy
+  /// is portable in both directions.
+  static const String fallbackMisconception = 'no_specific_diagnosis';
+
+  static Map<String, Diagnosis> _misconceptions(Map<String, dynamic> json) {
+    final Object? raw = json['misconceptions'];
+    if (raw == null) {
+      return const <String, Diagnosis>{};
+    }
+    if (raw is! Map<String, dynamic>) {
+      throw const FormatException('misconceptions must be an object');
+    }
+
+    final Map<String, Diagnosis> read = <String, Diagnosis>{
+      for (final MapEntry<String, dynamic> entry in raw.entries)
+        entry.key: _diagnosis(entry.key, entry.value),
+    };
+    if (!read.containsKey(fallbackMisconception)) {
+      // Without it, an unanticipated wrong answer — the common case — would
+      // reach the screen with nothing to say, which is the state this whole
+      // format exists to leave behind.
+      throw const FormatException(
+        'a pack with misconceptions must define "$fallbackMisconception"',
+      );
+    }
+    return read;
+  }
+
+  static Diagnosis _diagnosis(String id, Object? raw) {
+    if (raw is! Map<String, dynamic>) {
+      throw FormatException('misconception "$id" must be an object');
+    }
+    final Object? rawSteps = raw['steps'];
+    if (rawSteps is! List || rawSteps.isEmpty || rawSteps.length > 4) {
+      throw FormatException('misconception "$id" needs one to four steps');
+    }
+    return Diagnosis(
+      steps: <String>[
+        for (final Object? step in rawSteps)
+          if (step is String && step.isNotEmpty)
+            step
+          else
+            throw FormatException('misconception "$id" has an empty step'),
+      ],
+      explain: _requireString(raw, 'explain'),
+    );
+  }
+
+  /// The wrong answers an item anticipates, resolved to copy.
+  ///
+  /// Three refusals, all at load, all naming the item — because each of them
+  /// otherwise surfaces as a screen that says nothing, on a device, with no
+  /// way to report it:
+  ///
+  /// - an id the pack does not define,
+  /// - a key the canonicaliser cannot read, which is a distractor no answer can
+  ///   ever match,
+  /// - a key that is the item's own answer, which is the leak the frozen
+  ///   format's D3 exists to prevent.
+  static Map<String, Diagnosis> _distractors(
+    Map<String, dynamic> entry,
+    String id,
+    String answer,
+    Map<String, Diagnosis> misconceptions,
+  ) {
+    final Object? raw = entry['distractors'];
+    if (raw == null) {
+      return const <String, Diagnosis>{};
+    }
+    if (raw is! Map<String, dynamic>) {
+      throw FormatException('item "$id" has a malformed distractor table');
+    }
+
+    // `_item` has already refused an answer the canonicaliser cannot read, so
+    // this cannot be null by the time it runs.
+    final String? canonicalAnswer =
+        canonicalise(answer, mode: CanonMode.stored).value;
+    final Map<String, Diagnosis> table = <String, Diagnosis>{};
+    for (final MapEntry<String, dynamic> distractor in raw.entries) {
+      final CanonResult key =
+          canonicalise(distractor.key, mode: CanonMode.stored);
+      if (!key.ok) {
+        throw FormatException(
+          'item "$id" keys a distractor by "${distractor.key}", which is not a '
+          'readable answer (${key.tag}) — nothing a player types could match it',
+        );
+      }
+      if (key.value == canonicalAnswer) {
+        throw FormatException(
+          'item "$id" keys a distractor by its own answer "${distractor.key}"',
+        );
+      }
+      final Object? named = distractor.value;
+      final Diagnosis? copy =
+          named is String ? misconceptions[named] : null;
+      if (copy == null) {
+        throw FormatException(
+          'item "$id" names the misconception "$named", which the pack does '
+          'not define',
+        );
+      }
+      table[distractor.key] = copy;
+    }
+    return table;
+  }
+
+  static Item _item(Object? entry, Map<String, Diagnosis> misconceptions) {
     if (entry is! Map<String, dynamic>) {
       throw const FormatException('an item must be an object');
     }
@@ -88,12 +211,14 @@ class Pack {
       );
     }
 
+    final String id = _requireString(entry, 'id');
     return Item(
-      id: _requireString(entry, 'id'),
+      id: id,
       expected: answer,
       // Difficulty travels with the item. Rating never runs in Dart.
       ladderStep: _requireInt(entry, 'ladder_step'),
       stimulus: _stimulus(entry),
+      distractors: _distractors(entry, id, answer, misconceptions),
     );
   }
 

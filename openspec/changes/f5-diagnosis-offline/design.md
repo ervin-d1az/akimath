@@ -27,16 +27,24 @@ construction rather than carried unused.
 The pack file crossed 50 KB when the generated boards landed, which is the threshold
 `pack_reader_test` now guards. A map keeps it there; seventy copies would have doubled it.
 
-## D3 — Both sides go through the canonicaliser
+## D3 — The typed side is canonicalised; the authored side is validated
 
-`content/model/canon.dart` is what decides two answers are the same number, and it is checked
-against `contract/fixtures/canon.golden.json` — the gate that stops the Dart and TypeScript
-canonicalisers drifting.
+This started as "canonicalise both sides", which reads well and is half wrong. Measuring what
+the two modes actually do settled it:
 
-The typed answer goes through it because a player types `12,0`. **The distractor's key goes
-through it too**, because content is hand-written and holding an author to canonical spelling is
-a rule nothing enforces. Canonicalising one side and not the other is the version of this bug
-that looks correct in review.
+- **Learner mode** is the forgiving one. It folds U+2212 to `-`, strips spaces, folds U+2044.
+  The keypad emits U+2212 and a content author types the ASCII hyphen, so **without this every
+  distractor on a negative answer is dead** — which is the bug worth guarding.
+- **Storage mode rewrites essentially nothing.** It refuses `- 9`, `009`, `1⁄2`. It is a
+  validator of already-canonical text, not a normaliser.
+
+So canonicalising the authored key is an identity for every key that survives and a refusal for
+every key that does not — and the reader already performs that refusal, at load, where it can
+name the item. Doing it again in the lookup is the second half of a symmetry that reads well and
+does nothing, so the lookup is a plain map read on the canonical typed value.
+
+The falsification run is what forced this: replacing the authored-side canonicalisation with a
+raw string comparison changed no test, because there was nothing for it to change.
 
 ## D4 — `explain` is carried and not shown
 
