@@ -9,6 +9,7 @@ import {
 
 import { rederive, type TemplateRegistry } from "../registry.js";
 import type { Declaration } from "./declaration.js";
+import { predictDistractors } from "./distractors.js";
 import { liftAuthored, readAuthoredFile } from "./lift.js";
 import { seedAt } from "./seeds.js";
 
@@ -39,6 +40,15 @@ export interface BuildInputs {
    * to a player. A skill with nothing to say fails the build instead.
    */
   readonly fallbacks: ReadonlyMap<number, DiagnosisCopy>;
+  /**
+   * Copy for each misconception a distractor can name.
+   *
+   * A distractor naming a misconception this does not hold fails the build. The
+   * alternative — emitting the distractor with no copy — is an item that
+   * recognises a mistake and then has nothing to say about it, which is worse
+   * than not recognising it.
+   */
+  readonly misconceptions: ReadonlyMap<string, DiagnosisCopy>;
 }
 
 /** What was built, beside the pack — so a build can report rather than assert. */
@@ -60,6 +70,7 @@ function fromTemplate(
   registry: TemplateRegistry,
   source: Extract<Declaration["sources"][number], { kind: "template" }>,
   seedIndex: number,
+  misconceptions: ReadonlyMap<string, DiagnosisCopy>,
 ): Item {
   const generated = rederive(registry, {
     templateId: source.templateId,
@@ -92,8 +103,40 @@ function fromTemplate(
       shape: generated.answer.denominator === 1n ? "integer" : "fraction",
       digest: answerDigest(declaration.packSalt, canonical),
     },
-    diagnosis: null,
+    diagnosis: diagnosisFor(generated, canonical, declaration.packSalt, misconceptions),
   };
+}
+
+/**
+ * The distractors an item carries, or null when its family has no rules yet.
+ *
+ * Null rather than an empty list: the frozen `DiagnosisPayloadSchema` requires
+ * at least one distractor, so "none predicted" and "some predicted" are
+ * genuinely different shapes.
+ */
+function diagnosisFor(
+  generated: ReturnType<typeof rederive>,
+  canonical: string,
+  packSalt: string,
+  misconceptions: ReadonlyMap<string, DiagnosisCopy>,
+): Item["diagnosis"] {
+  const predicted = predictDistractors(generated, canonical);
+  if (predicted.length === 0) {
+    return null;
+  }
+  return {
+    diagnosis_version: 1,
+    distractors: predicted.map((distractor) => {
+      const copy = misconceptions.get(distractor.misconception);
+      if (copy === undefined) {
+        throw new TypeError(
+          `no copy for misconception "${distractor.misconception}"; an item that ` +
+            `recognises a mistake and cannot explain it is worse than one that does not`,
+        );
+      }
+      return { digest: answerDigest(packSalt, distractor.answer), diagnosis: copy };
+    }),
+  } as Item["diagnosis"];
 }
 
 export function buildPack(
@@ -109,7 +152,9 @@ export function buildPack(
       for (let n = 0; n < source.count; n += 1) {
         // The counter spans the whole build, not each source, so two template
         // sources never issue the same seed.
-        items.push(fromTemplate(declaration, inputs.registry, source, generated));
+        items.push(
+          fromTemplate(declaration, inputs.registry, source, generated, inputs.misconceptions),
+        );
         generated += 1;
       }
       continue;

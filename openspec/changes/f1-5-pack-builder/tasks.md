@@ -45,18 +45,18 @@
 
 ## 5. Diagnosis copy
 
-- [ ] 5.1 Red → green: the misconception copy file and its parser — keyed by snake_case id, every
+- [x] 5.1 Red → green: the misconception copy file and its parser — keyed by snake_case id, every
       `explain` and step non-empty.
-- [ ] 5.2 Red → green: a distractor resolves its copy by misconception id, and an unknown id fails
+- [x] 5.2 Red → green: a distractor resolves its copy by misconception id, and an unknown id fails
       the build rather than emitting an item with no explanation.
-- [ ] 5.3 Red → green: a distractor whose digest equals the answer is refused, and two distractors
+- [x] 5.3 Red → green: a distractor whose digest equals the answer is refused, and two distractors
       sharing a digest are refused (req-diagnosis-distractors-are-distinct).
-- [ ] 5.4 Red → green: the copy sweep — no "incorrecto", "error", "fallaste", "mal" or "equivocado"
+- [x] 5.4 Red → green: the copy sweep — no "incorrecto", "error", "fallaste", "mal" or "equivocado"
       in any emitted string, reporting how many strings were checked
       (req-diagnosis-copy-never-names-the-failure).
-- [ ] 5.5 Author the misconception copy in es-MX for the arithmetic distractors the one existing
+- [x] 5.5 Author the misconception copy in es-MX for the arithmetic distractors the one existing
       template can produce — sign errors and off-by-one on integer subtraction at minimum.
-- [ ] 5.6 Red → green: an item with no diagnosis still yields a valid pack, and the builder reports
+- [x] 5.6 Red → green: an item with no diagnosis still yields a valid pack, and the builder reports
       how many items carry distractors and how many do not (req-diagnosis-optional-per-item).
 
 ## 6. The CLI and the artifact

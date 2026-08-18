@@ -9,6 +9,7 @@ import { registryOf } from "../../src/registry.js";
 import type { Template } from "../../src/template.js";
 import { buildPack } from "../../src/pack/build.js";
 import { parseDeclaration } from "../../src/pack/declaration.js";
+import { parseMisconceptions } from "../../src/pack/misconceptions.js";
 
 const AUTHORED_PATH = "../../app/assets/packs/starter.json";
 const AUTHORED = readFileSync(
@@ -22,7 +23,14 @@ const FALLBACK: DiagnosisCopy = {
   explain: "Aquí va el razonamiento completo, paso por paso, sin regaños.",
 };
 
+const MISCONCEPTIONS = parseMisconceptions(
+  JSON.parse(
+    readFileSync(fileURLToPath(new URL("../../content/misconceptions.json", import.meta.url)), "utf8"),
+  ),
+);
+
 const inputs = (fallbacks: ReadonlyMap<number, DiagnosisCopy> = new Map([[1, FALLBACK]])) => ({
+  misconceptions: MISCONCEPTIONS,
   registry: CORE_REGISTRY,
   readAuthored: (path: string) => {
     if (path !== AUTHORED_PATH) throw new Error(`unexpected path ${path}`);

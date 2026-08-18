@@ -1,0 +1,24 @@
+{
+  "no_specific_diagnosis": {
+    "steps": [
+      "Lee otra vez el reto, sin prisa.",
+      "Rehaz la cuenta paso por paso.",
+      "Comprueba el resultado antes de enviarlo."
+    ],
+    "explain": "Repasa el reto con calma: vuelve a leer los números, rehaz la cuenta paso por paso y compara lo que te salió con lo que pedía el reto."
+  },
+  "subtracted_in_reverse": {
+    "steps": [
+      "Fíjate en cuál número va primero.",
+      "Quita el segundo al primero, en ese orden."
+    ],
+    "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+  },
+  "added_instead_of_subtracting": {
+    "steps": [
+      "Mira el signo que hay entre los dos números.",
+      "Si es −, quita en vez de juntar."
+    ],
+    "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+  }
+}
