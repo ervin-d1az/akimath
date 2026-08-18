@@ -13,11 +13,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// is asserted to be *refused* rather than skipped.
 const String _dir = '../contract/fixtures/puzzle';
 
-const Set<String> _readable = <String>{'kenken', 'killer'};
+const Set<String> _readable = <String>{'kenken', 'killer', 'magicSquare'};
 
 const Set<String> _pending = <String>{
   'kakuro',
-  'magicSquare',
   'wordSearch',
 };
 
@@ -196,6 +195,110 @@ void main() {
           'tutorial_steps': <String>['x'],
           'reference_sheet': <String>['y'],
         }, puzzleId: 'noop'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
+  group('a magic square is lines and totals', () {
+    test('it holds one to size squared, not one to size', () {
+      // The assumption the two caged formats hid. Deriving the domain from the
+      // board's size would refuse every digit above 3 here — which is every
+      // digit a 3×3 magic square is made of.
+      final MagicSquarePuzzle puzzle =
+          readPuzzle(_envelope(_read('magicSquare.json')), puzzleId: 'm1')
+              as MagicSquarePuzzle;
+
+      expect(puzzle.board.size, 3);
+      expect(puzzle.board.highestValue, 9);
+    });
+
+    test('a caged board still holds one to its size', () {
+      final KenKenPuzzle kenken =
+          readPuzzle(_envelope(_read('kenken.json')), puzzleId: 'k1')
+              as KenKenPuzzle;
+      expect(kenken.board.highestValue, 3);
+    });
+
+    test('its targets come through, one per line', () {
+      final MagicSquarePuzzle puzzle =
+          readPuzzle(_envelope(_read('magicSquare.json')), puzzleId: 'm1')
+              as MagicSquarePuzzle;
+
+      expect(puzzle.rowTargets, <int>[15, 15, 15]);
+      expect(puzzle.columnTargets, <int>[15, 15, 15]);
+    });
+
+    test('a board the pad cannot express is refused', () {
+      // A 4×4 needs sixteen values and the pad offers nine — seven of them
+      // could never be typed. Not a hard board: an unplayable one.
+      Object? read(int size) => readPuzzle(<String, dynamic>{
+            'kind': 'magicSquare',
+            'payload': <String, dynamic>{
+              'board': <String, dynamic>{
+                'size': size,
+                'blocked': <Object>[],
+                'given': <Object>[],
+                'solution': <List<int>>[
+                  for (int row = 0; row < size; row++)
+                    <int>[for (int col = 0; col < size; col++) row * size + col + 1],
+                ],
+              },
+              'row_targets': <int>[for (int i = 0; i < size; i++) 15],
+              'column_targets': <int>[for (int i = 0; i < size; i++) 15],
+            },
+            'tutorial_steps': <String>['x'],
+            'reference_sheet': <String>['y'],
+          }, puzzleId: 'big');
+
+      expect(() => read(3), returnsNormally, reason: 'nine is what the pad has');
+      for (final int size in <int>[4, 5, 6]) {
+        expect(() => read(size), throwsA(isA<FormatException>()),
+            reason: 'a $size square needs ${size * size} values');
+      }
+    });
+
+    test('a six-square KenKen is still fine — the limit is the domain', () {
+      // The rule is about what a player can type, not how big a board is.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'kenken',
+          'payload': <String, dynamic>{
+            'board': <String, dynamic>{
+              'size': 6,
+              'blocked': <Object>[],
+              'given': <Object>[],
+              'solution': <List<int>>[
+                for (int row = 0; row < 6; row++)
+                  <int>[for (int col = 0; col < 6; col++) (row + col) % 6 + 1],
+              ],
+            },
+            'cages': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'cells': <Map<String, int>>[
+                  for (int row = 0; row < 6; row++)
+                    for (int col = 0; col < 6; col++)
+                      <String, int>{'row': row, 'col': col},
+                ],
+                'operation': '+',
+                'target': 126,
+              },
+            ],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'big6'),
+        returnsNormally,
+      );
+    });
+
+    test('a targets list of the wrong length is refused', () {
+      // The frozen rejection row is exactly this — `solution_shape` with four
+      // column targets on a three square.
+      final Map<String, dynamic> fixture = _read('magicSquare.rejected.json');
+      expect(
+        () => readPuzzle(_envelope(fixture['pack'] as Map<String, dynamic>),
+            puzzleId: 'm1'),
         throwsA(isA<FormatException>()),
       );
     });

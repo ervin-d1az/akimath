@@ -171,7 +171,7 @@ const List<Item> registryFigurateItems = <Item>[
 /// is the board's rim and its label sits in the corner, which is the cheapest
 /// arrangement that still exercises every part of the renderer.
 KenKenPuzzle registryKenKen(int size) => KenKenPuzzle(
-      board: PuzzleBoard(
+      board: PuzzleBoard.caged(
         size: size,
         blocked: const <Cell>{},
         given: const <Cell>{},
@@ -307,6 +307,34 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         ],
         tutorialSteps: const <String>['Cada jaula pide una suma.'],
         referenceSheet: const <String>['Las jaulas no traen signo.'],
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · magic square 3x3',
+    // The only format with a margin, and therefore the widest board on screen.
+    build: () => PuzzleScreen(
+      // Not `const`: `Cell` overrides `==`, so a constant set of them is a
+      // compile error — the analyzer is right that constant set semantics and a
+      // custom equality do not mix.
+      puzzle: MagicSquarePuzzle(
+        board: PuzzleBoard(
+          size: 3,
+          blocked: const <Cell>{},
+          // The *set* cannot be const because `Cell` overrides `==`; the
+          // element still can.
+          given: <Cell>{const Cell(row: 0, col: 0)},
+          solution: const <List<int>>[
+            <int>[2, 7, 6],
+            <int>[9, 5, 1],
+            <int>[4, 3, 8],
+          ],
+          highestValue: 9,
+        ),
+        rowTargets: const <int>[15, 15, 15],
+        columnTargets: const <int>[15, 15, 15],
+        tutorialSteps: const <String>['Cada línea llega a su número.'],
+        referenceSheet: const <String>['Se usan los números del 1 al 9, uno por celda.'],
       ),
     ),
   ),

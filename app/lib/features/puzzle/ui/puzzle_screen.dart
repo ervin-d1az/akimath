@@ -30,7 +30,8 @@ class PuzzleScreen extends StatefulWidget {
 
   /// Any caged puzzle. Naming a concrete kind here would make every new caged
   /// format a change to this screen.
-  final CagedPuzzle puzzle;
+  /// Any puzzle the board can draw.
+  final Puzzle puzzle;
 
   /// Leaves the puzzle. Defaults to popping, so a pushed board always has an
   /// exit even if a caller forgets to wire one — the same rule the round
@@ -62,11 +63,11 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
 
   /// The digits this board cannot hold.
   ///
-  /// A 3×3 admits 1 to 3, so 4 to 9 are shown unavailable rather than quietly
+  /// A 3×3 KenKen admits 1 to 3, so 4 to 9 are shown unavailable rather than quietly
   /// doing nothing. `PuzzleEntry` refuses them either way — this changes what a
   /// player is invited to press, not what happens if they do.
   Set<String> get _tooLarge => <String>{
-        for (int digit = widget.puzzle.board.size + 1; digit <= 9; digit++)
+        for (int digit = widget.puzzle.board.highestValue + 1; digit <= 9; digit++)
           '$digit',
       };
 
@@ -101,7 +102,19 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                 child: Center(
                   child: PuzzleBoardView(
                     entry: _entry,
-                    cages: widget.puzzle.cages,
+                    cages: switch (widget.puzzle) {
+                      final CagedPuzzle caged => caged.cages,
+                      _ => const <Cage>[],
+                    },
+                    rowTargets: switch (widget.puzzle) {
+                      MagicSquarePuzzle(:final List<int> rowTargets) => rowTargets,
+                      _ => const <int>[],
+                    },
+                    columnTargets: switch (widget.puzzle) {
+                      MagicSquarePuzzle(:final List<int> columnTargets) =>
+                        columnTargets,
+                      _ => const <int>[],
+                    },
                     onTapCell: (Cell cell) => _apply(_entry.select(cell)),
                   ),
                 ),
@@ -124,6 +137,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
   String get _title => switch (widget.puzzle) {
         KenKenPuzzle() => 'KENKEN',
         KillerPuzzle() => 'SUMAS',
+        MagicSquarePuzzle() => 'CUADRO MÁGICO',
       };
 
   Widget _header() {
