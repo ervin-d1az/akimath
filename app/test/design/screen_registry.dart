@@ -4,7 +4,9 @@ import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
+import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
+import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/shell/ui/app_shell.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
@@ -163,6 +165,35 @@ const List<Item> registryFigurateItems = <Item>[
   ),
 ];
 
+/// A KenKen of a given size, with one cage over the whole board.
+///
+/// The cage is deliberately the largest one possible: a single cage's outline
+/// is the board's rim and its label sits in the corner, which is the cheapest
+/// arrangement that still exercises every part of the renderer.
+KenKenPuzzle registryKenKen(int size) => KenKenPuzzle(
+      board: PuzzleBoard(
+        size: size,
+        blocked: const <Cell>{},
+        given: const <Cell>{},
+        solution: <List<int>>[
+          for (int row = 0; row < size; row++)
+            <int>[for (int col = 0; col < size; col++) (row + col) % size + 1],
+        ],
+      ),
+      cages: <Cage>[
+        Cage(
+          cells: <Cell>[
+            for (int row = 0; row < size; row++)
+              for (int col = 0; col < size; col++) Cell(row: row, col: col),
+          ],
+          operation: '+',
+          target: size * size,
+        ),
+      ],
+      tutorialSteps: const <String>['Cada fila y cada columna, una sola vez.'],
+      referenceSheet: const <String>['Ningún número se repite en su fila.'],
+    );
+
 final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'character sheet',
@@ -247,6 +278,16 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // registered is a family whose first overflow report comes from a player —
     // and a grid is the tallest prompt the round has had to hold.
     build: () => const RoundScreen(items: registryMatrixItems),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · kenken 3x3',
+    build: () => PuzzleScreen(puzzle: registryKenKen(3)),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · kenken 6x6',
+    // The largest board the format admits — the tightest layout in the app, so
+    // it is measured rather than assumed to fit.
+    build: () => PuzzleScreen(puzzle: registryKenKen(6)),
   ),
   RegisteredScreen(
     label: 'preferences',

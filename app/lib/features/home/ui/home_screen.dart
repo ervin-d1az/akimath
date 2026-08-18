@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../content/model/item.dart';
 import '../../../design/brand/aki.dart';
+import '../../../design/icons/brand_icon.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
@@ -34,6 +35,7 @@ class HomeScreen extends StatelessWidget {
     required this.onStart,
     this.weekMarks = const <bool>[false, false, false, false, false, false, false],
     this.todaysFamilies = const <String>[],
+    this.onPuzzle,
   });
 
   /// The item whose expression the card previews.
@@ -50,6 +52,13 @@ class HomeScreen extends StatelessWidget {
   /// The families the next series will draw — from `seriesFamilies` over the
   /// same plan that will serve them.
   final List<String> todaysFamilies;
+
+  /// Opens the day's puzzle, or null when the pack carries none.
+  ///
+  /// **Null means the card is absent, not disabled.** A card a player can see
+  /// and cannot open is a promise the screen has no way to keep — the same
+  /// reasoning that keeps the rating off this screen entirely.
+  final VoidCallback? onPuzzle;
 
   /// Aki's band on the home is 150, against the verdict screens' 182.
   static const double _akiWidth = 150;
@@ -75,6 +84,10 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: BrandShape.space4),
           _challengeCard(),
           const SizedBox(height: BrandShape.space4),
+          if (onPuzzle != null) ...<Widget>[
+            _puzzleCard(),
+            const SizedBox(height: BrandShape.space4),
+          ],
           if (todaysFamilies.isNotEmpty) ...<Widget>[
             FamilyRow(families: todaysFamilies),
             const SizedBox(height: BrandShape.space4),
@@ -83,6 +96,41 @@ class HomeScreen extends StatelessWidget {
           BrandButton.primary(label: 'Empezar la serie', onPressed: onStart),
           const SizedBox(height: BrandShape.space3),
         ],
+      ),
+    );
+  }
+
+  /// `PUZZLE DEL DÍA` — the card F2 deferred to F6.
+  ///
+  /// It names the kind rather than only the word "puzzle", because a KenKen and
+  /// a word search are different amounts of evening and a player deciding
+  /// whether to start one should know which.
+  Widget _puzzleCard() {
+    return GestureDetector(
+      onTap: onPuzzle,
+      behavior: HitTestBehavior.opaque,
+      child: CandySurface(
+        borderRadius: BrandShape.radiusCardMedium,
+        padding: const EdgeInsets.symmetric(
+          horizontal: BrandShape.space4,
+          vertical: BrandShape.space3,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text('PUZZLE DEL DÍA', style: BrandText.eyebrow()),
+                  const SizedBox(height: 2),
+                  Text('KenKen', style: BrandText.cardTitle()),
+                ],
+              ),
+            ),
+            const BrandIcon(BrandGlyph.forward, size: 22),
+          ],
+        ),
       ),
     );
   }

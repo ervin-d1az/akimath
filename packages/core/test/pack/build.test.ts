@@ -107,6 +107,73 @@ describe("a pack is assembled from sources", () => {
   });
 });
 
+describe("a pack may carry puzzles", () => {
+  const kenken = JSON.stringify({
+    puzzles: [
+      {
+        kind: "kenken",
+        payload: {
+          board: { size: 3, blocked: [], given: [], solution: [[1, 2, 3], [2, 3, 1], [3, 1, 2]] },
+          cages: [
+            { cells: [{ row: 0, col: 0 }, { row: 1, col: 0 }], operation: "+", target: 3 },
+            { cells: [{ row: 0, col: 1 }, { row: 0, col: 2 }], operation: "-", target: 1 },
+            { cells: [{ row: 1, col: 1 }, { row: 2, col: 1 }], operation: "-", target: 2 },
+            { cells: [{ row: 1, col: 2 }, { row: 2, col: 2 }], operation: "+", target: 3 },
+            { cells: [{ row: 2, col: 0 }], operation: "+", target: 3 },
+          ],
+        },
+        tutorial_steps: ["Cada fila lleva 1, 2 y 3."],
+        reference_sheet: ["Nada se repite en su fila."],
+      },
+    ],
+  });
+
+  const withPuzzles = (file: string) =>
+    buildPack(
+      declaration({
+        sources: [
+          { kind: "authored", path: AUTHORED_PATH, skill_id: 1 },
+          { kind: "puzzles", path: "puzzles.json" },
+        ],
+      }),
+      {
+        ...inputs(),
+        readAuthored: (path: string) => (path === "puzzles.json" ? file : AUTHORED),
+      },
+    );
+
+  it("carries an authored board through to the pack", () => {
+    const { pack, report } = withPuzzles(kenken);
+
+    expect(pack.puzzles).toHaveLength(1);
+    expect(pack.puzzles[0]?.kind).toBe("kenken");
+    expect(report.puzzleKinds).toEqual(["kenken"]);
+  });
+
+  it("reports no puzzles when none were declared", () => {
+    // The gap between "packs may carry boards" and "this one does" stays
+    // visible rather than being assumed closed.
+    expect(buildPack(declaration(), inputs()).report.puzzleKinds).toEqual([]);
+  });
+
+  it("refuses a board the frozen envelope rejects, naming the puzzle", () => {
+    // A hand-authored board is exactly the input where knowing *which* one is
+    // wrong saves the afternoon — `parsePack`'s tag names only the fault.
+    const missingCopy = JSON.stringify({
+      puzzles: [{ kind: "kenken", payload: {}, tutorial_steps: [], reference_sheet: [] }],
+    });
+    expect(() => withPuzzles(missingCopy)).toThrow(/puzzle 0/);
+  });
+
+  it("refuses a cage that does not cover the board", () => {
+    // `checkCageCoverage` is the frozen validator's, and this is the assertion
+    // that the builder actually runs it rather than trusting the file.
+    const gap = JSON.parse(kenken) as { puzzles: { payload: { cages: unknown[] } }[] };
+    gap.puzzles[0]!.payload.cages = [gap.puzzles[0]!.payload.cages[0]];
+    expect(() => withPuzzles(JSON.stringify(gap))).toThrow();
+  });
+});
+
 describe("a generated answer is shaped by what the template produced", () => {
   it("calls a fractional answer a fraction", () => {
     // The one shipped template returns integers, so the fraction branch is

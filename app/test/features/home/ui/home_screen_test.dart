@@ -23,6 +23,7 @@ const Item _preview = Item(
 Future<void> _pump(
   WidgetTester tester, {
   VoidCallback? onStart,
+  VoidCallback? onPuzzle,
   int streakDays = 7,
   List<bool>? weekMarks,
   List<String> todaysFamilies = const <String>['Cuentas', 'Series'],
@@ -41,6 +42,7 @@ Future<void> _pump(
           weekMarks: weekMarks ??
               const <bool>[true, true, true, true, true, true, true],
           todaysFamilies: todaysFamilies,
+          onPuzzle: onPuzzle,
           onStart: onStart ?? () {},
         ),
       ),
@@ -54,6 +56,31 @@ Iterable<String> _copy(WidgetTester tester) => tester
     .where((String s) => s.isNotEmpty);
 
 void main() {
+  group('the day\'s puzzle', () {
+    testWidgets('is offered when the pack carries one',
+        (WidgetTester tester) async {
+      bool opened = false;
+      await _pump(tester, onPuzzle: () => opened = true);
+
+      expect(find.text('PUZZLE DEL DÍA'), findsOneWidget);
+      // Named, because a KenKen and a word search are different amounts of
+      // evening and a player deciding whether to start one should know which.
+      expect(find.text('KenKen'), findsOneWidget);
+
+      await tester.tap(find.text('PUZZLE DEL DÍA'));
+      await tester.pumpAndSettle();
+      expect(opened, isTrue);
+    });
+
+    testWidgets('is absent, not disabled, when the pack carries none',
+        (WidgetTester tester) async {
+      // A card a player can see and cannot open is a promise the screen has no
+      // way to keep.
+      await _pump(tester);
+      expect(find.text('PUZZLE DEL DÍA'), findsNothing);
+    });
+  });
+
   group('the preview draws whatever family the day begins with', () {
     // `HomeRoute` hands over `pack.items.first`, and the pack is interleaved:
     // which family lands first is a content decision, not a code one. The card

@@ -1555,5 +1555,111 @@
         }
       ]
     }
+  ],
+  "puzzles": [
+    {
+      "kind": "kenken",
+      "payload": {
+        "board": {
+          "size": 3,
+          "blocked": [],
+          "given": [],
+          "solution": [
+            [
+              1,
+              2,
+              3
+            ],
+            [
+              2,
+              3,
+              1
+            ],
+            [
+              3,
+              1,
+              2
+            ]
+          ]
+        },
+        "cages": [
+          {
+            "cells": [
+              {
+                "row": 0,
+                "col": 0
+              },
+              {
+                "row": 1,
+                "col": 0
+              }
+            ],
+            "operation": "+",
+            "target": 3
+          },
+          {
+            "cells": [
+              {
+                "row": 0,
+                "col": 1
+              },
+              {
+                "row": 0,
+                "col": 2
+              }
+            ],
+            "operation": "-",
+            "target": 1
+          },
+          {
+            "cells": [
+              {
+                "row": 1,
+                "col": 1
+              },
+              {
+                "row": 2,
+                "col": 1
+              }
+            ],
+            "operation": "-",
+            "target": 2
+          },
+          {
+            "cells": [
+              {
+                "row": 1,
+                "col": 2
+              },
+              {
+                "row": 2,
+                "col": 2
+              }
+            ],
+            "operation": "+",
+            "target": 3
+          },
+          {
+            "cells": [
+              {
+                "row": 2,
+                "col": 0
+              }
+            ],
+            "operation": "+",
+            "target": 3
+          }
+        ]
+      },
+      "tutorial_steps": [
+        "Cada fila y cada columna llevan 1, 2 y 3 una sola vez.",
+        "La esquina de cada jaula dice el resultado y la operación."
+      ],
+      "reference_sheet": [
+        "Una jaula de dos celdas con − pide la diferencia.",
+        "Ningún número se repite en su fila ni en su columna.",
+        "Una jaula de una sola celda ya trae su número."
+      ]
+    }
   ]
 }

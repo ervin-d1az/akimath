@@ -35,4 +35,5 @@ class AkiMathApp extends StatelessWidget {
       home: const FirstRunGate(home: RootScaffold()),
     );
   }
+  
 }
