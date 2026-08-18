@@ -20,6 +20,7 @@ import '../../round/ui/summary/series_summary_screen.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../../content/model/puzzle.dart';
 import '../../puzzle/ui/puzzle_screen.dart';
+import '../../puzzle/ui/puzzle_solved_screen.dart';
 import '../../puzzle/ui/word_search_screen.dart';
 import '../../shell/ui/skeleton_block.dart';
 import 'home_screen.dart';
@@ -149,10 +150,19 @@ class _HomeRouteState extends State<HomeRoute> {
   /// is a longer commitment than five items, so a bottom bar underneath it
   /// would be an invitation to abandon one halfway.
   Future<void> _startPuzzle(BuildContext context, Puzzle puzzle) async {
+    // **The route holds the clock** (design D3). Neither puzzle screen has one,
+    // and adding one to both would be the same decision written twice — the
+    // objection that put `onPractised` here rather than a store in each screen.
+    //
+    // Wall-clock from opening the board, rules-reading included. A puzzle is a
+    // sitting, not a reaction test.
+    final DateTime startedAt = widget.now();
+
     await Navigator.of(context).push(
       fullScreenSession<void>(
         (BuildContext sessionContext) {
           void leave() => Navigator.of(sessionContext).pop();
+          void solved() => _showSolved(sessionContext, puzzle, startedAt);
           // **The route records, the screens report** (design D3). The two
           // formats commit differently — a value on a board, a word claimed —
           // and the same IO decision written into both screens would be free
@@ -167,7 +177,7 @@ class _HomeRouteState extends State<HomeRoute> {
             WordSearchPuzzle() => WordSearchScreen(
                 puzzle: puzzle,
                 onClose: leave,
-                onSolved: leave,
+                onSolved: solved,
                 onPractised: practised,
               ),
             // Every numeric board is the same screen: it takes the board, the
@@ -175,7 +185,7 @@ class _HomeRouteState extends State<HomeRoute> {
             BoardPuzzle() => PuzzleScreen(
                 puzzle: puzzle,
                 onClose: leave,
-                onSolved: leave,
+                onSolved: solved,
                 onPractised: practised,
               ),
           };
@@ -187,6 +197,46 @@ class _HomeRouteState extends State<HomeRoute> {
     // increments locally is how it ends up showing a figure the store would not
     // yield.
     await _refreshLog();
+  }
+
+  /// Swaps the finished board for the screen that says so.
+  ///
+  /// **Replaces rather than stacks** (design D4): the board would still be
+  /// underneath, still solved, with nothing left to do to it — so leaving the
+  /// completion screen goes home.
+  ///
+  /// The streak counts today appended to what this screen last read. The day
+  /// was recorded the moment the player first committed to the board, so it is
+  /// in the store; `_log` may not have been re-read since, and showing a figure
+  /// one short of the one the home shows a second later is the
+  /// two-screens-one-morning contradiction `StreakPolicy` was fixed for.
+  void _showSolved(
+    BuildContext sessionContext,
+    Puzzle puzzle,
+    DateTime startedAt,
+  ) {
+    final DateTime finishedAt = widget.now();
+    // **Both figures are pinned here, not inside the builder.** A route's
+    // builder runs when Flutter decides to, which is after this method returns
+    // and can be after `_startPuzzle`'s `await` has resumed and refreshed the
+    // log — so a figure computed in there is a fact about frame scheduling
+    // rather than about the moment the player finished.
+    final Duration elapsed = finishedAt.difference(startedAt);
+    final int streakDays = streakLength(
+      attemptDays: <DateTime>[..._log.days, finishedAt],
+      today: finishedAt,
+    );
+
+    Navigator.of(sessionContext).pushReplacement(
+      fullScreenSession<void>(
+        (BuildContext doneContext) => PuzzleSolvedScreen(
+          format: puzzleName(puzzle),
+          elapsed: elapsed,
+          streakDays: streakDays,
+          onDone: () => Navigator.of(doneContext).pop(),
+        ),
+      ),
+    );
   }
 
   /// Pushes a series, and brings the player back when it ends.
