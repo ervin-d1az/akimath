@@ -6,6 +6,7 @@ import { CORE_REGISTRY } from "../golden.js";
 import { buildPack } from "../pack/build.js";
 import { parseDeclaration } from "../pack/declaration.js";
 import { parseMisconceptions } from "../pack/misconceptions.js";
+import { flag } from "./flags.js";
 
 /**
  * Writes the committed pack.
@@ -28,15 +29,9 @@ const here = (relative: string): string =>
  * broken declaration can only assert that the happy path works, and "writes no
  * file when it fails" is precisely the behaviour worth proving.
  */
-function flag(name: string, fallback: string): string {
-  const at = process.argv.indexOf(`--${name}`);
-  const value = at === -1 ? undefined : process.argv[at + 1];
-  return value === undefined ? fallback : path.resolve(value);
-}
-
-const DECLARATION = flag("declaration", here("../../content/pack.declaration.json"));
-const MISCONCEPTIONS = flag("misconceptions", here("../../content/misconceptions.json"));
-const OUT = flag("out", here("../../pack/starter.json"));
+const DECLARATION = path.resolve(flag("declaration", here("../../content/pack.declaration.json")));
+const MISCONCEPTIONS = path.resolve(flag("misconceptions", here("../../content/misconceptions.json")));
+const OUT = path.resolve(flag("out", here("../../pack/starter.json")));
 
 /** The skill every item currently belongs to, until the map exists at F5. */
 const FALLBACK_MISCONCEPTION = "no_specific_diagnosis";
