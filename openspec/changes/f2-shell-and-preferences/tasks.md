@@ -50,6 +50,6 @@
 
 ## 8. Evidence
 
-- [ ] 8.1 Tier 1: `flutter analyze --fatal-infos` and `flutter test` green, counts stated.
-- [ ] 8.2 Tier 1b: falsification matrix for the new pure policies and the shape-not-hue pairs.
-- [ ] 8.3 Tier 2: every new and changed screen on the simulator, with the navigation exercised.
+- [x] 8.1 Tier 1: `flutter analyze --fatal-infos` and `flutter test` green, counts stated.
+- [x] 8.2 Tier 1b: falsification matrix for the new pure policies and the shape-not-hue pairs.
+- [x] 8.3 Tier 2: every new and changed screen on the simulator, with the navigation exercised.

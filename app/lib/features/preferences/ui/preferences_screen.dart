@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../design/brand/aki.dart';
 import '../../../design/math/spec/es_mx_number.dart';
+import '../../../design/widgets/speech_bubble.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/verdict.dart';
@@ -63,6 +65,24 @@ class PreferencesScreen extends StatelessWidget {
           Text('CÓMO SE LEEN LOS RETOS', style: BrandText.eyebrow()),
           const SizedBox(height: BrandShape.space3),
           _legend(),
+          const SizedBox(height: BrandShape.space5),
+          // **Aki is allowed here.** The rule is that she never appears while
+          // the learner is *solving*; a settings screen is not a solve, which
+          // is the same reading that puts her on the verdict screens and the
+          // series summary and keeps her off `0.3`.
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Aki(width: 120, semanticLabel: 'Aki'),
+                const SizedBox(height: BrandShape.space3),
+                const SpeechBubble(
+                  text: 'Aquí guardo tu avance. Nada sale de este teléfono.',
+                  maxWidth: 300,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
