@@ -28,7 +28,36 @@ class PuzzleCellVisual {
   final bool selectable;
 }
 
-PuzzleCellVisual resolvePuzzleCell(PuzzleCellKind kind) => switch (kind) {
+/// How a cell is drawn, given what it is and whether the player is on it.
+///
+/// **Selection changes the fill, and that is a fix rather than a preference.**
+/// It used to be a ring alone, drawn in ink at 3 px — the same colour and all
+/// but the same width as a cage's outline, on the same edges. A cell fully
+/// enclosed by its cage was therefore *selectable with no visible selection at
+/// all*, which is what a player reported. The ring is still drawn, inset, so
+/// shape carries the state for a reader who cannot separate the hues (BRD-1);
+/// the fill is what makes it visible across a board.
+///
+/// The yellow is the one `term_visual.dart` uses for the hole in a stimulus and
+/// `word_search_screen.dart` for the letters under a finger — "this is the
+/// thing you are working on", already spelled the same way twice.
+PuzzleCellVisual resolvePuzzleCell(
+  PuzzleCellKind kind, {
+  bool selected = false,
+}) {
+  final PuzzleCellVisual base = _base(kind);
+  // Only an open cell can be selected; a blocked or given one would be a
+  // highlight on something a player cannot change.
+  return selected && base.selectable
+      ? PuzzleCellVisual(
+          background: BrandColors.yellow,
+          ink: base.ink,
+          selectable: base.selectable,
+        )
+      : base;
+}
+
+PuzzleCellVisual _base(PuzzleCellKind kind) => switch (kind) {
       // Inked solid: a wall, not an empty square waiting for something.
       PuzzleCellKind.blocked => const PuzzleCellVisual(
           background: BrandColors.ink,

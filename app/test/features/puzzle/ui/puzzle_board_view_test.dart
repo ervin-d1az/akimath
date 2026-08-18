@@ -60,7 +60,80 @@ Future<PuzzleEntry> _pump(
   return current;
 }
 
+/// Every cell's painted fill, in reading order.
+List<Color?> _fills(WidgetTester tester) => tester
+    .widgetList<DecoratedBox>(find.descendant(
+      of: find.byType(PuzzleBoardView),
+      matching: find.byType(DecoratedBox),
+    ))
+    .map((DecoratedBox box) => (box.decoration as BoxDecoration).color)
+    .where((Color? color) => color != null)
+    .toList();
+
+/// A cage per cell, so **every** cell is enclosed on all four sides by the
+/// heavy cage outline. This is the board the defect hid on.
+List<Cage> _cagePerCell(int size) => <Cage>[
+      for (int row = 0; row < size; row++)
+        for (int col = 0; col < size; col++)
+          Cage(
+            cells: <Cell>[Cell(row: row, col: col)],
+            operation: '+',
+            target: _solution[row][col],
+          ),
+    ];
+
 void main() {
+  group('the selected cell can be seen', () {
+    testWidgets('its fill is unlike every other cell on the board',
+        (WidgetTester tester) async {
+      await _pump(
+        tester,
+        entry: PuzzleEntry.of(_board()).select(const Cell(row: 1, col: 1)),
+      );
+
+      final List<Color?> fills = _fills(tester);
+      final Map<Color?, int> counted = <Color?, int>{};
+      for (final Color? fill in fills) {
+        counted[fill] = (counted[fill] ?? 0) + 1;
+      }
+
+      expect(
+        counted.values.where((int n) => n == 1),
+        isNotEmpty,
+        reason: 'no cell is drawn differently from the rest',
+      );
+    });
+
+    testWidgets('even when its cage outlines it on all four sides',
+        (WidgetTester tester) async {
+      // **The reported defect.** Selection was a ring in ink at 3 px — the
+      // cage outline's own colour and width, on the same edges — so a cell
+      // enclosed by its cage was selectable with no visible selection at all.
+      await _pump(
+        tester,
+        entry: PuzzleEntry.of(_board()).select(const Cell(row: 1, col: 1)),
+        cages: _cagePerCell(3),
+      );
+      final List<Color?> withSelection = _fills(tester);
+
+      await _pump(tester, cages: _cagePerCell(3));
+      final List<Color?> without = _fills(tester);
+
+      expect(withSelection, isNot(without));
+    });
+
+    testWidgets('nothing is highlighted before a cell is chosen',
+        (WidgetTester tester) async {
+      await _pump(tester);
+      final Set<Color?> fills = _fills(tester).toSet();
+
+      // One fill for every open cell and nothing else: an unselected board has
+      // no cell standing out from the others.
+      expect(fills, hasLength(1));
+    });
+  });
+
+
   group('the board draws its cells', () {
     testWidgets('one per square', (WidgetTester tester) async {
       await _pump(tester);
