@@ -144,6 +144,27 @@ void main() {
       expect(find.text('1+'), findsNothing);
     });
 
+    testWidgets('a killer cage shows its target and no operation',
+        (WidgetTester tester) async {
+      // A `+` there would be a claim `KillerPayloadSchema` does not make: a
+      // killer cage asks for a sum by naming nothing.
+      await _pump(
+        tester,
+        cages: <Cage>[
+          Cage(
+            cells: <Cell>[
+              for (int row = 0; row < 3; row++)
+                for (int col = 0; col < 3; col++) Cell(row: row, col: col),
+            ],
+            target: 18,
+          ),
+        ],
+      );
+
+      expect(find.text('18'), findsOneWidget);
+      expect(find.text('18+'), findsNothing);
+    });
+
     testWidgets('two cages label two different cells',
         (WidgetTester tester) async {
       await _pump(

@@ -17,6 +17,15 @@ row, and SHALL report how many kinds it reads.
 - **THEN** it is refused
   → `app/test/content/model/puzzle_fixture_test.dart`
 
+#### Scenario: A target no arrangement could reach
+
+- **WHEN** a summing cage asks for a total outside the range its cell count and the board's size
+  allow
+- **THEN** it is refused — a bound in constant time, not a reachability proof, because whether a
+  particular target is achievable under the Latin constraint is the builder's to decide and
+  re-deriving it on the device is the solving this app does not do
+  → `app/test/content/model/puzzle_fixture_test.dart`
+
 #### Scenario: The gate reports its coverage
 
 - **WHEN** the parity gate runs

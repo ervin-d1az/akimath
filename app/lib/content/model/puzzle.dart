@@ -65,18 +65,28 @@ class PuzzleBoard {
   int valueAt(Cell cell) => solution[cell.row][cell.col];
 }
 
-/// What a KenKen cage asks: an operation over its cells reaching a target.
+/// What a cage asks: its cells reaching a target, sometimes by a named
+/// operation.
+///
+/// **`operation` is optional because Killer's cages carry none** — they ask for
+/// a sum and say so by saying nothing. Two cage types would have meant two
+/// renderers, two outline computations and two label rules, all to model an
+/// absence (design D1).
+///
+/// The model is permissive and the readers are strict: KenKen's requires an
+/// operation and Killer's refuses one. That is the right way round — the model
+/// describes what can be drawn, the frozen schemas say what may arrive.
 class Cage {
   const Cage({
     required this.cells,
-    required this.operation,
     required this.target,
+    this.operation,
   });
 
   final List<Cell> cells;
 
-  /// One of `+`, `-`, `×`, `÷` — the frozen set.
-  final String operation;
+  /// One of `+`, `-`, `×`, `÷`, or null when the format names none.
+  final String? operation;
 
   final int target;
 }
@@ -98,7 +108,18 @@ sealed class Puzzle {
   PuzzleBoard get board;
 }
 
-final class KenKenPuzzle extends Puzzle {
+/// A puzzle whose board is divided into cages.
+///
+/// KenKen and Killer both are, and the screen takes this rather than either —
+/// what it needs is a board and some cages, and naming a concrete kind would
+/// make every new caged format a change to the screen.
+sealed class CagedPuzzle extends Puzzle {
+  const CagedPuzzle({required super.tutorialSteps, required super.referenceSheet});
+
+  List<Cage> get cages;
+}
+
+final class KenKenPuzzle extends CagedPuzzle {
   const KenKenPuzzle({
     required this.board,
     required this.cages,
@@ -109,5 +130,22 @@ final class KenKenPuzzle extends Puzzle {
   @override
   final PuzzleBoard board;
 
+  @override
+  final List<Cage> cages;
+}
+
+/// Cages that ask for a sum, with no operation named.
+final class KillerPuzzle extends CagedPuzzle {
+  const KillerPuzzle({
+    required this.board,
+    required this.cages,
+    required super.tutorialSteps,
+    required super.referenceSheet,
+  });
+
+  @override
+  final PuzzleBoard board;
+
+  @override
   final List<Cage> cages;
 }

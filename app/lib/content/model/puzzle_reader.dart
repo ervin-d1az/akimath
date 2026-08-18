@@ -43,6 +43,7 @@ Puzzle readPuzzle(Object? raw, {required String puzzleId}) {
 
   return switch (raw['kind']) {
     'kenken' => _kenken(payload, tutorial, reference, puzzleId),
+    'killer' => _killer(payload, tutorial, reference, puzzleId),
     // A kind the contract froze but this build has no renderer for lands here.
     // Refused where the pack is read: the alternative is a player opening a
     // card and meeting a blank board.
@@ -52,11 +53,45 @@ Puzzle readPuzzle(Object? raw, {required String puzzleId}) {
   };
 }
 
+Puzzle _killer(
+  Map<String, dynamic> payload,
+  List<String> tutorial,
+  List<String> reference,
+  String id,
+) {
+  final (PuzzleBoard board, List<Cage> cages) = _cagedBoard(payload, id, _sumCage);
+  return KillerPuzzle(
+    board: board,
+    cages: cages,
+    tutorialSteps: tutorial,
+    referenceSheet: reference,
+  );
+}
+
 Puzzle _kenken(
   Map<String, dynamic> payload,
   List<String> tutorial,
   List<String> reference,
   String id,
+) {
+  final (PuzzleBoard board, List<Cage> cages) = _cagedBoard(payload, id, _cage);
+  return KenKenPuzzle(
+    board: board,
+    cages: cages,
+    tutorialSteps: tutorial,
+    referenceSheet: reference,
+  );
+}
+
+/// The board and cages both caged formats share.
+///
+/// Killer is KenKen with the operation removed, so everything except how a cage
+/// is parsed is the same — and duplicating this was the alternative that would
+/// have let the two drift on coverage, bounds or which cell is outside a board.
+(PuzzleBoard, List<Cage>) _cagedBoard(
+  Map<String, dynamic> payload,
+  String id,
+  Cage Function(Object?, String) parseCage,
 ) {
   final PuzzleBoard board = _board(payload['board'], id);
   final Object? rawCages = payload['cages'];
@@ -65,7 +100,7 @@ Puzzle _kenken(
   }
 
   final List<Cage> cages = <Cage>[
-    for (final Object? cage in rawCages) _cage(cage, id),
+    for (final Object? cage in rawCages) parseCage(cage, id),
   ];
 
   // **Every cell in exactly one cage.** `checkCageCoverage` enforces it where
@@ -82,22 +117,76 @@ Puzzle _kenken(
     );
   }
 
-  return KenKenPuzzle(
-    board: board,
-    cages: cages,
-    tutorialSteps: tutorial,
-    referenceSheet: reference,
-  );
+  for (final Cage cage in cages) {
+    _boundTarget(cage, board.size, id);
+  }
+
+  return (board, cages);
 }
 
-Cage _cage(Object? raw, String id) {
-  if (raw is! Map<String, dynamic>) {
-    throw FormatException('puzzle "$id" has a malformed cage');
+/// Refuses a target no arrangement of digits could reach.
+///
+/// **A bound, not a reachability proof.** Every cell holds 1 to `size`, so a
+/// summing cage of `n` cells lies between `n` and `n × size` — arithmetic, in
+/// constant time, with nothing searched. Whether a *particular* target is
+/// actually achievable given the Latin constraint is `checkCagedBoard`'s, where
+/// the pack is built, and re-deriving it here is the device-side solving that
+/// `no_puzzle_generation_test` exists to prevent.
+///
+/// It earns its place on the cheapest possible case: the frozen Killer
+/// rejection row is a two-cell cage targeting 12 on a board whose cells top out
+/// at 3. That is not a subtle content bug, and a reader that drew it would hand
+/// a player a board with no answer.
+void _boundTarget(Cage cage, int size, String id) {
+  // Only for sums. `−` and `÷` cages are two cells and their targets are
+  // differences and ratios, which this bound says nothing about.
+  final bool sums = cage.operation == null || cage.operation == '+';
+  if (!sums) {
+    return;
   }
-  final String operation = raw['operation'] as String? ?? '';
+  final int cells = cage.cells.length;
+  if (cage.target < cells || cage.target > cells * size) {
+    throw FormatException(
+      'puzzle "$id" has a $cells-cell cage targeting ${cage.target}, outside '
+      'the $cells to ${cells * size} any arrangement could reach',
+    );
+  }
+}
+
+/// A cage whose operation the format names.
+Cage _cage(Object? raw, String id) {
+  final Map<String, dynamic> map = _cageMap(raw, id);
+  final String operation = map['operation'] as String? ?? '';
   if (!cageOperations.contains(operation)) {
     throw FormatException('puzzle "$id" has a cage with operation "$operation"');
   }
+  return _cageOf(map, id, operation);
+}
+
+/// A cage that asks for a sum and names no operation.
+///
+/// **An operation here is refused rather than ignored.** `KillerPayloadSchema`
+/// has no such field, so one arriving means the two readers disagree about what
+/// a Killer is — and ignoring it would draw a board that says less than its
+/// content claims.
+Cage _sumCage(Object? raw, String id) {
+  final Map<String, dynamic> map = _cageMap(raw, id);
+  if (map.containsKey('operation')) {
+    throw FormatException(
+      'puzzle "$id" has a killer cage naming an operation; killer cages sum',
+    );
+  }
+  return _cageOf(map, id, null);
+}
+
+Map<String, dynamic> _cageMap(Object? raw, String id) {
+  if (raw is! Map<String, dynamic>) {
+    throw FormatException('puzzle "$id" has a malformed cage');
+  }
+  return raw;
+}
+
+Cage _cageOf(Map<String, dynamic> raw, String id, String? operation) {
   final Object? target = raw['target'];
   if (target is! int || target < 1) {
     throw FormatException('puzzle "$id" has a cage targeting $target');
