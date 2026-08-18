@@ -1,12 +1,12 @@
 ## 1. Keep core's promises honest before adding to it
 
-- [ ] 1.1 Red → green: a test that walks the transitive imports of `src/index.ts` and fails if any
+- [x] 1.1 Red → green: a test that walks the transitive imports of `src/index.ts` and fails if any
       of them resolves into `@akimath/contract`. It must report how many modules it walked and fail
       at zero, so a broken walker cannot make the claim vacuous (PROC-10). Seen red first by
       pointing it at a module that does import contract.
-- [ ] 1.2 Confirm `test/dependency-allowlist.test.ts` still passes with contract as a
+- [x] 1.2 Confirm `test/dependency-allowlist.test.ts` still passes with contract as a
       devDependency, and extend its recorded rationale to say why the builder does not promote it.
-- [ ] 1.3 Confirm `test/determinism.test.ts` covers `src/pack/**` — the new pure modules must be
+- [x] 1.3 Confirm `test/determinism.test.ts` covers `src/pack/**` — the new pure modules must be
       inside the AST walk, not beside it. Falsify by adding a `Date.now()` to a pack module and
       seeing it go red.
 

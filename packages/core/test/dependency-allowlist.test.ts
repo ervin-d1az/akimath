@@ -37,14 +37,22 @@ const manifest = JSON.parse(
  * another package at all.
  */
 const DEV_DEPENDENCY_REASONS: Readonly<Record<string, string>> = {
-  // **Verification, not reuse.** Core is a producer of items; the contract is
-  // the frozen acceptor. Proving a generated item is loadable is a test-time
-  // concern, so the reference is a dev dependency and the `dependencies` key
-  // stays absent. Putting it in `dependencies` would defeat the gate above —
-  // a manifest reader cannot tell a workspace sibling from `drizzle-orm` — and
-  // would drag `zod` in transitively, because the contract's index re-exports
-  // every schema module.
-  "@akimath/contract": "the frozen format, imported by tests to prove core's output is acceptable",
+  // **Build-time, not shipped.** Core is a producer of items; the contract is
+  // the frozen acceptor. Two things need it and neither reaches a device: the
+  // tests, which prove a generated item is loadable, and the pack builder
+  // (`src/pack/`, `src/adapters/build-pack.ts`), which needs `answerDigest` and
+  // `parsePack` to emit a pack at all. Putting it in `dependencies` would
+  // defeat the gate above — a manifest reader cannot tell a workspace sibling
+  // from `drizzle-orm` — and would drag `zod` in transitively, because the
+  // contract's index re-exports every schema module.
+  //
+  // **A devDependency is on disk exactly like a runtime one**, so "core ships
+  // nothing" stopped being provable from the manifest alone the moment source
+  // could import this. `import_boundary.test.ts` is what makes it provable
+  // again: it walks the imports reachable from `src/index.ts` and fails if any
+  // of them leaves the package. The builder is not reachable from there, and
+  // that test is what keeps it so.
+  "@akimath/contract": "the frozen format — tests prove core's output is acceptable, and the pack builder emits it",
   "@stryker-mutator/core": "mutation testing (Tier 1b)",
   "@stryker-mutator/vitest-runner": "mutation testing (Tier 1b)",
   "@types/node": "types only, erased at build",
