@@ -49,9 +49,12 @@ class PuzzleEntry {
   /// Ignored when nothing is selected — a digit landing somewhere the player is
   /// not looking is worse than a digit doing nothing — and when the value is
   /// outside the board's domain, since no such number can appear in a solution.
+  ///
+  /// The domain is the board's own (`highestValue`), not its size: a magic
+  /// square holds 1 to `size²`.
   PuzzleEntry type(int value) {
     final Cell? cell = selected;
-    if (cell == null || value < 1 || value > board.size) {
+    if (cell == null || value < 1 || value > board.highestValue) {
       return this;
     }
     return PuzzleEntry(

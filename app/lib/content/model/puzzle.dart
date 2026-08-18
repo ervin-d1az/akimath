@@ -35,7 +35,16 @@ class PuzzleBoard {
     required this.blocked,
     required this.given,
     required this.solution,
+    required this.highestValue,
   });
+
+  /// A caged board: cells hold 1 to [size].
+  const PuzzleBoard.caged({
+    required this.size,
+    required this.blocked,
+    required this.given,
+    required this.solution,
+  }) : highestValue = size;
 
   /// 3 to 6, matching the frozen schema.
   final int size;
@@ -48,6 +57,19 @@ class PuzzleBoard {
 
   /// Row-major, `size` by `size`. Zero is an empty cell.
   final List<List<int>> solution;
+
+  /// The largest value a cell may hold.
+  ///
+  /// **Declared, not derived** (design D1). It equals [size] for KenKen and
+  /// Killer and `size × size` for a magic square, and the two were
+  /// indistinguishable while only caged formats existed — so the entry policy
+  /// derived it and would have refused every digit above 3 on a 3×3 magic
+  /// square, which is every digit that puzzle is made of.
+  ///
+  /// One place holds it, because the alternative is the same fact in the
+  /// policy, the pad and the renderer, free to disagree — which is how a format
+  /// ends up playable in one and unenterable in another.
+  final int highestValue;
 
   /// The cells a player is expected to fill: everything neither blocked nor
   /// given.
@@ -132,6 +154,29 @@ final class KenKenPuzzle extends CagedPuzzle {
 
   @override
   final List<Cage> cages;
+}
+
+/// Every line adds to the number beside it, and no value repeats in the square.
+///
+/// The one format with no cages, and the one whose cells hold 1 to `size²`
+/// rather than 1 to `size` — which is the assumption the two caged formats hid.
+final class MagicSquarePuzzle extends Puzzle {
+  const MagicSquarePuzzle({
+    required this.board,
+    required this.rowTargets,
+    required this.columnTargets,
+    required super.tutorialSteps,
+    required super.referenceSheet,
+  });
+
+  @override
+  final PuzzleBoard board;
+
+  /// What each row must total, top to bottom.
+  final List<int> rowTargets;
+
+  /// What each column must total, left to right.
+  final List<int> columnTargets;
 }
 
 /// Cages that ask for a sum, with no operation named.

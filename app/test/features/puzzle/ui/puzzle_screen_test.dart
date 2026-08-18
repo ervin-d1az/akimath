@@ -12,7 +12,7 @@ const List<List<int>> _solution = <List<int>>[
 ];
 
 KenKenPuzzle _puzzle() => KenKenPuzzle(
-      board: const PuzzleBoard(
+      board: const PuzzleBoard.caged(
         size: 3,
         blocked: <Cell>{},
         given: <Cell>{},

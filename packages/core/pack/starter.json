@@ -2530,6 +2530,64 @@
         "Las jaulas piden una suma; no traen signo.",
         "Ningún número se repite en su fila ni en su columna."
       ]
+    },
+    {
+      "kind": "magicSquare",
+      "payload": {
+        "board": {
+          "size": 3,
+          "blocked": [],
+          "given": [
+            {
+              "row": 0,
+              "col": 0
+            },
+            {
+              "row": 0,
+              "col": 1
+            },
+            {
+              "row": 1,
+              "col": 0
+            }
+          ],
+          "solution": [
+            [
+              2,
+              7,
+              6
+            ],
+            [
+              9,
+              5,
+              1
+            ],
+            [
+              4,
+              3,
+              8
+            ]
+          ]
+        },
+        "row_targets": [
+          15,
+          15,
+          15
+        ],
+        "column_targets": [
+          15,
+          15,
+          15
+        ]
+      },
+      "tutorial_steps": [
+        "Cada fila y cada columna llegan al número de su ficha.",
+        "Ningún número se repite en todo el cuadro."
+      ],
+      "reference_sheet": [
+        "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
+        "Se usan los números del 1 al 9, uno por celda."
+      ]
     }
   ]
 }

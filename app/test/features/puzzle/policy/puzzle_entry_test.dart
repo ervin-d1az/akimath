@@ -8,7 +8,7 @@ PuzzleBoard _board({
   Set<Cell> blocked = const <Cell>{},
   Set<Cell> given = const <Cell>{},
 }) =>
-    PuzzleBoard(
+    PuzzleBoard.caged(
       size: 3,
       blocked: blocked,
       given: given,
@@ -68,6 +68,57 @@ void main() {
 
     test('clearing with nothing selected changes nothing', () {
       expect(PuzzleEntry.of(_board()).clear().filled, isEmpty);
+    });
+  });
+
+  group('the domain is the board\'s, not its size', () {
+    /// A 3×3 magic square: three cells across, nine distinct values.
+    PuzzleBoard magic() => const PuzzleBoard(
+          size: 3,
+          blocked: <Cell>{},
+          given: <Cell>{},
+          solution: <List<int>>[
+            <int>[2, 7, 6],
+            <int>[9, 5, 1],
+            <int>[4, 3, 8],
+          ],
+          highestValue: 9,
+        );
+
+    test('a magic square accepts every digit up to nine', () {
+      // The assumption two caged formats hid. Deriving the domain from the
+      // board's size refuses 4 through 9 — every digit above the third, which
+      // is most of what a magic square is made of.
+      for (final int value in <int>[1, 5, 7, 9]) {
+        final PuzzleEntry entry = PuzzleEntry.of(magic())
+            .select(const Cell(row: 0, col: 0))
+            .type(value);
+        expect(entry.valueAt(const Cell(row: 0, col: 0)), value,
+            reason: '$value was refused');
+      }
+    });
+
+    test('and still refuses ten', () {
+      final PuzzleEntry entry =
+          PuzzleEntry.of(magic()).select(const Cell(row: 0, col: 0)).type(10);
+      expect(entry.filled, isEmpty);
+    });
+
+    test('a caged board of the same size still stops at three', () {
+      // Both formats are 3×3; only the domain differs, which is the whole
+      // point of declaring it.
+      final PuzzleEntry entry = PuzzleEntry.of(_board())
+          .select(const Cell(row: 0, col: 0))
+          .type(7);
+      expect(entry.filled, isEmpty);
+    });
+
+    test('a magic square is solved by its own values', () {
+      PuzzleEntry entry = PuzzleEntry.of(magic());
+      for (final Cell cell in magic().openCells) {
+        entry = entry.select(cell).type(magic().valueAt(cell));
+      }
+      expect(entry.isSolved, isTrue);
     });
   });
 

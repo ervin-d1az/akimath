@@ -23,6 +23,8 @@ class PuzzleBoardView extends StatelessWidget {
     required this.entry,
     required this.cages,
     required this.onTapCell,
+    this.rowTargets = const <int>[],
+    this.columnTargets = const <int>[],
   });
 
   final PuzzleEntry entry;
@@ -32,8 +34,68 @@ class PuzzleBoardView extends StatelessWidget {
 
   final ValueChanged<Cell> onTapCell;
 
+  /// What each line must total, for the formats that ask. Empty for caged
+  /// boards, which draw no margin at all — so a magic square and a KenKen show
+  /// the same grid at the same size, and only one has labels beside it.
+  final List<int> rowTargets;
+  final List<int> columnTargets;
+
   @override
   Widget build(BuildContext context) {
+    if (rowTargets.isEmpty && columnTargets.isEmpty) {
+      return _grid();
+    }
+    // The margin is space *around* an unchanged square: `cellRect` is untouched
+    // and the grid keeps the size it would have had.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        // **`IntrinsicHeight`**, so the row-target column has a height to divide.
+        // Without it the margin's `Expanded`s are handed unbounded height — the
+        // grid's height comes from its own aspect ratio, which the row does not
+        // know until it has laid the grid out.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(child: _grid()),
+              _margin(rowTargets, vertical: true),
+            ],
+          ),
+        ),
+        Row(
+          children: <Widget>[
+            Expanded(child: _margin(columnTargets, vertical: false)),
+            const SizedBox(width: _marginExtent),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// How much room a line of targets takes.
+  static const double _marginExtent = 28;
+
+  /// The targets down the right or along the bottom.
+  Widget _margin(List<int> targets, {required bool vertical}) {
+    final List<Widget> labels = <Widget>[
+      for (final int target in targets)
+        Expanded(
+          child: Center(
+            child: Text('$target', style: BrandText.eyebrow(size: 11)),
+          ),
+        ),
+    ];
+    return SizedBox(
+      width: vertical ? _marginExtent : null,
+      height: vertical ? null : _marginExtent,
+      child: vertical
+          ? Column(children: labels)
+          : Row(children: labels),
+    );
+  }
+
+  Widget _grid() {
     // Square, and sized by the narrower axis of whatever it is given — the same
     // rule `cellRect` follows, so the two cannot disagree about how big a cell
     // is.

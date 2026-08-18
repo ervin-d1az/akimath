@@ -44,6 +44,7 @@ Puzzle readPuzzle(Object? raw, {required String puzzleId}) {
   return switch (raw['kind']) {
     'kenken' => _kenken(payload, tutorial, reference, puzzleId),
     'killer' => _killer(payload, tutorial, reference, puzzleId),
+    'magicSquare' => _magicSquare(payload, tutorial, reference, puzzleId),
     // A kind the contract froze but this build has no renderer for lands here.
     // Refused where the pack is read: the alternative is a player opening a
     // card and meeting a blank board.
@@ -81,6 +82,69 @@ Puzzle _kenken(
     tutorialSteps: tutorial,
     referenceSheet: reference,
   );
+}
+
+/// The most values the frozen pad can express.
+///
+/// `KeypadLayout.puzzle` is 5×2: nine digits and a backspace. A board needing
+/// more than nine distinct values has values a player simply cannot type, which
+/// is not difficulty — it is an unplayable board, and the honest place to say so
+/// is where the pack is read (design D2).
+///
+/// Expressed as a property of the *input surface* rather than as "magic squares
+/// must be 3×3", so the rule keeps working if the pad ever grows.
+const int padHighestDigit = 9;
+
+Puzzle _magicSquare(
+  Map<String, dynamic> payload,
+  List<String> tutorial,
+  List<String> reference,
+  String id,
+) {
+  final PuzzleBoard square = _board(payload['board'], id);
+  // A magic square is made of 1 to size², each once.
+  final int highest = square.size * square.size;
+  if (highest > padHighestDigit) {
+    throw FormatException(
+      'puzzle "$id" is a ${square.size}×${square.size} magic square needing '
+      '$highest values, and the pad offers $padHighestDigit — a player could '
+      'not enter ${highest - padHighestDigit} of them',
+    );
+  }
+
+  final List<int> rows = _targets(payload['row_targets'], square.size, id, 'row');
+  final List<int> columns =
+      _targets(payload['column_targets'], square.size, id, 'column');
+
+  return MagicSquarePuzzle(
+    board: PuzzleBoard(
+      size: square.size,
+      blocked: square.blocked,
+      given: square.given,
+      solution: square.solution,
+      highestValue: highest,
+    ),
+    rowTargets: rows,
+    columnTargets: columns,
+    tutorialSteps: tutorial,
+    referenceSheet: reference,
+  );
+}
+
+List<int> _targets(Object? raw, int size, String id, String what) {
+  if (raw is! List || raw.length != size) {
+    throw FormatException(
+      'puzzle "$id" has ${raw is List ? raw.length : 'no'} $what targets for a '
+      '$size square',
+    );
+  }
+  return <int>[
+    for (final Object? target in raw)
+      if (target is int && target > 0)
+        target
+      else
+        throw FormatException('puzzle "$id" has a $what target of $target'),
+  ];
 }
 
 /// The board and cages both caged formats share.
@@ -243,7 +307,7 @@ PuzzleBoard _board(Object? raw, String id) {
     }
   }
 
-  return PuzzleBoard(size: size, blocked: blocked, given: given, solution: grid);
+  return PuzzleBoard.caged(size: size, blocked: blocked, given: given, solution: grid);
 }
 
 Set<Cell> _cellSet(Object? raw, String id) {
