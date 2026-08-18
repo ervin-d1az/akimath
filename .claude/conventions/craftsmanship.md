@@ -4,8 +4,9 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Eighteen rules, every one of them describing code that is
-already on disk today — not a pattern we hope to have. It grows by **PROC-6** and no other way.
+This book starts small on purpose. Twenty-seven rule IDs — counting `FUN-1a` as the carve-out it
+is rather than as a rule — every one of them describing code that is already on disk today, not
+a pattern we hope to have. It grows by **PROC-6** and no other way.
 
 `CLAUDE.md` at the repo root is the entry point for *how to work here*; this file is the *contract
 the code must satisfy*. Where both cover the same ground this file is the detailed version — and if
@@ -99,6 +100,16 @@ The one structural pattern the repo already commits to, on both sides of the sta
   inside a body is the ceiling, and longer rationale belongs in the plan, `ARCHITECTURE.md`, or an
   ADR under `docs/adr/`.
 
+- **CMT-2** MUST: **a comment that states behaviour the code does not have is a defect**, and it is
+  fixed with the code in the same commit — a comment is not a softer artifact than the code above
+  which it sits. CMT-1 governs whether a comment should exist and what it may say; this one governs
+  whether it is true. Found in `f2-onboarding-first-run`, where three doc comments claimed the
+  first-run flag was *"set by answering, not by escaping"* and that answering was *"the only path
+  that completes the first run"*, while the skip control one row below the close control completed it
+  with nothing solved; and where `FirstItemScreen` said *"it measures nothing"* above a screen whose
+  verdict displayed `RACHA 1`. A reviewer reading a comment believes it, which is exactly why a false
+  one is worse than none: it retires the question.
+
 ## LANG — Language
 
 - **LANG-1** MUST: code, identifiers, file names, comments, doc comments, test names, commit
@@ -106,15 +117,26 @@ The one structural pattern the repo already commits to, on both sides of the sta
   Spanish**, and they read as a person talking to a child, not as a system reporting
   (`'Se me desenroscó la cola. Ya vuelve.'`). There is no i18n layer yet, so player-facing Spanish
   sits inline in the widget that shows it; when a layer arrives this rule gains a clause under
-  PROC-6.
+  PROC-6. **A verbatim quotation of a Spanish design document, or of player-facing copy, may stand
+  inside an English comment** provided the rationale around it is in English — `banner_visual.dart`'s
+  *"Sin conexión no es un error del usuario: va en amarillo"* is the reason a decision was taken, and
+  paraphrasing a source into English loses the ability to check it against the source. Quoting is not
+  writing the comment in Spanish.
 
 ## DEP — Dependencies & the audience
 
 - **DEP-1** NEVER add a dependency that sends data off the device — analytics, ads, attribution,
   crash reporting, remote config, remote fonts, any SDK that "phones home". The audience includes
   children under 13 and the compliance posture in `ARCHITECTURE.md` §11 is minimization by
-  construction. Before adding *any* dependency, state in the PR what network calls it makes and what
-  it collects; "it's only a util" is not an audit. Assets ship bundled for the same reason — the
+  construction. Before adding *any* dependency, audit what network calls it makes and what it
+  collects; "it's only a util" is not an audit. **The audit lives in
+  `app/test/architecture/dependency_allowlist_test.dart`, beside the allowlist entry, in the same
+  change** — not in a pull-request body, which is not greppable, not versioned next to the thing it
+  describes, and fails no build. `shared_preferences`, added 2026-08-16, is the worked example: the
+  gate went red on the addition, and the entry carries the publisher, what the package wraps, what it
+  stores, and a verified negative for `HttpClient`, `package:http`, `Socket` and `WebSocket` across
+  the facade, the platform interface and both mobile implementations. A **dev** dependency is out of
+  the allowlist's scope because it does not ship, and the reason is stated at its declaration. Assets ship bundled for the same reason — the
   brand typefaces live in `app/assets/fonts/` precisely so that first launch makes no third-party
   request.
 
@@ -129,8 +151,9 @@ credit.
 
 - **BRD-1** MUST: success and error are distinguishable by **shape**, never by hue alone — `AkiPose.correct`
   and `AkiPose.slip` differ in the tail, the ears and the mouth curve, not only in color. Coral means
-  error and nothing else; green means action and success and nothing else; pink is the accent and
-  never carries state. Ask `BrandColorRole` for a role, not `BrandColors` for a hue, in anything that
+  error and nothing else; green means action and success and nothing else; pink is never `error`,
+  `success` or `action` — it is the accent, and `BrandColorRole.focus` is an input affordance, not a
+  verdict. Ask `BrandColorRole` for a role, not `BrandColors` for a hue, in anything that
   communicates state.
 
 - **BRD-2a** NEVER draw a blurred shadow, a gradient, a backdrop filter, or anything with Material
@@ -145,13 +168,28 @@ credit.
   so itself and is the single source of the palette; ask `BrandColorRole` for a role rather than
   `BrandColors` for a hue in anything that communicates state. **Carve-out, matching CLAUDE.md
   verbatim:** `Colors.transparent`, used to switch Material's surface tinting off, is the one
-  exception on disk (`app/lib/design/theme.dart:37,42,48,53`). Nothing else loosens —
-  `grep -rn "Color(0x" app/lib` returns only `brand_colors.dart`.
+  exception on disk (`app/lib/design/theme.dart:37,42,48,53`). Nothing else loosens, and this is a
+  red build rather than a `grep` a reviewer has to remember to run:
+  `app/test/architecture/no_color_literal_test.dart` scans all of `app/lib/` except
+  `design/tokens/` for `Color(0x`, `Color.fromARGB(`, `Color.fromRGBO(` and `Colors.`, with
+  comments stripped first. The last is matched on a word boundary — `(?<![A-Za-z0-9_$])Colors\.` —
+  because `Colors.` is a substring of `BrandColors.` and a naive match reports **94 correct lines**
+  across 12 files. It carves out `Colors.transparent` by name, asserts the `Colors.` arm alone
+  returns exactly the four `theme.dart` hits *before* that carve-out is applied, and reports how
+  many files it scanned so a mistyped root cannot make it vacuously green. It does not match
+  `#RRGGBB` text: the character sheet prints four brand hexes as swatch labels and is correct code.
 
 - **BRD-2c** SHOULD: take geometry from `BrandShape` — radii, stroke widths, spacing — and give any
-  deliberate departure a one-line reason next to it. The existing case is the 260px face tile in
-  `splash_screen.dart`, whose doc comment justifies its 60px radius; its `width: 4` border is
-  *not* justified and is not pre-blessed.
+  deliberate departure a one-line reason next to it. The worked example is the 260px face tile in
+  `splash_screen.dart`, whose doc comment justifies its 60px radius; that radius is now the screen's
+  only unexplained-looking number and it is the one that has a reason, because the `width: 4` border
+  beside it became `BrandShape.borderWidth` in `f0-token-scale` and the screen's uniform 26px rhythm
+  is one named `_gap` constant carrying its own one-line reason. Hard-shadow offsets on widget
+  surfaces are enforced rather than reviewed: `app/test/architecture/no_geometry_literal_test.dart`
+  scans `app/lib/design/widgets/` and `app/lib/features/` for `Offset(`, leaving `app/lib/design/brand/`
+  out because that is the artwork layer, where geometry *is* the content. Radii and border widths are
+  **not** scanned — a bare `24` is not greppable without parsing — so on those two this stays a
+  reviewer's read.
 
 - **BRD-2d** MUST: any interactive target is at least `BrandShape.minTouchTarget` (48 logical
   pixels) in both dimensions — keypad keys and puzzle-board cells alike.
@@ -179,8 +217,9 @@ credit.
 
 - **PROC-1** MUST: **TDD.** The test is written first and lands in the same commit as the behavior it
   describes — tests are committed here, they are the deliverable, and a behavior change with no test
-  in its commit is incomplete. `app/test/` and `packages/server/test/` are the two homes; a test
-  that needs a mock to describe a decision is a PURE-1 finding, not a test problem.
+  in its commit is incomplete. `app/test/`, `packages/server/test/` and `packages/contract/test/`
+  are the three homes; a test that needs a mock to describe a decision is a PURE-1 finding, not a
+  test problem.
 
 - **PROC-5** MUST: a change is proven by **evidence**, and the tier reached is stated in words. The
   tier names here are the same three CLAUDE.md uses; an agent file that numbers them differently is
@@ -188,35 +227,48 @@ credit.
   - **Tier 1 — the committed suite, always.** Run these, verbatim, per package:
 
     ```sh
-    cd app             && flutter analyze --fatal-infos
-    cd app             && flutter test
-    cd packages/server && npm run verify        # tsc --noEmit && vitest run
+    cd app               && flutter analyze --fatal-infos
+    cd app               && flutter test
+    cd packages/server   && npm run verify      # tsc --noEmit && vitest run
+    cd packages/contract && npm run verify      # tsc --noEmit && vitest run
     ```
 
     `--fatal-infos` is not decoration: these are the commands `.claude/hooks/verify-gate.sh` runs
     as a `PreToolUse` hook on every `git commit` and `git push`, exiting **2** (blocking) on a
-    failure, and the same commands `.github/workflows/ci.yml` runs in its `dart` and `ts` jobs.
+    failure, and the same commands `.github/workflows/ci.yml` runs in its `dart`, `ts` and
+    `contract` jobs.
     (The hook and CI spell the TypeScript half as `npm run typecheck` then `npm test`, which is
     exactly what `npm run verify` chains — same two checks, one script.)
     The rulebook, the hook and CI must name one set of commands; if they ever diverge, reconcile
-    them in the same session (PROC-6). The baseline is **zero**: 34 Flutter tests and 3 TypeScript
-    tests pass and both analyzers report clean today, so there is no pre-existing noise to hide a
-    new failure in. Green before, green after, stated with the counts.
+    them in the same session (PROC-6). The baseline is **zero**: the Flutter suite, 3 TypeScript
+    tests in `packages/server` and 189 in `packages/contract` all pass and every analyzer reports
+    clean, so there is no pre-existing noise to hide a new failure in. Green before, green after,
+    stated with the counts.
   - **Tier 1b — SHOULD, when the change is in the pure core: show the tests bite.** A green suite
     that would stay green with the logic inverted is not evidence.
-    - TypeScript: `cd packages/server && npm run mutation` (Stryker, `break: 70`, scoring 100.00
-      today) and `cd packages/server && npm run dry` (jscpd, 0 clones today).
+    - TypeScript: `npm run mutation` (Stryker, `break: 70`) and `npm run dry` (jscpd) in the
+      package under change — `packages/server` scores 100.00 with 0 clones today,
+      `packages/contract` 91.71 with 0 clones. **jscpd's `threshold: 1` means `npm run dry`
+      exits 0 with real clones in it**, so the number to read is "clones found", not the exit
+      code.
     - Dart: there is **no configured mutation harness** — `mutation_test` is a dev dependency but
       the rules XML that would define its test commands does not exist, so do not write that
       command as if it ran. The substitute is a **falsification step**, and because it edits
       versioned production code its mechanism is part of the rule, not a detail:
-      1. `git stash push -- <file>` is the safe form; otherwise edit in place and be ready to
-         `git checkout -- <file>`.
+      1. For a **tracked** file, `git stash push -- <file>` is the safe form; otherwise edit in
+         place and be ready to `git checkout -- <file>`. For an **untracked** file — a new file in
+         a session that has not committed — neither works: `git stash push` will not take an
+         untracked path and `git checkout --` has nothing to restore from. Copy it out of the tree
+         first, and record a `shasum -a 256` of it.
       2. Invert one assertion or return value, run `cd app && flutter test`, and record the
          **named** test that went red.
-      3. Restore: `git checkout -- <file>` (or `git stash pop`), then prove it with
-         `git diff --quiet -- <file>` **and** a `flutter test` run back to the count you recorded
-         before the mutation. Paste both into the ledger.
+      3. Restore: `git checkout -- <file>` (or `git stash pop`, or the copy), then prove it with
+         **two** things pasted into the ledger. Tracked: `git diff --quiet -- <file>` and a
+         `flutter test` run back to the count you recorded before the mutation. Untracked:
+         `git diff --quiet` is **vacuous** — it exits 0 for any path git does not track, whether or
+         not the mutation is still in the file — so the proof is the `shasum -a 256` from step 1
+         repeated and matching (`diff -q <backup> <file>` is the accepted equivalent for a single
+         file), plus that same returned test count. PROC-8 is the general form of this trap.
 
       A falsification step without that closing proof is not evidence, it is an uncommitted
       mutation waiting to be staged by the next `git add`.
@@ -260,6 +312,67 @@ credit.
   both in the same commit, or neither.
   Keep `config.yaml` pointing at files rather than restating them: a paraphrase of this rulebook
   copied into it goes stale silently, and nothing will ever fail to warn you.
+
+- **PROC-8** MUST: **git cannot prove anything about a path it does not track.** `git diff
+  --quiet -- <file>` and `git diff --exit-code -- <dir>` both exit **0** for an untracked path —
+  not because nothing changed, but because git has nothing to compare against. The proof is
+  therefore vacuous exactly when the file is new, which is exactly when a session is most likely
+  to reach for it. Use a `shasum -a 256` recorded before and repeated after instead, and **say
+  which form you used**: for a single file the checksum (or `diff -q <backup> <file>`), for a
+  whole directory a checksum of the sorted file list — `find <dir> -type f | sort | xargs shasum
+  -a 256` — compared before and after. PROC-5's tier-1b falsification step carries the mechanism;
+  this rule is why it has two branches. **For a *tracked* file `git diff --quiet -- <file>` is
+  itself the proof** — the checksum is the substitute for the untracked case, not a replacement for
+  git. A ledger that reads "the file is versioned, so `shasum` is the proof, not `git diff`" has
+  inverted this rule; it was written that way once, in `f2-onboarding-first-run`, by an author who
+  had taken in only the rule's first sentence. Found twice independently, in `f0-invariant-tests` (a
+  falsification step on a new test file) and in `f0-pack-contract` (a byte-determinism gate over
+  an untracked `contract/`), which is what promoted it to a rule.
+
+- **PROC-9** MUST: a mutation score is only evidence if the run's **initial test run** passed.
+  Stryker copies the package into a sandbox, so any test that reads a path outside the package
+  must discover that path by walking up rather than by counting `..` segments — otherwise the dry
+  run dies and there is no score at all, which is not the same as a low one. Measured in
+  `f0-pack-contract`: the fixture tests' hard-coded `../../../contract` resolved to nothing under
+  the sandbox. Never report a number from a run you did not watch complete.
+
+- **PROC-10** MUST: a gate driven by a registry asserts its registry is **non-empty**. Measured in
+  `f0-invariant-tests`: pointing `no_blurred_shadow_test.dart` at an empty `screen_registry.dart`
+  took it from 6 tests to `No tests ran. No tests were found.` and **exited 0** — the whole suite
+  dropped 72 to 66 in that session and reported success. A gate whose input list silently reaches
+  zero is indistinguishable from a gate that found nothing wrong. `expect(registeredScreens,
+  isNotEmpty)` in `app/test/design/screen_overflow_test.dart` and the per-root counts in
+  `app/test/architecture/pure_boundary_test.dart` are the two forms this takes today. The same
+  applies to a path-filtered scan: report how many files it walked, and fail at zero.
+- **PROC-11** MUST: **an assertion that holds for any input is not a test.** Green that carries no
+  information is worse than a gap, because a gap is visible. Four instances, all in this repository,
+  all found by review rather than by the suite:
+  - **An `expect` whose sides are algebraically equal.** `round_screen_test.dart` asserted
+    `text.width * (slot.width / text.width) <= slot.width + 0.5`, which reduces to
+    `slot.width <= slot.width + 0.5`. It was written to hold down a painting defect that had shipped,
+    and it held nothing.
+  - **A `hasLength` or value-set check over an enum whose arms nothing exercises.** `MathTone.values`
+    was pinned at two members while the adapter arm behind one was unreachable;
+    `BannerPlacement.values` was pinned at two while neither placement's radius was rendered in a
+    test.
+  - **A `catch` no test reaches.** Both arms of `PrefsDayLogStore` were unreached, because the only
+    backend in the tests never fails — and the write arm was the half the original incident was on.
+  - **A test whose name claims more than its body checks.** `'a notice banner renders with its
+    glyph'` checked a widget type, a string and a rect ordering, so a grep for glyph coverage
+    returned a false positive.
+
+  The remedy is the same in every case: **state the mutation the test would catch, then make it.**
+  When a test is the record of a defect that shipped, PROC-5's tier-1b falsification is not optional
+  — invert the fix and watch that specific test go red.
+
+- **PROC-12** MUST: **the change satisfies its approved delta spec.** `CLAUDE.md` makes the
+  `#### Scenario:` blocks under `openspec/changes/<id>/specs/**` the acceptance criteria, and each one
+  names the test file that must cover it with a `→`. A scenario with no covering test, a `→` pointing
+  at a file that does not exist, or a `SHALL` the code does not meet is a **blocking** finding, and it
+  is citable as this rule. Added because a reviewer holding two real spec violations — a first run
+  completed with no item solved, against `req-first-run`; a tutorial displaying a streak, against
+  `req-teaching-item-unrated`'s *"contributing to no rating or streak"* — had to attach both to
+  PROC-11 to give them an ID at all.
 
 
 ---

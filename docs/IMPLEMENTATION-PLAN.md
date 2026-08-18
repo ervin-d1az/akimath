@@ -686,7 +686,7 @@ the change that owns their screen.
 | `FractionGlyph` · the **struck** and **editable-slot** variants and metrics-driven sizing | `f1b-math-compositor` | `04 Error`'s strike and the answer slot, F2 |
 | `SkeletonBlock` (now `shell/ui/`), `InlineBanner` | `f2-app-shell` | `4.11`, the offline banner |
 | `ScreenHeaderBar` | `f2-core-loop` | the six item screens |
-| `CenteredStateView` | `f2-onboarding-first-run` | `0.2` |
+| `CenteredStateView` | `f2-onboarding-first-run` | `0.2` — **not built; `0.2` is a bespoke column. `docs/decisions/OPEN.md` §6.** |
 | `BrandTextField`, `SegmentedIndicator` | `f3-auth-screens` | `1.1`, `1.5` |
 | `EntityRow` | `f5-skill-map` | `2.7 Detalle de nodo` |
 | `AppBottomNav` | `f5-skill-map` | the second tab root |
@@ -1661,9 +1661,10 @@ that job does not exist because there was nothing to protect.
 **Capability:** `domain-core`. **Depends on:** `f0-pack-contract`.
 
 `packages/core` is the rederivation machine: `attempts` is append-only and the server must
-reconstruct the exact problem years later from `(template_id, template_version, seed)`. Zero
+reconstruct the exact problem years later from `(template_id, template_version, seed, ladder_step)`
+— **four fields; `issued_items` stores the ladder step and no seed implies it**. Zero
 `dependencies`, enforced by a CI check that reads `package.json` — not by pnpm strictness, because
-an agent runs `pnpm add drizzle-orm --filter @aki/core` and a resolution-based invariant dies in a
+an agent runs `pnpm add drizzle-orm --filter @akimath/core` and a resolution-based invariant dies in a
 one-line diff. Rationals as `BigInt`; a vendored PRNG whose golden vector is **emitted from the
 code**; Glicko-1 with the **session** as the rating period; `decay(prior, elapsedDays)` in days.
 
@@ -1678,8 +1679,9 @@ The system SHALL forbid `Math.random`, `Date`, `performance`, `crypto.randomUUID
 - **WHEN** a file under `packages/core/**` references `Date`
 - **THEN** the lint fails, because an import ban cannot catch `Math.random()`, and a test asserts
   that the ban lists every one of the six globals rather than trusting the config to stay complete
-  → `packages/core/test/determinism.test.ts`, `packages/core/eslint.config.js`
-  (`no-restricted-globals`), CI job `ts-unit`
+  → `packages/core/test/determinism.test.ts`, CI job `core`.
+  **As built:** a TypeScript AST walk rather than ESLint — a flat ban cannot scope the permission
+  Glicko needs — and the CI job is `core`; there is no `ts-unit` job in `.github/workflows/ci.yml`.
 ```
 
 #### `f1-contract-emitter` — phase F1

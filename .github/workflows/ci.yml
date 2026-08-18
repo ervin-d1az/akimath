@@ -27,8 +27,9 @@
 # merge — so it is left to Ervin rather than made by an agent.
 #
 # Not implemented yet, deliberately, because the code they guard does not exist:
-#   protected-paths  — no contract/ and no generated app/lib/api/ to protect
-#   contract         — no packages/contract, no OpenAPI emitter
+#   protected-paths  — contract/ now exists and is exactly the kind of path this
+#                      job should guard, but there is still no generated
+#                      app/lib/api/; adding it belongs with f3-store-artifacts
 #   compliance       — no PrivacyInfo.xcprivacy, no merged manifest to grep
 #   integration      — no Neon project, no database
 #   mutation         — Stryker is scoped to packages/core, which does not exist
@@ -52,13 +53,21 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Every job below carries `timeout-minutes`, and the reason is not tidiness.
+# GitHub's default is **six hours** per job, so one non-terminating loop in the
+# code under test burns a runner for a working day and reports nothing. The
+# numbers here are generous — an order of magnitude above what these jobs take
+# today — because their job is to bound a hang, not to police a slow runner.
 jobs:
   changes:
     name: changes
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       dart: ${{ steps.filter.outputs.dart }}
       ts: ${{ steps.filter.outputs.ts }}
+      contract: ${{ steps.filter.outputs.contract }}
+      core: ${{ steps.filter.outputs.core }}
       spec: ${{ steps.filter.outputs.spec }}
     steps:
       - uses: actions/checkout@v7
@@ -70,17 +79,103 @@ jobs:
         id: filter
         with:
           filters: |
+            # ARCHITECTURE.md §8 has always said the dart job runs on
+            # `dart` OR `contract`, and the workflow only ever implemented the
+            # first half. `contract/fixtures/canon.golden.json` is the single
+            # file binding the Dart and TypeScript canonicalisers — risk R2 —
+            # and the Dart parity test iterates whatever it contains. A change
+            # to it that nobody re-ran Dart against is exactly how the two
+            # silently diverge.
             dart:
               - 'app/**'
+              - 'contract/**'
               - '.github/workflows/ci.yml'
+            # Narrowed from 'packages/**' when packages/contract landed: the ts
+            # job has working-directory packages/server, so a contract-only
+            # change used to run the wrong package's suite and report it as
+            # coverage of the change.
             ts:
-              - 'packages/**'
+              - 'packages/server/**'
               - 'package.json'
               - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yml'
+            # `protected-paths` is unfiltered and needs no output; `integration`
+            # rides the `ts` filter above, because everything it exercises —
+            # migrations, schema.sql, the suites — lives under packages/server.
+            contract:
+              - 'packages/contract/**'
+              - 'contract/**'
+              - '.github/workflows/ci.yml'
+            # **Both sides of the edge.** `packages/core`'s parity suite imports
+            # the frozen contract as a devDependency, so a change to the contract
+            # has to run core's tests — a filter watching only core's own tree
+            # reports green while the thing it is checked against moves.
+            core:
+              - 'packages/core/**'
+              - 'packages/contract/**'
+              - 'contract/**'
+              - 'app/assets/packs/starter.json'
               - '.github/workflows/ci.yml'
             spec:
               - 'openspec/**'
               - '.github/workflows/ci.yml'
+
+  # ARCHITECTURE.md §8 job 1. Unfiltered, like `secrets`, because the whole point
+  # is that it cannot be dodged by a path filter.
+  #
+  # It did not exist until now because there was nothing to protect. A migration
+  # is the first artifact in this repository that is *history*: once applied
+  # anywhere, editing it desynchronises every database that ran it, and the
+  # runner refuses to start. §8's list is migrations, the schema snapshot, the
+  # contract artifacts and the workflows themselves; this job starts with the two
+  # this change creates and grows as the others acquire the same property.
+  #
+  # It does not block the edit. It requires that a human said the edit was
+  # intended, by putting `allow-protected-edit` on the pull request — an agent
+  # cannot add a label.
+  protected-paths:
+    name: protected-paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Refuse an unattended edit to a protected path
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "no base to compare against; nothing to check."
+            exit 0
+          fi
+          touched="$(git diff --name-only "$BASE" "$HEAD" -- \
+            'packages/server/migrations/**' \
+            'packages/server/schema.sql' || true)"
+          if [ -z "$touched" ]; then
+            echo "no protected path touched."
+            exit 0
+          fi
+          echo "protected paths touched:"
+          echo "$touched"
+          case ",$LABELS," in
+            *,allow-protected-edit,*)
+              echo "label allow-protected-edit is present; a human approved this."
+              ;;
+            *)
+              echo
+              echo "A migration is history once it has been applied: editing one"
+              echo "desynchronises every database that ran it, and the runner will"
+              echo "refuse to start. Add a new forward-only migration instead."
+              echo
+              echo "If the edit is genuinely intended, label the pull request"
+              echo "'allow-protected-edit'."
+              exit 1
+              ;;
+          esac
 
   # Unfiltered on purpose: a secret can land in any file, including the ones no
   # language job looks at. gitleaks-action scopes its scan to the commits in the
@@ -91,6 +186,8 @@ jobs:
   secrets:
     name: secrets
     runs-on: ubuntu-latest
+    # gitleaks walks the commits in the push or pull request.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -108,6 +205,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.dart == 'true'
     runs-on: ubuntu-latest
+    # The long pole: a cold flutter-action downloads the whole SDK before
+    # `flutter pub get` has run a line.
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: app
@@ -134,12 +234,26 @@ jobs:
       # returns once someone configures the linter and clears or accepts that
       # baseline; until then it is honestly absent rather than dishonestly green.
       - run: flutter test
+      # The streak walks backwards a calendar day at a time, and a calendar day
+      # is 23, 24 or 25 hours long. A run under a zone that observes daylight
+      # saving is the only thing that catches arithmetic which quietly assumes
+      # 24 — and neither the default runner zone (UTC) nor the audience's own
+      # `America/Mexico_City` (abolished DST in 2022) observes one, so the whole
+      # suite above passes over the bug.
+      #
+      # Measured, not assumed: with the fix reverted, `flutter test` is green
+      # here and this step reports 0, 29 and 4 where it wants 30, 30 and 5.
+      # Tijuana and Ciudad Juárez are Mexican DST zones, so this is the
+      # audience rather than a travelling device.
+      - name: flutter test (DST zone)
+        run: TZ=America/Tijuana flutter test test/features/round/policy/streak_policy_test.dart
 
   ts:
     name: ts
     needs: changes
     if: needs.changes.outputs.ts == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: packages/server
@@ -158,14 +272,270 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  # ARCHITECTURE.md §8 job 4 is "emit + git add -A -- contract/ + git diff
+  # --cached --exit-code + oasdiff breaking-change check". The oasdiff half needs
+  # contract/openapi.json, which f1-contract-emitter produces; until then this job
+  # is the first two steps and says so rather than pretending to be the whole thing.
+  #
+  # Its own job rather than a line in `ts`: that job has
+  # working-directory: packages/server and caches on that package's lockfile.
+  contract:
+    name: contract
+    needs: changes
+    if: needs.changes.outputs.contract == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/contract
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/contract/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      # The determinism gate: re-emitting the committed artifacts from a clean
+      # checkout must change nothing. zod is pinned to an exact version for
+      # this reason — a caret range turns this step red with no diff in the
+      # repository, which is how a determinism gate gets deleted instead of
+      # fixed.
+      #
+      # The marker is stamped outside the repository, in RUNNER_TEMP, so it can
+      # never turn up in contract/ or in the comparison below.
+      - name: Stamp the tree before emitting
+        run: touch "${RUNNER_TEMP}/emit-marker"
+      - run: npm run emit
+      # An absolute working-directory, not `.`: this job's `defaults.run` puts
+      # every step in packages/contract, and unlike the bare repo-wide
+      # `git diff` this replaced, all three commands below carry a `contract/`
+      # pathspec. Resolve that relative to the wrong root and `find` matches
+      # nothing, the guard below fires on every run, and the gate is red
+      # forever for a reason that has nothing to do with the contract.
+      - name: The emitted contract matches the committed one
+        working-directory: ${{ github.workspace }}
+        run: |
+          # PROC-10 — a gate whose input set can silently reach zero cannot tell
+          # "nothing is wrong" from "nothing was checked". emit resolves its
+          # output root by walking four `..` segments up from src/adapters/
+          # (emit.ts, repositoryContractRoot). Let that resolve anywhere else and
+          # the emitter writes into a directory nobody compares, contract/ stays
+          # untouched, and the comparison below reports success on any diff at
+          # all. So make the emitter prove it wrote something first.
+          written=$(find contract -type f -newer "${RUNNER_TEMP}/emit-marker" | wc -l | tr -d ' ')
+          echo "npm run emit rewrote ${written} file(s) under contract/"
+          if [ "${written}" -eq 0 ]; then
+            echo "::error::npm run emit wrote nothing under contract/. Its output root no longer resolves to this directory, so this gate is checking nothing."
+            exit 1
+          fi
+          # PROC-8 — git cannot prove anything about a path it does not track.
+          # `git diff --exit-code` compares the worktree against the index and is
+          # blind to an untracked file, so the one mistake this gate exists to
+          # catch — a golden fixture committed without the <stem>.normalised.json
+          # that emit writes beside it — arrived here as an untracked file and
+          # exited 0. Reproduced: a staged fixture plus an unstaged record gives
+          # `git diff --exit-code` → EXIT=0.
+          #
+          # Staging first is the fix, and it is the one worth having over
+          # `test -z "$(git status --porcelain)"`: it folds untracked, modified
+          # and deleted into a single comparison *and* --exit-code still prints
+          # the patch, so the author sees the bytes that differ rather than a
+          # bare non-zero exit.
+          git add -A -- contract/
+          git diff --cached --exit-code -- contract/
+
   # The planning artifacts are code here: they are committed, and a malformed
   # change is a plan nobody can gate on. `validate --strict` is the same check
   # craftsman-lead runs before it lets BUILD start, so CI and the agent agree.
+  # ARCHITECTURE.md §8 job 7 is "ephemeral Neon branch (a separate akimath-ci
+  # project)". This runs a **postgres service container** instead, and the
+  # deviation is deliberate: a service container needs no account, no project and
+  # no secret, so the gate works on a fork and on day one. What these tests
+  # assert — grants, constraints, the catalogue, an idempotent job — is plain
+  # PostgreSQL behaviour, not Neon behaviour. The day something depends on the
+  # pooler or on autosuspend, that test wants a real Neon branch and this comment
+  # is where to say so.
+  #
+  # The image is pinned to the major **production** runs, which is what CI should
+  # mirror. Neon provisioned PostgreSQL 18 in August 2026; the schema was
+  # developed against 17, and moving CI to 18 cost nothing — `pg_dump` produces a
+  # byte-identical `schema.sql` on both majors, verified. PostgreSQL 18 did expose
+  # one real defect that 17 had hidden: two workers migrating fresh databases
+  # concurrently raced on `CREATE ROLE`, which is cluster-wide.
+
+      # ARCHITECTURE.md §8 job 4 is "emit + git add + git diff --cached + oasdiff
+      # breaking-change check". The first three have been here since
+      # f0-pack-contract; this is the fourth, which `CLAUDE.md` recorded as
+      # waiting on f1-contract-emitter.
+      #
+      # **Version-pinned**, for the same reason `pg_dump` is in the integration
+      # job: a tool that changes its own output turns a gate into noise and
+      # somebody deletes it.
+      #
+      # **Breaking changes only.** A gate that fires on every addition trains
+      # people to pass `--fail-on none`, and then it is gone.
+      - name: Install oasdiff
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/oasdiff.tar.gz \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/oasdiff.tar.gz -C /tmp oasdiff
+          sudo install -m 0755 /tmp/oasdiff /usr/local/bin/oasdiff
+          oasdiff --version
+        env:
+          OASDIFF_VERSION: "1.29.1"
+
+      - name: No breaking change to a shipped contract
+        working-directory: ${{ github.workspace }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "no base commit to compare against; nothing to check."
+            exit 0
+          fi
+          if ! git cat-file -e "$BASE:contract/openapi.json" 2>/dev/null; then
+            echo "the base commit has no contract/openapi.json — this is its first appearance."
+            exit 0
+          fi
+          git show "$BASE:contract/openapi.json" > /tmp/openapi.base.json
+          oasdiff breaking /tmp/openapi.base.json contract/openapi.json --fail-on ERR
+
+  integration:
+    name: integration
+    needs: changes
+    if: needs.changes.outputs.ts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/server
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: akimath_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/akimath_ci
+      MIGRATE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/akimath_snapshot
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/server/package-lock.json
+      - run: npm ci
+
+      # The suites skip their database half when TEST_DATABASE_URL is absent, so
+      # this job is the only place they actually run. `npm test` in the `ts` job
+      # runs the pure half.
+      - name: The suites, against a real database
+        run: npm test
+
+      # **`pg_dump` refuses a server newer than itself**, and the runner image
+      # ships 16 against this job's `postgres:18` service — "aborting because of
+      # server version mismatch", before it reads a single table. The client has
+      # to match the server's major, not merely exist. `CLAUDE.md` already says
+      # CI mirrors production at 18 because that is what Neon provisioned; this
+      # is the half of that claim the workflow was not keeping.
+      #
+      # The dump script still normalises the version header and the random
+      # restrict key, which is a different problem: those make two dumps of the
+      # *same* schema differ.
+      - name: A pg_dump that can read a PostgreSQL 18 server
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-18
+          echo /usr/lib/postgresql/18/bin >> "$GITHUB_PATH"
+
+      # The snapshot, on a database of its own so the suites' wiping cannot race
+      # it.
+      - name: Apply the migrations to an empty database
+        run: |
+          PGPASSWORD=postgres createdb -h localhost -U postgres akimath_snapshot
+          npm run migrate
+
+      - name: The committed snapshot still matches what the migrations produce
+        run: |
+          npm run schema:dump
+          cd "$GITHUB_WORKSPACE"
+          git add -A -- packages/server/schema.sql
+          git diff --cached --exit-code -- packages/server/schema.sql
+
+  # `packages/core` is the rederivation machine: zero runtime dependencies, no
+  # ambient IO, and three committed golden artifacts. Without this job those
+  # artifacts are decorative — a golden no required check reads cannot fail.
+  core:
+    name: core
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/core
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/core/package-lock.json
+
+      # **Core typechecks *through* contract's sources, so it needs contract's
+      # dependencies on disk — not merely its own.** `@akimath/contract` is a
+      # `file:` devDependency, which npm installs as a symlink, and TypeScript
+      # resolves a module from a file's *real* path. So `import { z } from "zod"`
+      # inside `packages/contract/src/` is looked up under
+      # `packages/contract/node_modules/`, which core's own `npm ci` never
+      # creates. Locally it is always there because anyone who has run the
+      # contract suite has installed it, which is exactly why this went unnoticed
+      # until a pull request compared the whole tree against `main`: 38
+      # `Cannot find module 'zod'` errors, none of them reproducible on a
+      # developer's machine.
+      - name: The contract's dependencies, which core resolves through
+        working-directory: packages/contract
+        run: npm ci
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      # The artifacts must be what the code produces. Staged before diffing,
+      # because a bare `git diff` is blind to a file the author never committed
+      # — the lesson the `contract` job already carries.
+      - name: The committed golden artifacts still match
+        run: |
+          npm run emit
+          cd "$GITHUB_WORKSPACE"
+          git add -A -- packages/core/golden/
+          git diff --cached --exit-code -- packages/core/golden/
+
   spec:
     name: spec
     needs: changes
     if: needs.changes.outputs.spec == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -180,8 +550,10 @@ jobs:
   gate:
     name: gate
     if: always()
-    needs: [changes, secrets, dart, ts, spec]
+    needs: [changes, protected-paths, secrets, dart, ts, contract, core, integration, spec]
     runs-on: ubuntu-latest
+    # Two `echo` steps. If this one ever runs long, something is very wrong.
+    timeout-minutes: 5
     steps:
       # `contains(needs.*.result, ...)` rather than a chain of
       # `needs.x.result == 'success'`: a path-filtered job reports 'skipped',
@@ -191,9 +563,13 @@ jobs:
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: |
           echo "changes=${{ needs.changes.result }}"
+          echo "protected-paths=${{ needs['protected-paths'].result }}"
           echo "secrets=${{ needs.secrets.result }}"
           echo "dart=${{ needs.dart.result }}"
           echo "ts=${{ needs.ts.result }}"
+          echo "contract=${{ needs.contract.result }}"
+          echo "core=${{ needs.core.result }}"
+          echo "integration=${{ needs.integration.result }}"
           echo "spec=${{ needs.spec.result }}"
           exit 1
       - name: Report

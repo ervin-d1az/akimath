@@ -1,0 +1,17 @@
+{
+  "threshold": 1,
+  "reporters": ["consoleFull"],
+  "absolute": true,
+  "gitignore": true,
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/tmp/**",
+    "**/reports/**",
+    "**/.worktrees/**",
+    "**/.swarmforge/**",
+
+    "src/templates/**"
+  ]
+}

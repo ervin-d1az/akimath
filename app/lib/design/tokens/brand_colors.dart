@@ -28,6 +28,10 @@ abstract final class BrandColors {
   /// The bead and facets on Aki's collar tag.
   static const Color pinkSoft = Color(0xFFFFC2D8);
 
+  /// Figures drawn in pink: the hidden-operation machine's body and a figurate
+  /// dot. A shade deeper than [pinkSoft], which stays the collar tag's.
+  static const Color pinkFigure = Color(0xFFFF9EC1);
+
   /// Aki's coat. Also the color her mouth is cut into the dark muzzle with.
   static const Color akiCoat = Color(0xFFF7DFB6);
 
@@ -52,6 +56,15 @@ abstract final class BrandColors {
 
   /// A hairline divider inside a card. Ink at 16%, never a separate grey.
   static const Color rule = Color(0x291C1A2E);
+
+  /// The line a puzzle board is ruled with. Ink at 18%, a step above [rule]
+  /// because a board draws a hundred of these and a card draws two: the same
+  /// alpha reads as heavier on the board and lighter on the card.
+  static const Color hairline = Color(0x2E1C1A2E);
+
+  /// The quiet neutral: the backspace key's fill and a skeleton block's fill.
+  /// It is the one surface that must read as present but not as offered.
+  static const Color quiet = Color(0xFFEAE6F0);
 }
 
 /// The semantic role of a color, which is what the rest of the app asks for.
@@ -80,6 +93,10 @@ enum BrandColorRole {
 
   /// Brand accent. Carries no state.
   accent(BrandColors.pink),
+
+  /// The field, key or cell the player is on right now. Transient input
+  /// affordance, never a verdict: it says "here", not "right" or "wrong".
+  focus(BrandColors.pink),
 
   /// Neutral highlight.
   highlight(BrandColors.yellow),

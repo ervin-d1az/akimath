@@ -39,8 +39,34 @@ dependencies:
   # any Flutter widget code, which is what keeps it testable in isolation.
   meta: ^1.17.0
 
+  # The day log's storage. Flutter exposes no writable path without a plugin,
+  # and the streak has to survive a relaunch to mean anything.
+  #
+  # DEP-1 audit, 2026-08-16, decided by Ervin: published by flutter.dev, wraps
+  # NSUserDefaults on iOS and SharedPreferences on Android, makes no network
+  # request of any kind, collects nothing, and reports nothing. It stores one
+  # string under one key on the device.
+  shared_preferences: ^2.3.0
+
 dev_dependencies:
+  # Dev only, and deliberately so: it carries `InMemorySharedPreferencesAsync`,
+  # the backend that lets `PrefsDayLogStore` be tested against the **real**
+  # SharedPreferencesAsync API rather than mocked out. It does not ship, which
+  # is why `dependency_allowlist_test` scopes itself to runtime dependencies.
+  shared_preferences_platform_interface: ^2.4.0
+
   flutter_test:
+    sdk: flutter
+
+  # Drives the real app on a real device. Dev only: it never ships, so DEP-1's
+  # shipping allowlist does not reach it and `dependency_allowlist_test` scopes
+  # itself to runtime dependencies.
+  #
+  # It is here because a written observation is not Tier 2 for anything
+  # interactive. `docs/decisions/OPEN.md` §7 recorded the gap — no assistive
+  # access for `osascript`, no `simctl tap`, no `idb` — which left the press
+  # physics that ~50 drawn elements share never once exercised on a device.
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -72,6 +98,9 @@ flutter:
   #
   # Both families are licensed under the SIL Open Font License; the license
   # texts sit next to the files in assets/fonts/.
+  assets:
+    - assets/packs/
+
   fonts:
     - family: Darumadrop One
       fonts:

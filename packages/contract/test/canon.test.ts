@@ -1,0 +1,211 @@
+import { describe, expect, it } from "vitest";
+
+import { readFixture } from "./fixture-files.js";
+import {
+  canonicalize,
+  CHAR_MAP,
+  renderCanonicalAnswer,
+  requireStoredCanonical,
+} from "../src/canon.js";
+import { buildCanonGolden, CANON_INPUTS } from "../src/canon-vectors.js";
+
+const ARABIC_INDIC_ZERO = "٠";
+const ZERO_WIDTH_SPACE = "​";
+const COMBINING_ACUTE = "́";
+const MINUS_SIGN = "−";
+
+describe("canonicalize — learner input", () => {
+  it("rejects an empty answer", () => {
+    expect(canonicalize("")).toEqual({ ok: false, tag: "empty" });
+  });
+
+  it("rejects a zero denominator", () => {
+    expect(canonicalize("1/0")).toEqual({ ok: false, tag: "zero_denominator" });
+  });
+
+  it("rejects an answer that is not a number", () => {
+    expect(canonicalize("x+1")).toEqual({ ok: false, tag: "non_numeric" });
+  });
+
+  it("rejects an Arabic-Indic digit", () => {
+    expect(canonicalize(ARABIC_INDIC_ZERO)).toEqual({ ok: false, tag: "non_ascii_digit" });
+  });
+
+  it("rejects a zero-width space rather than stripping it", () => {
+    expect(canonicalize(`1${ZERO_WIDTH_SPACE}2`)).toEqual({
+      ok: false,
+      tag: "invisible_character",
+    });
+  });
+
+  it("rejects a combining mark rather than stripping it", () => {
+    expect(canonicalize(`1${COMBINING_ACUTE}`)).toEqual({ ok: false, tag: "combining_mark" });
+  });
+
+  it("folds the keypad's U+2212 minus sign to ASCII", () => {
+    expect(canonicalize(`${MINUS_SIGN}5`)).toEqual({ ok: true, value: "-5" });
+  });
+
+  it("folds the answer draft's placeholder spaces away", () => {
+    expect(canonicalize(" 5 ")).toEqual({ ok: true, value: "5" });
+  });
+
+  it("folds leading zeros so 007 and 7 reach the same bytes", () => {
+    expect(canonicalize("007")).toEqual({ ok: true, value: "7" });
+  });
+
+  it("folds negative zero to zero", () => {
+    expect(canonicalize("-0")).toEqual({ ok: true, value: "0" });
+  });
+
+  it("keeps a fraction unreduced, because 2/4 and 1/2 are different answers", () => {
+    expect(canonicalize("2/4")).toEqual({ ok: true, value: "2/4" });
+  });
+
+  it("accepts a canonical fraction unchanged", () => {
+    expect(canonicalize("1/2")).toEqual({ ok: true, value: "1/2" });
+  });
+
+  it("rejects a fraction with a negative denominator", () => {
+    expect(canonicalize("1/-2")).toEqual({ ok: false, tag: "non_numeric" });
+  });
+});
+
+describe("requireStoredCanonical — pack content", () => {
+  it("rejects an empty stored answer", () => {
+    expect(requireStoredCanonical("")).toEqual({ ok: false, tag: "empty" });
+  });
+
+  it("rejects a stored zero denominator", () => {
+    expect(requireStoredCanonical("1/0")).toEqual({ ok: false, tag: "zero_denominator" });
+  });
+
+  it("rejects a stored answer that is not a number", () => {
+    expect(requireStoredCanonical("x+1")).toEqual({ ok: false, tag: "non_numeric" });
+  });
+
+  it("rejects a stored Arabic-Indic digit", () => {
+    expect(requireStoredCanonical(ARABIC_INDIC_ZERO)).toEqual({
+      ok: false,
+      tag: "non_ascii_digit",
+    });
+  });
+
+  it("rejects a stored zero-width space", () => {
+    expect(requireStoredCanonical(`1${ZERO_WIDTH_SPACE}2`)).toEqual({
+      ok: false,
+      tag: "invisible_character",
+    });
+  });
+
+  it("rejects a stored combining mark", () => {
+    expect(requireStoredCanonical(`1${COMBINING_ACUTE}`)).toEqual({
+      ok: false,
+      tag: "combining_mark",
+    });
+  });
+
+  it("rejects a stored U+2212 that the learner direction would have folded", () => {
+    expect(requireStoredCanonical(`${MINUS_SIGN}5`)).toEqual({ ok: false, tag: "not_canonical" });
+  });
+
+  it("rejects stored leading zeros that the learner direction would have folded", () => {
+    expect(requireStoredCanonical("007")).toEqual({ ok: false, tag: "not_canonical" });
+  });
+
+  it("accepts a stored answer that is already canonical", () => {
+    expect(requireStoredCanonical("1/2")).toEqual({ ok: true, value: "1/2" });
+  });
+});
+
+describe("the committed canon.golden.json", () => {
+  it("is what the code produces, not a hand-written vector", () => {
+    expect(readFixture("canon.golden.json")).toEqual(JSON.parse(JSON.stringify(buildCanonGolden())));
+  });
+
+  it("records both directions for every row of the table", () => {
+    const golden = buildCanonGolden();
+    expect(golden.vectors.length).toBe(CANON_INPUTS.length);
+    for (const vector of golden.vectors) {
+      expect(vector).toHaveProperty("learner");
+      expect(vector).toHaveProperty("stored");
+    }
+  });
+
+  it("records the fold map the two stacks must share", () => {
+    expect(buildCanonGolden().char_map).toEqual(CHAR_MAP);
+  });
+});
+
+describe("rendering is the inverse of canonicalizing, by construction", () => {
+  /** Every shape the renderer can produce, spanning sign, zero and denominator. */
+  const RENDERED: ReadonlyArray<{
+    readonly numerator: bigint;
+    readonly denominator?: bigint;
+    readonly expected: string;
+  }> = [
+    { numerator: 0n, expected: "0" },
+    { numerator: 7n, expected: "7" },
+    { numerator: -7n, expected: "-7" },
+    { numerator: 1n, denominator: 2n, expected: "1/2" },
+    { numerator: -3n, denominator: 4n, expected: "-3/4" },
+    { numerator: 5n, denominator: 4n, expected: "5/4" },
+    { numerator: 12n, denominator: 7n, expected: "12/7" },
+    { numerator: 4n, denominator: 1n, expected: "4/1" },
+    { numerator: 0n, denominator: 5n, expected: "0/5" },
+    // A sign on a zero magnitude is dropped, in both shapes. This is the rule a
+    // `-0/5` defect once shipped through on the Dart side.
+    { numerator: -0n, denominator: 5n, expected: "0/5" },
+    { numerator: 0n, denominator: -5n, expected: "0/5" },
+    { numerator: -0n, expected: "0" },
+    // A negative denominator moves its sign to the numerator.
+    { numerator: 3n, denominator: -4n, expected: "-3/4" },
+    { numerator: -3n, denominator: -4n, expected: "3/4" },
+    // Beyond a double.
+    { numerator: 9007199254740993n, expected: "9007199254740993" },
+  ];
+
+  it("renders the shape the format specifies", () => {
+    for (const { numerator, denominator, expected } of RENDERED) {
+      expect(renderCanonicalAnswer(numerator, denominator)).toBe(expected);
+    }
+    expect(RENDERED.length).toBeGreaterThan(0);
+  });
+
+  it("everything it renders is already storage-canonical", () => {
+    // The property that matters, and the reason the renderer lives in this
+    // module calling the same private join: if these two could disagree, a pack
+    // would carry answers its own validator refuses.
+    let checked = 0;
+    for (const { numerator, denominator } of RENDERED) {
+      const rendered = renderCanonicalAnswer(numerator, denominator);
+      const stored = requireStoredCanonical(rendered);
+      expect(stored, `requireStoredCanonical rejected ${rendered}`).toEqual({
+        ok: true,
+        value: rendered,
+      });
+      checked += 1;
+    }
+    expect(checked).toBe(RENDERED.length);
+    // eslint-disable-next-line no-console
+    console.log(`  render round-trip · ${checked} shapes`);
+  });
+
+  it("and the learner direction folds to the same string", () => {
+    for (const { numerator, denominator } of RENDERED) {
+      const rendered = renderCanonicalAnswer(numerator, denominator);
+      expect(canonicalize(rendered)).toEqual({ ok: true, value: rendered });
+    }
+  });
+
+  it("refuses a zero denominator rather than rendering nonsense", () => {
+    expect(() => renderCanonicalAnswer(1n, 0n)).toThrow(/non-zero denominator/);
+  });
+
+  it("distinguishes an omitted denominator from a denominator of one", () => {
+    // The shape is the caller's decision and the spelling is this module's.
+    // Guessing from the value would make these the same call.
+    expect(renderCanonicalAnswer(4n)).toBe("4");
+    expect(renderCanonicalAnswer(4n, 1n)).toBe("4/1");
+  });
+});

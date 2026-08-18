@@ -1,0 +1,534 @@
+{
+  "kakuro": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "board": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "col": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "row": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "row",
+                "col"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "given": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "col": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "row": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "row",
+                "col"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "size": {
+            "maximum": 6,
+            "minimum": 3,
+            "type": "integer"
+          },
+          "solution": {
+            "items": {
+              "items": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "size",
+          "blocked",
+          "given",
+          "solution"
+        ],
+        "type": "object"
+      },
+      "runs": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "cells": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "col": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "row": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "row",
+                  "col"
+                ],
+                "type": "object"
+              },
+              "minItems": 2,
+              "type": "array"
+            },
+            "sum": {
+              "maximum": 9007199254740991,
+              "minimum": 3,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "cells",
+            "sum"
+          ],
+          "type": "object"
+        },
+        "minItems": 1,
+        "type": "array"
+      }
+    },
+    "required": [
+      "board",
+      "runs"
+    ],
+    "type": "object"
+  },
+  "kenken": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "board": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "col": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "row": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "row",
+                "col"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "given": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "col": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "row": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "row",
+                "col"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "size": {
+            "maximum": 6,
+            "minimum": 3,
+            "type": "integer"
+          },
+          "solution": {
+            "items": {
+              "items": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "size",
+          "blocked",
+          "given",
+          "solution"
+        ],
+        "type": "object"
+      },
+      "cages": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "cells": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "col": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "row": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "row",
+                  "col"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "operation": {
+              "enum": [
+                "+",
+                "-",
+                "×",
+                "÷"
+              ],
+              "type": "string"
+            },
+            "target": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "cells",
+            "operation",
+            "target"
+          ],
+          "type": "object"
+        },
+        "minItems": 1,
+        "type": "array"
+      }
+    },
+    "required": [
+      "board",
+      "cages"
+    ],
+    "type": "object"
+  },
+  "killer": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "board": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "col": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "row": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "row",
+                "col"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "given": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "col": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "row": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "row",
+                "col"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "size": {
+            "maximum": 6,
+            "minimum": 3,
+            "type": "integer"
+          },
+          "solution": {
+            "items": {
+              "items": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "size",
+          "blocked",
+          "given",
+          "solution"
+        ],
+        "type": "object"
+      },
+      "cages": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "cells": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "col": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "row": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "row",
+                  "col"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "target": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "cells",
+            "target"
+          ],
+          "type": "object"
+        },
+        "minItems": 1,
+        "type": "array"
+      }
+    },
+    "required": [
+      "board",
+      "cages"
+    ],
+    "type": "object"
+  },
+  "magicSquare": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "board": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "col": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "row": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "row",
+                "col"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "given": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "col": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "row": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "row",
+                "col"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "size": {
+            "maximum": 6,
+            "minimum": 3,
+            "type": "integer"
+          },
+          "solution": {
+            "items": {
+              "items": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "size",
+          "blocked",
+          "given",
+          "solution"
+        ],
+        "type": "object"
+      },
+      "column_targets": {
+        "items": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "maxItems": 6,
+        "minItems": 3,
+        "type": "array"
+      },
+      "row_targets": {
+        "items": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "maxItems": 6,
+        "minItems": 3,
+        "type": "array"
+      }
+    },
+    "required": [
+      "board",
+      "row_targets",
+      "column_targets"
+    ],
+    "type": "object"
+  },
+  "wordSearch": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "grid": {
+        "items": {
+          "items": {
+            "pattern": "^[A-ZÑ]$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxItems": 8,
+        "minItems": 3,
+        "type": "array"
+      },
+      "words": {
+        "items": {
+          "pattern": "^[A-ZÑ]{3,8}$",
+          "type": "string"
+        },
+        "maxItems": 8,
+        "minItems": 1,
+        "type": "array"
+      }
+    },
+    "required": [
+      "grid",
+      "words"
+    ],
+    "type": "object"
+  }
+}

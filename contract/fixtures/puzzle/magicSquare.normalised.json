@@ -1,0 +1,72 @@
+{
+  "ok": true,
+  "pack": {
+    "expires_at": "2026-09-15T00:00:00.000Z",
+    "issued_at": "2026-08-16T00:00:00.000Z",
+    "items": [],
+    "pack_format_version": 1,
+    "pack_salt": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "puzzles": [
+      {
+        "kind": "magicSquare",
+        "payload": {
+          "board": {
+            "blocked": [],
+            "given": [
+              {
+                "col": 0,
+                "row": 0
+              },
+              {
+                "col": 1,
+                "row": 0
+              },
+              {
+                "col": 0,
+                "row": 1
+              }
+            ],
+            "size": 3,
+            "solution": [
+              [
+                2,
+                7,
+                6
+              ],
+              [
+                9,
+                5,
+                1
+              ],
+              [
+                4,
+                3,
+                8
+              ]
+            ]
+          },
+          "column_targets": [
+            15,
+            15,
+            15
+          ],
+          "row_targets": [
+            15,
+            15,
+            15
+          ]
+        },
+        "reference_sheet": [
+          "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
+          "Se usan los números del 1 al 9, uno por celda."
+        ],
+        "tutorial_steps": [
+          "Cada fila y cada columna llegan al número de su ficha.",
+          "Ningún número se repite en todo el cuadro."
+        ]
+      }
+    ],
+    "skill_fallbacks": [],
+    "skill_nodes": []
+  }
+}

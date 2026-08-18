@@ -1,0 +1,1124 @@
+{
+  "rows": [
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "0",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "5",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "0",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "16"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "15",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "0",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "26"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "25",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "0",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "36"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "35",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "1",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "10"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-4",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "1",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "20"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-14",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "1",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "20"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-14",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "1",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "16"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "20"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-4",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "389",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "5"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "3",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "389",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "18"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "15"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "3",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "389",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "15"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-7",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "389",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "5"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "3",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "9223372036854775807",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "10"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "2",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "9223372036854775807",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "20"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "12",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "9223372036854775807",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "10"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "28"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-18",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "9223372036854775807",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "40"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "48"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-8",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "-9223372036854775808",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "5",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "-9223372036854775808",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "16"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "11"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "5",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "-9223372036854775808",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "26"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "21"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "5",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 1,
+      "seed": "-9223372036854775808",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "16"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "31"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-15",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "0",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "5",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "0",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "16"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "15",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "0",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "26"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "25",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "0",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "36"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "35",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "1",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "10"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "4",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "1",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "20"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "14",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "1",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "20"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-14",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "1",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "16"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "20"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-4",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "389",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "5"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "3",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "389",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "18"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "15"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "3",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "389",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "15"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-7",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "389",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "5"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "3",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "9223372036854775807",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "10"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "2",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "9223372036854775807",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "20"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "8"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "12",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "9223372036854775807",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "10"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "28"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-18",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "9223372036854775807",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "40"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "48"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-8",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "-9223372036854775808",
+      "ladderStep": 1,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "6"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "1"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "5",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "-9223372036854775808",
+      "ladderStep": 2,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "16"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "11"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "5",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "-9223372036854775808",
+      "ladderStep": 3,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "26"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "21"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "5",
+        "denominator": "1"
+      }
+    },
+    {
+      "templateId": "arith.integer.subtract",
+      "templateVersion": 2,
+      "seed": "-9223372036854775808",
+      "ladderStep": 5,
+      "prompt": [
+        {
+          "kind": "text",
+          "value": "16"
+        },
+        {
+          "kind": "operator",
+          "glyph": "−"
+        },
+        {
+          "kind": "text",
+          "value": "31"
+        },
+        {
+          "kind": "operator",
+          "glyph": "="
+        }
+      ],
+      "answer": {
+        "numerator": "-15",
+        "denominator": "1"
+      }
+    }
+  ]
+}

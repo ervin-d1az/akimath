@@ -18,6 +18,13 @@ judgment on the open questions in §11.
 
 ## 1 · The decision that gated the rest: one repo, not two
 
+> **Audience, clarified 2026-08-17.** The product is for **adults**, and children can play it too.
+> Every constraint in this document that exists "because children" still holds without exception — a
+> mixed audience is governed by its youngest member — but the product is **not child-directed**, and
+> that changes two things: the register of the copy is not a register for children, and
+> `players.age_band` is the routing decision between the two populations rather than a compliance
+> footnote. Prose here written before that date often says "a child" where it means "a player".
+
 **Decided and done: a single `akimath` repository.** This reversed an earlier
 two-repo split. `akimath-app` and `akimath-api` are archived; their histories
 live under `app/` and `packages/server/` with `git log --follow` and `git blame`
@@ -99,7 +106,7 @@ nothing is submitted yet.
 akimath/
 ├── contract/openapi.json         COMMITTED ARTIFACT — generated, never hand-edited
 ├── packages/
-│   ├── core/                     @aki/core — pure, zero dependencies
+│   ├── core/                     @akimath/core — pure, zero dependencies
 │   ├── contract/                 Zod + route defs + the OpenAPI emitter
 │   └── server/                   Hono, Drizzle, Better Auth, batch jobs
 ├── app/                          the only Dart package
@@ -120,22 +127,36 @@ workspaces, and there is exactly one Dart package.
 
 ## 2 · The contract chain
 
-Generate locally, **verify** in CI. `contract/openapi.json` and the Dart client
-are committed; CI runs the generator and does `git diff --exit-code`. Having CI
-generate *and commit* races against agent worktrees.
+Generate locally, **verify** in CI. `contract/openapi.json` is committed; CI runs the
+emitter and then compares the re-emitted tree against the commit — `git add -A -- contract/`
+followed by `git diff --cached --exit-code -- contract/`. Never a bare `git diff`: it is blind
+to an artifact the author never committed, so the one mistake this gate exists to catch — a
+new fixture landing without the file the emitter writes beside it — used to exit 0 (PROC-8).
+Having CI generate *and commit* races against agent worktrees.
+
+**The Dart client is committed but not generated** (ADR 0001, 2026-08-16), so no CI job runs
+a Dart generator and no byte-diff gate guards it. The gate does not die for want of
+determinism — `swagger_dart_code_generator` 4.1.1 proved byte-identical across three cold
+runs — it dies because the chosen path has no generator to run.
 
 Pin **OpenAPI 3.0.3**, not 3.1 — Zod 4 emits JSON Schema 2020-12 which maps to
 3.1, and no mature Dart generator digests that well. Zero response polymorphism:
 no `oneOf`, no `discriminator`; variance lives inside an opaque `params`/`payload`.
 
-The Dart client is an **open fork in the road, not a validation**. There is no JVM
-and no Docker on this machine, which removes `dart-dio` and `openapi-generator-cli`
-from the option space. That leaves `swagger_dart_code_generator` or **a hand-written
-client** — ~250 lines for 12–15 endpoints with no polymorphism, and it deletes five
-codegen dependencies, the byte-determinism gate, and `build_runner` from every
-worktree. Decide it with a half-day spike in phase 0, with an explicit exit
-criterion: *if the generated Dart for three representative schemas is not better
-than what you would write by hand, write it by hand.*
+The Dart client is **hand-written — decided, not open** (`docs/adr/0001-dart-api-client.md`,
+spike `f0-dart-client-spike`, 2026-08-16). No JVM and no Docker removed `dart-dio` and
+`openapi-generator-cli` — proved by `java -version`, since `command -v java` succeeds on the
+macOS stub. The half-day spike then applied the exit criterion — *if the generated Dart for
+three representative schemas is not better than what you would write by hand, write it by
+hand* — and `swagger_dart_code_generator` lost five of six rubric rows. It emits **chopper**,
+not `dio`: rejecting it drops 14 net-new runtime packages, four dev dependencies, and
+`build_runner` from every worktree.
+
+The size estimate this section used to carry — "~250 lines for 12–15 endpoints" — was measured
+at three: three endpoints and seven types cost **364 lines**, models being 223 of them. The cost
+scales with **type count, not endpoint count**, so budget several hundred lines more. That does
+not change the decision — the generated equivalent was 3.2× larger — but an estimate wrong by
+roughly 3× will be quoted back as a reason to reopen this.
 
 ---
 
@@ -144,15 +165,24 @@ than what you would write by hand, write it by hand.*
 `packages/core` is not a utility library — it is the **rederivation machine**.
 One invariant governs the whole design: `attempts` is append-only and the server
 must reconstruct the exact problem years later, on a different Node, from
-`(template_id, template_version, seed)`.
+`(template_id, template_version, seed, ladder_step)` — **four fields, not
+three**. `issued_items` stores the ladder step alongside the other three because
+nothing in a seed says which step an item was issued at, and the same seed at a
+different step is a different item. Corrected 2026-08-17 by
+`f1-core-rederivation`, against the applied migration.
 
-- **Zero `dependencies`.** Enforced by a CI check that reads `package.json`, not
-  by pnpm's strictness — an agent runs `pnpm add drizzle-orm --filter @aki/core`
-  and a resolution-based invariant dies in a one-line diff.
-- The check nobody proposed and that actually protects determinism:
-  `no-restricted-globals` over `packages/core/**` for `Math.random`, `Date`,
-  `performance`, `crypto.randomUUID`, `Intl`, `toLocaleString`. No import ban
-  catches `Math.random()`.
+- **Zero `dependencies`.** Enforced by a test that reads `package.json`, not
+  by pnpm's strictness — an agent runs `pnpm add drizzle-orm --filter
+  @akimath/core` and a resolution-based invariant dies in a one-line diff. The
+  package is **`@akimath/core`**, matching its two siblings on disk; earlier
+  drafts of this document and of `CLAUDE.md` said `@aki/core`.
+- The check nobody proposed and that actually protects determinism: a ban over
+  `packages/core/**` on `Math.random`, `Date`, `performance`,
+  `crypto.randomUUID`, `Intl` and `toLocaleString`. No import ban catches
+  `Math.random()`. **Implemented as a TypeScript AST walk rather than
+  `no-restricted-globals`**, because a flat ban cannot scope a permission and
+  this one must: Glicko needs `Math.exp`, and the generators must not inherit
+  it. There is also no ESLint anywhere in this repository.
 - **Rationals as `BigInt`**, vendored PRNG with a golden vector *emitted from the
   code* — the canonical cyrb128+sfc32 snippet does not produce the vector that was
   claimed, which is exactly the kind of thing a hand-written golden test enshrines
@@ -176,8 +206,12 @@ generator to Dart; and letting the client send `(template_id, seed)` back at
 answer time lets it request hard and answer easy.
 
 **Resolution:** the server emits, records in `issued_items`, and returns
-`{itemId, prompt: PromptToken[], keypad, options?}`. `templateId`, `templateVersion`,
+`{itemId, prompt: PromptToken[], keypad}`. `templateId`, `templateVersion`,
 and `seed` never appear in the response. The client answers with `itemId`.
+(`options` was listed here until 2026-08-17 and contradicted this section's own
+resolution — a field offering a child a set of answers to pick from is a
+different product. `contract/openapi.json` now says so, and a test sweeps the
+emitted document for all four names.)
 
 The invariant gets rewritten to something true:
 
@@ -194,6 +228,9 @@ both:
 offline_packs (
   id uuid PRIMARY KEY, player_id uuid NOT NULL, skill_id smallint,
   template_refs jsonb NOT NULL,   -- [{template_id, template_version, seed, ladder_step}] × N
+                                  -- seed is a JSON *string*: jsonb is read with
+                                  -- JSON.parse, which loses a bigint above 2^53.
+                                  -- Migration 0002 refuses a numeric seed.
   pack_salt bytea NOT NULL, issued_at timestamptz, expires_at timestamptz
 );
 ```
@@ -329,12 +366,17 @@ coding swarm. That pattern is cheap, repeatable, and has no runtime state.
 | 1 | `protected-paths` | **always, unfiltered** | yes |
 | 2 | `secrets` (gitleaks) | **always, unfiltered** | yes |
 | 3 | `ts-unit` — `tsc --build`, vitest, core-has-zero-deps check | `ts` | yes |
-| 4 | `contract` — emit + `git diff --exit-code` + `oasdiff` breaking-change check | `ts`∨`contract` | yes |
+| 4 | `contract` — emit + `git add -A -- contract/` + `git diff --cached --exit-code` + `oasdiff` breaking-change check | `ts`∨`contract` | yes |
 | 5 | `dart` — `flutter analyze --fatal-infos`, `dart_code_linter`, `flutter test`, generated-client diff | `dart`∨`contract` | yes |
 | 6 | `compliance` — lockfile allowlist, SDK denylist, merged manifest has no `AD_ID`, `PrivacyInfo.xcprivacy` | `dart` | yes |
 | 7 | `integration` — ephemeral Neon branch (**a separate `akimath-ci` project**) | `ts` | yes |
 | 8 | `gate` — `if: always()`, needs 1–7 | always | **the only required check** |
 | 9 | `mutation` — Stryker over `packages/core`, fast-check 1000 runs | nightly | no |
+
+Every job carries `timeout-minutes`. GitHub's default is six hours, so a single loop
+that never terminates costs a runner a working day and reports nothing at all; the
+same reasoning puts a per-command deadline in `.claude/hooks/verify-gate.sh`, where the
+symptom is a `git commit` that never returns.
 
 `fast-check` and Stryker fight: Stryker re-runs the suite per surviving mutant, so
 with random seeding a mutant dies on one run and survives the next, the score

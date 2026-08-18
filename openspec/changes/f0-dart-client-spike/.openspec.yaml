@@ -1,0 +1,7 @@
+schema: spec-driven
+created: 2026-08-16
+# This change ships no product behaviour: its only committed output is an ADR in
+# `docs/adr/`. Specs describe behaviour, so there is no delta spec to write and
+# inventing a requirement to satisfy validation is what the schema's own `specs`
+# instruction forbids. The ADR's acceptance conditions live in `tasks.md`.
+skip_specs: true

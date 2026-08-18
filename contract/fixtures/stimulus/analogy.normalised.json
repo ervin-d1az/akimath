@@ -1,0 +1,57 @@
+{
+  "ok": true,
+  "pack": {
+    "expires_at": "2026-09-15T00:00:00.000Z",
+    "issued_at": "2026-08-16T00:00:00.000Z",
+    "items": [
+      {
+        "answer": {
+          "digest": "63242bff5699b4baf65b36cb91cf2576182591c90b0ada950db2c81891aeb978",
+          "shape": "integer"
+        },
+        "diagnosis": null,
+        "keypad": "item",
+        "ladder_step": 2,
+        "skill_id": 4,
+        "stimulus": {
+          "kind": "analogy",
+          "payload": {
+            "pairs": [
+              {
+                "left": 2,
+                "right": 4
+              },
+              {
+                "left": 5,
+                "right": 10
+              }
+            ],
+            "unknown_index": 3
+          }
+        }
+      }
+    ],
+    "pack_format_version": 1,
+    "pack_salt": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "puzzles": [],
+    "skill_fallbacks": [
+      {
+        "diagnosis": {
+          "explain": "Aquí va el razonamiento completo, paso por paso, sin regaños.",
+          "misconception": "unclassified",
+          "steps": [
+            "Vuelve a ver el paso de en medio.",
+            "Ahí es donde se decide el resultado."
+          ]
+        },
+        "skill_id": 4
+      }
+    ],
+    "skill_nodes": [
+      {
+        "skill_id": 4,
+        "state": "locked"
+      }
+    ]
+  }
+}

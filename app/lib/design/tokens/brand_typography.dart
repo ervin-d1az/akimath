@@ -8,8 +8,11 @@ import 'brand_colors.dart';
 /// are never fetched at runtime: the app is used by minors and cannot depend on
 /// a third-party request to render text.
 abstract final class BrandFonts {
-  /// Display face. Wordmark and section headers only — never the
-  /// "RETOS MATEMÁTICOS" descriptor.
+  /// Display face. It carries the wordmark, section headers, and every figure
+  /// the player reads as a quantity: keypad digits, board digits, stat values
+  /// and OTP digits.
+  ///
+  /// It is never the "RETOS MATEMÁTICOS" descriptor, which is Plus Jakarta.
   static const String display = 'Darumadrop One';
 
   /// UI text. Variable font: weight is requested via [FontVariation].
@@ -60,6 +63,14 @@ abstract final class BrandText {
   /// Section header set in Darumadrop.
   static TextStyle sectionTitle({double size = 34}) => _display(size, height: 1);
 
+  /// A digit the player reads as a quantity: a keypad key, a board cell, a
+  /// stat value, an OTP box.
+  ///
+  /// It returns the same style as [sectionTitle] today and is a separate name
+  /// on purpose — a keypad key reaching for "section title" is how a header
+  /// tweak silently resizes the keypad.
+  static TextStyle numeral(double size) => _display(size, height: 1);
+
   /// The wordmark. Call sites choose the size; it never goes below
   /// [BrandShape.minWordmarkFontSize].
   static TextStyle wordmark(double size, Color color) =>
@@ -73,20 +84,44 @@ abstract final class BrandText {
       _text(size, FontWeight.w800, color: color, letterSpacing: size * 0.22);
 
   /// Small all-caps block label.
-  static TextStyle eyebrow({Color color = BrandColors.muted}) =>
-      _text(12, FontWeight.w800, color: color, letterSpacing: 1.2);
+  ///
+  /// [letterSpacing] is em and is resolved against [size], which is how the
+  /// design documents state tracking and how [descriptor] already reads it.
+  /// Asking for it in logical pixels would make every call site do the
+  /// multiplication and would silently mistrack the day a size moved.
+  static TextStyle eyebrow({
+    Color color = BrandColors.muted,
+    double size = 12,
+    double letterSpacing = 0.1,
+  }) =>
+      _text(
+        size,
+        FontWeight.w800,
+        color: color,
+        letterSpacing: size * letterSpacing,
+      );
 
   /// Card title.
-  static TextStyle cardTitle({Color color = BrandColors.ink}) =>
-      _text(20, FontWeight.w800, color: color);
+  static TextStyle cardTitle({
+    Color color = BrandColors.ink,
+    double size = 20,
+  }) =>
+      _text(size, FontWeight.w800, color: color);
 
-  /// Body copy.
-  static TextStyle body({Color color = BrandColors.ink}) =>
-      _text(15, FontWeight.w600, color: color, height: 1.5);
+  /// Body copy. [height] tightens for a short line that has to sit in a box.
+  static TextStyle body({
+    Color color = BrandColors.ink,
+    double height = 1.5,
+  }) =>
+      _text(15, FontWeight.w600, color: color, height: height);
 
   /// Secondary note.
-  static TextStyle caption({Color color = BrandColors.muted}) =>
-      _text(13, FontWeight.w600, color: color, height: 1.5);
+  static TextStyle caption({
+    Color color = BrandColors.muted,
+    double size = 13,
+    double height = 1.5,
+  }) =>
+      _text(size, FontWeight.w600, color: color, height: height);
 
   /// Text sitting on a button or a key.
   static TextStyle action({Color color = BrandColors.ink, double size = 18}) =>

@@ -47,4 +47,40 @@ void main() {
       );
     }
   });
+
+  test('the quiet neutral has a name', () {
+    expect(BrandColors.quiet, const Color(0xFFEAE6F0));
+  });
+
+  test('the figure pink is distinct from the soft pink', () {
+    expect(BrandColors.pinkFigure, const Color(0xFFFF9EC1));
+    // The requirement is the distinctness, not the hex: the two are 7/6/4
+    // apart and the token exists only to keep them apart.
+    expect(BrandColors.pinkFigure, isNot(BrandColors.pinkSoft));
+  });
+
+  test('the board hairline and the card rule are two tokens, not one alpha',
+      () {
+    // Asserted numerically on purpose: 0x2E is also the ink's own blue byte,
+    // so an eyeballed `0x2E1C1A2E` reads as correct whichever byte moved.
+    expect((BrandColors.hairline.a * 255).round(), 46);
+    expect((BrandColors.rule.a * 255).round(), 41);
+    expect(BrandColors.hairline, isNot(BrandColors.rule));
+
+    for (final Color divider in <Color>[
+      BrandColors.hairline,
+      BrandColors.rule,
+    ]) {
+      expect(divider.r, BrandColors.ink.r);
+      expect(divider.g, BrandColors.ink.g);
+      expect(divider.b, BrandColors.ink.b);
+    }
+  });
+
+  test('focus is an accent, not a verdict', () {
+    // The three invariant tests above are the other half of this one: focus is
+    // permitted precisely because pink still resolves to no verdict role, and
+    // none of them was edited to let this through.
+    expect(BrandColorRole.focus.color, BrandColors.pink);
+  });
 }

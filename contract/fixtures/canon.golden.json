@@ -1,0 +1,273 @@
+{
+  "char_map": {
+    " ": "",
+    "⁄": "/",
+    "−": "-"
+  },
+  "vectors": [
+    {
+      "learner": {
+        "ok": false,
+        "tag": "empty"
+      },
+      "raw": "",
+      "stored": {
+        "ok": false,
+        "tag": "empty"
+      }
+    },
+    {
+      "learner": {
+        "ok": false,
+        "tag": "empty"
+      },
+      "raw": " ",
+      "stored": {
+        "ok": false,
+        "tag": "empty"
+      }
+    },
+    {
+      "learner": {
+        "ok": false,
+        "tag": "zero_denominator"
+      },
+      "raw": "1/0",
+      "stored": {
+        "ok": false,
+        "tag": "zero_denominator"
+      }
+    },
+    {
+      "learner": {
+        "ok": false,
+        "tag": "non_numeric"
+      },
+      "raw": "x+1",
+      "stored": {
+        "ok": false,
+        "tag": "non_numeric"
+      }
+    },
+    {
+      "learner": {
+        "ok": false,
+        "tag": "non_ascii_digit"
+      },
+      "raw": "٠",
+      "stored": {
+        "ok": false,
+        "tag": "non_ascii_digit"
+      }
+    },
+    {
+      "learner": {
+        "ok": false,
+        "tag": "invisible_character"
+      },
+      "raw": "1​2",
+      "stored": {
+        "ok": false,
+        "tag": "invisible_character"
+      }
+    },
+    {
+      "learner": {
+        "ok": false,
+        "tag": "combining_mark"
+      },
+      "raw": "1́",
+      "stored": {
+        "ok": false,
+        "tag": "combining_mark"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "-5"
+      },
+      "raw": "−5",
+      "stored": {
+        "ok": false,
+        "tag": "not_canonical"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "-5"
+      },
+      "raw": "-5",
+      "stored": {
+        "ok": true,
+        "value": "-5"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "5"
+      },
+      "raw": " 5 ",
+      "stored": {
+        "ok": false,
+        "tag": "not_canonical"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "7"
+      },
+      "raw": "007",
+      "stored": {
+        "ok": false,
+        "tag": "not_canonical"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "0"
+      },
+      "raw": "-0",
+      "stored": {
+        "ok": false,
+        "tag": "not_canonical"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "0"
+      },
+      "raw": "0",
+      "stored": {
+        "ok": true,
+        "value": "0"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "7"
+      },
+      "raw": "7",
+      "stored": {
+        "ok": true,
+        "value": "7"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "1/2"
+      },
+      "raw": "1/2",
+      "stored": {
+        "ok": true,
+        "value": "1/2"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "2/4"
+      },
+      "raw": "2/4",
+      "stored": {
+        "ok": true,
+        "value": "2/4"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "1/2"
+      },
+      "raw": "1⁄2",
+      "stored": {
+        "ok": false,
+        "tag": "not_canonical"
+      }
+    },
+    {
+      "learner": {
+        "ok": false,
+        "tag": "non_numeric"
+      },
+      "raw": "1/-2",
+      "stored": {
+        "ok": false,
+        "tag": "non_numeric"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "12/7"
+      },
+      "raw": "12/007",
+      "stored": {
+        "ok": false,
+        "tag": "not_canonical"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "0/5"
+      },
+      "raw": "0/5",
+      "stored": {
+        "ok": true,
+        "value": "0/5"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "0/5"
+      },
+      "raw": "-0/5",
+      "stored": {
+        "ok": false,
+        "tag": "not_canonical"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "-3/4"
+      },
+      "raw": "-3/4",
+      "stored": {
+        "ok": true,
+        "value": "-3/4"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "4/1"
+      },
+      "raw": "4/1",
+      "stored": {
+        "ok": true,
+        "value": "4/1"
+      }
+    },
+    {
+      "learner": {
+        "ok": true,
+        "value": "12/7"
+      },
+      "raw": "12/7",
+      "stored": {
+        "ok": true,
+        "value": "12/7"
+      }
+    }
+  ]
+}

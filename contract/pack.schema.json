@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "expires_at": {
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+      "type": "string"
+    },
+    "issued_at": {
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "additionalProperties": false,
+            "properties": {
+              "digest": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "shape": {
+                "enum": [
+                  "integer",
+                  "fraction"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "shape",
+              "digest"
+            ],
+            "type": "object"
+          },
+          "diagnosis": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "diagnosis_version": {
+                    "const": 1,
+                    "type": "number"
+                  },
+                  "distractors": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "diagnosis": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "explain": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "misconception": {
+                              "pattern": "^[a-z][a-z0-9_]*$",
+                              "type": "string"
+                            },
+                            "steps": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "maxItems": 4,
+                              "minItems": 1,
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "misconception",
+                            "steps",
+                            "explain"
+                          ],
+                          "type": "object"
+                        },
+                        "digest": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "digest",
+                        "diagnosis"
+                      ],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "diagnosis_version",
+                  "distractors"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "keypad": {
+            "enum": [
+              "item",
+              "puzzle",
+              "otp"
+            ],
+            "type": "string"
+          },
+          "ladder_step": {
+            "maximum": 20,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "skill_id": {
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "stimulus": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "arithmetic",
+                  "numberSeries",
+                  "matrix",
+                  "analogy",
+                  "hiddenOperation",
+                  "figurate"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "additionalProperties": {},
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "payload"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "skill_id",
+          "ladder_step",
+          "keypad",
+          "stimulus",
+          "answer",
+          "diagnosis"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "pack_format_version": {
+      "const": 1,
+      "type": "number"
+    },
+    "pack_salt": {
+      "pattern": "^[0-9a-f]{32}$",
+      "type": "string"
+    },
+    "puzzles": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "kenken",
+              "kakuro",
+              "killer",
+              "magicSquare",
+              "wordSearch"
+            ],
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "reference_sheet": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "type": "array"
+          },
+          "tutorial_steps": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "payload",
+          "tutorial_steps",
+          "reference_sheet"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "skill_fallbacks": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "diagnosis": {
+            "additionalProperties": false,
+            "properties": {
+              "explain": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "misconception": {
+                "pattern": "^[a-z][a-z0-9_]*$",
+                "type": "string"
+              },
+              "steps": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "required": [
+              "misconception",
+              "steps",
+              "explain"
+            ],
+            "type": "object"
+          },
+          "skill_id": {
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "skill_id",
+          "diagnosis"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "skill_nodes": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "skill_id": {
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "locked",
+              "available",
+              "started",
+              "mastered"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill_id",
+          "state"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "pack_format_version",
+    "pack_salt",
+    "issued_at",
+    "expires_at",
+    "skill_nodes",
+    "skill_fallbacks",
+    "items",
+    "puzzles"
+  ],
+  "type": "object"
+}

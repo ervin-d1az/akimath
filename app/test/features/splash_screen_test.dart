@@ -54,4 +54,54 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsNothing);
   });
+
+  testWidgets('Aki stands at the width the design states',
+      (WidgetTester tester) async {
+    await pump(tester, SplashVariant.cream);
+
+    expect(tester.widget<Aki>(find.byType(Aki)).width, 210);
+  });
+
+  /// The gaps of the splash's own column.
+  ///
+  /// Read from the column's children rather than from every [SizedBox] in the
+  /// tree: `Aki` builds one of its own to hold the artwork, and a tree-wide
+  /// sweep would measure that instead.
+  List<double?> gapsOf(WidgetTester tester) {
+    final Column column = tester.widget<Column>(find.byType(Column));
+    return column.children
+        .whereType<SizedBox>()
+        .map((SizedBox gap) => gap.height)
+        .toList();
+  }
+
+  for (final SplashVariant variant in SplashVariant.values) {
+    testWidgets('the ${variant.name} splash spaces its column uniformly',
+        (WidgetTester tester) async {
+      await pump(tester, variant);
+
+      // The design measures 26/26/26. The file reached 28/28/36 by arithmetic
+      // on the spacing scale, which read as three deliberate values.
+      expect(gapsOf(tester), <double>[26, 26, 26]);
+    });
+  }
+
+  testWidgets('the face tile is outlined at the standard stroke',
+      (WidgetTester tester) async {
+    await pump(tester, SplashVariant.brandGreen);
+
+    final Container tile = tester.widget<Container>(
+      find.ancestor(
+        of: find.byType(AkiFace),
+        matching: find.byType(Container),
+      ),
+    );
+    final BoxDecoration decoration = tile.decoration! as BoxDecoration;
+
+    // The 4 that stood here had no reason next to it; BRD-2c says outright
+    // that it was not pre-blessed. The tile's 60px radius is the one
+    // deliberate departure on this screen and it carries its reason.
+    expect(decoration.border!.top.width, BrandShape.borderWidth);
+    expect(decoration.borderRadius, BorderRadius.circular(60));
+  });
 }
