@@ -550,6 +550,18 @@ jobs:
           git add -A -- packages/core/golden/
           git diff --cached --exit-code -- packages/core/golden/
 
+      # The pack is emitted from a declaration, a template registry and the
+      # authored items the app ships — so this fails when any of those move and
+      # the artifact was not rebuilt. Staged before diffing for the same reason
+      # the others are: a bare `git diff` is blind to a file the author never
+      # committed.
+      - name: The committed pack still matches what the declaration produces
+        run: |
+          npm run build:pack
+          cd "$GITHUB_WORKSPACE"
+          git add -A -- packages/core/pack/
+          git diff --cached --exit-code -- packages/core/pack/
+
   spec:
     name: spec
     needs: changes
