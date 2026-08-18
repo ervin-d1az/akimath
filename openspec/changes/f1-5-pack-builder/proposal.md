@@ -65,13 +65,20 @@ it.
 ## Impact
 
 - **`packages/core`** — gains `src/pack/` (pure: assembly, seed derivation,
-  envelope construction) and one adapter, the CLI that writes a file. Gains
-  `@akimath/contract` as a runtime rather than dev dependency, for
-  `answerDigest` and `parsePack`. Its zero-runtime-dependency claim and the
-  allowlist test that enforces it both need revisiting — that is a real change
-  to a stated property of the package and is called out rather than absorbed.
-- **`contract/fixtures/`** — gains a committed emitted pack, byte-diffed in CI
-  the way `canon.golden.json` and the OpenAPI document already are.
+  envelope construction) and one adapter, the CLI that writes a file. It needs
+  `answerDigest` and `parsePack` from `@akimath/contract`.
+  **Its zero-runtime-dependency claim survives, and is strengthened.** An
+  earlier draft of this section said the opposite — that contract would become a
+  runtime dependency and the claim would need revisiting. `design.md` D1 settled
+  it the other way after weighing the alternatives: contract stays a
+  devDependency, the builder is never reachable from `src/index.ts`, and a new
+  gate walks the exported surface's imports to prove it. The claim moves from a
+  comment to a checked fact rather than being given up.
+- **`packages/core/pack/`** — a new directory holding the committed emitted
+  pack, byte-diffed in CI the way `canon.golden.json` and the OpenAPI document
+  already are. An earlier draft said `contract/fixtures/`; that would leave one
+  directory with two owners and two emitters, since `contract/` is produced by
+  the contract package and diffed as a unit.
 - **`.github/workflows/ci.yml`** — the `core` job gains the emit-and-diff step.
 - **No Dart change.** `app/` is untouched, and no dependency joins its
   allowlist.

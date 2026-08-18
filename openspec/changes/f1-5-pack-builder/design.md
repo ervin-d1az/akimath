@@ -93,6 +93,11 @@ byte-diffed in CI. The pack joins them, using the same staged-diff form — `git
 `git diff --cached --exit-code` — because a bare `git diff` is blind to an artifact the author never
 committed.
 
+**It lands in `packages/core/pack/`.** `contract/` is emitted by the contract package and diffed as
+a unit, so putting a file produced by a different package there would leave one directory with two
+owners. The proposal's Impact section said `contract/fixtures/` before this decision was taken and
+has been corrected to match.
+
 ### D6 · The builder writes through a temporary file
 
 Output goes to a temp path and is moved into place only after the frozen validator has accepted it.

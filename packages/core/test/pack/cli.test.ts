@@ -123,14 +123,38 @@ describe("a refusal writes nothing and damages nothing", () => {
 });
 
 describe("the committed pack is the one the declaration produces", () => {
+  const committed = fileURLToPath(new URL("../../pack/starter.json", import.meta.url));
+
   it("re-emitting leaves it byte-identical", () => {
     // The same claim the CI step makes, made here so a developer finds out
     // before pushing.
-    const committed = fileURLToPath(new URL("../../pack/starter.json", import.meta.url));
     const before = readFileSync(committed, "utf8");
     const r = run([]);
 
     expect(r.status).toBe(0);
     expect(readFileSync(committed, "utf8")).toBe(before);
+  });
+
+  it("keeps all six families, in the pack we actually ship", () => {
+    // **The assembly tests prove a pack *can* keep six families; this proves
+    // the one in the tree does.** They run against their own declaration, so
+    // editing `content/pack.declaration.json` down to templates only would
+    // leave every one of them green while the shipped artifact offered a
+    // player one kind of question. That is the regression this whole change is
+    // shaped to prevent, so it is asserted against the artifact itself.
+    const pack = JSON.parse(readFileSync(committed, "utf8")) as {
+      items: { stimulus: { kind: string } }[];
+    };
+    const families = new Set(pack.items.map((item) => item.stimulus.kind));
+
+    expect([...families].sort()).toEqual([
+      "analogy",
+      "arithmetic",
+      "figurate",
+      "hiddenOperation",
+      "matrix",
+      "numberSeries",
+    ]);
+    expect(pack.items.length).toBeGreaterThan(70);
   });
 });
