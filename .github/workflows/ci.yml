@@ -166,6 +166,26 @@ jobs:
               echo "label allow-protected-edit is present; a human approved this."
               ;;
             *)
+              # **A push carries no pull request, and therefore no label.** The
+              # escape hatch this gate offers exists only on a `pull_request`
+              # event, so enforcing on a push is a check nothing can satisfy —
+              # which is exactly what happened when the schema first landed:
+              # the pull request was refused correctly, and then the merge
+              # commit was refused again with no way to answer it, leaving
+              # `main` red and taking `gate` down with it.
+              #
+              # Re-checking on push buys nothing anyway. `main` is protected by
+              # the `protect-main` ruleset — no direct push — so every commit
+              # that reaches it came through a pull request this job already
+              # judged. Reporting what was touched is still worth doing; failing
+              # over it a second time is not.
+              if [ "${GITHUB_EVENT_NAME:-}" != "pull_request" ]; then
+                echo
+                echo "This is a '${GITHUB_EVENT_NAME:-push}' event, which carries no"
+                echo "pull request and so no label. The edit was judged where a"
+                echo "human could answer for it; not enforcing again here."
+                exit 0
+              fi
               echo
               echo "A migration is history once it has been applied: editing one"
               echo "desynchronises every database that ran it, and the runner will"
