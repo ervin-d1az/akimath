@@ -33,15 +33,15 @@
 
 ## 4. Assembly
 
-- [ ] 4.1 Red → green: assemble a pack from one template source and one authored source, and assert
+- [x] 4.1 Red → green: assemble a pack from one template source and one authored source, and assert
       the frozen validator accepts it (req-builder-sources).
-- [ ] 4.2 Red → green: the assembled pack carries all six stimulus families given the shipped
+- [x] 4.2 Red → green: the assembled pack carries all six stimulus families given the shipped
       declaration — the assertion that this change cannot regress what a player sees.
-- [ ] 4.3 Red → green: `skill_nodes` and `skill_fallbacks` are emitted so every `skill_id` an item
+- [x] 4.3 Red → green: `skill_nodes` and `skill_fallbacks` are emitted so every `skill_id` an item
       declares is covered; an item naming an undeclared skill fails the build.
-- [ ] 4.4 Red → green: the emitted pack contains no plaintext canonical answer anywhere, swept over
+- [x] 4.4 Red → green: the emitted pack contains no plaintext canonical answer anywhere, swept over
       every string, reporting how many items were checked.
-- [ ] 4.5 Red → green: building twice over an unchanged declaration produces byte-identical output.
+- [x] 4.5 Red → green: building twice over an unchanged declaration produces byte-identical output.
 
 ## 5. Diagnosis copy
 
