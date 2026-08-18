@@ -10,12 +10,10 @@ import type { Template } from "../../src/template.js";
 import { buildPack } from "../../src/pack/build.js";
 import { parseDeclaration } from "../../src/pack/declaration.js";
 import { parseMisconceptions } from "../../src/pack/misconceptions.js";
+import { AUTHORED_PACK_PATH } from "../authored-pack.js";
 
 const AUTHORED_PATH = "../../app/assets/packs/starter.json";
-const AUTHORED = readFileSync(
-  fileURLToPath(new URL("../../../../app/assets/packs/starter.json", import.meta.url)),
-  "utf8",
-);
+const AUTHORED = readFileSync(AUTHORED_PACK_PATH, "utf8");
 
 const FALLBACK: DiagnosisCopy = {
   misconception: "sin_diagnostico",

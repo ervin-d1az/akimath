@@ -20,15 +20,15 @@
 
 ## 3. Lifting authored items
 
-- [ ] 3.1 Red → green: lift one authored arithmetic item into the frozen envelope — `term operator
+- [x] 3.1 Red → green: lift one authored arithmetic item into the frozen envelope — `term operator
       term =` becomes `{left, operator, right}`, the answer becomes a digest, `skill_id` and
       `keypad` are added and nothing else changes (req-builder-preserves-authored-content).
-- [ ] 3.2 Red → green: lift an item of each non-arithmetic family, whose stimulus payload passes
+- [x] 3.2 Red → green: lift an item of each non-arithmetic family, whose stimulus payload passes
       through byte-identical.
-- [ ] 3.3 Red → green: lift the whole shipped authored file and assert every item is accepted,
+- [x] 3.3 Red → green: lift the whole shipped authored file and assert every item is accepted,
       reporting the count and the family breakdown. Reads `app/assets/packs/starter.json` through
       the declaration's path, so drift between the two formats fails here.
-- [ ] 3.4 Red → green: an authored answer that is not storage-canonical fails the build naming the
+- [x] 3.4 Red → green: an authored answer that is not storage-canonical fails the build naming the
       item (req-builder-answers-are-digests).
 
 ## 4. Assembly
@@ -71,14 +71,14 @@
 
 ## 7. Evidence
 
-- [ ] 7.1 Tier 1: `npm run verify` green in all three TypeScript packages with the counts stated,
+- [x] 7.1 Tier 1: `npm run verify` green in all three TypeScript packages with the counts stated,
       and `flutter analyze --fatal-infos` + `flutter test` still green — the app is untouched and
       this is what proves it.
-- [ ] 7.2 Tier 1b: `npm run mutation` and `npm run dry` in `packages/core`, with the score stated
+- [x] 7.2 Tier 1b: `npm run mutation` and `npm run dry` in `packages/core`, with the score stated
       and any survivor either killed or explained.
-- [ ] 7.3 Tier 1b: record the falsification matrix for the checks that Stryker cannot reach — the
+- [x] 7.3 Tier 1b: record the falsification matrix for the checks that Stryker cannot reach — the
       import-boundary walk, the determinism walk and the copy sweep — each mutation named, each
       seen red, sources restored byte-identical and verified with `diff` against a snapshot
       (PROC-8).
-- [ ] 7.4 Confirm `openspec status` reports every task complete, and that the emitted pack in the
+- [x] 7.4 Confirm `openspec status` reports every task complete, and that the emitted pack in the
       tree is the one the committed declaration produces.

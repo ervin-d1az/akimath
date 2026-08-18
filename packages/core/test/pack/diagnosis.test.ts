@@ -48,6 +48,29 @@ describe("the copy file is content, and it is checked like content", () => {
     expect(MISCONCEPTIONS.size).toBeGreaterThan(0);
   });
 
+  it("refuses something that is not an object keyed by identifier", () => {
+    // Never exercised until the mutation pass: deleting this branch entirely
+    // left every test green.
+    for (const junk of [null, [], "text", 42]) {
+      expect(() => parseMisconceptions(junk)).toThrow(/object keyed by identifier/);
+    }
+  });
+
+  it("refuses a file that declares no misconceptions at all", () => {
+    expect(() => parseMisconceptions({})).toThrow(/declares none/);
+  });
+
+  it("refuses more steps than the frozen copy schema admits", () => {
+    // One to four. Five is a wall of text on a screen with room for a couple
+    // of lines, and the frozen schema refuses it anyway.
+    expect(() =>
+      parseMisconceptions({ a: { steps: ["1", "2", "3", "4", "5"], explain: "b" } }),
+    ).toThrow(/steps/);
+    expect(() =>
+      parseMisconceptions({ a: { steps: ["1", "2", "3", "4"], explain: "b" } }),
+    ).not.toThrow();
+  });
+
   it("refuses an id that is not a snake_case identifier", () => {
     for (const id of ["Sign Flip", "signFlip", "1st", ""]) {
       expect(() =>
@@ -90,11 +113,25 @@ describe("the shipped copy never scolds", () => {
     expect(strings.length).toBeGreaterThan(0);
   });
 
-  it("sees a scolding that is there", () => {
+  it("sees a scolding that is there, and says which word and where", () => {
     // The control: every assertion above passes for a sweep that is broken.
-    expect(scoldings(["Eso estuvo mal."])).toHaveLength(1);
-    expect(scoldings(["Hubo un error."])).toHaveLength(1);
+    // It reports the word *and* the text, because "something scolds somewhere
+    // in the copy file" is not a message anyone can act on.
+    expect(scoldings(["Eso estuvo mal."])).toEqual(['"mal" in "Eso estuvo mal."']);
+    expect(scoldings(["Hubo un error."])).toEqual(['"error" in "Hubo un error."']);
     expect(scoldings(["Vas muy bien."])).toEqual([]);
+  });
+
+  it("catches every word on the list, not merely the first", () => {
+    // Each entry is checked on its own, so emptying any one of them shows up.
+    for (const word of FORBIDDEN_WORDS) {
+      expect(scoldings([`texto ${word} texto`])).toHaveLength(1);
+    }
+    expect(FORBIDDEN_WORDS).toHaveLength(4);
+  });
+
+  it("reports each offending string separately", () => {
+    expect(scoldings(["Eso estuvo mal.", "Hubo un error.", "Bien."])).toHaveLength(2);
   });
 });
 

@@ -5,6 +5,7 @@ import { answerDigest, ItemSchema } from "@akimath/contract";
 import { describe, expect, it } from "vitest";
 
 import { liftAuthored, readAuthoredFile } from "../../src/pack/lift.js";
+import { AUTHORED_PACK_PATH } from "../authored-pack.js";
 
 const SALT = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
 const lift = (item: unknown) => liftAuthored(item, { skillId: 1, packSalt: SALT });
@@ -14,9 +15,7 @@ const payloadOf = (item: unknown): Record<string, unknown> =>
   (item as { stimulus: { payload: Record<string, unknown> } }).stimulus.payload;
 
 /** The file the app actually ships. Read, not copied — see the group below. */
-const AUTHORED = fileURLToPath(
-  new URL("../../../../app/assets/packs/starter.json", import.meta.url),
-);
+const AUTHORED = AUTHORED_PACK_PATH;
 
 describe("an authored arithmetic item becomes a frozen envelope", () => {
   const authored = {
@@ -71,6 +70,20 @@ describe("an authored arithmetic item becomes a frozen envelope", () => {
       { kind: "operator", glyph: "=" },
     ] };
     expect(payloadOf(lift(minus))["operator"]).toBe("-");
+  });
+
+  it("accepts the ASCII hyphen as well as the minus sign", () => {
+    // Both spellings map to the frozen `-`. Only U+2212 was exercised, so
+    // emptying the ASCII entry of the table changed nothing.
+    for (const glyph of ["-", "−"]) {
+      const item = { ...authored, answer: "1", prompt: [
+        { kind: "text", value: "9" },
+        { kind: "operator", glyph },
+        { kind: "text", value: "8" },
+        { kind: "operator", glyph: "=" },
+      ] };
+      expect(payloadOf(lift(item))["operator"]).toBe("-");
+    }
   });
 
   it("carries the answer as a digest and never in the clear", () => {

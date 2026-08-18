@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { AUTHORED_PACK_PATH } from "../authored-pack.js";
+
 /**
  * The adapter, run for real.
  *
@@ -19,9 +21,7 @@ const CLI = fileURLToPath(new URL("../../src/adapters/build-pack.ts", import.met
 const REAL_MISCONCEPTIONS = fileURLToPath(
   new URL("../../content/misconceptions.json", import.meta.url),
 );
-const AUTHORED = fileURLToPath(
-  new URL("../../../../app/assets/packs/starter.json", import.meta.url),
-);
+const AUTHORED = AUTHORED_PACK_PATH;
 
 interface Run {
   readonly status: number;
