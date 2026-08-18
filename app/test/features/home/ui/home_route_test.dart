@@ -11,6 +11,7 @@ import 'package:akimath_app/features/home/policy/puzzle_of_day.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_board_view.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
+import 'package:akimath_app/features/puzzle/ui/puzzle_solved_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
@@ -492,6 +493,151 @@ void main() {
 
       expect(find.text('1 DÍA'), findsOneWidget);
       expect((await store.read()).days, hasLength(1));
+    });
+  });
+
+  group('finishing a puzzle says so', () {
+    /// Solves the test pack's 3×3 KenKen: 1 2 3 / 2 3 1 / 3 1 2.
+    Future<void> solveTheBoard(WidgetTester tester) async {
+      const List<List<int>> solution = <List<int>>[
+        <int>[1, 2, 3],
+        <int>[2, 3, 1],
+        <int>[3, 1, 2],
+      ];
+      for (int row = 0; row < 3; row += 1) {
+        for (int col = 0; col < 3; col += 1) {
+          // Scoped to the board: the header buttons and every keypad key are
+          // gesture detectors too, so an unscoped index taps something else
+          // and the test passes having exercised nothing.
+          await tester.tap(
+            find
+                .descendant(
+                  of: find.byType(PuzzleBoardView),
+                  matching: find.byType(GestureDetector),
+                )
+                .at(row * 3 + col),
+          );
+          await tester.pump();
+          await tester.tap(find.byWidgetPredicate(
+            (Widget w) =>
+                w is KeypadKeyView && w.data.id == '${solution[row][col]}',
+          ));
+          await tester.pump();
+        }
+      }
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> openPuzzle(WidgetTester tester, String label) async {
+      await tester.scrollUntilVisible(find.text(label), 120);
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a solved board is acknowledged, and the way out goes home',
+        (WidgetTester tester) async {
+      // Before this, twenty minutes of Kakuro ended with the screen simply
+      // going away — which reads as the app losing your place.
+      await _pump(tester, source: _puzzlePack);
+      await tester.pumpAndSettle();
+
+      await openPuzzle(tester, 'KenKen');
+      await solveTheBoard(tester);
+
+      expect(find.byType(PuzzleSolvedScreen), findsOneWidget);
+      expect(find.text('KenKen'), findsOneWidget, reason: 'it names the format');
+      expect(find.byType(PuzzleScreen), findsNothing,
+          reason: 'the finished board is still underneath');
+
+      await tester.tap(find.text('Seguir'));
+      await tester.pumpAndSettle();
+      expect(find.text('ROMPECABEZAS'), findsOneWidget);
+    });
+
+    testWidgets('a solved sopa de letras is acknowledged too',
+        (WidgetTester tester) async {
+      await _pump(tester, source: _puzzlePack);
+      await tester.pumpAndSettle();
+
+      await openPuzzle(tester, 'Sopa de letras');
+      for (final List<String> word in <List<String>>[
+        <String>['S', 'U', 'M', 'A'],
+        <String>['C', 'E', 'R', 'O'],
+      ]) {
+        final TestGesture gesture =
+            await tester.startGesture(tester.getCenter(find.text(word.first)));
+        for (final String letter in word.skip(1)) {
+          await gesture.moveTo(tester.getCenter(find.text(letter)));
+        }
+        await gesture.up();
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.byType(PuzzleSolvedScreen), findsOneWidget);
+      expect(find.text('Sopa de letras'), findsOneWidget);
+    });
+
+    testWidgets('leaving one unsolved shows nothing',
+        (WidgetTester tester) async {
+      await _pump(tester, source: _puzzlePack);
+      await tester.pumpAndSettle();
+
+      await openPuzzle(tester, 'KenKen');
+      await tester.tap(find.byWidgetPredicate(
+        (Widget w) => w is Semantics && w.properties.label == 'Salir',
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PuzzleSolvedScreen), findsNothing);
+      expect(find.text('ROMPECABEZAS'), findsOneWidget);
+    });
+
+    testWidgets('the streak it shows is the one the home will show',
+        (WidgetTester tester) async {
+      // The day was recorded the moment the player first put a value on the
+      // board, but `_log` is only re-read on the way back — so reading it
+      // straight would print a streak one short of the one the home prints a
+      // second later. That is the two-screens-one-morning contradiction
+      // `StreakPolicy` was fixed for, in the other direction.
+      final DayLogStore store = InMemoryDayLogStore(DayLog.empty);
+      await _pump(tester, source: _puzzlePack, dayLog: store);
+      await tester.pumpAndSettle();
+
+      await openPuzzle(tester, 'KenKen');
+      await solveTheBoard(tester);
+
+      final PuzzleSolvedScreen screen =
+          tester.widget<PuzzleSolvedScreen>(find.byType(PuzzleSolvedScreen));
+      expect(screen.streakDays, 1);
+
+      await tester.tap(find.text('Seguir'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 DÍA'), findsOneWidget,
+          reason: 'the home disagreed with the screen before it');
+    });
+
+    testWidgets('the time is the route\'s, from opening the puzzle',
+        (WidgetTester tester) async {
+      // The clock is injected, so the elapsed figure is a fact about the
+      // session and not about how fast the test ran.
+      DateTime now = DateTime(2026, 8, 16, 9);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeRoute(
+            reader: PackReader(bundle: _FakeBundle(_puzzlePack)),
+            now: () => now,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await openPuzzle(tester, 'KenKen');
+      now = now.add(const Duration(minutes: 3, seconds: 20));
+      await solveTheBoard(tester);
+
+      final PuzzleSolvedScreen screen =
+          tester.widget<PuzzleSolvedScreen>(find.byType(PuzzleSolvedScreen));
+      expect(screen.elapsed, const Duration(minutes: 3, seconds: 20));
     });
   });
 

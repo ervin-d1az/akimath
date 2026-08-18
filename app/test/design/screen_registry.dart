@@ -7,6 +7,7 @@ import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
+import 'package:akimath_app/features/puzzle/ui/puzzle_solved_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/shell/ui/app_shell.dart';
@@ -412,6 +413,18 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         tutorialSteps: <String>['Encuentra las palabras escondidas.'],
         referenceSheet: <String>['Las palabras van en ocho direcciones.'],
       ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · solved',
+    // The longest format name and the largest figures it can show: a Kakuro
+    // that took an hour, on a streak that has reached the ninety days `DayLog`
+    // retains. Nothing wider can arrive.
+    build: () => PuzzleSolvedScreen(
+      format: 'Sopa de letras',
+      elapsed: const Duration(hours: 1, minutes: 4, seconds: 9),
+      streakDays: 90,
+      onDone: () {},
     ),
   ),
   RegisteredScreen(
