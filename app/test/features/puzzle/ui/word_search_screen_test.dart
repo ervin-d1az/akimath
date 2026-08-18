@@ -42,7 +42,54 @@ Finder _inList(String word) => find.byWidgetPredicate(
 TextDecoration? _decorationOf(WidgetTester tester, String word) =>
     tester.widget<Text>(_inList(word)).style?.decoration;
 
+Future<int Function()> _pumpCountingPractice(WidgetTester tester) async {
+  int practised = 0;
+  tester.view
+    ..physicalSize = const Size(390, 844)
+    ..devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      home: WordSearchScreen(
+        puzzle: _puzzle(),
+        onPractised: () => practised++,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return () => practised;
+}
+
 void main() {
+  group('claiming a word is practice', () {
+    testWidgets('the first word claimed reports it, once',
+        (WidgetTester tester) async {
+      final int Function() practised = await _pumpCountingPractice(tester);
+      expect(practised(), 0, reason: 'opening a puzzle is not practice');
+
+      await _trace(tester, <String>['S', 'U', 'M', 'A']);
+      expect(practised(), 1);
+
+      await _trace(tester, <String>['C', 'E', 'R', 'O']);
+      expect(practised(), 1, reason: 'the day is recorded once, not per word');
+    });
+
+    testWidgets('a trace that spells nothing is not practice',
+        (WidgetTester tester) async {
+      // Design D2: this is the word search's analogue of a gesture that was
+      // never submitted, not of a wrong answer — the player has asserted
+      // nothing about the puzzle.
+      final int Function() practised = await _pumpCountingPractice(tester);
+
+      await _trace(tester, <String>['S', 'C', 'E', 'R', 'O']);
+      expect(practised(), 0);
+
+      await _trace(tester, <String>['S', 'U', 'M', 'A']);
+      expect(practised(), 1, reason: 'a word still counts afterwards');
+    });
+  });
+
+
   group('the screen shows a grid and a list', () {
     testWidgets('every letter is drawn', (WidgetTester tester) async {
       await _pump(tester);

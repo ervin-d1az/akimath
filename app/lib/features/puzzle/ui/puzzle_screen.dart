@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 
 import '../../../content/model/puzzle.dart';
@@ -26,13 +27,11 @@ class PuzzleScreen extends StatefulWidget {
     required this.puzzle,
     this.onClose,
     this.onSolved,
+    this.onPractised,
   });
 
-  /// Any caged puzzle. Naming a concrete kind here would make every new caged
-  /// format a change to this screen.
-  /// Any puzzle the board can draw.
-  /// Any puzzle played on the shared square. A word search is not one, and
-  /// the type says so rather than a getter throwing.
+  /// Any puzzle played on the shared square. A word search is not one, and the
+  /// type says so rather than a getter throwing.
   final BoardPuzzle puzzle;
 
   /// Leaves the puzzle. Defaults to popping, so a pushed board always has an
@@ -44,6 +43,18 @@ class PuzzleScreen extends StatefulWidget {
   /// Called once, when the last cell makes the board correct.
   final VoidCallback? onSolved;
 
+  /// Called once, the first time a value lands on the board.
+  ///
+  /// **Not on solve** (design D1): a puzzle is a longer commitment than an item,
+  /// and a player who works on one for half an hour and leaves it unfinished has
+  /// practised. It is the board's analogue of a round submitting an answer —
+  /// which records the day right or wrong.
+  ///
+  /// The screen reports; the route records. It holds no store, because the two
+  /// puzzle formats commit differently and the same IO decision written twice
+  /// is free to diverge.
+  final VoidCallback? onPractised;
+
   @override
   State<PuzzleScreen> createState() => _PuzzleScreenState();
 }
@@ -51,10 +62,19 @@ class PuzzleScreen extends StatefulWidget {
 class _PuzzleScreenState extends State<PuzzleScreen> {
   late PuzzleEntry _entry = PuzzleEntry.of(widget.puzzle.board);
   bool _reported = false;
+  bool _practised = false;
   bool _rulesOpen = false;
 
   void _apply(PuzzleEntry next) {
+    // **What landed on the board**, not what was pressed. Selecting a cell, and
+    // a digit the board cannot hold, both leave `filled` alone — and neither
+    // asserts anything about the puzzle.
+    final bool committed = !mapEquals(next.filled, _entry.filled);
     setState(() => _entry = next);
+    if (!_practised && committed) {
+      _practised = true;
+      widget.onPractised?.call();
+    }
     // Once, and only on the transition. A callback that fired on every keystroke
     // after completion would push a verdict screen per digit.
     if (!_reported && next.isSolved) {

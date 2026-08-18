@@ -106,6 +106,88 @@ bool _available(WidgetTester tester, String id) => tester
     .available;
 
 void main() {
+  group('working on a board is practice', () {
+    testWidgets('the first value entered reports it, once',
+        (WidgetTester tester) async {
+      // The streak counts days practised, and a round records on submit right
+      // or wrong. A board's analogue of submitting is putting a value on it.
+      int practised = 0;
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PuzzleScreen(
+            puzzle: _puzzle(),
+            onPractised: () => practised++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(practised, 0, reason: 'opening a puzzle is not practice');
+
+      await _tapCell(tester, 0, 0);
+      expect(practised, 0, reason: 'selecting a cell is not practice');
+
+      await _press(tester, '1');
+      expect(practised, 1);
+
+      await _tapCell(tester, 0, 1);
+      await _press(tester, '2');
+      expect(practised, 1, reason: 'the day is recorded once, not per digit');
+    });
+
+    testWidgets('a key the board cannot hold is not practice',
+        (WidgetTester tester) async {
+      // A 3×3 KenKen admits 1 to 3. Pressing 9 changes nothing on the board, so
+      // it asserts nothing about the puzzle.
+      int practised = 0;
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PuzzleScreen(
+            puzzle: _puzzle(),
+            onPractised: () => practised++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _tapCell(tester, 0, 0);
+      await _press(tester, '9');
+      expect(practised, 0);
+
+      await _press(tester, '1');
+      expect(practised, 1, reason: 'a value it can hold still counts');
+    });
+
+    testWidgets('a value typed with no cell selected is not practice',
+        (WidgetTester tester) async {
+      int practised = 0;
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PuzzleScreen(
+            puzzle: _puzzle(),
+            onPractised: () => practised++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _press(tester, '1');
+      expect(practised, 0);
+    });
+  });
+
+
   group('the pad offers only what the board can hold', () {
     testWidgets('a 3x3 offers three digits', (WidgetTester tester) async {
       // Nine keys on a board that admits three. The six that cannot act used to
