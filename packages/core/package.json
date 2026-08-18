@@ -21,6 +21,7 @@
     "dry": "jscpd src",
     "emit": "tsx src/adapters/emit-golden.ts",
     "build:pack": "tsx src/adapters/build-pack.ts",
+    "build:puzzles": "tsx src/adapters/build-puzzles.ts",
     "verify": "npm run typecheck && npm run test"
   },
   "devDependencies": {
