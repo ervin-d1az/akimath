@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../content/model/diagnosis.dart';
 import '../../../content/model/item.dart';
 import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
@@ -265,6 +266,7 @@ class _HomeRouteState extends State<HomeRoute> {
       fullScreenSession<void>(
         (BuildContext sessionContext) => _SeriesSession(
           items: plan,
+          fallbackDiagnosis: pack.fallbackDiagnosis,
           now: widget.now,
           attemptDays: _log.days,
           dayLog: _dayLog,
@@ -338,6 +340,7 @@ class _HomeMessage extends StatelessWidget {
 class _SeriesSession extends StatefulWidget {
   const _SeriesSession({
     required this.items,
+    required this.fallbackDiagnosis,
     required this.now,
     required this.attemptDays,
     required this.dayLog,
@@ -346,6 +349,10 @@ class _SeriesSession extends StatefulWidget {
   });
 
   final List<Item> items;
+
+  /// The pack's, threaded through so `RoundScreen` never reaches for one.
+  final Diagnosis? fallbackDiagnosis;
+
   final DateTime Function() now;
   final List<DateTime> attemptDays;
   final DayLogStore dayLog;
@@ -379,6 +386,7 @@ class _SeriesSessionState extends State<_SeriesSession> {
 
     return RoundScreen(
       items: widget.items,
+      fallbackDiagnosis: widget.fallbackDiagnosis,
       now: widget.now,
       attemptDays: widget.attemptDays,
       dayLog: widget.dayLog,

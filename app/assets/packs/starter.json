@@ -3,6 +3,37 @@
   "pack_id": "starter",
   "issued_at": "2026-08-16T00:00:00Z",
   "expires_at": "2027-08-16T00:00:00Z",
+  "misconceptions": {
+    "no_specific_diagnosis": {
+      "steps": [
+        "Lee otra vez el reto, sin prisa.",
+        "Rehaz la cuenta paso por paso.",
+        "Comprueba el resultado antes de enviarlo."
+      ],
+      "explain": "Repasa el reto con calma: vuelve a leer los números, rehaz la cuenta paso por paso y compara lo que te salió con lo que pedía el reto."
+    },
+    "subtracted_in_reverse": {
+      "steps": [
+        "Fíjate en cuál número va primero.",
+        "Quita el segundo al primero, en ese orden."
+      ],
+      "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
+    },
+    "added_instead_of_subtracting": {
+      "steps": [
+        "Mira el signo que hay entre los dos números.",
+        "Si es −, quita en vez de juntar."
+      ],
+      "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+    },
+    "subtracted_instead_of_adding": {
+      "steps": [
+        "Mira el signo que hay entre los dos números.",
+        "Si es +, junta en vez de quitar."
+      ],
+      "explain": "Ese resultado sale de quitar un número del otro. El signo + pide lo contrario: juntar los dos."
+    }
+  },
   "items": [
     {
       "id": "add-1",
@@ -25,7 +56,10 @@
           "kind": "operator",
           "glyph": "="
         }
-      ]
+      ],
+      "distractors": {
+        "1": "subtracted_instead_of_adding"
+      }
     },
     {
       "id": "ana-1",
@@ -151,7 +185,10 @@
           "kind": "operator",
           "glyph": "="
         }
-      ]
+      ],
+      "distractors": {
+        "14": "subtracted_instead_of_adding"
+      }
     },
     {
       "id": "sub-1",
@@ -174,7 +211,11 @@
           "kind": "operator",
           "glyph": "="
         }
-      ]
+      ],
+      "distractors": {
+        "-6": "subtracted_in_reverse",
+        "24": "added_instead_of_subtracting"
+      }
     },
     {
       "id": "ana-2",
@@ -300,7 +341,11 @@
           "kind": "operator",
           "glyph": "="
         }
-      ]
+      ],
+      "distractors": {
+        "7": "subtracted_in_reverse",
+        "23": "added_instead_of_subtracting"
+      }
     },
     {
       "id": "mul-1",

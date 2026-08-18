@@ -118,6 +118,122 @@ void main() {
     });
   });
 
+  group('the diagnosis copy is carried once and checked at load', () {
+    String packWith(String extra, {String distractors = ''}) => '''
+{
+  "pack_version": 1,
+  "pack_id": "test",
+  "issued_at": "2026-08-01T00:00:00Z",
+  "expires_at": "2099-01-01T00:00:00Z",
+  $extra
+  "items": [
+    {
+      "id": "a1",
+      "ladder_step": 2,
+      "answer": "9",
+      $distractors
+      "prompt": [
+        {"kind": "text", "value": "26"},
+        {"kind": "operator", "glyph": "−"},
+        {"kind": "text", "value": "17"},
+        {"kind": "operator", "glyph": "="}
+      ]
+    }
+  ]
+}
+''';
+
+    const String map = '''
+  "misconceptions": {
+    "no_specific_diagnosis": {
+      "steps": ["Lee otra vez el reto, sin prisa."],
+      "explain": "Repasa el reto con calma."
+    },
+    "subtracted_in_reverse": {
+      "steps": ["Fíjate en cuál número va primero."],
+      "explain": "Al restar, el orden importa."
+    }
+  },
+''';
+
+    Future<Pack> read(String source) =>
+        PackReader(bundle: _FakeBundle(<String, String>{'p': source})).load('p');
+
+    test('two items sharing a misconception share one copy', () async {
+      final Pack pack = await read(packWith(
+        map,
+        distractors: '"distractors": {"-9": "subtracted_in_reverse"},',
+      ));
+
+      expect(pack.items.single.distractors['-9']!.steps.single,
+          'Fíjate en cuál número va primero.');
+      expect(pack.fallbackDiagnosis!.steps.single,
+          'Lee otra vez el reto, sin prisa.');
+    });
+
+    test('a pack with no misconceptions is still valid', () async {
+      // Every pack written before this one stays readable, and its error
+      // screen stays as bare as it was.
+      final Pack pack = await read(packWith(''));
+
+      expect(pack.fallbackDiagnosis, isNull);
+      expect(pack.items.single.distractors, isEmpty);
+    });
+
+    test('an id with no copy behind it is refused', () async {
+      // Otherwise it surfaces as a screen that says nothing, on a device, with
+      // no way to report it.
+      await expectLater(
+        read(packWith(map, distractors: '"distractors": {"-9": "invented"},')),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a distractor keyed by the item\'s own answer is refused', () async {
+      // A distractor explaining the right answer away is the leak the frozen
+      // format's D3 exists to prevent.
+      await expectLater(
+        read(packWith(map, distractors: '"distractors": {"9": "subtracted_in_reverse"},')),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a key the canonicaliser cannot read is refused', () async {
+      // Nothing a player types could ever match it, so it is dead content
+      // rather than a distractor.
+      await expectLater(
+        read(packWith(map, distractors: '"distractors": {"9,0": "subtracted_in_reverse"},')),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a misconceptions map without the fallback is refused', () async {
+      // An unanticipated wrong answer is the common case, and it would reach
+      // the screen with nothing to say.
+      const String noFallback = '''
+  "misconceptions": {
+    "subtracted_in_reverse": {
+      "steps": ["Fíjate en cuál número va primero."],
+      "explain": "Al restar, el orden importa."
+    }
+  },
+''';
+      await expectLater(
+        read(packWith(noFallback)),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a misconception with no steps is refused', () async {
+      const String empty = '''
+  "misconceptions": {
+    "no_specific_diagnosis": {"steps": [], "explain": "x"}
+  },
+''';
+      await expectLater(read(packWith(empty)), throwsA(isA<FormatException>()));
+    });
+  });
+
   group('it decodes the bytes itself', () {
     testWidgets('it never asks the bundle for a string',
         (WidgetTester tester) async {

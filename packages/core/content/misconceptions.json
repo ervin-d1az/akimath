@@ -20,5 +20,12 @@
       "Si es −, quita en vez de juntar."
     ],
     "explain": "Ese resultado sale de juntar los dos números. El signo − pide lo contrario: quitar el segundo del primero."
+  },
+  "subtracted_instead_of_adding": {
+    "steps": [
+      "Mira el signo que hay entre los dos números.",
+      "Si es +, junta en vez de quitar."
+    ],
+    "explain": "Ese resultado sale de quitar un número del otro. El signo + pide lo contrario: juntar los dos."
   }
 }

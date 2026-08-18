@@ -4,6 +4,7 @@ import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
+import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
@@ -450,6 +451,34 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         verdict: Verdict.correct,
         elapsed: Duration(milliseconds: 4200),
         streakDays: 7,
+      ),
+      onContinue: () {},
+      onClose: () {},
+    ),
+  ),
+  RegisteredScreen(
+    label: 'verdict · error · con diagnóstico',
+    // **The most the format admits**, at the longest lines in
+    // `misconceptions.json`: four steps is the schema's ceiling. Registered
+    // separately because `verdict · error` builds no diagnosis, so without this
+    // the gate would stay green while the shipped screen overflowed — the same
+    // shape as the home once registered with no puzzle cards.
+    build: () => VerdictScreen(
+      summary: const VerdictSummary(
+        verdict: Verdict.wrong,
+        elapsed: Duration(milliseconds: 9800),
+        streakDays: 12,
+        diagnosis: Diagnosis(
+          steps: <String>[
+            'Comprueba el resultado antes de enviarlo.',
+            'Quita el segundo al primero, en ese orden.',
+            'Mira el signo que hay entre los dos números.',
+            'Rehaz la cuenta paso por paso, sin prisa.',
+          ],
+          explain: 'Repasa el reto con calma: vuelve a leer los números, rehaz '
+              'la cuenta paso por paso y compara lo que te salió con lo que '
+              'pedía el reto.',
+        ),
       ),
       onContinue: () {},
       onClose: () {},

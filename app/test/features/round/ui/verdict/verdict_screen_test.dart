@@ -3,6 +3,7 @@ import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/design/widgets/stat_tile.dart';
 import 'package:akimath_app/design/widgets/verdict_ring.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
+import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -33,6 +34,100 @@ Iterable<String> _copy(WidgetTester tester) => tester
     .where((String s) => s.isNotEmpty);
 
 void main() {
+  group('a wrong answer is told why', () {
+    testWidgets('the steps are drawn', (WidgetTester tester) async {
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: VerdictScreen(
+            summary: const VerdictSummary(
+              verdict: Verdict.wrong,
+              elapsed: Duration(seconds: 9),
+              streakDays: 3,
+              diagnosis: Diagnosis(
+                steps: <String>[
+                  'Fíjate en cuál número va primero.',
+                  'Quita el segundo al primero, en ese orden.',
+                ],
+                explain: 'Al restar, el orden importa.',
+              ),
+            ),
+            onContinue: () {},
+            onClose: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('cuál número va primero'), findsOneWidget);
+      expect(find.textContaining('en ese orden'), findsOneWidget);
+    });
+
+    testWidgets('the paragraph is not printed as well',
+        (WidgetTester tester) async {
+      // `explain` says the same thing at length. A screen printing both asks a
+      // player to read it twice.
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: VerdictScreen(
+            summary: const VerdictSummary(
+              verdict: Verdict.wrong,
+              elapsed: Duration(seconds: 9),
+              streakDays: 3,
+              diagnosis: Diagnosis(
+                steps: <String>['Fíjate en cuál número va primero.'],
+                explain: 'Al restar, el orden importa mucho de verdad.',
+              ),
+            ),
+            onContinue: () {},
+            onClose: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('importa mucho de verdad'), findsNothing);
+    });
+
+    testWidgets('a correct answer is told nothing, even if handed a diagnosis',
+        (WidgetTester tester) async {
+      // `03 Acierto` is unchanged. Nothing constructs this pairing, and the
+      // screen still must not print an explanation over a right answer.
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: VerdictScreen(
+            summary: const VerdictSummary(
+              verdict: Verdict.correct,
+              elapsed: Duration(seconds: 4),
+              streakDays: 3,
+              diagnosis: Diagnosis(
+                steps: <String>['Fíjate en cuál número va primero.'],
+                explain: 'x',
+              ),
+            ),
+            onContinue: () {},
+            onClose: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('cuál número va primero'), findsNothing);
+    });
+  });
+
+
   group('the error screen names the reasoning, never the failure', () {
     testWidgets('none of the four forbidden words appears',
         (WidgetTester tester) async {
