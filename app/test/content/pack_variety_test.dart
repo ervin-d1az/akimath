@@ -1,6 +1,8 @@
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/content/model/pack.dart';
 import 'package:akimath_app/content/pack_reader.dart';
+import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/features/home/policy/puzzle_of_day.dart';
 import 'package:akimath_app/features/round/policy/series_plan.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,6 +14,15 @@ String _family(Item item) => switch (item.stimulus) {
       AnalogyStimulus() => 'analogy',
       HiddenOperationStimulus() => 'hiddenOperation',
       FigurateStimulus() => 'figurate',
+    };
+
+/// A board's identity, for a test that has to say which one it means.
+///
+/// The kind and its solution: two KenKens of the same size differ by their
+/// solution, and nothing in the pack format carries an id.
+String _puzzleId(Puzzle puzzle) => switch (puzzle) {
+      BoardPuzzle() => '${puzzleKindOf(puzzle)}:${puzzle.board.solution}',
+      WordSearchPuzzle() => '${puzzleKindOf(puzzle)}:${puzzle.grid}',
     };
 
 /// **The shipped pack's order is a product decision, and this is the gate.**
@@ -92,6 +103,44 @@ void main() {
               reason: 'the series from $from had ${entry.value} '
                   '${entry.key} items');
         }
+      }
+    });
+  });
+
+  group('the puzzles it carries are all reachable', () {
+    test('a fortnight of days offers every board', () {
+      // The home shows one card per format, so a board only reaches a player on
+      // the days its kind's rotation lands on it. Content nothing ever offers
+      // is content that may as well not be in the pack — and this is the gate
+      // that notices when a fifth KenKen quietly outruns the rotation.
+      final Set<String> offered = <String>{};
+      for (int day = 0; day < 14; day += 1) {
+        for (final Puzzle puzzle
+            in puzzlesOfDay(pack.puzzles, today: DateTime(2026, 8, 1 + day))) {
+          offered.add(_puzzleId(puzzle));
+        }
+      }
+
+      final Set<String> carried = pack.puzzles.map(_puzzleId).toSet();
+      expect(carried, isNotEmpty, reason: 'the pack carries no puzzle at all');
+      expect(
+        carried.difference(offered),
+        isEmpty,
+        reason: 'boards no fortnight reaches',
+      );
+      final int formats = pack.puzzles.map(puzzleKindOf).toSet().length;
+      // ignore: avoid_print
+      print('  puzzle rotation · ${carried.length} boards across $formats '
+          'formats → all offered within a fortnight');
+    });
+
+    test('each day offers one board per format, never two of a kind', () {
+      for (int day = 0; day < 14; day += 1) {
+        final List<Puzzle> today =
+            puzzlesOfDay(pack.puzzles, today: DateTime(2026, 8, 1 + day));
+        final List<String> kinds = today.map(puzzleKindOf).toList();
+
+        expect(kinds.toSet(), hasLength(kinds.length), reason: 'day $day: $kinds');
       }
     });
   });

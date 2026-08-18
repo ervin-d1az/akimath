@@ -265,8 +265,16 @@ jobs:
       # here and this step reports 0, 29 and 4 where it wants 30, 30 and 5.
       # Tijuana and Ciudad Juárez are Mexican DST zones, so this is the
       # audience rather than a travelling device.
+      #
+      # `puzzle_of_day_test` joined it for the same reason and was measured the
+      # same way: with `dayNumber` reverted to `Duration` arithmetic over local
+      # time, the suite is green in UTC and fails only here — a player would
+      # have been handed the same board two days running, once a year.
       - name: flutter test (DST zone)
-        run: TZ=America/Tijuana flutter test test/features/round/policy/streak_policy_test.dart
+        run: |
+          TZ=America/Tijuana flutter test \
+            test/features/round/policy/streak_policy_test.dart \
+            test/features/home/policy/puzzle_of_day_test.dart
 
   ts:
     name: ts

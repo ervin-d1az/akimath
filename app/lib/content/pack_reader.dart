@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data' show ByteData;
 
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 
@@ -29,8 +30,21 @@ class PackReader {
   /// Throws [FormatException] if the pack is malformed — content is validated
   /// where it is read, so a broken pack fails at load rather than showing a
   /// player a wrong verdict later.
+  ///
+  /// **It decodes the bytes itself rather than calling `loadString`.** Flutter
+  /// hands a UTF-8 decode over 50 KB to a background isolate, and the shipped
+  /// pack passed that mark the day it started carrying several boards per
+  /// format. An isolate never completes inside `testWidgets`' fake-async zone,
+  /// so every widget test that loads the real pack stopped failing and started
+  /// *hanging* for ten minutes — which is a far worse thing for a suite to do.
+  ///
+  /// Decoding here also spares the app an isolate spawn at launch, for a file
+  /// it compiled in itself and already knows is UTF-8.
   Future<Pack> load([String path = starterPath]) async {
-    final String source = await _assets.loadString(path);
+    final ByteData bytes = await _assets.load(path);
+    final String source = utf8.decode(
+      bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+    );
     final Object? decoded = json.decode(source);
     if (decoded is! Map<String, dynamic>) {
       throw const FormatException('a pack must be a JSON object');
