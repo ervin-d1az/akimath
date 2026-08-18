@@ -1,7 +1,12 @@
 import { mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { generateCagedBatch, type PuzzleCopy } from "../puzzles/batch.js";
+import {
+  generateCagedBatch,
+  generateWordSearchBatch,
+  type Batch,
+  type PuzzleCopy,
+} from "../puzzles/batch.js";
 import { flag } from "./flags.js";
 import type { CagedKind } from "../puzzles/caged.js";
 
@@ -20,8 +25,39 @@ import type { CagedKind } from "../puzzles/caged.js";
  */
 const CAGED_KINDS: readonly CagedKind[] = ["kenken", "killer"];
 
+/** Every kind this generator can build. */
+type BuildableKind = CagedKind | "wordSearch";
+
+const KINDS: readonly BuildableKind[] = [...CAGED_KINDS, "wordSearch"];
+
+/**
+ * The words a sopa de letras may hide.
+ *
+ * **Content, and it lives in the adapter** for the same reason the copy does:
+ * `src/puzzles/` has no business holding a Spanish word list. Unaccented and
+ * uppercase, because the contract's cell is `[A-ZÑ]` — a `Ú` is not a letter
+ * this format can print, and a grid that quietly dropped the accent would be
+ * teaching the wrong spelling.
+ */
+const VOCABULARY: readonly string[] = [
+  "SUMA",
+  "RESTA",
+  "CERO",
+  "DOBLE",
+  "MITAD",
+  "NUMERO",
+  "DECENA",
+  "UNIDAD",
+  "TRIPLE",
+  "PARES",
+  "IMPAR",
+  "TOTAL",
+  "MEDIDA",
+  "CUENTA",
+];
+
 /** The es-MX copy each kind carries, the same lines the authored boards use. */
-const COPY: Readonly<Record<CagedKind, PuzzleCopy>> = Object.freeze({
+const COPY: Readonly<Record<BuildableKind, PuzzleCopy>> = Object.freeze({
   kenken: {
     tutorialSteps: [
       "Cada fila y cada columna llevan cada número una vez.",
@@ -42,12 +78,22 @@ const COPY: Readonly<Record<CagedKind, PuzzleCopy>> = Object.freeze({
       "Los números van del 1 al tamaño del cuadro.",
     ],
   },
+  wordSearch: {
+    tutorialSteps: [
+      "Arrastra el dedo de la primera letra a la última.",
+      "Una palabra puede ir en cualquiera de las ocho direcciones.",
+    ],
+    referenceSheet: [
+      "Las palabras se leen en línea recta, nunca dan vuelta.",
+      "Tacha la lista: terminas cuando no queda ninguna.",
+    ],
+  },
 });
 
-function requireKind(raw: string): CagedKind {
-  const found = CAGED_KINDS.find((kind) => kind === raw);
+function requireKind(raw: string): BuildableKind {
+  const found = KINDS.find((kind) => kind === raw);
   if (found === undefined) {
-    throw new TypeError(`--kind must be one of ${CAGED_KINDS.join(", ")}, not ${raw}`);
+    throw new TypeError(`--kind must be one of ${KINDS.join(", ")}, not ${raw}`);
   }
   return found;
 }
@@ -67,7 +113,12 @@ function main(): void {
   const firstSeed = BigInt(flag("seed", "1"));
   const out = path.resolve(flag("out", `puzzles-${kind}-${size}.json`));
 
-  const batch = generateCagedBatch({ kind, size, count, firstSeed }, COPY[kind]);
+  const batch: Batch = kind === "wordSearch"
+    ? generateWordSearchBatch(
+        { size, count, firstSeed, vocabulary: VOCABULARY },
+        COPY[kind],
+      )
+    : generateCagedBatch({ kind, size, count, firstSeed }, COPY[kind]);
 
   // **Written through a temporary file**, for the reason `build-pack.ts`
   // records: `> out` truncates before the producer has run, so a refusal used
