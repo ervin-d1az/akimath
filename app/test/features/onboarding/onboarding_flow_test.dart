@@ -57,7 +57,7 @@ Future<void> _pump(WidgetTester tester) async {
 
   await tester.pumpWidget(
     MaterialApp(
-      home: FirstRunGate(home: HomeRoute(reader: PackReader(bundle: _FakeBundle()))),
+      home: FirstRunGate(splashFloor: Duration.zero, home: HomeRoute(reader: PackReader(bundle: _FakeBundle()))),
     ),
   );
   await tester.pumpAndSettle();

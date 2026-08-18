@@ -41,10 +41,20 @@ void main() {
     });
   });
 
-  group('what F2 actually has', () {
-    test('the roots that exist today produce no bar', () {
-      expect(visibleTabs(rootsPresentToday), isEmpty);
-      expect(rootsPresentToday, <AppTab>{AppTab.home});
+  group('what the app actually has', () {
+    test('the roots that exist today produce a two-tab bar', () {
+      // **This asserted the opposite until preferences landed**, and the change
+      // is the whole mechanism: `visibleTabs` was not touched. A destination
+      // was added to the set below and the rule started returning something.
+      expect(rootsPresentToday, <AppTab>{AppTab.home, AppTab.profile});
+      expect(visibleTabs(rootsPresentToday), <AppTab>[AppTab.home, AppTab.profile]);
+    });
+
+    test('the two tabs that have no root are not drawn', () {
+      // `skills` at F5, `progress` after it. Four tabs with two dead ones is
+      // the thing this policy exists to prevent.
+      expect(visibleTabs(rootsPresentToday), isNot(contains(AppTab.skills)));
+      expect(visibleTabs(rootsPresentToday), isNot(contains(AppTab.progress)));
     });
   });
 }

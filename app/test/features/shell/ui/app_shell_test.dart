@@ -16,10 +16,14 @@ Future<void> _pump(WidgetTester tester, Widget home) async {
 void main() {
   group('the app routes without a navigation bar until a second root exists', () {
     testWidgets('one root draws no bar', (WidgetTester tester) async {
+      // An explicit single root, not `rootsPresentToday` — the rule outlives
+      // whatever the app happens to ship, and this test now says so instead of
+      // borrowing today's fact and quietly testing nothing when it changes.
       bool built = false;
       await _pump(
         tester,
         AppShell(
+          roots: const <AppTab>{AppTab.home},
           navBar: (List<AppTab> tabs) {
             built = true;
             return const SizedBox.shrink();
@@ -52,11 +56,15 @@ void main() {
       expect(find.text('bar'), findsOneWidget);
     });
 
-    testWidgets('the app as it ships today has no bar',
+    testWidgets('the app as it ships today has two tabs',
         (WidgetTester tester) async {
+      // The shell itself still draws nothing without a builder — the bar it
+      // shows in the app is `RootScaffold`'s, handed the same list. What is
+      // asserted here is that the policy now yields one, which it did not
+      // before preferences became a root.
       await _pump(tester, const AppShell(child: Text('home')));
       expect(find.byType(BottomNavigationBar), findsNothing);
-      expect(visibleTabs(rootsPresentToday), isEmpty);
+      expect(visibleTabs(rootsPresentToday), hasLength(2));
     });
   });
 

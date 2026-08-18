@@ -10,6 +10,7 @@ import '../data/day_log_store.dart';
 import '../data/prefs_day_log_store.dart';
 import '../data/series_cursor_store.dart';
 import '../policy/day_log.dart';
+import '../policy/series_families.dart';
 import '../../round/ui/round_screen.dart';
 import '../../round/ui/summary/series_summary_screen.dart';
 import '../../shell/ui/app_shell.dart';
@@ -57,6 +58,12 @@ class _HomeRouteState extends State<HomeRoute> {
   late final DayLogStore _dayLog = widget.dayLog ?? const PrefsDayLogStore();
   DayLog _log = DayLog.empty;
 
+  /// How many items have been served, held here as well as read in
+  /// `_startSeries`, because the home now *shows* what the next series holds
+  /// and cannot await a store while building. Refreshed with the log, so
+  /// returning from a series updates both.
+  int _itemsServed = 0;
+
   @override
   void initState() {
     super.initState();
@@ -65,8 +72,12 @@ class _HomeRouteState extends State<HomeRoute> {
 
   Future<void> _refreshLog() async {
     final DayLog log = await _dayLog.read();
+    final int served = await widget.seriesCursor.read();
     if (mounted) {
-      setState(() => _log = log);
+      setState(() {
+        _log = log;
+        _itemsServed = served;
+      });
     }
   }
 
@@ -94,6 +105,16 @@ class _HomeRouteState extends State<HomeRoute> {
             streakDays: streakLength(
               attemptDays: _log.days,
               today: widget.now(),
+            ),
+            weekMarks: weekMarks(
+              attemptDays: _log.days,
+              today: widget.now(),
+            ),
+            // **The plan the player is about to be served**, not the pack in
+            // general. `_startSeries` calls `seriesPlan` with the same cursor,
+            // so the row cannot promise a family the series will not draw.
+            todaysFamilies: seriesFamilies(
+              seriesPlan(pack.items, from: _itemsServed),
             ),
             onStart: () => _startSeries(context, pack),
           ),

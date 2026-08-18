@@ -106,7 +106,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('2'), findsOneWidget);
+      // The streak is labelled now, so the assertion names the label as well as
+      // the figure — a bare `2` could be a day mark, a ladder step or anything
+      // else the screen happens to print.
+      expect(find.text('2 DÍAS'), findsOneWidget);
     });
 
     testWidgets('an expired pack is refused', (WidgetTester tester) async {
@@ -260,7 +263,7 @@ void main() {
 
       await _pump(tester, dayLog: store);
       await tester.pumpAndSettle();
-      expect(find.text('1'), findsOneWidget, reason: 'yesterday alone');
+      expect(find.text('1 DÍA'), findsOneWidget, reason: 'yesterday alone');
 
       await tester.tap(find.text('Empezar la serie'));
       await tester.pumpAndSettle();
@@ -280,7 +283,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('2'),
+        find.text('2 DÍAS'),
         findsOneWidget,
         reason: 'today was not recorded, or the home did not re-read',
       );
