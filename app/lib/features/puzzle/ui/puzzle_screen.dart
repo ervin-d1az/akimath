@@ -115,6 +115,10 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                         columnTargets,
                       _ => const <int>[],
                     },
+                    runs: switch (widget.puzzle) {
+                      KakuroPuzzle(:final List<Run> runs) => runs,
+                      _ => const <Run>[],
+                    },
                     onTapCell: (Cell cell) => _apply(_entry.select(cell)),
                   ),
                 ),
@@ -138,6 +142,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
         KenKenPuzzle() => 'KENKEN',
         KillerPuzzle() => 'SUMAS',
         MagicSquarePuzzle() => 'CUADRO MÁGICO',
+        KakuroPuzzle() => 'KAKURO',
       };
 
   Widget _header() {

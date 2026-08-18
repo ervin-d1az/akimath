@@ -45,6 +45,7 @@ Puzzle readPuzzle(Object? raw, {required String puzzleId}) {
     'kenken' => _kenken(payload, tutorial, reference, puzzleId),
     'killer' => _killer(payload, tutorial, reference, puzzleId),
     'magicSquare' => _magicSquare(payload, tutorial, reference, puzzleId),
+    'kakuro' => _kakuro(payload, tutorial, reference, puzzleId),
     // A kind the contract froze but this build has no renderer for lands here.
     // Refused where the pack is read: the alternative is a player opening a
     // card and meeting a blank board.
@@ -82,6 +83,84 @@ Puzzle _kenken(
     tutorialSteps: tutorial,
     referenceSheet: reference,
   );
+}
+
+/// A Kakuro's cells hold 1 to 9, whatever the board's size.
+///
+/// `KAKURO_DIGIT_CEILING` in the frozen validator. A third rule after `size`
+/// and `size²`, which is the reason the board declares its domain rather than
+/// anything deriving one (design D3).
+const int kakuroHighestValue = 9;
+
+Puzzle _kakuro(
+  Map<String, dynamic> payload,
+  List<String> tutorial,
+  List<String> reference,
+  String id,
+) {
+  final PuzzleBoard read = _board(payload['board'], id);
+  final Object? rawRuns = payload['runs'];
+  if (rawRuns is! List || rawRuns.isEmpty) {
+    throw FormatException('puzzle "$id" has no runs');
+  }
+
+  final List<Run> runs = <Run>[
+    for (final Object? run in rawRuns) _run(run, id),
+  ];
+
+  // Every fillable cell in at least one run. A cell in none is a cell no clue
+  // constrains — solvable only by guessing, which is not the game.
+  final Set<Cell> covered = <Cell>{
+    for (final Run run in runs) ...run.cells,
+  };
+  for (final Cell cell in read.openCells) {
+    if (!covered.contains(cell)) {
+      throw FormatException('puzzle "$id" leaves $cell in no run');
+    }
+  }
+
+  return KakuroPuzzle(
+    board: PuzzleBoard(
+      size: read.size,
+      blocked: read.blocked,
+      given: read.given,
+      solution: read.solution,
+      highestValue: kakuroHighestValue,
+    ),
+    runs: runs,
+    tutorialSteps: tutorial,
+    referenceSheet: reference,
+  );
+}
+
+Run _run(Object? raw, String id) {
+  if (raw is! Map<String, dynamic>) {
+    throw FormatException('puzzle "$id" has a malformed run');
+  }
+  final Object? cells = raw['cells'];
+  if (cells is! List || cells.length < 2) {
+    throw FormatException('puzzle "$id" has a run of fewer than two cells');
+  }
+  final Object? sum = raw['sum'];
+  if (sum is! int) {
+    throw FormatException('puzzle "$id" has a run summing to $sum');
+  }
+  final List<Cell> run = <Cell>[for (final Object? cell in cells) _cell(cell, id)];
+
+  // **Distinct digits 1 to 9, so a run of n lies between n(n+1)/2 and the top
+  // n of 9..1.** Arithmetic, in constant time — whether a *particular* sum is
+  // reachable given the crossing runs is the builder's, and finding that out
+  // here would be solving.
+  final int n = run.length;
+  final int lowest = n * (n + 1) ~/ 2;
+  final int highest = n * (2 * kakuroHighestValue - n + 1) ~/ 2;
+  if (sum < lowest || sum > highest) {
+    throw FormatException(
+      'puzzle "$id" has a $n-cell run summing to $sum, outside the $lowest to '
+      '$highest that $n distinct digits could reach',
+    );
+  }
+  return Run(cells: run, sum: sum);
 }
 
 /// The most values the frozen pad can express.

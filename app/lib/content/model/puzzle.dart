@@ -156,6 +156,39 @@ final class KenKenPuzzle extends CagedPuzzle {
   final List<Cage> cages;
 }
 
+/// A stretch of cells that must total its clue, with no digit repeated inside
+/// it.
+class Run {
+  const Run({required this.cells, required this.sum});
+
+  /// In order — left to right for a row, top to bottom for a column.
+  final List<Cell> cells;
+
+  final int sum;
+
+  /// Whether the run reads across. A run of one is neither, and the format does
+  /// not admit one.
+  bool get isAcross => cells.length > 1 && cells.first.row == cells.last.row;
+}
+
+/// Runs that must reach their sums, crossing each other.
+///
+/// Its cells hold **1 to 9 whatever the board's size** — a third domain rule
+/// after `size` and `size²`, which is why the board declares one.
+final class KakuroPuzzle extends Puzzle {
+  const KakuroPuzzle({
+    required this.board,
+    required this.runs,
+    required super.tutorialSteps,
+    required super.referenceSheet,
+  });
+
+  @override
+  final PuzzleBoard board;
+
+  final List<Run> runs;
+}
+
 /// Every line adds to the number beside it, and no value repeats in the square.
 ///
 /// The one format with no cages, and the one whose cells hold 1 to `size²`
