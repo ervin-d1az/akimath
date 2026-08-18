@@ -28,7 +28,9 @@ class PuzzleScreen extends StatefulWidget {
     this.onSolved,
   });
 
-  final KenKenPuzzle puzzle;
+  /// Any caged puzzle. Naming a concrete kind here would make every new caged
+  /// format a change to this screen.
+  final CagedPuzzle puzzle;
 
   /// Leaves the puzzle. Defaults to popping, so a pushed board always has an
   /// exit even if a caller forgets to wire one — the same rule the round
@@ -57,6 +59,16 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
       widget.onSolved?.call();
     }
   }
+
+  /// The digits this board cannot hold.
+  ///
+  /// A 3×3 admits 1 to 3, so 4 to 9 are shown unavailable rather than quietly
+  /// doing nothing. `PuzzleEntry` refuses them either way — this changes what a
+  /// player is invited to press, not what happens if they do.
+  Set<String> get _tooLarge => <String>{
+        for (int digit = widget.puzzle.board.size + 1; digit <= 9; digit++)
+          '$digit',
+      };
 
   void _onKey(KeypadKey key) {
     if (key.id == 'backspace') {
@@ -95,13 +107,24 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                 ),
               ),
               const SizedBox(height: BrandShape.space3),
-              Keypad(layout: KeypadLayout.puzzle, onKeyPressed: _onKey),
+              Keypad(
+                layout: KeypadLayout.puzzle,
+                onKeyPressed: _onKey,
+                unavailable: _tooLarge,
+              ),
             ],
           ),
         ),
       ),
     );
   }
+
+  /// The kind, named for the player. Switched over the sealed type so a third
+  /// caged format is a compile error here rather than a board labelled KENKEN.
+  String get _title => switch (widget.puzzle) {
+        KenKenPuzzle() => 'KENKEN',
+        KillerPuzzle() => 'SUMAS',
+      };
 
   Widget _header() {
     return Row(
@@ -117,7 +140,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
             child: const BrandIcon(BrandGlyph.close, size: 22),
           ),
         ),
-        Text('KENKEN', style: BrandText.eyebrow()),
+        Text(_title, style: BrandText.eyebrow()),
         Semantics(
           label: 'Cómo se juega',
           button: true,

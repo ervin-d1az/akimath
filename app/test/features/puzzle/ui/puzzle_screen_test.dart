@@ -98,7 +98,42 @@ Future<void> _tapCell(WidgetTester tester, int row, int col) async {
   await tester.pump();
 }
 
+/// Whether a key is offered as usable.
+bool _available(WidgetTester tester, String id) => tester
+    .widget<KeypadKeyView>(find.byWidgetPredicate(
+      (Widget w) => w is KeypadKeyView && w.data.id == id,
+    ))
+    .available;
+
 void main() {
+  group('the pad offers only what the board can hold', () {
+    testWidgets('a 3x3 offers three digits', (WidgetTester tester) async {
+      // Nine keys on a board that admits three. The six that cannot act used to
+      // look identical to the three that can and simply did nothing — which is
+      // what the preferences screen already argues against.
+      await _pump(tester);
+
+      for (final String digit in <String>['1', '2', '3']) {
+        expect(_available(tester, digit), isTrue, reason: '$digit should work');
+      }
+      for (final String digit in <String>['4', '5', '6', '7', '8', '9']) {
+        expect(_available(tester, digit), isFalse, reason: '$digit cannot act');
+      }
+      // Backspace always can.
+      expect(_available(tester, 'backspace'), isTrue);
+    });
+
+    testWidgets('pressing an unavailable key still enters nothing',
+        (WidgetTester tester) async {
+      // The presentation changed, not the rule.
+      await _pump(tester);
+      await _tapCell(tester, 0, 0);
+      await _press(tester, '7');
+      expect(_onBoard('7'), findsNothing);
+    });
+  });
+
+
   group('the screen composes the board and the pad it was built for', () {
     testWidgets('both are there', (WidgetTester tester) async {
       await _pump(tester);

@@ -290,6 +290,27 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => PuzzleScreen(puzzle: registryKenKen(6)),
   ),
   RegisteredScreen(
+    label: 'puzzle · killer 3x3',
+    // The second caged format on the same board, registered so the label rule
+    // — a sum cage shows no operation — is measured and not merely tested.
+    build: () => PuzzleScreen(
+      puzzle: KillerPuzzle(
+        board: registryKenKen(3).board,
+        cages: <Cage>[
+          Cage(
+            cells: <Cell>[
+              for (int row = 0; row < 3; row++)
+                for (int col = 0; col < 3; col++) Cell(row: row, col: col),
+            ],
+            target: 18,
+          ),
+        ],
+        tutorialSteps: const <String>['Cada jaula pide una suma.'],
+        referenceSheet: const <String>['Las jaulas no traen signo.'],
+      ),
+    ),
+  ),
+  RegisteredScreen(
     label: 'preferences',
     // The second root, and the reason the app has a bar at all. In the shell,
     // because that is the only way it renders.

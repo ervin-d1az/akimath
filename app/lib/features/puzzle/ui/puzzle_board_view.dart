@@ -81,12 +81,23 @@ class PuzzleBoardView extends StatelessWidget {
         edges: cage == null ? null : _edgesFor(cage, cell),
         // Only the cage's anchor carries the target, so a five-cell cage shows
         // its sum once rather than five times.
-        target: cage != null && _isAnchor(cage, cell)
-            ? '${cage.target}${cage.cells.length == 1 ? '' : cage.operation}'
-            : null,
+        target: cage != null && _isAnchor(cage, cell) ? _label(cage) : null,
         onTap: () => onTapCell(cell),
       ),
     );
+  }
+
+  /// What a cage's corner says.
+  ///
+  /// The target always; the operation only when the format named one and there
+  /// is more than one cell to combine. A Killer cage asks for a sum and says so
+  /// by saying nothing, and `3+` on a single cell is not a sum in any format.
+  String _label(Cage cage) {
+    final String? operation = cage.operation;
+    if (operation == null || cage.cells.length == 1) {
+      return '${cage.target}';
+    }
+    return '${cage.target}$operation';
   }
 
   CageEdges? _edgesFor(Cage cage, Cell cell) {

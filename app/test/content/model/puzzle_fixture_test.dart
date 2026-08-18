@@ -13,11 +13,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// is asserted to be *refused* rather than skipped.
 const String _dir = '../contract/fixtures/puzzle';
 
-const Set<String> _readable = <String>{'kenken'};
+const Set<String> _readable = <String>{'kenken', 'killer'};
 
 const Set<String> _pending = <String>{
   'kakuro',
-  'killer',
   'magicSquare',
   'wordSearch',
 };
@@ -102,9 +101,110 @@ void main() {
     });
   });
 
+  group('a killer is cages and sums', () {
+    test('its cages carry a target and no operation', () {
+      final KillerPuzzle puzzle =
+          readPuzzle(_envelope(_read('killer.json')), puzzleId: 'k1')
+              as KillerPuzzle;
+
+      expect(puzzle.cages, isNotEmpty);
+      for (final Cage cage in puzzle.cages) {
+        expect(cage.operation, isNull,
+            reason: 'a killer cage asks for a sum by naming nothing');
+        expect(cage.target, greaterThan(0));
+      }
+    });
+
+    test('its cages cover the board exactly once', () {
+      final KillerPuzzle puzzle =
+          readPuzzle(_envelope(_read('killer.json')), puzzleId: 'k1')
+              as KillerPuzzle;
+      final List<Cell> covered =
+          puzzle.cages.expand((Cage c) => c.cells).toList();
+      final int fillable =
+          puzzle.board.size * puzzle.board.size - puzzle.board.blocked.length;
+
+      expect(covered, hasLength(fillable));
+      expect(covered.toSet(), hasLength(fillable));
+    });
+
+    test('a killer cage naming an operation is refused', () {
+      // `KillerPayloadSchema` has no such field. Ignoring one would draw a
+      // board that says less than its content claims, and would let the two
+      // readers disagree about what a killer is.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'killer',
+          'payload': <String, dynamic>{
+            'board': <String, dynamic>{
+              'size': 3,
+              'blocked': <Object>[],
+              'given': <Object>[],
+              'solution': <List<int>>[
+                <int>[1, 2, 3],
+                <int>[2, 3, 1],
+                <int>[3, 1, 2],
+              ],
+            },
+            'cages': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'cells': <Map<String, int>>[
+                  for (int row = 0; row < 3; row++)
+                    for (int col = 0; col < 3; col++)
+                      <String, int>{'row': row, 'col': col},
+                ],
+                'target': 18,
+                'operation': '+',
+              },
+            ],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'op'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a kenken cage without an operation is still refused', () {
+      // The other half of D1: the model is permissive and the readers are
+      // strict, so making `operation` optional must not let KenKen lose one.
+      expect(
+        () => readPuzzle(<String, dynamic>{
+          'kind': 'kenken',
+          'payload': <String, dynamic>{
+            'board': <String, dynamic>{
+              'size': 3,
+              'blocked': <Object>[],
+              'given': <Object>[],
+              'solution': <List<int>>[
+                <int>[1, 2, 3],
+                <int>[2, 3, 1],
+                <int>[3, 1, 2],
+              ],
+            },
+            'cages': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'cells': <Map<String, int>>[
+                  for (int row = 0; row < 3; row++)
+                    for (int col = 0; col < 3; col++)
+                      <String, int>{'row': row, 'col': col},
+                ],
+                'target': 18,
+              },
+            ],
+          },
+          'tutorial_steps': <String>['x'],
+          'reference_sheet': <String>['y'],
+        }, puzzleId: 'noop'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
   group('the reader refuses the rejection row', () {
-    test('kenken is refused', () {
-      final Map<String, dynamic> fixture = _read('kenken.rejected.json');
+    for (final String kind in _readable) {
+    test('$kind is refused', () {
+      final Map<String, dynamic> fixture = _read('$kind.rejected.json');
       final Map<String, dynamic> envelope =
           _envelope(fixture['pack'] as Map<String, dynamic>);
 
@@ -115,6 +215,7 @@ void main() {
             'accepted, so the two stacks disagree about a valid board',
       );
     });
+    }
   });
 
   group('a malformed board is refused where it is read', () {
