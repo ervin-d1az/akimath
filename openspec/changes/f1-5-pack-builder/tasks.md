@@ -12,11 +12,11 @@
 
 ## 2. The declaration, and seeds
 
-- [ ] 2.1 Red → green: the declaration type and its parser — seed base, pack salt, validity window,
+- [x] 2.1 Red → green: the declaration type and its parser — seed base, pack salt, validity window,
       ordered sources. A malformed declaration is refused with a message naming the field.
-- [ ] 2.2 Red → green: seed derivation, `base + n` over generated items only. Two builds differing
+- [x] 2.2 Red → green: seed derivation, `base + n` over generated items only. Two builds differing
       only in base produce different items (req-builder-deterministic).
-- [ ] 2.3 Falsify: fix the base internally and confirm the differing-base test goes red.
+- [x] 2.3 Falsify: fix the base internally and confirm the differing-base test goes red.
 
 ## 3. Lifting authored items
 
