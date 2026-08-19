@@ -77,15 +77,24 @@ describe("the figures live in exactly one module", () => {
     });
   }
 
-  // **Skipped under Stryker, on purpose.** This is a gate on the shape of the
-  // source, not on behaviour, and Stryker runs the suite against an
-  // instrumented copy of `src/` in a sandbox — every file it rewrites gains
-  // numeric mutant ids, so a bare-number search finds them and reports a
-  // duplication that exists only inside the mutation run. It runs on every
-  // `npm test`, which is where it belongs.
-  const underStryker = process.env.STRYKER_MUTATOR_RUNNER !== undefined;
+  // **Skipped when the tree is instrumented, on purpose.** This is a gate on
+  // the shape of the source, not on behaviour, and Stryker runs the suite
+  // against a rewritten copy of `src/` in a sandbox — every file it touches
+  // gains numeric mutant ids, so a bare-number search finds them and reports a
+  // duplication that exists only inside the mutation run.
+  //
+  // **Decided from the files, not from an environment variable.** It used to
+  // read `STRYKER_MUTATOR_RUNNER`, which is not set during the *dry* run — so
+  // the gate did run against the instrumented tree, and passed only because no
+  // rewritten file happened to contain a bare `400`. Adding a source file
+  // shifted the ids, one landed on 400, and the whole mutation run aborted on a
+  // failure that had nothing to do with retention. Asking whether the bytes
+  // carry Stryker's marker cannot go stale that way.
+  const marker = "stry" + "MutAct_";
+  const allSources = sourceFiles(fileURLToPath(new URL("../src", import.meta.url)));
+  const instrumented = allSources.some((file) => readFileSync(file, "utf8").includes(marker));
 
-  it.skipIf(underStryker)("400 appears in retention.ts and nowhere else in src/", () => {
+  it.skipIf(instrumented)("400 appears in retention.ts and nowhere else in src/", () => {
     const src = fileURLToPath(new URL("../src", import.meta.url));
     const files = sourceFiles(src);
 
@@ -110,7 +119,7 @@ describe("the figures live in exactly one module", () => {
     ).toEqual([]);
   });
 
-  it.skipIf(underStryker)("RETENTION_DAYS is declared in exactly one file", () => {
+  it.skipIf(instrumented)("RETENTION_DAYS is declared in exactly one file", () => {
     const src = fileURLToPath(new URL("../src", import.meta.url));
     const declaring = sourceFiles(src).filter((file) =>
       /export const RETENTION_DAYS/.test(readFileSync(file, "utf8")),

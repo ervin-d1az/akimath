@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readCredential } from "../src/session.js";
+import { isAccountId, readCredential } from "../src/session.js";
 
 /**
  * Reading the `Authorization` header, and nothing else.
@@ -91,6 +91,38 @@ describe("what the caller offered", () => {
         expect(credential.why.length).toBeGreaterThan(0);
         expect(credential.why).not.toContain("\n");
       }
+    }
+  });
+});
+
+describe("what an account id looks like", () => {
+  // Neon Auth stores identity in our own Postgres and `neon_auth.user.id` is a
+  // `uuid` — read from the catalogue, not assumed. Our `players.auth_user_id`
+  // is a `uuid` too, so a subject that is not one cannot match a row: it would
+  // reach the database as `invalid input syntax for type uuid`, which is a 500
+  // for a request that deserves a 401.
+
+  it("accepts the shape the provider issues", () => {
+    for (const id of [
+      "6f2b1c8d-0000-4000-8000-0000000000a1",
+      "018F4E3C-0000-7000-8000-0000000000A1",
+      "00000000-0000-0000-0000-000000000000",
+    ]) {
+      expect(isAccountId(id), id).toBe(true);
+    }
+  });
+
+  it("refuses anything else, including the near misses", () => {
+    for (const id of [
+      "",
+      "not-a-uuid",
+      "6f2b1c8d00004000800000000000000a1",
+      "6f2b1c8d-0000-4000-8000-0000000000a",
+      "6f2b1c8d-0000-4000-8000-0000000000a1x",
+      " 6f2b1c8d-0000-4000-8000-0000000000a1",
+      "6f2b1c8d-0000-4000-8000-0000000000g1",
+    ]) {
+      expect(isAccountId(id), JSON.stringify(id)).toBe(false);
     }
   });
 });

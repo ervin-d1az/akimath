@@ -73,3 +73,21 @@ export function readCredential(header: string | undefined): Credential {
 
   return { kind: "bearer", token };
 }
+
+/**
+ * Whether a token's subject could name an account here.
+ *
+ * **A uuid, because that is what the provider stores.** `neon_auth.user.id` is
+ * a `uuid` — read from the catalogue rather than assumed — and so is
+ * `players.auth_user_id`. A subject of any other shape cannot match a row: it
+ * would reach the database as `invalid input syntax for type uuid`, which is a
+ * 500 for a request that deserves a 401.
+ *
+ * Checked here rather than in the repository so the refusal happens before any
+ * connection is borrowed, and so it is a pure rule with a pure test.
+ */
+export function isAccountId(subject: string): boolean {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+    subject,
+  );
+}

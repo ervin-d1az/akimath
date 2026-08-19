@@ -104,7 +104,7 @@ OpenAPI half arrives with `f1-contract-emitter`.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only), the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **154 tests, green, 98.58% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **185 tests, green, 99.04% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -116,9 +116,15 @@ OpenAPI half arrives with `f1-contract-emitter`.
   key set that is *injected*, so the tests run the real function against real Ed25519 keys.
   **`NEON_AUTH_BASE_URL` is not set anywhere yet** — it lives on the Neon console's Auth page and
   is not derivable from the connection string, so `npm run dev` exits 1 until somebody pastes it in.
-  No endpoint is implemented: an authenticated request answers **501**, declared per operation in
-  the contract, and the declaration list is held to the router in both directions so it prunes
-  itself as endpoints land.
+  **One endpoint is implemented, and it is the whole path in miniature**: `GET /me` verifies the
+  token, connects through `src/adapters/request-database.ts` — which offers `inRequestRole` and no
+  other way to query, opening a transaction and `SET LOCAL ROLE app_request` so a handler can never
+  hold the owner's grants — reads one row, and answers the frozen `Me` shape, or **404 and not
+  401** when the account has no player yet. `route()` returns *an answer* or *whose handler should
+  produce one*, so the surface stays where the parity gate reads it, and
+  `IMPLEMENTED_OPERATIONS` is the contract's 501 list inverted, checked in both directions — an
+  endpoint stops advertising itself as unbuilt in the same diff that builds it. The other seven
+  still answer **501**.
   **There is one way to write a log line.** `src/log.ts` (PURE) turns an event into one JSON
   object — `at`, `level`, `msg`, fields at the top level — and `src/adapters/logger.ts` is the
   **only** file under `src/` allowed to touch a stream, which `test/one-way-to-log.test.ts`
@@ -133,7 +139,7 @@ OpenAPI half arrives with `f1-contract-emitter`.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 27 of the 154 report as skipped rather than passing quietly.
+  run; leave it unset and 42 of the 185 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the

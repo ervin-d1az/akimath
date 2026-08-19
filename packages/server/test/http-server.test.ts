@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createApp } from "../src/adapters/http-server.js";
+import { createApp, type Handlers } from "../src/adapters/http-server.js";
 import { createLogger, type Logger } from "../src/adapters/logger.js";
 import type { SessionVerifier } from "../src/adapters/session-verifier.js";
 import { type Caller, CONTRACTED_OPERATIONS, OPS_ROUTES, route } from "../src/routing.js";
@@ -9,6 +9,25 @@ import { fakeJwt } from "./support/fake-jwt.js";
 const VERSION = "1.2.3";
 const NOBODY: Caller = { kind: "absent" };
 const LINKED: Caller = { kind: "session", userId: "3f1a2b4c-0000-7000-8000-00000000abcd" };
+
+/**
+ * Handlers that touch no database.
+ *
+ * The real `getMe` is exercised against a real one in `get-me.test.ts`. What
+ * this file is about is the wiring, so the map is a stand-in — and an empty one
+ * by default, which is what makes `route()`'s answers below the answers the
+ * router alone produced.
+ */
+const NO_HANDLERS: Handlers = {};
+
+/** The status of a decision that is known to be an answer. */
+const answerOf = (method: string, path: string, caller: Caller = NOBODY) => {
+  const decision = route(method, path, VERSION, caller);
+  if (decision.kind !== "answer") {
+    throw new Error(`${method} ${path} dispatched to ${decision.operationId}`);
+  }
+  return decision.response;
+};
 
 /**
  * A verifier that reports what it was handed and answers as told.
@@ -56,6 +75,7 @@ async function call(
     version: VERSION,
     verify: stubVerifier(options.caller ?? NOBODY),
     log: recordingLogger(),
+    handlers: NO_HANDLERS,
   }).fetch(request);
 }
 
@@ -76,7 +96,7 @@ describe("the transport returns exactly what the policy decided", () => {
 
     expect(paths.length).toBeGreaterThan(1);
     for (const { method, path } of paths) {
-      const expected = route(method, path, VERSION, NOBODY);
+      const expected = answerOf(method, path);
       const response = await call(method, path);
 
       expect(response.status, `${method} ${path}`).toBe(expected.status);
@@ -125,7 +145,7 @@ describe("the version it was given is the version it reports", () => {
   it("a query string is not part of the path", async () => {
     // `route` matches on the path alone; a transport that passed the whole URL
     // would turn every link with a `?utm_source` into a 404.
-    const response = await createApp({ version: VERSION, verify: stubVerifier(NOBODY), log: recordingLogger() }).fetch(
+    const response = await createApp({ version: VERSION, verify: stubVerifier(NOBODY), log: recordingLogger(), handlers: NO_HANDLERS }).fetch(
       new Request("http://localhost/health?from=somewhere"),
     );
 
@@ -144,7 +164,7 @@ describe("the credential reaches the verifier and the verdict reaches the policy
     // code runs. Its *inner* shape is untouched, which is the part `session.ts`
     // has opinions about.
     const verify = stubVerifier(NOBODY);
-    await createApp({ version: VERSION, verify: verify, log: recordingLogger() }).fetch(
+    await createApp({ version: VERSION, verify: verify, log: recordingLogger(), handlers: NO_HANDLERS }).fetch(
       new Request("http://localhost/me", { headers: { Authorization: "Bearer  weird " } }),
     );
     expect(verify.seen).toEqual(["Bearer  weird"]);
@@ -152,14 +172,16 @@ describe("the credential reaches the verifier and the verdict reaches the policy
 
   it("hands over undefined when there is no header at all", async () => {
     const verify = stubVerifier(NOBODY);
-    await createApp({ version: VERSION, verify: verify, log: recordingLogger() }).fetch(new Request("http://localhost/me"));
+    await createApp({ version: VERSION, verify: verify, log: recordingLogger(), handlers: NO_HANDLERS }).fetch(new Request("http://localhost/me"));
     expect(verify.seen).toEqual([undefined]);
   });
 
   it("a verified caller gets the answer a verified caller gets", async () => {
     const response = await call("GET", "/me", { caller: LINKED, header: "Bearer good" });
-    expect(response.status).toBe(501);
-    expect(await response.json()).toEqual(route("GET", "/me", VERSION, LINKED).body);
+    // `/me` dispatches for a verified caller, and this app has no handler for
+    // it, so the adapter's own "routed to a handler that does not exist" answer
+    // is what comes back. `get-me.test.ts` covers the handler that exists.
+    expect(response.status).toBe(500);
   });
 
   it("a refused caller gets the refusal, reason included", async () => {
@@ -184,9 +206,12 @@ describe("the credential reaches the verifier and the verdict reaches the policy
 
 describe("every request leaves one line", () => {
   it("says what was asked, what was answered, and who asked", async () => {
+    // `/me/history` rather than `/me`: this app has no handlers, and `/me` is
+    // now dispatched. An operation the router still answers itself is what
+    // keeps this test about the log line.
     const log = recordingLogger();
-    await createApp({ version: VERSION, verify: stubVerifier(LINKED), log }).fetch(
-      new Request("http://localhost/me", { headers: { Authorization: "Bearer good" } }),
+    await createApp({ version: VERSION, verify: stubVerifier(LINKED), log, handlers: NO_HANDLERS }).fetch(
+      new Request("http://localhost/me/history", { headers: { Authorization: "Bearer good" } }),
     );
 
     expect(log.lines).toHaveLength(1);
@@ -194,7 +219,7 @@ describe("every request leaves one line", () => {
       level: "info",
       msg: "request",
       method: "GET",
-      path: "/me",
+      path: "/me/history",
       status: 501,
       caller: "session",
     });
@@ -204,7 +229,7 @@ describe("every request leaves one line", () => {
     // A user id on every access line is a per-request record of who was awake.
     // The kind is what makes a 401 spike diagnosable, and it is all that does.
     const log = recordingLogger();
-    await createApp({ version: VERSION, verify: stubVerifier(LINKED), log }).fetch(
+    await createApp({ version: VERSION, verify: stubVerifier(LINKED), log, handlers: NO_HANDLERS }).fetch(
       new Request("http://localhost/me", { headers: { Authorization: "Bearer good" } }),
     );
     expect(log.lines.join("")).not.toContain(LINKED.kind === "session" ? LINKED.userId : "");
@@ -216,7 +241,7 @@ describe("every request leaves one line", () => {
     // mechanism, so removing one of them fails here.
     const log = recordingLogger();
     const token = fakeJwt();
-    await createApp({ version: VERSION, verify: stubVerifier(NOBODY), log }).fetch(
+    await createApp({ version: VERSION, verify: stubVerifier(NOBODY), log, handlers: NO_HANDLERS }).fetch(
       new Request("http://localhost/me", { headers: { Authorization: `Bearer ${token}` } }),
     );
     expect(log.lines.join("")).not.toContain(token);
@@ -224,7 +249,7 @@ describe("every request leaves one line", () => {
 
   it("a 404 is logged too, because that is the line you go looking for", async () => {
     const log = recordingLogger();
-    await createApp({ version: VERSION, verify: stubVerifier(NOBODY), log }).fetch(
+    await createApp({ version: VERSION, verify: stubVerifier(NOBODY), log, handlers: NO_HANDLERS }).fetch(
       new Request("http://localhost/nope"),
     );
     expect(JSON.parse(log.lines[0] ?? "null")).toMatchObject({ status: 404, path: "/nope" });

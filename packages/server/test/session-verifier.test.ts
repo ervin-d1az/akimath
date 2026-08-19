@@ -97,6 +97,16 @@ describe("turning a header into a caller", () => {
     expect(caller.kind === "refused" && caller.why).toContain("sub");
   });
 
+  it("a subject that is not an account id is refused", async () => {
+    // A signed, unexpired, correctly-issued token whose `sub` is not a uuid.
+    // Passing it on would reach the database as `invalid input syntax for type
+    // uuid` — a 500 for a request that deserves a 401.
+    const token = await sign({ sub: "someone@example.com" });
+    const caller = await verify(`Bearer ${token}`);
+    expect(caller.kind).toBe("refused");
+    expect(caller.kind === "refused" && caller.why).toContain("account id");
+  });
+
   it("garbage in the bearer position is refused rather than thrown", async () => {
     // The verifier is on the request path. An exception here is a 500 for a
     // request that deserves a 401.

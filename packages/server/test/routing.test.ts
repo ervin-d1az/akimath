@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   type Caller,
   CONTRACTED_OPERATIONS,
+  IMPLEMENTED_OPERATIONS,
   matchesTemplate,
   OPS_ROUTES,
   route,
@@ -14,9 +15,22 @@ const VERSION = "1.2.3";
 
 const NOBODY: Caller = { kind: "absent" };
 
-/** The unauthenticated caller, which is what most of this file is about. */
-const call = (method: string, path: string): Response =>
-  route(method, path, VERSION, NOBODY);
+/**
+ * The unauthenticated caller, which is what most of this file is about.
+ *
+ * Unwraps the decision, and throws if the router dispatched instead: an
+ * unauthenticated request must never reach a handler, so a dispatch here is a
+ * failure rather than something to assert around.
+ */
+const answer = (method: string, path: string, caller: Caller = NOBODY): Response => {
+  const decision = route(method, path, VERSION, caller);
+  if (decision.kind !== "answer") {
+    throw new Error(`${method} ${path} dispatched to ${decision.operationId}`);
+  }
+  return decision.response;
+};
+
+const call = (method: string, path: string): Response => answer(method, path);
 
 describe("health is still health", () => {
   it("reports health for GET /health", () => {
@@ -160,7 +174,9 @@ describe("the ops routes are named, not inferred", () => {
   it("health is the only one", () => {
     // The parity gate excuses these by name. A prefix or a predicate would
     // excuse the next one silently.
-    expect(OPS_ROUTES).toEqual([{ method: "GET", path: "/health" }]);
+    expect(OPS_ROUTES).toEqual([
+      { method: "GET", path: "/health", operationId: "health" },
+    ]);
   });
 });
 
@@ -171,16 +187,16 @@ describe("who is asking changes the answer", () => {
     // `/health` is the one route outside the contract, and it is the one route
     // a load balancer calls. Requiring a credential of it would make the server
     // look dead to the thing deciding whether it is.
-    expect(route("GET", "/health", VERSION, LINKED).status).toBe(200);
-    expect(route("GET", "/health", VERSION, NOBODY).status).toBe(200);
+    expect(answer("GET", "/health", LINKED).status).toBe(200);
+    expect(answer("GET", "/health", NOBODY).status).toBe(200);
   });
 
   it("no credential earns a different refusal from a broken one", () => {
     // Same status, different tag. A client that never linked and a client
     // holding something it wrongly believes is a session are two different
     // bugs, and one 401 for both makes the second undiagnosable.
-    const absent = route("GET", "/me", VERSION, NOBODY);
-    const refused = route("GET", "/me", VERSION, {
+    const absent = answer("GET", "/me", NOBODY);
+    const refused = answer("GET", "/me", {
       kind: "refused",
       why: "the signature did not verify",
     });
@@ -190,7 +206,7 @@ describe("who is asking changes the answer", () => {
   });
 
   it("a refusal carries the reason it was given, so it can be diagnosed", () => {
-    const refused = route("GET", "/me", VERSION, {
+    const refused = answer("GET", "/me", {
       kind: "refused",
       why: "the token expired 40 minutes ago",
     });
@@ -204,8 +220,11 @@ describe("who is asking changes the answer", () => {
     // would retry forever. 404 is worse — the path is real and the contract
     // names it.
     for (const operation of CONTRACTED_OPERATIONS) {
+      if (IMPLEMENTED_OPERATIONS.includes(operation.operationId)) {
+        continue;
+      }
       const path = operation.path.replace(/\{[^}]+\}/g, "any-id");
-      expect(route(operation.method, path, VERSION, LINKED)).toMatchObject({
+      expect(answer(operation.method, path, LINKED), operation.operationId).toMatchObject({
         status: 501,
         body: {
           error: "not_implemented",
@@ -215,15 +234,39 @@ describe("who is asking changes the answer", () => {
     }
   });
 
+  it("and an operation that is built is handed to its handler instead", () => {
+    // The half that makes the list above mean something: without this, emptying
+    // `IMPLEMENTED_OPERATIONS` would make every assertion in this file pass.
+    expect(IMPLEMENTED_OPERATIONS.length).toBeGreaterThan(0);
+    for (const operationId of IMPLEMENTED_OPERATIONS) {
+      const operation = CONTRACTED_OPERATIONS.find((o) => o.operationId === operationId);
+      expect(operation, operationId).toBeDefined();
+      const decision = route(operation!.method, operation!.path, VERSION, LINKED);
+      expect(decision, operationId).toEqual({
+        kind: "dispatch",
+        operationId,
+        userId: LINKED.kind === "session" ? LINKED.userId : "",
+      });
+    }
+  });
+
+  it("but only for a caller who actually has a session", () => {
+    // A dispatch carries a user id, and a handler will trust it. Reaching one
+    // without a verified session is the failure this whole file exists for.
+    for (const caller of [NOBODY, { kind: "refused", why: "x" } as Caller]) {
+      expect(route("GET", "/me", VERSION, caller).kind, caller.kind).toBe("answer");
+    }
+  });
+
   it("a wrong method is a wrong method whoever is asking", () => {
     // The method check happens before the credential one: a client retrying
     // with a session it went and fetched would still be wrong, and telling it
     // to authenticate first would be a wild goose chase.
-    expect(route("PATCH", "/me", VERSION, NOBODY).status).toBe(405);
-    expect(route("PATCH", "/me", VERSION, LINKED).status).toBe(405);
+    expect(answer("PATCH", "/me", NOBODY).status).toBe(405);
+    expect(answer("PATCH", "/me", LINKED).status).toBe(405);
   });
 
   it("and a path that does not exist does not exist either", () => {
-    expect(route("GET", "/nope", VERSION, LINKED).status).toBe(404);
+    expect(answer("GET", "/nope", LINKED).status).toBe(404);
   });
 });

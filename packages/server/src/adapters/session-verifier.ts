@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
 
 import type { Caller } from "../routing.js";
-import { readCredential } from "../session.js";
+import { isAccountId, readCredential } from "../session.js";
 
 /**
  * Turns an `Authorization` header into a caller.
@@ -22,9 +22,10 @@ export type SessionVerifier = (header: string | undefined) => Promise<Caller>;
  * real expiry check — with only the HTTP fetch absent. A verifier that took a
  * URL could only be tested against a fake of itself.
  *
- * `jwtVerify` checks the signature, `exp`, `nbf` and the issuer. Two things it
+ * `jwtVerify` checks the signature, `exp`, `nbf` and the issuer. Three things it
  * cannot check are checked here: that the algorithm is the one Neon signs with,
- * and that the token names somebody.
+ * that the token names somebody, and that the somebody is shaped like an
+ * account id.
  */
 export function createSessionVerifier(keys: JWTVerifyGetKey, issuer: string): SessionVerifier {
   return async (header) => {
@@ -50,6 +51,12 @@ export function createSessionVerifier(keys: JWTVerifyGetKey, issuer: string): Se
           kind: "refused",
           why: "The token verified but carries no sub, so it names no account.",
         };
+      }
+      if (!isAccountId(payload.sub)) {
+        // Refused rather than passed on: `players.auth_user_id` is a `uuid`, so
+        // a subject of another shape reaches the database as a syntax error —
+        // a 500 for a request that deserves a 401.
+        return { kind: "refused", why: "The token's sub is not an account id." };
       }
       return { kind: "session", userId: payload.sub };
     } catch (error) {
