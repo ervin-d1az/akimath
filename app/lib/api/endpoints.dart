@@ -17,11 +17,24 @@ abstract final class Endpoints {
 
   /// Where the provider is told to send a browser after verification.
   ///
-  /// Absolute, or `sign-up/email` refuses with `MISSING_ORIGIN`: it wants an
-  /// `Origin` header or an absolute destination, and a mobile app has neither
-  /// to offer. Nothing follows this link — the code arrives by email — but it
-  /// has to be well-formed.
-  static const String callbackUrl = 'akimath://verified';
+  /// **The auth base URL itself, and it has to be something already trusted.**
+  /// Two provider rules meet here. It must be absolute, or `sign-up/email`
+  /// answers `MISSING_ORIGIN` — it wants an `Origin` header or an absolute
+  /// destination, and a mobile app has neither. And it must sit inside a
+  /// trusted origin, or it answers **403 `INVALID_CALLBACK_URL`**; with
+  /// `trusted_origins` empty, the only trusted origin is the provider's own.
+  ///
+  /// Measured, not guessed: `akimath://verified`, `http://localhost`,
+  /// `http://localhost/verified` and `http://localhost:8791/verified` are all
+  /// 403, and the auth URL is the one that gets through.
+  ///
+  /// **Nothing ever follows this link.** Verification is a code typed into
+  /// `1.3`, not a link tapped in a mail client, so the value only has to
+  /// satisfy the provider. The alternative is adding a scheme to
+  /// `trusted_origins` in the console, which is worth doing the day a link
+  /// actually needs to reach the app — and not before, because an origin
+  /// trusted for nothing is a trusted origin nobody is watching.
+  static String get callbackUrl => authBaseUrl;
 
   static bool get configured => authBaseUrl.isNotEmpty && apiBaseUrl.isNotEmpty;
 }

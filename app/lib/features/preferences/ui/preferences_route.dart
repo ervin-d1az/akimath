@@ -61,7 +61,9 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
       builder: (BuildContext _) => AppShell(
         child: AuthFlow(
           auth: auth,
-          callbackUrl: Endpoints.callbackUrl,
+          // The provider's own origin: the only one it trusts while
+          // `trusted_origins` is empty. See `Endpoints.callbackUrl`.
+          callbackUrl: widget.authBaseUrl,
           today: widget.now(),
           onLinked: (LinkedAccount account) {
             auth.close();
