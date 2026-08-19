@@ -70,6 +70,29 @@ const ALLOWED_RUNTIME_DEPENDENCIES: ReadonlySet<string> = new Set([
   //   transitive. That was the condition for adopting a framework at all.
   // · Pinned exactly.
   "@hono/node-server",
+
+  // Added 2026-08-19 by `f3-verify-the-session`. JOSE primitives — here, only
+  // `jwtVerify` and `createRemoteJWKSet`. ADR 0002 makes Neon Auth the identity
+  // provider and its access token a JWT signed with EdDSA (Ed25519); verifying
+  // that signature is the one thing on this list `CLAUDE.md` explicitly forbids
+  // writing ourselves ("never hand-write authentication crypto").
+  //
+  // **DEP-1 audit, performed before the addition:**
+  // · **No dependencies and no peer dependencies.** `npm view jose@6.2.9
+  //   dependencies` and `peerDependencies` both print nothing.
+  // · **No `scripts` key at all**, so no postinstall and nothing to run at
+  //   install time. Re-checked on every run below.
+  // · **No hardcoded host anywhere in the shipped JavaScript.** Grepped
+  //   `dist/webapi` for `https?://` and found none; the four URLs in the
+  //   tarball are all in `.d.ts` doc comments (MDN, W3C, RFC editor, GitHub).
+  //   `createRemoteJWKSet` fetches **only the URL its caller passes**, and it
+  //   throws unless that argument is a `URL` instance.
+  // · `npm audit --omit=dev` reports **0 vulnerabilities** in the runtime tree.
+  // · MIT, 248 KB unpacked, one build (`dist/webapi`) over the platform's
+  //   WebCrypto rather than a native addon.
+  // · **It never ships to a device.** The Dart client verifies nothing.
+  // · Pinned exactly.
+  "jose",
 ]);
 
 interface Manifest {

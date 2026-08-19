@@ -2,6 +2,7 @@ import { serve, type ServerType } from "@hono/node-server";
 import { Hono } from "hono";
 
 import { route } from "../routing.js";
+import type { SessionVerifier } from "./session-verifier.js";
 
 /**
  * The boundary that owns the socket.
@@ -24,13 +25,24 @@ import { route } from "../routing.js";
  * It also drops two defaults the old adapter needed. `request.url ?? "/"` and
  * `request.method ?? "GET"` were papering over a `node:http` type, and a
  * request with no method silently became a `GET` of `/health`.
+ *
+ * **The verifier is injected**, so this file holds no key set and no URL. The
+ * one thing it does with a credential is resolve it before routing: `route()`
+ * is synchronous and pure, and verification is neither.
  */
-export function createApp(version: string): Hono {
+export function createApp(version: string, verify: SessionVerifier): Hono {
   const app = new Hono();
 
-  app.all("*", (context) => {
+  app.all("*", async (context) => {
     const path = new URL(context.req.url).pathname;
-    const result = route(context.req.method, path, version);
+    // **Resolved for every request, including the ones that will 404.** The
+    // alternative is to route first and verify only when the path matched,
+    // which makes the answer to "does this path exist" measurably faster for an
+    // unauthenticated caller than for an authenticated one. The paths are all
+    // published in `contract/openapi.json`, so the leak is small — and so is
+    // the cost of not having it, since a verified key set is cached in memory.
+    const caller = await verify(context.req.header("Authorization"));
+    const result = route(context.req.method, path, version, caller);
 
     return context.json(
       result.body as Record<string, unknown>,
@@ -42,8 +54,12 @@ export function createApp(version: string): Hono {
 }
 
 /** Every status `route()` can return. Hono types its own set; this is ours. */
-type ContentfulStatus = 200 | 401 | 404 | 405;
+type ContentfulStatus = 200 | 401 | 404 | 405 | 501;
 
-export function startHttpServer(version: string, port: number): ServerType {
-  return serve({ fetch: createApp(version).fetch, port });
+export function startHttpServer(
+  version: string,
+  port: number,
+  verify: SessionVerifier,
+): ServerType {
+  return serve({ fetch: createApp(version, verify).fetch, port });
 }

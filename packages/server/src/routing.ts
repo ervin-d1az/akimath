@@ -5,6 +5,23 @@ export interface Response {
   readonly body: unknown;
 }
 
+/**
+ * Who is asking, as the adapter resolved it.
+ *
+ * **Three cases, because a 401 with one meaning cannot be diagnosed.** A client
+ * that has never linked and a client holding something it wrongly believes is a
+ * session are different bugs; they earn the same status and different tags, and
+ * the second carries the reason it was refused.
+ *
+ * `refused` is deliberately blind to *why* — expired, wrong issuer, bad
+ * signature, unreachable key set. That belongs to the verifier; this module's
+ * job is to know that verification did not succeed and to pass the sentence on.
+ */
+export type Caller =
+  | { readonly kind: "absent" }
+  | { readonly kind: "refused"; readonly why: string }
+  | { readonly kind: "session"; readonly userId: string };
+
 /** One entry in the route table: a method and a path template. */
 export interface Route {
   readonly method: string;
@@ -88,8 +105,16 @@ function error(status: number, tag: string, message: string): Response {
  * No sockets, no framework, no environment. This is what the quality gates
  * (coverage, mutation, CRAP, DRY) run against.
  */
-export function route(method: string, path: string, version: string): Response {
+export function route(
+  method: string,
+  path: string,
+  version: string,
+  caller: Caller,
+): Response {
   if (method === "GET" && path === "/health") {
+    // **A probe carries no session and must not need one.** `/health` is the
+    // route a load balancer calls; requiring a credential of it would make the
+    // server look dead to the thing deciding whether it is.
     return { status: 200, body: buildHealthReport("akimath-api", version) };
   }
 
@@ -97,15 +122,30 @@ export function route(method: string, path: string, version: string): Response {
     (candidate) => candidate.method === method && matchesTemplate(candidate.path, path),
   );
   if (routed) {
-    // **Every contracted operation answers 401 until auth exists** (design D2).
-    // The contract declares `401 — No valid session` on all of them and there is
-    // no session mechanism at all, so this is the true answer rather than a
-    // placeholder — and it degrades correctly, because an operation with no
-    // body still answers 401 for the old reason once auth lands.
+    if (caller.kind === "absent") {
+      return error(
+        401,
+        "unauthenticated",
+        "This operation needs a session. Send one as Authorization: Bearer <token>.",
+      );
+    }
+    if (caller.kind === "refused") {
+      // A different tag from the one above, on purpose: the client is holding
+      // something, and "you sent nothing" would send it looking for a bug it
+      // does not have.
+      return error(401, "invalid_session", caller.why);
+    }
+    // **501 once the caller has authenticated.** 401 was the true answer while
+    // no session could exist and stops being true the moment one can: refusing
+    // a caller who *did* authenticate, with a reason saying they did not, is a
+    // lie the client would retry forever. 404 is worse — the path is real and
+    // the contract names it. So the status says what is actually the case, and
+    // `contract-parity.test.ts` holds the contract's 501 list to exactly the
+    // operations that still answer this, so the list shrinks as they land.
     return error(
-      401,
-      "unauthenticated",
-      "This operation needs a session, and there is no way to open one yet.",
+      501,
+      "not_implemented",
+      "That operation is routed and your session is good; the server has not built it yet.",
     );
   }
 

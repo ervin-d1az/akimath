@@ -1,15 +1,44 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../src/adapters/http-server.js";
-import { CONTRACTED_OPERATIONS, OPS_ROUTES, route } from "../src/routing.js";
+import type { SessionVerifier } from "../src/adapters/session-verifier.js";
+import { type Caller, CONTRACTED_OPERATIONS, OPS_ROUTES, route } from "../src/routing.js";
 
 const VERSION = "1.2.3";
+const NOBODY: Caller = { kind: "absent" };
+const LINKED: Caller = { kind: "session", userId: "3f1a2b4c-0000-7000-8000-00000000abcd" };
+
+/**
+ * A verifier that reports what it was handed and answers as told.
+ *
+ * The real one is tested against real Ed25519 keys in
+ * `session-verifier.test.ts`. What this file is about is the wiring: that the
+ * header reaches the verifier and the verdict reaches `route()`.
+ */
+function stubVerifier(caller: Caller): SessionVerifier & { seen: (string | undefined)[] } {
+  const seen: (string | undefined)[] = [];
+  const verify = ((header) => {
+    seen.push(header);
+    return Promise.resolve(caller);
+  }) as SessionVerifier & { seen: (string | undefined)[] };
+  verify.seen = seen;
+  return verify;
+}
 
 /** A request through the whole adapter, without opening a socket. */
-async function call(method: string, path: string): Promise<Response> {
-  return createApp(VERSION).fetch(
-    new Request(`http://localhost${path}`, { method }),
-  );
+async function call(
+  method: string,
+  path: string,
+  options: { caller?: Caller; header?: string } = {},
+): Promise<Response> {
+  const request =
+    options.header === undefined
+      ? new Request(`http://localhost${path}`, { method })
+      : new Request(`http://localhost${path}`, {
+          method,
+          headers: { Authorization: options.header },
+        });
+  return createApp(VERSION, stubVerifier(options.caller ?? NOBODY)).fetch(request);
 }
 
 describe("the transport returns exactly what the policy decided", () => {
@@ -29,7 +58,7 @@ describe("the transport returns exactly what the policy decided", () => {
 
     expect(paths.length).toBeGreaterThan(1);
     for (const { method, path } of paths) {
-      const expected = route(method, path, VERSION);
+      const expected = route(method, path, VERSION, NOBODY);
       const response = await call(method, path);
 
       expect(response.status, `${method} ${path}`).toBe(expected.status);
@@ -78,10 +107,59 @@ describe("the version it was given is the version it reports", () => {
   it("a query string is not part of the path", async () => {
     // `route` matches on the path alone; a transport that passed the whole URL
     // would turn every link with a `?utm_source` into a 404.
-    const response = await createApp(VERSION).fetch(
+    const response = await createApp(VERSION, stubVerifier(NOBODY)).fetch(
       new Request("http://localhost/health?from=somewhere"),
     );
 
     expect(response.status).toBe(200);
+  });
+});
+
+describe("the credential reaches the verifier and the verdict reaches the policy", () => {
+  it("hands the header over without a second opinion about it", async () => {
+    // The adapter adds no parsing of its own — a `trim()` or a `toLowerCase()`
+    // here would be a second parser competing with the pure one in
+    // `session.ts`, and the two would disagree eventually.
+    //
+    // The value arrives with its outer whitespace already gone: that is the
+    // `Headers` API doing what the HTTP spec tells it to, before any of our
+    // code runs. Its *inner* shape is untouched, which is the part `session.ts`
+    // has opinions about.
+    const verify = stubVerifier(NOBODY);
+    await createApp(VERSION, verify).fetch(
+      new Request("http://localhost/me", { headers: { Authorization: "Bearer  weird " } }),
+    );
+    expect(verify.seen).toEqual(["Bearer  weird"]);
+  });
+
+  it("hands over undefined when there is no header at all", async () => {
+    const verify = stubVerifier(NOBODY);
+    await createApp(VERSION, verify).fetch(new Request("http://localhost/me"));
+    expect(verify.seen).toEqual([undefined]);
+  });
+
+  it("a verified caller gets the answer a verified caller gets", async () => {
+    const response = await call("GET", "/me", { caller: LINKED, header: "Bearer good" });
+    expect(response.status).toBe(501);
+    expect(await response.json()).toEqual(route("GET", "/me", VERSION, LINKED).body);
+  });
+
+  it("a refused caller gets the refusal, reason included", async () => {
+    const response = await call("GET", "/me", {
+      caller: { kind: "refused", why: "the token expired" },
+      header: "Bearer stale",
+    });
+    expect(response.status).toBe(401);
+    expect((await response.json()) as { message: string }).toMatchObject({
+      message: expect.stringContaining("expired"),
+    });
+  });
+
+  it("the probe answers whoever asks, credential or not", async () => {
+    // `/health` must not depend on the verifier having a key set — the moment it
+    // does, a key-server outage looks like a dead application.
+    for (const caller of [NOBODY, LINKED, { kind: "refused", why: "x" } as Caller]) {
+      expect((await call("GET", "/health", { caller })).status).toBe(200);
+    }
   });
 });
