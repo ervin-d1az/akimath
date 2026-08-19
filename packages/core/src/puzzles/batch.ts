@@ -1,6 +1,7 @@
 import { parsePuzzle, type PuzzleEnvelope, type PuzzleRejectionTag } from "@akimath/contract";
 
 import { cagedCandidate, type CagedKind } from "./caged.js";
+import { kakuroCandidate } from "./kakuro.js";
 import { magicSquareCandidate } from "./magic-square.js";
 import { wordSearchCandidate } from "./word-search.js";
 
@@ -85,6 +86,17 @@ export function generateMagicSquareBatch(
 ): Batch {
   return collectBatch(request.count, request.firstSeed, copy, (seed) =>
     magicSquareCandidate(seed, request.size));
+}
+
+/**
+ * A batch of Kakuro boards, every one accepted by the frozen contract.
+ */
+export function generateKakuroBatch(
+  request: SizedRequest,
+  copy: PuzzleCopy,
+): Batch {
+  return collectBatch(request.count, request.firstSeed, copy, (seed) =>
+    kakuroCandidate(seed, request.size));
 }
 
 export interface SizedRequest {

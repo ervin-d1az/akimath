@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   generateCagedBatch,
+  generateKakuroBatch,
   generateMagicSquareBatch,
   generateWordSearchBatch,
   type Batch,
@@ -27,9 +28,14 @@ import type { CagedKind } from "../puzzles/caged.js";
 const CAGED_KINDS: readonly CagedKind[] = ["kenken", "killer"];
 
 /** Every kind this generator can build. */
-type BuildableKind = CagedKind | "wordSearch" | "magicSquare";
+type BuildableKind = CagedKind | "wordSearch" | "magicSquare" | "kakuro";
 
-const KINDS: readonly BuildableKind[] = [...CAGED_KINDS, "wordSearch", "magicSquare"];
+const KINDS: readonly BuildableKind[] = [
+  ...CAGED_KINDS,
+  "wordSearch",
+  "magicSquare",
+  "kakuro",
+];
 
 /**
  * The words a sopa de letras may hide.
@@ -99,6 +105,16 @@ const COPY: Readonly<Record<BuildableKind, PuzzleCopy>> = Object.freeze({
       "Se usan los números del 1 al total de casillas.",
     ],
   },
+  kakuro: {
+    tutorialSteps: [
+      "Cada tramo suma el número de su pista.",
+      "Dentro de un tramo no se repite ningún dígito.",
+    ],
+    referenceSheet: [
+      "Los tramos van hacia la derecha y hacia abajo.",
+      "Solo se usan los dígitos del 1 al 9.",
+    ],
+  },
 });
 
 function requireKind(raw: string): BuildableKind {
@@ -131,6 +147,8 @@ function switchKind(
       );
     case "magicSquare":
       return generateMagicSquareBatch({ size, count, firstSeed }, COPY[kind]);
+    case "kakuro":
+      return generateKakuroBatch({ size, count, firstSeed }, COPY[kind]);
     default:
       return generateCagedBatch({ kind, size, count, firstSeed }, COPY[kind]);
   }
