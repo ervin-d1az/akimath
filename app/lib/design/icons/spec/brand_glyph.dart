@@ -16,7 +16,18 @@ enum BrandGlyph {
   alert,
   close,
   back,
+
+  /// The chevron on a card that opens something. **Not an arrow between two
+  /// numbers** — see [mapsTo].
   forward,
+
+  /// "becomes", between an input and an output.
+  ///
+  /// **A separate glyph because `forward` reads as a comparison.** The stand-in
+  /// for `forward` is `›`, and `2 › 4` set between two numerals is
+  /// indistinguishable from `2 > 4` — a false statement, printed by a maths
+  /// app, in the one place a player is being asked to work out a rule.
+  mapsTo,
   pause,
   undo,
   hint,
