@@ -197,6 +197,20 @@ server side is still at the scaffold, so the next phase with code behind it is *
 flutter analyze --fatal-infos
 flutter test
 
+# Running it on a simulator against a real backend. **Both steps matter.**
+#   `--dart-define` is baked into `kernel_blob.bin` at build time, and a build
+#   that reuses a cached kernel silently keeps the old values — so the app comes
+#   up with `Endpoints.configured` false and the account row simply absent, with
+#   nothing on screen to say why. And `simctl install` over an existing bundle
+#   does not reliably replace `App.framework`, so uninstall first.
+#   Verify rather than trust: the URL must appear in the *installed* blob.
+#     rm -rf build/ios/iphonesimulator .dart_tool/flutter_build
+#     flutter build ios --simulator --debug \
+#       --dart-define=NEON_AUTH_BASE_URL=... --dart-define=AKIMATH_API_BASE_URL=...
+#     xcrun simctl uninstall booted com.akimath.akimathApp
+#     xcrun simctl install   booted build/ios/iphonesimulator/Runner.app
+#     xcrun simctl launch    booted com.akimath.akimathApp
+
 # TypeScript — from packages/server/
 npm run verify        # tsc --noEmit && vitest run
 npm run mutation      # Stryker over src/, excluding main.ts, adapters/ and cli/
