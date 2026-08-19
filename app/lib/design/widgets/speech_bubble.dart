@@ -17,7 +17,12 @@ class SpeechBubble extends StatelessWidget {
   final double maxWidth;
 
   static const double _tailWidth = 26;
-  static const double _tailHeight = 16;
+
+  /// **18, not 16.** The design's tail is a `26×18` box whose apex sits at
+  /// `y=16`, so the last two units are the overshoot that lets the seam be
+  /// covered. Drawing it 16 tall squashed the whole path by a ninth and left
+  /// the patch too short to reach the bubble's border.
+  static const double _tailHeight = 18;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +53,8 @@ class SpeechBubble extends StatelessWidget {
             child: Text(text, style: BrandText.body()),
           ),
           Positioned(
-            left: 22,
+            // `left:26` in `pantallas-base.md`; the code had 22.
+            left: 26,
             bottom: -_tailHeight,
             width: _tailWidth,
             height: _tailHeight,
@@ -60,35 +66,77 @@ class SpeechBubble extends StatelessWidget {
   }
 }
 
-/// The bubble's tail: an outlined triangle whose top edge is painted over in
-/// surface color so it reads as one shape with the bubble above it.
+/// The bubble's tail.
+///
+/// **The mouth is open.** A speech bubble's tail is not a triangle stuck
+/// underneath: its inside is the bubble's inside, and the outline runs around
+/// the outside of both. Drawn as a closed, fully stroked triangle it reads as a
+/// separate little arrow hanging off the box — which is what a player reported.
+///
+/// Three passes, in this order:
+///
+/// 1. **Erase the bubble's border across the mouth**, between the two side
+///    strokes. The design calls this the *seam patch*. Its own `h=4` was
+///    measured for the SVG's coordinate space and does not cover a 3 px border
+///    once the box is scaled, so this reaches further up: the point is to
+///    remove the line, and a patch that removes most of it leaves exactly the
+///    hairline that made the tail look detached.
+/// 2. **Fill the triangle**, so the tail's inside is the same white.
+/// 3. **Stroke only the two slanted sides.** Stroking the top edge as well is
+///    what drew the line the patch then had to hide; not drawing it is simpler
+///    than covering it.
 class _BubbleTail extends CustomPainter {
   const _BubbleTail();
 
+  /// The design's viewBox, so the path below can be read against
+  /// `M3 2 L23 2 L11 16 Z` without arithmetic.
+  static const double _designWidth = 26;
+  static const double _designHeight = 18;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final double sx = size.width / 26;
-    final double sy = size.height / 18;
+    final double sx = size.width / _designWidth;
+    final double sy = size.height / _designHeight;
+    final double stroke = BrandShape.borderWidth * sx;
 
-    final Path triangle = Path()
-      ..moveTo(3 * sx, 2 * sy)
-      ..lineTo(23 * sx, 2 * sy)
-      ..lineTo(11 * sx, 16 * sy)
-      ..close();
+    final Paint fill = Paint()..color = BrandColors.surface;
 
-    canvas.drawPath(triangle, Paint()..color = BrandColors.surface);
+    // 1 — the seam. Inset horizontally by half a stroke on each side so the
+    // two side strokes survive it, and taken well above the mouth so the
+    // bubble's whole 3 px border goes with it.
+    canvas.drawRect(
+      Rect.fromLTRB(
+        3 * sx + stroke / 2,
+        -stroke - sy,
+        23 * sx - stroke / 2,
+        1 * sy,
+      ),
+      fill,
+    );
+
+    // 2 — the tail's own white.
     canvas.drawPath(
-      triangle,
+      Path()
+        ..moveTo(3 * sx, 0)
+        ..lineTo(23 * sx, 0)
+        ..lineTo(11 * sx, 16 * sy)
+        ..close(),
+      fill,
+    );
+
+    // 3 — the two sides, open at the top. The apex keeps the design's lean:
+    // x=11 of 26 is left of centre.
+    canvas.drawPath(
+      Path()
+        ..moveTo(3 * sx, 0)
+        ..lineTo(11 * sx, 16 * sy)
+        ..lineTo(23 * sx, 0),
       Paint()
         ..style = PaintingStyle.stroke
         ..color = BrandColors.ink
-        ..strokeWidth = 3 * sx
-        ..strokeJoin = StrokeJoin.round,
-    );
-    // Hide the seam where the tail meets the bubble's own border.
-    canvas.drawRect(
-      Rect.fromLTWH(5 * sx, -2 * sy, 16 * sx, 4 * sy),
-      Paint()..color = BrandColors.surface,
+        ..strokeWidth = stroke
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.butt,
     );
   }
 
