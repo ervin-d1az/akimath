@@ -16,9 +16,24 @@ import 'preferences_screen.dart';
 /// already computed by policies the home uses, so there is nothing here to get
 /// wrong except the reading.
 class PreferencesRoute extends StatefulWidget {
-  const PreferencesRoute({super.key, this.dayLog, this.now = DateTime.now});
+  const PreferencesRoute({
+    super.key,
+    this.dayLog,
+    this.now = DateTime.now,
+    this.authBaseUrl = Endpoints.authBaseUrl,
+  });
 
   final DayLogStore? dayLog;
+
+  /// Where Neon Auth is, defaulting to the build's own `--dart-define`.
+  ///
+  /// **A parameter and not a direct read of the constant**, because a
+  /// compile-time constant is one no test can vary — and "the door appears when
+  /// the build was configured" is exactly the claim worth checking. It was
+  /// asserted here once and was false: the first simulator build reused a
+  /// cached kernel, the defines never landed, and the row silently did not
+  /// render.
+  final String authBaseUrl;
 
   /// Injected, so the streak can be tested by handing it a date.
   final DateTime Function() now;
@@ -40,7 +55,7 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
   String? _accountEmail;
 
   void _openAccountFlow() {
-    final AuthClient auth = AuthClient(baseUrl: Uri.parse(Endpoints.authBaseUrl));
+    final AuthClient auth = AuthClient(baseUrl: Uri.parse(widget.authBaseUrl));
     Navigator.of(context).push(MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (BuildContext _) => AppShell(
@@ -89,8 +104,9 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
         streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
         accountEmail: _accountEmail,
         // Absent rather than broken when the build was given no endpoints.
-        onCreateAccount:
-            Endpoints.configured && _accountEmail == null ? _openAccountFlow : null,
+        onCreateAccount: widget.authBaseUrl.isNotEmpty && _accountEmail == null
+            ? _openAccountFlow
+            : null,
       ),
     );
   }
