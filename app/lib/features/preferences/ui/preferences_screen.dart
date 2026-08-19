@@ -6,6 +6,7 @@ import '../../../design/widgets/speech_bubble.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/verdict.dart';
+import '../../../design/widgets/spec/verdict_copy.dart';
 import '../../../design/widgets/stat_tile.dart';
 import '../../../design/widgets/verdict_ring.dart';
 
@@ -21,7 +22,7 @@ import '../../../design/widgets/verdict_ring.dart';
 /// calculate, which is the same reason the verdict screens show no rating.
 ///
 /// The card is the one the implementation plan already decided v1 ships: the
-/// `Acierto` / `Se torció` preview and its legend. It earns its place by
+/// The verdict preview and its legend. It earns its place by
 /// teaching the pair somewhere other than mid-round — a learner meets these two
 /// marks in the second where they most want to know what happened.
 ///
@@ -113,23 +114,21 @@ class PreferencesScreen extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _legendRow(
-            Verdict.correct,
-            'Acierto',
-            'El aro va completo, sin cortes.',
-          ),
+          // **The same words the screens use** — from `verdict_copy.dart`, so
+          // the key cannot teach a term a player will never meet. It used to
+          // say *Acierto* and *Se torció* while `03` and `04` said *¡Bien
+          // hecho!* and *Casi*.
+          _legendRow(Verdict.correct),
           const SizedBox(height: BrandShape.space4),
-          _legendRow(
-            Verdict.wrong,
-            'Se torció',
-            'El aro va cortado. Lo vuelves a intentar.',
-          ),
+          _legendRow(Verdict.wrong),
         ],
       ),
     );
   }
 
-  Widget _legendRow(Verdict verdict, String title, String meaning) {
+  Widget _legendRow(Verdict verdict) {
+    final String title = verdictHeadline(verdict);
+    final String meaning = verdictMarkDescription(verdict);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[

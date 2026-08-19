@@ -1,4 +1,5 @@
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
+import 'package:akimath_app/design/widgets/spec/verdict_copy.dart';
 import 'package:akimath_app/design/widgets/verdict_ring.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
 import 'package:flutter/material.dart';
@@ -74,8 +75,11 @@ void main() {
     testWidgets('shows both marks with what each means',
         (WidgetTester tester) async {
       await _pump(tester);
-      expect(find.text('Acierto'), findsOneWidget);
-      expect(find.text('Se torció'), findsOneWidget);
+      // The words the screens themselves use, from `verdict_copy.dart`. The
+      // legend used to say `Acierto` / `Se torció` while `03` and `04` said
+      // `¡Bien hecho!` / `Casi` — a key to two terms the app never showed.
+      expect(find.text(verdictHeadline(Verdict.correct)), findsOneWidget);
+      expect(find.text(verdictHeadline(Verdict.wrong)), findsOneWidget);
       expect(find.byType(VerdictRing), findsNWidgets(2));
     });
 

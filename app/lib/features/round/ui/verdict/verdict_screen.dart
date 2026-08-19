@@ -8,6 +8,7 @@ import '../../../../design/tokens/tokens.dart';
 import '../../../../design/widgets/brand_button.dart';
 import '../../../../design/widgets/icon_button_tile.dart';
 import '../../../../design/widgets/spec/verdict.dart';
+import '../../../../design/widgets/spec/verdict_copy.dart';
 import '../../../../design/widgets/stat_tile.dart';
 import '../../../../design/widgets/verdict_ring.dart';
 
@@ -115,8 +116,17 @@ class VerdictScreen extends StatelessWidget {
                             const SizedBox(height: BrandShape.space4),
                             VerdictRing(summary.verdict),
                             const SizedBox(height: BrandShape.space3),
+                            // From `verdict_copy.dart`, the one place the two
+                            // headlines live — `4.5`'s legend reads the same
+                            // strings, so the key cannot teach a word this
+                            // screen does not say.
+                            //
+                            // The wrong case lost its second sentence, "Mira
+                            // cómo va.": the diagnosis steps below now say
+                            // exactly that, concretely, instead of promising
+                            // it.
                             Text(
-                              _correct ? '¡Bien hecho!' : 'Casi. Mira cómo va.',
+                              verdictHeadline(summary.verdict),
                               style: BrandText.cardTitle(size: 22),
                             ),
                             if (_steps.isNotEmpty) ...<Widget>[
