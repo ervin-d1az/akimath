@@ -294,7 +294,13 @@ class _RoundScreenState extends State<RoundScreen> {
               const SizedBox(height: BrandShape.space5),
               _answerSlot(),
               const Spacer(),
-              Keypad(layout: KeypadLayout.item, onKeyPressed: _onKey),
+              Keypad(
+                layout: KeypadLayout.item,
+                // A key whose output the grader can never accept is a trap
+                // rather than a feature — see `keysWithNoGradableAnswer`.
+                unavailable: KeypadLayout.keysWithNoGradableAnswer,
+                onKeyPressed: _onKey,
+              ),
               // **Skipping needs somewhere to skip to.** On a one-item round
               // there is none, and the control did real damage: it routes to
               // `_next`, which on the last item calls `onFinished` — so one tap

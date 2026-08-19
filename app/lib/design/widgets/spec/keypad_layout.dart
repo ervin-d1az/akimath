@@ -104,22 +104,26 @@ class KeypadLayout {
     gap: 10,
     iconSize: 24,
     keys: <KeypadKey>[
+      // **The operator strip is `a/b`, `−x`, `x²`, top to bottom**, which is
+      // `TecladoReactivo`'s order and was not the code's — it ran `−x`, `x²`,
+      // `a/b`, putting the only one of the three a player can currently use at
+      // the bottom and a disabled key between two live ones.
       KeypadKey(id: '7', face: TextFace('7'), emits: '7'),
       KeypadKey(id: '8', face: TextFace('8'), emits: '8'),
       KeypadKey(id: '9', face: TextFace('9'), emits: '9'),
-      KeypadKey(id: 'negate', face: TextFace(_minus), emits: _minus),
-      KeypadKey(id: '4', face: TextFace('4'), emits: '4'),
-      KeypadKey(id: '5', face: TextFace('5'), emits: '5'),
-      KeypadKey(id: '6', face: TextFace('6'), emits: '6'),
-      KeypadKey(id: 'square', face: TextFace(_squared), emits: _squared),
-      KeypadKey(id: '1', face: TextFace('1'), emits: '1'),
-      KeypadKey(id: '2', face: TextFace('2'), emits: '2'),
-      KeypadKey(id: '3', face: TextFace('3'), emits: '3'),
       KeypadKey(
         id: 'fraction',
         face: FractionFace(numerator: 'a', denominator: 'b'),
         emits: '/',
       ),
+      KeypadKey(id: '4', face: TextFace('4'), emits: '4'),
+      KeypadKey(id: '5', face: TextFace('5'), emits: '5'),
+      KeypadKey(id: '6', face: TextFace('6'), emits: '6'),
+      KeypadKey(id: 'negate', face: TextFace(_negateFace), emits: _minus),
+      KeypadKey(id: '1', face: TextFace('1'), emits: '1'),
+      KeypadKey(id: '2', face: TextFace('2'), emits: '2'),
+      KeypadKey(id: '3', face: TextFace('3'), emits: '3'),
+      KeypadKey(id: 'square', face: TextFace(_squareFace), emits: _squared),
       KeypadKey(id: 'decimal', face: TextFace(_decimal), emits: _decimal),
       KeypadKey(id: '0', face: TextFace('0'), emits: '0'),
       KeypadKey(id: 'backspace', face: IconFace(BrandGlyph.backspace)),
@@ -193,4 +197,30 @@ class KeypadLayout {
 
   /// U+002C COMMA — the es-MX decimal separator.
   static const String _decimal = ',';
+
+  /// **The faces carry the `x`, as the design draws them.**
+  ///
+  /// `TecladoReactivo` labels these two keys `−x` and `x²`. The code showed a
+  /// bare `−` and a bare `²`, and in the brand's numeral face a lone superscript
+  /// two sits in the fourth column reading as *another digit 2* — beside the
+  /// real `2` one row down. The `x` is what says "this does something to your
+  /// number" rather than "this is a number".
+  static const String _negateFace = '−x';
+  static const String _squareFace = 'x²';
+
+  /// The keys whose output no answer can ever be.
+  ///
+  /// **`ANSWER_SHAPES` is `integer` and `fraction`** — the contract freezes
+  /// both, and neither admits a decimal point or a power. `canonicalise('3,5')`
+  /// and `canonicalise('5²')` both come back `non_numeric`, so pressing either
+  /// key guarantees a wrong verdict no matter what the item asked.
+  ///
+  /// They stay on the pad because the design's grid is four by four and a hole
+  /// in it is worse than a key that is visibly not offered — the same treatment
+  /// a puzzle board already gives a digit above its ceiling. They come back the
+  /// day the contract grows a shape that needs them.
+  static const Set<String> keysWithNoGradableAnswer = <String>{
+    'decimal',
+    'square',
+  };
 }
