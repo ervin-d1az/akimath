@@ -416,10 +416,17 @@ jobs:
         env:
           OASDIFF_VERSION: "1.29.1"
 
+      # **The escape is a label, exactly as `protected-paths` does it.** A
+      # breaking change before v1 ships is ordinary and will happen again; what
+      # must not happen is one nobody decided on. The two alternatives were
+      # worse: an `--err-ignore` file keeps matching after the break has merged
+      # and so silences the next identical one, and relaxing `--fail-on`
+      # deletes the gate outright.
       - name: No breaking change to a shipped contract
         working-directory: ${{ github.workspace }}
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: |
           set -euo pipefail
           if [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
@@ -431,7 +438,34 @@ jobs:
             exit 0
           fi
           git show "$BASE:contract/openapi.json" > /tmp/openapi.base.json
-          oasdiff breaking /tmp/openapi.base.json contract/openapi.json --fail-on ERR
+          if oasdiff breaking /tmp/openapi.base.json contract/openapi.json --fail-on ERR; then
+            exit 0
+          fi
+          case ",$LABELS," in
+            *,allow-breaking-contract,*)
+              echo
+              echo "label allow-breaking-contract is present; a human approved this."
+              exit 0
+              ;;
+          esac
+          # A push carries no pull request and therefore no label — the same
+          # asymmetry `protected-paths` records, and the same answer. `main` is
+          # unreachable except through a pull request this job already judged,
+          # so failing again here would leave it red with nothing able to
+          # answer.
+          if [ "${GITHUB_EVENT_NAME:-}" != "pull_request" ]; then
+            echo
+            echo "This is a '${GITHUB_EVENT_NAME:-push}' event, which carries no pull"
+            echo "request and so no label. The change was judged where a human could"
+            echo "answer for it; not enforcing again here."
+            exit 0
+          fi
+          echo
+          echo "A breaking change to contract/openapi.json breaks every client already"
+          echo "built against it. If the break is genuinely intended — and before v1"
+          echo "ships it often is — label the pull request 'allow-breaking-contract'"
+          echo "and say in the description what breaks and who has to change."
+          exit 1
 
   integration:
     name: integration

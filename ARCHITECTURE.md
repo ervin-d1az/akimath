@@ -270,6 +270,12 @@ invariant true by construction rather than by discipline.
   `onLinkAccount` (that hook runs *after* the `createUser` commit, so its
   "no progress lost" promise does not hold) but an idempotent
   `POST /v1/players/link` with an `Idempotency-Key`.
+
+  **The band travels in that request**, because with guest sync gone this is where the
+  `players` row is created and `age_band` is NOT NULL with no default. It is the
+  device's declaration and never read off the account: linking is an adult's act, but
+  the player being linked need not be an adult, and taking `adult` from the credential
+  would route a child out of the protections `age_band` exists to select.
 - **`attempts`, restated for `CLAUDE.md`:**
 
   > `attempts` never accepts UPDATE. It accepts DELETE **only** through the
