@@ -377,9 +377,17 @@ Better Auth with identity in a `neon_auth` schema in our own Postgres and a REST
 needs no SDK. It exposes **no anonymous plugin** and **no IP-tracking control**, and every
 session row carries `ipAddress` and `userAgent` — so a child's device never gets a session at
 all. `player_id` is minted on the device, unlinked play is entirely offline, and linking is an
-adult's act and the first server contact. GHSA-qq9h-g4jm-xgf3 is closed by configuration
-(magic-link off, email+password disabled, registration closed) because the managed version,
-1.4.18, is inside its range and cannot be patched by us.
+adult's act and the first server contact. **An account is made with an email and a password**
+(open sign-up, verification required) — decided 2026-08-19, because the alternative was Google on
+Neon's shared consent screen plus two new Flutter dependencies to run a browser redirect.
+
+GHSA-qq9h-g4jm-xgf3 is still closed, by a **narrower and load-bearing** condition: the managed
+version is 1.4.18 and cannot be patched by us, so what shuts the advisory is that the
+**magic-link and email-OTP plugins are off**. It needs a passwordless sign-in path to collide with
+a password registration at the same address, and there is none. **Turning magic-link on reopens
+it** — that is one toggle in a console, so it is an invariant, not a preference. It stops mattering
+the day the managed version passes 1.6.22. ADR 0002's amendment carries the four conditions and
+the queries that verify them.
 
 **The Dart API client is hand-written** — `docs/adr/0001-dart-api-client.md`, decided
 2026-08-16 by the F0 spike `f0-dart-client-spike`. `swagger_dart_code_generator` is rejected:

@@ -96,6 +96,10 @@ The advisory needs magic-link **or** email-OTP **and** open email+password regis
 email+password disabled entirely and magic-link off, no path remains — the version is still
 1.4.18 and the exploit has nowhere to start.
 
+> **Amended 2026-08-19 — email sign-up is now open, and the mitigation moved.** See
+> "Amendment: the sign-up method" at the end of this record. The sentence above describes the
+> configuration as it stood when this ADR was accepted; it is no longer the live one.
+
 The absence of the anonymous plugin was read twice, from the console's Plugins tab and from
 `plugin_configs`, because a single source would have left "the console does not show it" and "it
 does not exist" indistinguishable.
@@ -115,3 +119,70 @@ both empty at the time of writing (`select count(*)` — 0 and 0).
   than the one this ADR removes — an adult who creates an account is not a minor whose IP was
   taken without a decision — but it is not nothing, and Neon should be asked whether
   `disableIpTracking` can be exposed.
+
+---
+
+## Amendment: the sign-up method — 2026-08-19
+
+**Email and password sign-up is enabled, and the advisory is still closed.** The mitigation is
+now narrower and it is load-bearing, so it is written down here rather than left in a console.
+
+### Why it changed
+
+This ADR left exactly one way to create an account: Google OAuth on **Neon's shared keys**, which
+puts Neon's name on the consent screen for an app whose audience includes children — already
+flagged in Open below. In a Flutter client it also means a browser redirect and a deep link back,
+so at least two new runtime dependencies against a floor of four, each needing a DEP-1 audit,
+before a single account could exist.
+
+### The reading that allows it
+
+GHSA-qq9h-g4jm-xgf3 is exploitable only when **all four** hold, quoted from the advisory:
+
+1. a version below `1.6.22` (or a `1.7.0-beta` below `.10`);
+2. **the magic-link plugin or the email-OTP plugin is enabled**;
+3. email and password sign-up with **open registration**;
+4. an account can exist at an address before its owner first signs in with the passwordless flow.
+
+Condition 1 holds and cannot be fixed by us. Conditions 3 and 4 now hold. **Condition 2 does
+not**, and it is the conjunction that makes the attack: it needs a passwordless sign-in path to
+collide with a password registration at the same address. `plugin_configs` exposes exactly three
+plugins — `magicLink`, `organization`, `phoneNumber` — all `false`, and there is **no email-OTP
+plugin offered at all**.
+
+Verified against the database rather than the console, before and after:
+
+```
+$ psql -At -c "select string_agg(k||'='||(v->>'enabled'),' ') from
+    neon_auth.project_config, jsonb_each(plugin_configs) e(k,v);"
+magicLink=false organization=false phoneNumber=false
+
+$ psql -At -c "select email_and_password::text from neon_auth.project_config;"
+{"enabled": true, "disableSignUp": false, "requireEmailVerification": true,
+ "emailVerificationMethod": "otp", ...}
+```
+
+### The invariant this creates
+
+> **While Better Auth is below 1.6.22 and email sign-up is open, the magic-link and email-OTP
+> plugins must stay off.** Turning either on reopens GHSA-qq9h-g4jm-xgf3.
+
+That is one toggle in a console, so it is repeated in `CLAUDE.md` and `ARCHITECTURE.md` §5. It
+stops being load-bearing the day the managed version passes 1.6.22, which is worth re-checking
+periodically rather than assuming.
+
+**Email verification is required** (`requireEmailVerification: true`, method `otp`), which closes
+the residual case the advisory does not cover: registering an address you do not own. Note that
+`sendVerificationEmailOnSignUp` is `false`, so the client asks for the code explicitly rather than
+one arriving automatically — a detail `1.3 Verificar correo` has to account for.
+
+### What was measured at the same time
+
+The Auth URL is `https://ep-young-mouse-auwur7po.neonauth.c-10.us-east-1.aws.neon.tech/neondb/auth`
+— note the `neonauth` label, which is not derivable from the Postgres host and is why eight probed
+guesses all reached the SQL-over-HTTP handler instead. Its JWKS endpoint serves **one Ed25519 key,
+`alg: EdDSA`, no private material**, which is exactly what `createSessionVerifier` pins.
+
+The server was run against it: a token signed with a local key was refused with *"no applicable key
+found in the JSON Web Key Set"* after a 311 ms fetch, and the next request took 0 ms — the real key
+set, really fetched, really cached.
