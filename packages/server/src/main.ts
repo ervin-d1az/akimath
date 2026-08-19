@@ -1,7 +1,9 @@
-import { startHttpServer } from "./adapters/http-server.js";
+import { createHandlers, startHttpServer } from "./adapters/http-server.js";
 import { createProcessLogger } from "./adapters/logger.js";
+import { createRequestDatabase } from "./adapters/request-database.js";
 import { createSessionVerifier, remoteKeySet } from "./adapters/session-verifier.js";
 import { readAuthConfig } from "./auth-config.js";
+import { readDatabaseConfig } from "./database-config.js";
 
 const log = createProcessLogger(process.env);
 
@@ -18,11 +20,18 @@ if ("problem" in config) {
   process.exit(1);
 }
 
+const database = readDatabaseConfig(process.env);
+if ("problem" in database) {
+  log.error("cannot start", { problem: database.problem });
+  process.exit(1);
+}
+
 startHttpServer({
   version,
   port,
   verify: createSessionVerifier(remoteKeySet(config.jwksUrl), config.issuer),
   log,
+  handlers: createHandlers(createRequestDatabase(database.url)),
 });
 
 log.info("listening", { port, version, jwksUrl: config.jwksUrl, issuer: config.issuer });

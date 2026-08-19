@@ -193,7 +193,9 @@ export function buildOpenApiDocument(): unknown {
           responses: {
             "200": { description: "The player.", ...(json(ref("Me")) as object) },
             ...errors,
-            ...notImplemented,
+            // No `notImplemented`: this one is built. The spread comes off an
+            // operation in the same diff that implements it, and
+            // `contract-parity.test.ts` fails if the two ever disagree.
           },
         },
         delete: {

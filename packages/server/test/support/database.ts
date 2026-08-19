@@ -29,6 +29,8 @@ export const MIGRATIONS_DIR = fileURLToPath(
 
 export interface TestDatabase {
   readonly client: pg.Client;
+  /** The worker database's own connection string, for code that opens its own. */
+  readonly url: string;
   readonly close: () => Promise<void>;
 }
 
@@ -48,6 +50,10 @@ function urlForDatabase(base: string, database: string): string {
   const url = new URL(base);
   url.pathname = `/${database}`;
   return url.toString();
+}
+
+function workerDatabaseUrl(): string {
+  return urlForDatabase(TEST_DATABASE_URL!, WORKER_DATABASE);
 }
 
 async function connectToWorkerDatabase(): Promise<pg.Client> {
@@ -110,7 +116,7 @@ export async function freshDatabase(
     const client = await connectToWorkerDatabase();
     await wipe(client);
     await runMigrations(client, migrationsDir);
-    return { client, close: () => client.end() };
+    return { client, url: workerDatabaseUrl(), close: () => client.end() };
   });
 }
 
@@ -119,7 +125,7 @@ export async function emptyDatabase(): Promise<TestDatabase> {
   return withClusterLock(async () => {
     const client = await connectToWorkerDatabase();
     await wipe(client);
-    return { client, close: () => client.end() };
+    return { client, url: workerDatabaseUrl(), close: () => client.end() };
   });
 }
 
