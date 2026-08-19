@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { CONTRACTED_OPERATIONS, OPS_ROUTES, route } from "../src/routing.js";
-import { contractedOperations } from "./support/contract.js";
+import {
+  contractedOperations,
+  requiresSession,
+  securitySchemeNames,
+} from "./support/contract.js";
 
 /**
  * The route table against the committed contract, both directions.
@@ -87,4 +91,46 @@ describe("the status the router returns is one the contract declares", () => {
       expect(declared, `the router returns ${status}`).toContain(String(status));
     }
   });
+});
+
+describe("what the contract secures is what the router refuses", () => {
+  // A template cannot be requested. Any non-empty segment matches, so the value
+  // is arbitrary and named to say so.
+  const concrete = (path: string): string => path.replace(/\{[^}]+\}/g, "any-id");
+
+  it("reports what it compared", () => {
+    const secured = contractedOperations.filter((op) => requiresSession(op.method, op.path));
+    expect(secured.length).toBeGreaterThan(0);
+    console.log(
+      `  api security · ${securitySchemeNames.length} scheme(s) → ` +
+        `${secured.length} of ${contractedOperations.length} operations secured, ` +
+        `${OPS_ROUTES.length} ops route outside the contract`,
+    );
+  });
+
+  it("every operation the contract secures is refused without a credential", () => {
+    // **The two artifacts have to agree about who may knock.** The contract says
+    // a session is required and the router is what enforces it; today it refuses
+    // all eight because no session mechanism exists, and when one lands this
+    // gate is what stops an operation going public by omission.
+    const open = contractedOperations
+      .filter((op) => requiresSession(op.method, op.path))
+      .filter((op) => route(op.method, concrete(op.path), "test").status !== 401);
+
+    expect(open.map((op) => `${op.method} ${op.path} (${op.operationId})`)).toEqual([]);
+  });
+
+  it("the route outside the contract is not secured by it, and answers", () => {
+    // The control. "Everything is 401" would satisfy the test above and would be
+    // a server nobody can reach — and `/health` is the one route that must
+    // answer an unauthenticated caller, because a probe carries no session.
+    for (const ops of OPS_ROUTES) {
+      expect(document_describes(ops.path)).toBe(false);
+      expect(route(ops.method, ops.path, "test").status).toBe(200);
+    }
+  });
+
+  function document_describes(path: string): boolean {
+    return contractedOperations.some((op) => op.path === path);
+  }
 });

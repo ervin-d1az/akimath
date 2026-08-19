@@ -287,3 +287,53 @@ describe("a player's band is one set, declared once", () => {
     expect([...distinct][0]).toBe(JSON.stringify(["under_13", "13_17", "adult"]));
   });
 });
+
+describe("a session travels in the Authorization header", () => {
+  const components = (committed as { components: Record<string, unknown> }).components;
+  const schemes = (components["securitySchemes"] ?? {}) as Record<
+    string,
+    { type?: string; scheme?: string; bearerFormat?: string }
+  >;
+
+  it("declares exactly one way to authenticate", () => {
+    // One scheme, so there is no question of which a client should send and no
+    // second one to leave half-implemented on the server.
+    expect(Object.keys(schemes)).toEqual(["session"]);
+  });
+
+  it("and it is a bearer JWT, because that is what Neon Auth issues", () => {
+    // ADR 0002 chose Neon Auth. Its access token is a JWT signed with EdDSA and
+    // verified against a JWKS endpoint, and its documented transport is
+    // `Authorization: Bearer <jwt>` — recorded here so the client and the
+    // verifier are reading the same sentence.
+    expect(schemes["session"]).toEqual({
+      type: "http",
+      scheme: "bearer",
+      bearerFormat: "JWT",
+      description: expect.stringContaining("Neon Auth"),
+    });
+  });
+
+  it("requires it of everything, by saying so once", () => {
+    // **Secure by default.** A document that repeats the requirement per
+    // operation is a document where the next operation is unauthenticated
+    // because somebody forgot a line. Declared at the root, an omission cannot
+    // happen silently — only an explicit `security: []` can undo it.
+    expect((committed as { security?: unknown }).security).toEqual([{ session: [] }]);
+  });
+
+  it("and nothing opts out", () => {
+    // `/health` is not in this document at all — it is an ops route, excused by
+    // name in `OPS_ROUTES`. So there is no operation here that should be
+    // reachable without a session, and an override appearing is the thing to
+    // catch.
+    const overrides = NODES.filter(
+      ({ path, node }) =>
+        path.startsWith("paths.") &&
+        typeof node === "object" &&
+        node !== null &&
+        "security" in node,
+    ).map(({ path }) => path);
+    expect(overrides).toEqual([]);
+  });
+});
