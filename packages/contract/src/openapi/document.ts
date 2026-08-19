@@ -42,6 +42,36 @@ const errors = {
   "405": { description: "That method is not routed here.", ...(json(ref("Error")) as object) },
 };
 
+/**
+ * How a caller proves it has a session.
+ *
+ * **A bearer JWT, because that is what the provider issues.** ADR 0002 chose
+ * Neon Auth; its access token is a JWT signed with EdDSA, verified against the
+ * project's JWKS endpoint, and its documented transport is
+ * `Authorization: Bearer <jwt>`. Naming the format here rather than leaving the
+ * scheme bare is the difference between a client that knows what to send and
+ * one that guesses.
+ *
+ * **Not a cookie**, which is Better Auth's own default. A cookie is a browser
+ * mechanism: it needs an origin, it rides along on requests nobody wrote, and
+ * the client here is a Flutter app with no browser under it. A header is what a
+ * mobile client can actually attach and revoke.
+ *
+ * One scheme and no second: a document offering two leaves the client asking
+ * which and the server implementing whichever it was tested against.
+ */
+const SECURITY_SCHEMES = {
+  session: {
+    type: "http",
+    scheme: "bearer",
+    bearerFormat: "JWT",
+    description:
+      "A Neon Auth access token. Short-lived — the provider issues 15-minute " +
+      "tokens — and verified against the project's JWKS endpoint rather than " +
+      "by asking the provider about each request.",
+  },
+};
+
 export function buildOpenApiDocument(): unknown {
   const schemas: Record<string, unknown> = {};
   for (const [name, schema] of Object.entries(API_SCHEMAS)) {
@@ -179,6 +209,13 @@ export function buildOpenApiDocument(): unknown {
         },
       },
     },
-    components: { schemas },
+    // **At the root, not per operation.** Every operation in this document is
+    // client-facing and every one of them declares `401 — No valid session`, so
+    // repeating the requirement eight times buys nothing and costs the ninth,
+    // where somebody forgets the line and ships an open endpoint. `/health` is
+    // not here to be excused: it is an ops route, named in `OPS_ROUTES` and
+    // deliberately outside the contract.
+    security: [{ session: [] }],
+    components: { schemas, securitySchemes: SECURITY_SCHEMES },
   };
 }

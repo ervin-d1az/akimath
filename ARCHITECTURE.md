@@ -276,6 +276,17 @@ invariant true by construction rather than by discipline.
   device's declaration and never read off the account: linking is an adult's act, but
   the player being linked need not be an adult, and taking `adult` from the credential
   would route a child out of the protections `age_band` exists to select.
+
+  **The session travels as `Authorization: Bearer <jwt>`**, and the contract says so —
+  `securitySchemes.session`, declared once at the document root so an operation cannot
+  be left open by omission. It is Neon Auth's access token: a JWT signed with **EdDSA
+  (Ed25519)**, expiring in **15 minutes**, whose issuer is the origin of the Neon Auth
+  URL and whose `sub` is the user id. **We verify it against the project's JWKS
+  endpoint** (`/.well-known/jwks.json`) rather than asking the provider about each
+  request — one network round trip per key rotation instead of one per request, and no
+  coupling to `neon_auth`'s internal tables, which the managed service owns and migrates.
+  Not a cookie, which is Better Auth's own default and a browser mechanism: the client
+  is a Flutter app with no browser under it.
 - **`attempts`, restated for `CLAUDE.md`:**
 
   > `attempts` never accepts UPDATE. It accepts DELETE **only** through the

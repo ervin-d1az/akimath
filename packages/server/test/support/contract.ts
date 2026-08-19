@@ -48,16 +48,23 @@ interface JsonSchema {
 interface Operation {
   readonly operationId: string;
   readonly responses: Record<string, unknown>;
+  readonly security?: readonly Record<string, readonly string[]>[];
   readonly requestBody?: {
     readonly content?: Record<string, { readonly schema?: JsonSchema }>;
   };
 }
 
+type SecurityRequirement = Record<string, readonly string[]>;
+
 const document = JSON.parse(
   readFileSync(findContract(process.cwd()), "utf8"),
 ) as {
   paths: Record<string, Record<string, Operation>>;
-  components: { schemas: Record<string, JsonSchema> };
+  components: {
+    schemas: Record<string, JsonSchema>;
+    securitySchemes?: Record<string, unknown>;
+  };
+  security?: readonly SecurityRequirement[];
 };
 
 /** Every operation the committed contract describes, method upper-cased. */
@@ -132,4 +139,25 @@ export function validatesAsError(body: unknown): boolean {
     return true;
   }
   return Object.keys(record).every((key) => key in errorSchema.properties);
+}
+
+/** Every authentication scheme the committed contract declares, by name. */
+export const securitySchemeNames: readonly string[] = Object.keys(
+  document.components.securitySchemes ?? {},
+).sort();
+
+/**
+ * Whether the contract requires a credential of an operation.
+ *
+ * **The root requirement applies unless the operation overrides it**, which is
+ * OpenAPI's own rule and the reason the document declares security once rather
+ * than eight times. An empty array is the override that means "no credential",
+ * so `length > 0` is the question, not "is it defined".
+ */
+export function requiresSession(method: string, path: string): boolean {
+  const operation = document.paths[path]?.[method.toLowerCase()];
+  if (!operation) {
+    throw new Error(`the contract describes no ${method} ${path}`);
+  }
+  return (operation.security ?? document.security ?? []).length > 0;
 }

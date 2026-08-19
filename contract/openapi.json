@@ -449,6 +449,14 @@
         ],
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "session": {
+        "bearerFormat": "JWT",
+        "description": "A Neon Auth access token. Short-lived — the provider issues 15-minute tokens — and verified against the project's JWKS endpoint rather than by asking the provider about each request.",
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
@@ -955,6 +963,11 @@
       }
     }
   },
+  "security": [
+    {
+      "session": []
+    }
+  ],
   "servers": [
     {
       "url": "/v1"
