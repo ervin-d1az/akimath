@@ -71,3 +71,9 @@ now asked about separately, with its absence treated as a broken gate rather tha
 That is PROC-10 in its original form — a gate that cannot tell "nothing is wrong" from "nothing
 was checked" is not a gate — and the repository's own comments warn about it in three other
 places.
+
+A gate nobody has seen run also has no measured false-positive rate. `contract/` holds three
+schemas, thirty-seven fixtures and `canon.golden.json` besides `openapi.json`, and the `changes`
+filter starts this job for any of them — so the common case from now on is a pull request whose
+`openapi.json` is **identical** to the base. Simulated that too, with the document restored to the
+base bytes: *"No changes detected"*, exit 0. Everyone else's pull requests still pass.
