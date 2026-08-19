@@ -2,6 +2,7 @@ import { serve, type ServerType } from "@hono/node-server";
 import { Hono } from "hono";
 
 import { route } from "../routing.js";
+import type { Logger } from "./logger.js";
 import type { SessionVerifier } from "./session-verifier.js";
 
 /**
@@ -26,14 +27,22 @@ import type { SessionVerifier } from "./session-verifier.js";
  * `request.method ?? "GET"` were papering over a `node:http` type, and a
  * request with no method silently became a `GET` of `/health`.
  *
- * **The verifier is injected**, so this file holds no key set and no URL. The
- * one thing it does with a credential is resolve it before routing: `route()`
- * is synchronous and pure, and verification is neither.
+ * **The verifier and the logger are injected**, so this file holds no key set,
+ * no URL and no stream. The one thing it does with a credential is resolve it
+ * before routing: `route()` is synchronous and pure, and verification is
+ * neither.
  */
-export function createApp(version: string, verify: SessionVerifier): Hono {
+export interface AppOptions {
+  readonly version: string;
+  readonly verify: SessionVerifier;
+  readonly log: Logger;
+}
+
+export function createApp({ version, verify, log }: AppOptions): Hono {
   const app = new Hono();
 
   app.all("*", async (context) => {
+    const startedAt = Date.now();
     const path = new URL(context.req.url).pathname;
     // **Resolved for every request, including the ones that will 404.** The
     // alternative is to route first and verify only when the path matched,
@@ -43,6 +52,19 @@ export function createApp(version: string, verify: SessionVerifier): Hono {
     // the cost of not having it, since a verified key set is cached in memory.
     const caller = await verify(context.req.header("Authorization"));
     const result = route(context.req.method, path, version, caller);
+
+    // **One line per request, and `caller` is the kind rather than the who.**
+    // A user id in every access line is a per-request record of who was awake;
+    // the kind is what makes a 401 spike diagnosable, and it is all that does.
+    // The token cannot appear here even by accident — `log.ts` redacts values,
+    // not only field names.
+    log.info("request", {
+      method: context.req.method,
+      path,
+      status: result.status,
+      caller: caller.kind,
+      ms: Date.now() - startedAt,
+    });
 
     return context.json(
       result.body as Record<string, unknown>,
@@ -56,10 +78,6 @@ export function createApp(version: string, verify: SessionVerifier): Hono {
 /** Every status `route()` can return. Hono types its own set; this is ours. */
 type ContentfulStatus = 200 | 401 | 404 | 405 | 501;
 
-export function startHttpServer(
-  version: string,
-  port: number,
-  verify: SessionVerifier,
-): ServerType {
-  return serve({ fetch: createApp(version, verify).fetch, port });
+export function startHttpServer(options: AppOptions & { readonly port: number }): ServerType {
+  return serve({ fetch: createApp(options).fetch, port: options.port });
 }

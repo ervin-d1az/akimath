@@ -104,7 +104,7 @@ OpenAPI half arrives with `f1-contract-emitter`.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only), the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **124 tests, green, 98.32% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **154 tests, green, 98.58% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -119,8 +119,21 @@ OpenAPI half arrives with `f1-contract-emitter`.
   No endpoint is implemented: an authenticated request answers **501**, declared per operation in
   the contract, and the declaration list is held to the router in both directions so it prunes
   itself as endpoints land.
+  **There is one way to write a log line.** `src/log.ts` (PURE) turns an event into one JSON
+  object — `at`, `level`, `msg`, fields at the top level — and `src/adapters/logger.ts` is the
+  **only** file under `src/` allowed to touch a stream, which `test/one-way-to-log.test.ts`
+  enforces by scanning for `console.*` and `process.stdout` and reporting a count. **The logger
+  cannot print a credential**: redaction runs over *values* as well as field names, at any depth
+  and inside `msg` itself, so a JWT, a `Bearer …` header or the password in a connection string is
+  replaced wherever it appears — the host and database survive, because that is usually why the
+  line was written. Every request leaves one line carrying the **kind** of caller and never the
+  caller. `pino` was audited and turned down: 14 transitive packages against this package's floor
+  of zero, and path-based redaction that protects the fields you thought of.
+  `packages/core`'s three build scripts keep `console.log` on purpose — their output is a developer
+  watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
+  `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 27 of the 124 report as skipped rather than passing quietly.
+  run; leave it unset and 27 of the 154 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the

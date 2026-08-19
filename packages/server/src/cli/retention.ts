@@ -1,6 +1,9 @@
 import pg from "pg";
 
+import { createProcessLogger } from "../adapters/logger.js";
 import { runRetention } from "../adapters/retention-job.js";
+
+const log = createProcessLogger(process.env);
 
 /**
  * Deletes what has expired and reports the counts.
@@ -12,7 +15,7 @@ import { runRetention } from "../adapters/retention-job.js";
 const url = process.env.RETENTION_DATABASE_URL;
 
 if (url === undefined) {
-  console.error("no RETENTION_DATABASE_URL — refusing to guess a database");
+  log.error("refusing to guess a database", { wanted: ["RETENTION_DATABASE_URL"] });
   process.exit(1);
 }
 
@@ -22,9 +25,10 @@ await client.connect();
 try {
   // The clock is read here, at the edge, and handed to a module that has none.
   const run = await runRetention(client, new Date());
-  console.log(
-    `retention: deleted ${run.attempts} attempts, ${run.diagEvents} diagnosis events`,
-  );
+  log.info("retention run complete", {
+    attemptsDeleted: run.attempts,
+    diagEventsDeleted: run.diagEvents,
+  });
 } finally {
   await client.end();
 }
