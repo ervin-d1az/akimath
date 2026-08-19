@@ -1,5 +1,8 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../design/brand/brand_drawing_painter.dart';
+import '../../../design/brand/spec/brand_shapes.dart';
+import '../../../design/icons/spec/nav_glyph_spec.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/nav_tab_visual.dart';
@@ -22,11 +25,17 @@ import '../policy/visible_tabs.dart';
 /// green chip and its label is heavier, so it survives deuteranopia. Every
 /// destination is at least `BrandShape.minTouchTarget` tall.
 ///
-/// **Labels, not icons, and that is deliberate.** The design draws four
-/// stroked glyphs; `BrandIcon` renders stand-in characters until the
-/// transcribed artwork lands, and the two nearest "home" and "settings" are a
-/// tick — which means *correct* everywhere else in this app — and a gear the
-/// system paints as a colour emoji. A wrong mark reads worse than a word.
+/// **An icon over a label, and the icon is ours.** This bar carried labels
+/// alone for a reason worth restating: `BrandIcon` renders stand-in characters
+/// until the transcribed artwork lands, and the two nearest marks were a tick —
+/// which means *correct* everywhere else in this app — and a gear the system
+/// paints as a colour emoji. A wrong mark does read worse than a word.
+///
+/// So the two marks are drawn rather than borrowed, in
+/// `design/icons/spec/nav_glyph_spec.dart`, which says plainly that it is a
+/// fork of a design nobody has transcribed and is counted by a test. **The
+/// label stays under the icon**: a mark this app invented is not one anyone has
+/// learned yet, and an unlabelled bottom bar assumes they have.
 class NavBar extends StatelessWidget {
   const NavBar({
     super.key,
@@ -105,7 +114,7 @@ class _Tab extends StatelessWidget {
         height: BrandShape.minTouchTarget,
         child: Center(
           child: visual.chip == null
-              ? _label(visual)
+              ? _content(visual)
               : CandySurface(
                   background: visual.chip!,
                   // 18 in the design, which is `radiusPill` here.
@@ -118,19 +127,69 @@ class _Tab extends StatelessWidget {
                   ),
                   height: _chipHeight,
                   alignment: Alignment.center,
-                  child: _label(visual),
+                  child: _content(visual),
                 ),
         ),
       ),
     );
   }
 
+  /// The mark over the word.
+  ///
+  /// `mainAxisSize.min` and no spacer: the chip is a fixed 52 tall and the two
+  /// children have to fit inside it at any text scale the app supports, which
+  /// `screen_overflow_test` checks at 1.3.
+  Widget _content(NavTabVisual visual) => Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          SizedBox(
+            width: _markSize,
+            height: _markSize,
+            child: CustomPaint(
+              painter: BrandDrawingPainter(_markFor(tab, visual.mark)),
+            ),
+          ),
+          const SizedBox(height: 2),
+          _label(visual),
+        ],
+      );
+
   Widget _label(NavTabVisual visual) => Text(
         NavBar.labelOf(tab),
         maxLines: 1,
-        style: BrandText.eyebrow(color: visual.mark, size: 11)
+        style: BrandText.eyebrow(color: visual.mark, size: 10)
             .copyWith(fontWeight: visual.weight),
       );
+
+  /// The drawn mark, tinted to whatever the tab's state says.
+  ///
+  /// `skills` and `progress` have no root yet, so they cannot be reached and
+  /// have no mark; they fall back to the house rather than to nothing, because
+  /// a bar that renders an empty box is worse than one that repeats itself —
+  /// and `rootsPresentToday` means neither is ever built.
+  static BrandDrawing _markFor(AppTab tab, Color ink) {
+    final BrandDrawing drawing = switch (tab) {
+      AppTab.profile => NavGlyphSpec.settings,
+      AppTab.home || AppTab.skills || AppTab.progress => NavGlyphSpec.home,
+    };
+    return BrandDrawing(
+      viewBox: drawing.viewBox,
+      marks: drawing.marks.map((BrandMark mark) => _tinted(mark, ink)).toList(),
+    );
+  }
+
+  /// Both nav marks are stroke-only, which is what makes them tintable — see
+  /// `NavGlyphSpec`. Anything else passes through unchanged rather than being
+  /// silently recoloured wrong.
+  static BrandMark _tinted(BrandMark mark, Color ink) => switch (mark) {
+    InkStroke(:final Offset start, :final List<PathStep> steps, :final double width) =>
+      InkStroke(start: start, steps: steps, width: width, color: ink),
+    _ => mark,
+  };
+
+  /// 20, so the mark and a 10 pt label together clear the 52 chip.
+  static const double _markSize = 20;
 
   /// `64×52` in the design. The chip is what the selected tab sits on and the
   /// footprint every tab reserves, so the labels do not shift when one is

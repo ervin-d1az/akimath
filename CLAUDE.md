@@ -210,6 +210,9 @@ flutter test
 #     xcrun simctl uninstall booted com.akimath.akimathApp
 #     xcrun simctl install   booted build/ios/iphonesimulator/Runner.app
 #     xcrun simctl launch    booted com.akimath.akimathApp
+#   The uninstall takes `shared_preferences` with it, so every run of this
+#   starts at `0.2 Bienvenida` again — the bottom bar lives on the home, which
+#   is two taps past the first run.
 
 # TypeScript — from packages/server/
 npm run verify        # tsc --noEmit && vitest run
