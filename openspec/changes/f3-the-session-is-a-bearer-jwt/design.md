@@ -52,3 +52,22 @@ Checked against the pinned `oasdiff 1.29.1` rather than guessed: `api-global-sec
 by this — but that client would have been refused by the server anyway, which has answered 401 to
 all eight operations since the router landed. The document is catching up to the server, not
 moving ahead of it.
+
+## D5 — The two surviving mutants were measured, not assumed
+
+Stryker leaves `document.ts` at 98.29 with two survivors, and the first draft of this document
+called them "pre-existing" on the strength of where they sit — a `{ target: "draft-7" }` argument
+this change does not touch. That was an inference from a line number, in a repository that gates
+on the difference.
+
+So it was measured. `origin/main` checked out into a scratch worktree, its own `npm ci`, Stryker
+over the same file:
+
+| | `document.ts` | mutants | survived | package |
+|---|---|---|---|---|
+| `main` | 98.11 | 104 | 2 | 90.81 |
+| here | 98.29 | 115 | 2 | 91.04 |
+
+Same two, and the eleven mutants this change adds are all killed. The survivors stay unaddressed
+on purpose: they mutate a string the committed artifact pins byte-for-byte, so the emit gate kills
+them where a unit test would only restate the literal.
