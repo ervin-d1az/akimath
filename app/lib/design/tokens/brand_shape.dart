@@ -19,6 +19,17 @@ abstract final class BrandShape {
   /// the player can press.
   static const double borderWidthField = 2;
 
+  /// A puzzle board's grid line — the thinnest stroke the app draws.
+  ///
+  /// `reactivos-puzzles.md`: *Celdas / 1.5 px tinta 18%*.
+  static const double borderWidthHairline = 1.5;
+
+  /// A cage's outline. Between the hairline and the board's own 3 px, because
+  /// inside the board the hierarchy is colour and stroke rather than weight.
+  ///
+  /// `reactivos-puzzles.md`: *Jaula / 2.5 px punteado rosa*.
+  static const double borderWidthCage = 2.5;
+
   /// Radii, named by the surface that carries them rather than by size, so a
   /// screen asks for a slot and not for a number. Two names may share a value
   /// — that is two roles, not a duplication.

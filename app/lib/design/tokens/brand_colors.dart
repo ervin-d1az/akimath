@@ -54,6 +54,15 @@ abstract final class BrandColors {
   /// Secondary text and descriptors.
   static const Color muted = Color(0xFF8A7FA8);
 
+  /// The grid inside a puzzle board: ink at 18 %.
+  ///
+  /// **`reactivos-puzzles.md` reserves the thick outline for the object.** Its
+  /// own words: *"El contorno grueso se reserva para el objeto (el tablero).
+  /// Dentro, la jerarquía deja de ser grosor y pasa a ser peso, color y
+  /// trazo."* So a board's frame is 3 px ink, and everything inside it steps
+  /// down — cells to a 1.5 px hairline at this opacity, cages to dashed pink.
+  static const Color gridHairline = Color(0x2E1C1A2E);
+
   /// A hairline divider inside a card. Ink at 16%, never a separate grey.
   static const Color rule = Color(0x291C1A2E);
 
