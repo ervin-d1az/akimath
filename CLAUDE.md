@@ -32,6 +32,7 @@ es-MX.
 
 ```
 app/                      the Flutter client — the only Dart package
+  lib/api/                 the hand-written API client (ADR 0001). `dart:io`, no dependency
   lib/design/brand/spec/   pure geometry: no Canvas, no widgets, testable without mocks
   lib/design/brand/        the adapter that paints that spec
   lib/design/tokens/       colors, type, shape. No color literal lives outside tokens/
@@ -46,9 +47,8 @@ contract/                 the frozen artifacts: 3 schemas, 37 fixtures, canon.go
 docs/adr/                 ADR 0001 decides the Dart API client; older decisions live in ARCHITECTURE.md
 ```
 
-Planned, **not yet on disk** (README's layout block describes the destination, not the
-present): `app/lib/api/`. `packages/contract` now exists and holds the offline pack format; its
-OpenAPI half arrives with `f1-contract-emitter`.
+`app/lib/api/` now exists and holds one operation. `packages/contract` holds the offline pack
+format and its OpenAPI half.
 
 ## What exists today
 
@@ -72,7 +72,9 @@ OpenAPI half arrives with `f1-contract-emitter`.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1046 Flutter tests, green.**
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1205 Flutter tests, green — the last 30 of them `app/lib/api/`, which is
+  checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
+  server's half is.**
   **All six frozen stimulus families draw and grade** — arithmetic, number series, matrix,
   analogy, the function machine and figurate. `content/model/stimulus_reader.dart` holds the six
   hand-written parsers and `test/content/model/stimulus_fixture_test.dart` checks each against
