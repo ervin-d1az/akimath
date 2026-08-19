@@ -33,6 +33,43 @@ const ALLOWED_RUNTIME_DEPENDENCIES: ReadonlySet<string> = new Set([
   // · Pinned **exactly**, not with a caret, matching `zod@4.4.3` in
   //   `packages/contract`.
   "pg",
+
+  // Added 2026-08-19 by `f3-hono-adapter`. The HTTP framework, named by
+  // `ARCHITECTURE.md` §5 ("Hono confirmed, 4.13.x"). It replaces a `node:http`
+  // handler that would otherwise have to grow a JSON body parser and a
+  // middleware chain by hand — and the first middleware is the session check,
+  // which `CLAUDE.md` forbids hand-writing.
+  //
+  // **DEP-1 audit, performed before the addition:**
+  // · **It declares no dependencies at all.** `npm view hono@4.13.3
+  //   dependencies` prints nothing, and the installed tree adds exactly this
+  //   package. That is the rarest thing on this list and the main reason it is
+  //   on it.
+  // · No postinstall and no install script. Re-checked on every run below.
+  // · No hardcoded host anywhere in `dist/index.js` — grepped for `https://`
+  //   and found none, so there is no telemetry endpoint to disable.
+  // · `npm audit --omit=dev` reports **0 vulnerabilities** in the runtime tree.
+  //   (The two moderate advisories `npm audit` shows are
+  //   `@stryker-mutator/core` → `typed-rest-client`, which is a dev
+  //   dependency and does not ship.)
+  // · **It never ships to a device**, the same as `pg` — and written down for
+  //   the same reason: "the rule is about the client" is how the first
+  //   unaudited dependency gets in.
+  // · Pinned exactly.
+  "hono",
+
+  // Added 2026-08-19 by the same change. The Node adapter for the above: Hono
+  // speaks web-standard `Request`/`Response`, and this is what listens on a
+  // socket and translates.
+  //
+  // **DEP-1 audit:**
+  // · **Also declares no dependencies**, only a peer on `hono@^4` — which is
+  //   the entry above, already audited, rather than a tree of its own.
+  // · No postinstall, no install script, no hardcoded host.
+  // · Together the two add **two packages** to the runtime tree and nothing
+  //   transitive. That was the condition for adopting a framework at all.
+  // · Pinned exactly.
+  "@hono/node-server",
 ]);
 
 interface Manifest {
