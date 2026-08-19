@@ -3,6 +3,7 @@ import 'package:akimath_app/content/model/pack.dart';
 import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/content/model/puzzle_reader.dart';
 import 'package:akimath_app/features/home/policy/puzzle_of_day.dart';
 import 'package:akimath_app/features/round/policy/series_plan.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -133,6 +134,37 @@ void main() {
       // ignore: avoid_print
       print('  puzzle rotation · ${carried.length} boards across $formats '
           'formats → all offered within a fortnight');
+    });
+
+    test('no board asks for a digit the pad cannot enter', () {
+      // **The contract permits sizes this client cannot play.** A 4×4 magic
+      // square draws from 1 to 16 and the keypad has nine keys, so
+      // `readPuzzle` refuses one — which is how a batch of generated 4×4s was
+      // caught before it shipped. The reader failing at load is the real gate;
+      // this one names the rule so the next person meets a sentence rather
+      // than a `FormatException`.
+      for (final Puzzle puzzle in pack.puzzles) {
+        if (puzzle case final BoardPuzzle board) {
+          expect(
+            board.board.highestValue,
+            lessThanOrEqualTo(padHighestDigit),
+            reason: '${puzzleKindOf(puzzle)} ${board.board.size}×'
+                '${board.board.size} needs ${board.board.highestValue}',
+          );
+        }
+      }
+    });
+
+    test('every format offers a week before it repeats', () {
+      // The rotation is one board per kind per day, so however many boards a
+      // kind carries is how many days it takes to come round again.
+      final Map<String, int> perKind = <String, int>{};
+      for (final Puzzle puzzle in pack.puzzles) {
+        perKind.update(puzzleKindOf(puzzle), (int n) => n + 1, ifAbsent: () => 1);
+      }
+
+      expect(perKind.values, everyElement(greaterThanOrEqualTo(7)),
+          reason: 'boards per kind: $perKind');
     });
 
     test('each day offers one board per format, never two of a kind', () {
