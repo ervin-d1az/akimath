@@ -2,7 +2,10 @@ import 'package:flutter/widgets.dart';
 
 import '../../../content/model/puzzle.dart';
 import '../../../design/puzzle/spec/board_geometry.dart';
+import '../../../design/painting/cage_edge_painter.dart';
+import '../../../design/painting/spec/dash_spec.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/puzzle_cell_visual.dart';
 import '../policy/puzzle_entry.dart';
 
@@ -100,14 +103,40 @@ class PuzzleBoardView extends StatelessWidget {
     );
   }
 
+  /// The board, framed.
+  ///
+  /// **The thick ink outline is the board's and nothing else's.**
+  /// `reactivos-puzzles.md`: *"El contorno grueso se reserva para el objeto (el
+  /// tablero). Dentro, la jerarquía deja de ser grosor y pasa a ser peso, color
+  /// y trazo."* Inside are a 1.5 px hairline and a dashed pink cage; the frame
+  /// is what those two step down *from*, and without it the grid floated with
+  /// no object boundary at all.
   Widget _grid() {
+    return AspectRatio(
+      aspectRatio: 1,
+      child: CandySurface(
+        borderRadius: BrandShape.radiusCardMedium,
+        // **Inset, because a square grid does not fit a rounded rectangle.**
+        // Flush to the frame, each corner arc cut across the outermost cells:
+        // a curved ink line crossing straight pink dashes, and a cage that
+        // appeared to run off the board. A 26 px radius intrudes about
+        // `26 × (1 − 1/√2)` ≈ 8 px on the diagonal, so `space2` is the smallest
+        // inset that clears it — and the gap it leaves is what makes the frame
+        // read as the object holding the grid rather than as its outermost
+        // line.
+        padding: const EdgeInsets.all(BrandShape.space2),
+        clip: true,
+        child: _cells(),
+      ),
+    );
+  }
+
+  Widget _cells() {
     // Square, and sized by the narrower axis of whatever it is given — the same
     // rule `cellRect` follows, so the two cannot disagree about how big a cell
     // is.
-    return AspectRatio(
-      aspectRatio: 1,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
           final double side = constraints.biggest.shortestSide;
           final Rect box = Rect.fromLTWH(0, 0, side, side);
           final Map<Cell, Cage> cageOf = <Cell, Cage>{
@@ -126,8 +155,7 @@ class PuzzleBoardView extends StatelessWidget {
               ],
             ),
           );
-        },
-      ),
+      },
     );
   }
 
@@ -254,22 +282,27 @@ class _Cell extends StatelessWidget {
           color: visual.background,
           // The thin grid, drawn on every cell. The cage's heavier border goes
           // over it below.
+          // **A hairline, not a box.** `reactivos-puzzles.md` puts the cells
+          // at 1.5 px ink-18% and reserves weight for the board itself; at
+          // `muted` and 2 px the grid competed with everything drawn on it.
           border: Border.all(
-            color: BrandColors.muted,
-            width: BrandShape.borderWidthField,
+            color: BrandColors.gridHairline,
+            width: BrandShape.borderWidthHairline,
           ),
         ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: outline == null
-                ? null
-                : Border(
-                    top: _side(outline.top),
-                    right: _side(outline.right),
-                    bottom: _side(outline.bottom),
-                    left: _side(outline.left),
-                  ),
-          ),
+        child: CustomPaint(
+          // **Dashed pink, not solid ink.** The thick ink outline is the
+          // board's, and a cage drawn in it read as a second object stacked on
+          // the first — on a board where most cells touch a boundary, that is
+          // most of the grid in the heaviest stroke the app has.
+          foregroundPainter: outline == null
+              ? null
+              : CageEdgePainter(
+                  edges: outline,
+                  dash: DashSpec.kenKenCage,
+                  color: BrandColors.pink,
+                  strokeWidth: BrandShape.borderWidthCage,
+                ),
           child: Stack(
             children: <Widget>[
               if (target != null)
@@ -327,7 +360,4 @@ class _Cell extends StatelessWidget {
     );
   }
 
-  BorderSide _side(bool on) => on
-      ? const BorderSide(color: BrandColors.ink, width: BrandShape.borderWidth)
-      : BorderSide.none;
 }
