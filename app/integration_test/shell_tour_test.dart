@@ -41,8 +41,11 @@ void main() {
     await tester.tap(find.text('Ajustes'));
     await tester.pumpAndSettle();
     expect(find.byType(PreferencesScreen), findsOneWidget);
-    expect(find.text('Acierto'), findsOneWidget);
-    expect(find.text('Se torció'), findsOneWidget);
+    // The legend's own words, which `fix-verdict-copy` changed from `Acierto`
+    // and `Se torció`. This suite kept the old pair for weeks because nothing
+    // ran it — `flutter test` does not reach `integration_test/`.
+    expect(find.text('¡Bien hecho!'), findsOneWidget);
+    expect(find.text('Casi'), findsOneWidget);
 
     await tester.tap(find.text('Inicio'));
     await tester.pumpAndSettle();

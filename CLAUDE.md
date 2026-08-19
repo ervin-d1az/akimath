@@ -197,6 +197,16 @@ server side is still at the scaffold, so the next phase with code behind it is *
 flutter analyze --fatal-infos
 flutter test
 
+# Tier 2, on a booted simulator. **`flutter test` does not reach
+# `integration_test/`**, which is how three of these suites sat broken for
+# weeks against copy that had changed under them. Run them when a screen or a
+# flow moves.
+#   xcrun simctl list devices booted        # take the id
+#   flutter test integration_test -d <id>
+#   # the account tour needs the endpoints, and skips itself without them:
+#   flutter test integration_test -d <id> \
+#     --dart-define=NEON_AUTH_BASE_URL=... --dart-define=AKIMATH_API_BASE_URL=...
+
 # Running it on a simulator against a real backend. **Both steps matter.**
 #   `--dart-define` is baked into `kernel_blob.bin` at build time, and a build
 #   that reuses a cached kernel silently keeps the old values — so the app comes
