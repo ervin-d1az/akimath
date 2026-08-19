@@ -22,6 +22,8 @@
     "schema:dump": "./scripts/dump-schema.sh"
   },
   "dependencies": {
+    "@hono/node-server": "2.1.1",
+    "hono": "4.13.3",
     "pg": "8.23.0"
   },
   "devDependencies": {
