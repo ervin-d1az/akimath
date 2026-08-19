@@ -43,6 +43,24 @@ const errors = {
 };
 
 /**
+ * The answer to an authenticated caller whose operation the server has not
+ * built.
+ *
+ * **Spread per operation, never folded into `errors` above**, because this one
+ * is temporary and the others are not. Every operation carries it today and
+ * each drops it as it lands, so the diff that implements an endpoint is also
+ * the diff that stops advertising it as missing — and `contract-parity.test.ts`
+ * holds this list to exactly the operations the router still answers 501 for,
+ * in both directions, so it cannot go stale in either.
+ */
+const notImplemented = {
+  "501": {
+    description: "Routed and authenticated, but the server has not built it yet.",
+    ...(json(ref("Error")) as object),
+  },
+};
+
+/**
  * How a caller proves it has a session.
  *
  * **A bearer JWT, because that is what the provider issues.** ADR 0002 chose
@@ -101,6 +119,7 @@ export function buildOpenApiDocument(): unknown {
               ...(json(ref("ItemResponse")) as object),
             },
             ...errors,
+            ...notImplemented,
           },
         },
       },
@@ -118,6 +137,7 @@ export function buildOpenApiDocument(): unknown {
               ...(json(ref("VerdictBatch")) as object),
             },
             ...errors,
+            ...notImplemented,
           },
         },
       },
@@ -139,6 +159,7 @@ export function buildOpenApiDocument(): unknown {
               ...(json(ref("OfflinePack")) as object),
             },
             ...errors,
+            ...notImplemented,
           },
         },
       },
@@ -161,6 +182,7 @@ export function buildOpenApiDocument(): unknown {
           responses: {
             "200": { description: "Linked.", ...(json(ref("Me")) as object) },
             ...errors,
+            ...notImplemented,
           },
         },
       },
@@ -171,6 +193,7 @@ export function buildOpenApiDocument(): unknown {
           responses: {
             "200": { description: "The player.", ...(json(ref("Me")) as object) },
             ...errors,
+            ...notImplemented,
           },
         },
         delete: {
@@ -179,6 +202,7 @@ export function buildOpenApiDocument(): unknown {
           responses: {
             "204": { description: "Erased." },
             ...errors,
+            ...notImplemented,
           },
         },
       },
@@ -192,6 +216,7 @@ export function buildOpenApiDocument(): unknown {
               ...(json(ref("Standing")) as object),
             },
             ...errors,
+            ...notImplemented,
           },
         },
       },
@@ -205,6 +230,7 @@ export function buildOpenApiDocument(): unknown {
               ...(json(ref("History")) as object),
             },
             ...errors,
+            ...notImplemented,
           },
         },
       },

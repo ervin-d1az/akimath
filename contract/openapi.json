@@ -529,6 +529,16 @@
               }
             },
             "description": "That method is not routed here."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "Submit a session's attempts and receive their verdicts."
@@ -587,6 +597,16 @@
               }
             },
             "description": "That method is not routed here."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "The next item to show, already rendered."
@@ -638,6 +658,16 @@
               }
             },
             "description": "That method is not routed here."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "Erase the player and everything recorded about them."
@@ -694,6 +724,16 @@
               }
             },
             "description": "That method is not routed here."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "The current player."
@@ -752,6 +792,16 @@
               }
             },
             "description": "That method is not routed here."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "Recent series and puzzles."
@@ -810,6 +860,16 @@
               }
             },
             "description": "That method is not routed here."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "The player's rating per skill."
@@ -879,6 +939,16 @@
               }
             },
             "description": "That method is not routed here."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "An issued offline pack."
@@ -957,6 +1027,16 @@
               }
             },
             "description": "That method is not routed here."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "Attach a locally-minted player to the current account."

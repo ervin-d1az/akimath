@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  type Caller,
   CONTRACTED_OPERATIONS,
   matchesTemplate,
   OPS_ROUTES,
@@ -11,7 +12,11 @@ import { validatesAsError } from "./support/contract.js";
 
 const VERSION = "1.2.3";
 
-const call = (method: string, path: string): Response => route(method, path, VERSION);
+const NOBODY: Caller = { kind: "absent" };
+
+/** The unauthenticated caller, which is what most of this file is about. */
+const call = (method: string, path: string): Response =>
+  route(method, path, VERSION, NOBODY);
 
 describe("health is still health", () => {
   it("reports health for GET /health", () => {
@@ -156,5 +161,69 @@ describe("the ops routes are named, not inferred", () => {
     // The parity gate excuses these by name. A prefix or a predicate would
     // excuse the next one silently.
     expect(OPS_ROUTES).toEqual([{ method: "GET", path: "/health" }]);
+  });
+});
+
+describe("who is asking changes the answer", () => {
+  const LINKED: Caller = { kind: "session", userId: "3f1a2b4c-0000-7000-8000-00000000abcd" };
+
+  it("a probe needs no session, because a probe has none to give", () => {
+    // `/health` is the one route outside the contract, and it is the one route
+    // a load balancer calls. Requiring a credential of it would make the server
+    // look dead to the thing deciding whether it is.
+    expect(route("GET", "/health", VERSION, LINKED).status).toBe(200);
+    expect(route("GET", "/health", VERSION, NOBODY).status).toBe(200);
+  });
+
+  it("no credential earns a different refusal from a broken one", () => {
+    // Same status, different tag. A client that never linked and a client
+    // holding something it wrongly believes is a session are two different
+    // bugs, and one 401 for both makes the second undiagnosable.
+    const absent = route("GET", "/me", VERSION, NOBODY);
+    const refused = route("GET", "/me", VERSION, {
+      kind: "refused",
+      why: "the signature did not verify",
+    });
+
+    expect(absent).toMatchObject({ status: 401, body: { error: "unauthenticated" } });
+    expect(refused).toMatchObject({ status: 401, body: { error: "invalid_session" } });
+  });
+
+  it("a refusal carries the reason it was given, so it can be diagnosed", () => {
+    const refused = route("GET", "/me", VERSION, {
+      kind: "refused",
+      why: "the token expired 40 minutes ago",
+    });
+    expect((refused.body as { message: string }).message).toContain("expired");
+  });
+
+  it("a verified session gets 501, because the operation is not built yet", () => {
+    // **The honest status.** 401 was true while no session could exist and
+    // stops being true the moment one can: refusing a caller who *did*
+    // authenticate, for a reason that says they did not, is a lie the client
+    // would retry forever. 404 is worse — the path is real and the contract
+    // names it.
+    for (const operation of CONTRACTED_OPERATIONS) {
+      const path = operation.path.replace(/\{[^}]+\}/g, "any-id");
+      expect(route(operation.method, path, VERSION, LINKED)).toMatchObject({
+        status: 501,
+        body: {
+          error: "not_implemented",
+          message: expect.stringContaining("has not built it yet"),
+        },
+      });
+    }
+  });
+
+  it("a wrong method is a wrong method whoever is asking", () => {
+    // The method check happens before the credential one: a client retrying
+    // with a session it went and fetched would still be wrong, and telling it
+    // to authenticate first would be a wild goose chase.
+    expect(route("PATCH", "/me", VERSION, NOBODY).status).toBe(405);
+    expect(route("PATCH", "/me", VERSION, LINKED).status).toBe(405);
+  });
+
+  it("and a path that does not exist does not exist either", () => {
+    expect(route("GET", "/nope", VERSION, LINKED).status).toBe(404);
   });
 });

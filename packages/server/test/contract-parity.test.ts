@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { CONTRACTED_OPERATIONS, OPS_ROUTES, route } from "../src/routing.js";
+import {
+  type Caller,
+  CONTRACTED_OPERATIONS,
+  OPS_ROUTES,
+  route,
+} from "../src/routing.js";
 import {
   contractedOperations,
   requiresSession,
@@ -16,6 +21,20 @@ import {
  * none of the eight it does.
  */
 const key = (r: { method: string; path: string }): string => `${r.method} ${r.path}`;
+
+/** A template cannot be requested; any non-empty segment matches. */
+const concrete = (path: string): string => path.replace(/\{[^}]+\}/g, "any-id");
+
+const NOBODY: Caller = { kind: "absent" };
+const LINKED: Caller = { kind: "session", userId: "3f1a2b4c-0000-7000-8000-00000000abcd" };
+
+/** Every status `route()` can produce for an operation, over every caller. */
+const statusesFor = (op: { method: string; path: string }): ReadonlySet<number> =>
+  new Set(
+    [NOBODY, { kind: "refused", why: "x" } as Caller, LINKED].map(
+      (caller) => route(op.method, concrete(op.path), "1.0.0", caller).status,
+    ),
+  );
 
 describe("the route table matches the contract", () => {
   it("reports what it compared", () => {
@@ -76,14 +95,10 @@ describe("the status the router returns is one the contract declares", () => {
     const declared = new Set(contractedOperations.flatMap((op) => op.statuses));
     const emitted = new Set(
       [
-        ...contractedOperations.map((op) =>
-          route(op.method, op.path.replace("{packId}", "abc"), "1.0.0"),
-        ),
-        route("GET", "/nonsense", "1.0.0"),
-        route("PUT", "/me", "1.0.0"),
-      ]
-        .map((r) => r.status)
-        .filter((status) => status >= 400),
+        ...contractedOperations.flatMap((op) => [...statusesFor(op)]),
+        route("GET", "/nonsense", "1.0.0", NOBODY).status,
+        route("PUT", "/me", "1.0.0", NOBODY).status,
+      ].filter((status) => status >= 400),
     );
 
     expect(emitted.size).toBeGreaterThan(0);
@@ -94,10 +109,6 @@ describe("the status the router returns is one the contract declares", () => {
 });
 
 describe("what the contract secures is what the router refuses", () => {
-  // A template cannot be requested. Any non-empty segment matches, so the value
-  // is arbitrary and named to say so.
-  const concrete = (path: string): string => path.replace(/\{[^}]+\}/g, "any-id");
-
   it("reports what it compared", () => {
     const secured = contractedOperations.filter((op) => requiresSession(op.method, op.path));
     expect(secured.length).toBeGreaterThan(0);
@@ -115,7 +126,7 @@ describe("what the contract secures is what the router refuses", () => {
     // gate is what stops an operation going public by omission.
     const open = contractedOperations
       .filter((op) => requiresSession(op.method, op.path))
-      .filter((op) => route(op.method, concrete(op.path), "test").status !== 401);
+      .filter((op) => route(op.method, concrete(op.path), "test", NOBODY).status !== 401);
 
     expect(open.map((op) => `${op.method} ${op.path} (${op.operationId})`)).toEqual([]);
   });
@@ -126,11 +137,44 @@ describe("what the contract secures is what the router refuses", () => {
     // answer an unauthenticated caller, because a probe carries no session.
     for (const ops of OPS_ROUTES) {
       expect(document_describes(ops.path)).toBe(false);
-      expect(route(ops.method, ops.path, "test").status).toBe(200);
+      expect(route(ops.method, ops.path, "test", NOBODY).status).toBe(200);
+      expect(route(ops.method, ops.path, "test", LINKED).status).toBe(200);
     }
   });
 
   function document_describes(path: string): boolean {
     return contractedOperations.some((op) => op.path === path);
   }
+});
+
+describe("what the router answers is what the operation declares", () => {
+  it("every status an operation can answer is declared on that operation", () => {
+    // **Per operation, not merely somewhere in the document.** The older gate
+    // above pools every declared status and asks whether the router's are among
+    // them, which a document declaring 501 on one operation would satisfy for
+    // all eight. This asks each operation the question separately.
+    const undeclared = contractedOperations.flatMap((op) =>
+      [...statusesFor(op)]
+        .filter((status) => !op.statuses.includes(String(status)))
+        .map((status) => `${key(op)} answers ${status} and does not declare it`),
+    );
+    expect(undeclared).toEqual([]);
+  });
+
+  it("and 501 is declared by exactly the operations that still answer it", () => {
+    // **The other direction, so the list prunes itself.** 501 means "not built
+    // yet"; an operation that has been built and still advertises it is telling
+    // clients to expect a status it can no longer return. Neither half can be
+    // satisfied by doing nothing.
+    const answers = contractedOperations.filter((op) => statusesFor(op).has(501)).map(key);
+    const declares = contractedOperations
+      .filter((op) => op.statuses.includes("501"))
+      .map(key);
+
+    expect(declares.sort()).toEqual(answers.sort());
+    console.log(
+      `  api readiness · ${contractedOperations.length} operations → ` +
+        `${answers.length} still answer 501`,
+    );
+  });
 });
