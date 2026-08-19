@@ -96,7 +96,21 @@ class _AuthFlowState extends State<AuthFlow> {
       });
       return;
     }
-    await _requestCode(moveOn: true);
+    // **No second request here, and that was a bug.** `project_config` says
+    // `sendVerificationEmailOnSignUp: false`, so this asked for a code on the
+    // way to the verify screen — and the provider had already sent one, because
+    // `requireEmailVerification` makes sign-up issue an OTP whatever that flag
+    // says. Two codes arrived, the second invalidated the first, and a player
+    // typing the one that landed first was told it was wrong.
+    //
+    // Observed on a device before it was reasoned about. The resend button is
+    // still there for a code that never arrives; it just is not pressed for
+    // everyone automatically.
+    setState(() {
+      _busy = false;
+      _codeIssuedAt = DateTime.now();
+      _step = _Step.verify;
+    });
   }
 
   Future<void> _requestCode({bool moveOn = false}) async {
