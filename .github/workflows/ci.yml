@@ -536,23 +536,47 @@ jobs:
       # The dump script still normalises the version header and the random
       # restrict key, which is a different problem: those make two dumps of the
       # *same* schema differ.
-      - name: A pg_dump that can read a PostgreSQL 18 server
+      #
+      # **Taken from the service container rather than installed.** This used to
+      # add the PGDG apt repository and `apt-get install postgresql-client-18`,
+      # and that step hung on a slow mirror twice in four runs — no timeout of
+      # its own, so each hang burned the job's whole 15 minutes and reported
+      # "cancelled", which reads like a bug in the change under test.
+      #
+      # The container already has a `pg_dump` of exactly the right major,
+      # because it *is* the server. Shimming that one onto PATH removes an
+      # external mirror from the critical path and makes the version match by
+      # construction instead of by two pinned numbers agreeing.
+      - name: A pg_dump that matches the server, taken from the server
+        timeout-minutes: 3
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
         run: |
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
-            https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
-            https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
-            | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-18
-          echo /usr/lib/postgresql/18/bin >> "$GITHUB_PATH"
+          set -euo pipefail
+          test -n "${POSTGRES_CONTAINER}"
+          mkdir -p "$HOME/bin"
+          # Unquoted heredoc, so the container id is baked in now — it is this
+          # step's environment and would not exist when the dump script runs.
+          # `\$@` is escaped for the opposite reason: the shim needs it at call
+          # time, with whatever flags `scripts/dump-schema.sh` passes.
+          cat > "$HOME/bin/pg_dump" <<SHIM
+          #!/usr/bin/env bash
+          exec docker exec ${POSTGRES_CONTAINER} pg_dump "\$@"
+          SHIM
+          chmod +x "$HOME/bin/pg_dump"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          "$HOME/bin/pg_dump" --version
 
       # The snapshot, on a database of its own so the suites' wiping cannot race
-      # it.
+      # it. `createdb` also comes from the container, for the same reason: the
+      # runner's own client is a version this job should not depend on at all.
       - name: Apply the migrations to an empty database
+        timeout-minutes: 5
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
         run: |
-          PGPASSWORD=postgres createdb -h localhost -U postgres akimath_snapshot
+          set -euo pipefail
+          docker exec "$POSTGRES_CONTAINER" createdb -U postgres akimath_snapshot
           npm run migrate
 
       - name: The committed snapshot still matches what the migrations produce
