@@ -243,20 +243,30 @@ invariant true by construction rather than by discipline.
 
 ## 5 · Server, auth, and data
 
-- **Hono confirmed** (4.13.x, releasing every 1–2 weeks). **Better Auth floor
-  `>= 1.6.22`** for GHSA-qq9h-g4jm-xgf3, `basePath: "/v1/auth"`, and
-  `advanced.ipAddress.disableIpTracking: true` — by default it persists IP and
-  user-agent **of minors**.
+- **Hono confirmed** (4.13.x, releasing every 1–2 weeks). Auth is **Neon Auth** —
+  managed Better Auth, identity in a `neon_auth` schema in our own Postgres, a REST
+  API and no SDK in the client. The floor of `>= 1.6.22` this section used to set
+  for GHSA-qq9h-g4jm-xgf3 **cannot be met**: the managed version is 1.4.18. The
+  advisory is closed by configuration instead — magic-link off, email+password
+  disabled entirely, registration closed — which removes every precondition it
+  needs. `advanced.ipAddress.disableIpTracking` is **not exposed** by the managed
+  service, which is why ADR 0002 keeps children off it altogether rather than
+  trusting a setting that does not exist.
 - **`pg` over TCP, not the Neon serverless driver.** Neon documents TCP for
   long-lived processes, and the HTTP driver cannot run the design's central
   transaction: the sync batch computes Glicko in TypeScript *between* the INSERT's
   `RETURNING` and the `user_skills` upsert. That is an interactive transaction.
   Pooler string at runtime, direct string for migrations, low `idleTimeoutMillis`
   so autosuspend still fires, `pg_advisory_xact_lock` to serialize two devices.
-- **Identity: `players` is the game identity; Better Auth's `anonymous()` only
-  supplies a session.** The client mints `player_id` as a UUIDv7 on first launch —
-  without it there is no foreign key for phase-2 attempts, which run with no
-  server at all. Zero rows in the database until first sync. Linking is **not**
+- **Identity: `players` is the game identity, and nothing syncs until an account
+  exists** — `docs/adr/0002-neon-auth-and-no-sync-until-linked.md`. This paragraph
+  used to say *"Better Auth's `anonymous()` only supplies a session"*; the provider
+  chosen since, **Neon Auth**, does not expose that plugin, cannot turn off the IP
+  and user-agent it records on every session, and runs a version inside
+  GHSA-qq9h-g4jm-xgf3's range. So a child's device gets no session at all: the
+  client mints `player_id` as a UUIDv7 on first launch and plays entirely offline,
+  and **zero rows until first sync** becomes zero rows for as long as nobody links.
+  Linking is an adult's act and the first server contact. It is **not**
   `onLinkAccount` (that hook runs *after* the `createUser` commit, so its
   "no progress lost" promise does not hold) but an idempotent
   `POST /v1/players/link` with an `Idempotency-Key`.
