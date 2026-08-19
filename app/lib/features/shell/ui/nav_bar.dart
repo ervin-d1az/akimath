@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
+import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/nav_tab_visual.dart';
 import '../policy/visible_tabs.dart';
 
@@ -11,10 +12,21 @@ import '../policy/visible_tabs.dart';
 /// So this widget never has to know that a one-tab bar would be wrong — it is
 /// simply never built.
 ///
-/// **Selection is marked by more than hue** (BRD-1): the current tab is filled
-/// and its label is heavier, so it survives deuteranopia. Every destination is
-/// at least `BrandShape.minTouchTarget` tall, which is why the bar's height is
-/// derived from that constant rather than chosen to look right.
+/// **It floats.** `pantallas-base.md` places it `left:20; right:20; bottom:20`
+/// as a 344×72 white card with a 3 px border, a 26 radius and the app's most
+/// common hard shadow — the same object every card and button on the screen
+/// already is. It used to be a full-bleed strip with a hairline on top, which
+/// is the one surface treatment the rest of the app never uses.
+///
+/// **Selection is marked by more than hue** (BRD-1): the current tab sits on a
+/// green chip and its label is heavier, so it survives deuteranopia. Every
+/// destination is at least `BrandShape.minTouchTarget` tall.
+///
+/// **Labels, not icons, and that is deliberate.** The design draws four
+/// stroked glyphs; `BrandIcon` renders stand-in characters until the
+/// transcribed artwork lands, and the two nearest "home" and "settings" are a
+/// tick — which means *correct* everywhere else in this app — and a gear the
+/// system paints as a colour emoji. A wrong mark reads worse than a word.
 class NavBar extends StatelessWidget {
   const NavBar({
     super.key,
@@ -35,58 +47,39 @@ class NavBar extends StatelessWidget {
         AppTab.profile => 'Ajustes',
       };
 
+  /// The card's own height, from the design. The chip inside it is 52 and the
+  /// remaining 20 is the padding above and below it.
+  static const double _height = 72;
+
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: BrandColors.surface,
-        border: Border(
-          top: BorderSide(color: BrandColors.ink, width: BrandShape.borderWidth),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          BrandShape.space5,
+          0,
+          BrandShape.space5,
+          BrandShape.space5,
         ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: <Widget>[
-            for (final AppTab tab in tabs)
-              Expanded(
-                child: _Tab(
+        child: CandySurface(
+          height: _height,
+          borderRadius: BrandShape.radiusCardMedium,
+          shadowOffset: BrandShape.shadowButton,
+          padding: const EdgeInsets.symmetric(horizontal: BrandShape.space2),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: <Widget>[
+              for (final AppTab tab in tabs)
+                _Tab(
                   tab: tab,
                   selected: tab == current,
                   onTap: () => onSelect(tab),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
-    );
-  }
-}
-
-/// The mark above a selected tab.
-///
-/// Always occupies its space, so switching tabs does not shift the labels by a
-/// few pixels — a bar that twitches under a thumb reads as a bug.
-class _SelectionDot extends StatelessWidget {
-  const _SelectionDot({required this.shown});
-
-  final bool shown;
-
-  static const double _size = 7;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: _size,
-      height: _size,
-      child: shown
-          ? const DecoratedBox(
-              decoration: BoxDecoration(
-                color: BrandColors.ink,
-                shape: BoxShape.circle,
-              ),
-            )
-          : null,
     );
   }
 }
@@ -104,34 +97,44 @@ class _Tab extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      // Opaque, so the whole cell is tappable and not only the glyph — a tab
+      // Opaque, so the whole cell is tappable and not only the label — a tab
       // you have to hit precisely is a tab that feels broken.
       behavior: HitTestBehavior.opaque,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: BrandShape.minTouchTarget),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: BrandShape.space2),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              // **A dot, not a glyph.** The icon layer is a deliberate
-              // placeholder — `BrandIcon` renders stand-in characters until the
-              // transcribed artwork lands, and the two nearest to "home" and
-              // "settings" are a tick, which means *correct* everywhere else in
-              // this app, and a gear the system draws as a colour emoji. A
-              // wrong mark reads worse than none, and a dot is honest about
-              // what has not been drawn yet.
-              _SelectionDot(shown: visual.showsDot),
-              const SizedBox(height: BrandShape.space2),
-              Text(
-                NavBar.labelOf(tab),
-                style: BrandText.eyebrow(color: visual.mark, size: 11)
-                    .copyWith(fontWeight: visual.weight),
-              ),
-            ],
-          ),
+      child: SizedBox(
+        width: _chipWidth,
+        height: BrandShape.minTouchTarget,
+        child: Center(
+          child: visual.chip == null
+              ? _label(visual)
+              : CandySurface(
+                  background: visual.chip!,
+                  // 18 in the design, which is `radiusPill` here.
+                  borderRadius: BrandShape.radiusPill,
+                  // No shadow: a nested surface does not cast one, the same
+                  // rule the `5 retos` chip follows inside its card.
+                  shadowOffset: Offset.zero,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: BrandShape.space2,
+                  ),
+                  height: _chipHeight,
+                  alignment: Alignment.center,
+                  child: _label(visual),
+                ),
         ),
       ),
     );
   }
+
+  Widget _label(NavTabVisual visual) => Text(
+        NavBar.labelOf(tab),
+        maxLines: 1,
+        style: BrandText.eyebrow(color: visual.mark, size: 11)
+            .copyWith(fontWeight: visual.weight),
+      );
+
+  /// `64×52` in the design. The chip is what the selected tab sits on and the
+  /// footprint every tab reserves, so the labels do not shift when one is
+  /// chosen.
+  static const double _chipWidth = 78;
+  static const double _chipHeight = 52;
 }

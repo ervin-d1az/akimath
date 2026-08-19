@@ -18,28 +18,33 @@ class NavTabVisual {
   const NavTabVisual({
     required this.mark,
     required this.weight,
-    required this.showsDot,
+    required this.chip,
   });
 
   final Color mark;
   final FontWeight weight;
 
-  /// Whether the dot above the label is drawn.
+  /// The chip drawn behind the selected tab, or null.
   ///
   /// **Presence, which is the shape half of the distinction.** Ink against
-  /// muted is a hue difference and BRD-1 does not accept one on its own; a dot
-  /// that is either there or not survives with the hue gone entirely.
-  final bool showsDot;
+  /// muted is a hue difference and BRD-1 does not accept one on its own; a
+  /// chip that is either there or not survives with the hue gone entirely.
+  ///
+  /// It replaced a small dot above the label. `pantallas-base.md` draws the
+  /// active destination as a `64×52` green chip with a 3 px border and an 18
+  /// radius — a shape the rest of the app already speaks, where the dot was a
+  /// mark invented because the icons were not ready.
+  final Color? chip;
 }
 
 NavTabVisual resolveNavTab(bool selected) => selected
     ? const NavTabVisual(
         mark: BrandColors.ink,
         weight: FontWeight.w800,
-        showsDot: true,
+        chip: BrandColors.green,
       )
     : const NavTabVisual(
         mark: BrandColors.muted,
         weight: FontWeight.w600,
-        showsDot: false,
+        chip: null,
       );

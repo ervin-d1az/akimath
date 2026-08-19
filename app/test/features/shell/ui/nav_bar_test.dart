@@ -1,5 +1,6 @@
 import 'package:akimath_app/design/tokens/tokens.dart';
 import 'package:akimath_app/features/shell/policy/visible_tabs.dart';
+import 'package:akimath_app/design/widgets/candy_surface.dart';
 import 'package:akimath_app/features/shell/ui/nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,33 +47,63 @@ void main() {
   });
 
   group('where you are is legible without hue', () {
-    testWidgets('the selected tab carries a mark the other does not',
+    testWidgets('the selected tab carries a chip the other does not',
         (WidgetTester tester) async {
       // BRD-1. Ink against muted is a hue difference and would say nothing to
-      // a reader with deuteranopia; the dot is present or absent.
+      // a reader with deuteranopia; the chip is present or absent.
       await _pump(tester, current: AppTab.home);
 
-      final Iterable<DecoratedBox> dots = tester
-          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
-          .where((DecoratedBox d) =>
-              (d.decoration as BoxDecoration).shape == BoxShape.circle);
-
-      expect(dots, hasLength(1), reason: 'exactly one tab is current');
+      expect(_chips(tester).evaluate(), hasLength(1), reason: 'exactly one tab is current');
     });
 
-    testWidgets('the mark moves with the selection', (WidgetTester tester) async {
+    testWidgets('the chip moves with the selection',
+        (WidgetTester tester) async {
       await _pump(tester, current: AppTab.profile);
 
-      // The dot sits above the label of whichever tab is current, so its
-      // horizontal position is the assertion — a mark that never moved would
-      // satisfy the count above forever.
-      final double dot = tester
-          .getCenter(find.byWidgetPredicate((Widget w) =>
-              w is DecoratedBox &&
-              (w.decoration as BoxDecoration).shape == BoxShape.circle))
-          .dx;
-      expect(dot, greaterThan(tester.getCenter(find.text('Inicio')).dx));
-      expect(dot, closeTo(tester.getCenter(find.text('Ajustes')).dx, 1));
+      // A mark that never moved would satisfy the count above forever.
+      final double chip = tester.getCenter(_chips(tester)).dx;
+
+      expect(chip, greaterThan(tester.getCenter(find.text('Inicio')).dx));
+      expect(chip, closeTo(tester.getCenter(find.text('Ajustes')).dx, 1));
+    });
+
+    testWidgets('the chip is the design\'s green, and bordered',
+        (WidgetTester tester) async {
+      // `pantallas-base.md` draws the active destination as a green chip with
+      // a 3 px border — a shape the rest of the app already speaks, where the
+      // dot it replaced was invented because the icons were not ready.
+      await _pump(tester, current: AppTab.home);
+      final CandySurface chip = tester.widget<CandySurface>(_chips(tester));
+
+      expect(chip.background, BrandColors.green);
+      expect(chip.borderWidth, BrandShape.borderWidth);
+    });
+  });
+
+  group('the bar is a card, not a strip', () {
+    testWidgets('it floats, with the app\'s own shadow',
+        (WidgetTester tester) async {
+      // It used to be full-bleed with a hairline on top, which is the one
+      // surface treatment the rest of the app never uses.
+      await _pump(tester);
+      final CandySurface card = tester.widget<CandySurface>(
+        find.descendant(of: find.byType(NavBar), matching: find.byType(CandySurface)).first,
+      );
+
+      expect(card.shadowOffset, BrandShape.shadowButton);
+      expect(card.borderRadius, BrandShape.radiusCardMedium);
+    });
+
+    testWidgets('it is inset from all three edges', (WidgetTester tester) async {
+      await _pump(tester);
+      final Rect bar = tester.getRect(find.byType(NavBar));
+      final Rect card = tester.getRect(
+        find.descendant(of: find.byType(NavBar), matching: find.byType(CandySurface)).first,
+      );
+
+      expect(card.left, greaterThan(bar.left));
+      expect(card.right, lessThan(bar.right));
+      expect(card.bottom, lessThan(bar.bottom));
     });
   });
 
@@ -144,3 +175,12 @@ void main() {
     });
   });
 }
+
+/// The chips a bar is currently drawing — a selected tab's surface, and nothing
+/// else, since the bar's own card is found by `.first` before them.
+Finder _chips(WidgetTester tester) => find.descendant(
+      of: find.byType(NavBar),
+      matching: find.byWidgetPredicate(
+        (Widget w) => w is CandySurface && w.background == BrandColors.green,
+      ),
+    );
