@@ -38,6 +38,7 @@ class PreferencesScreen extends StatelessWidget {
     required this.streakDays,
     this.onCreateAccount,
     this.accountEmail,
+    this.accountStatus,
   });
 
   /// Opens the account flow, or null while the build has no endpoints
@@ -48,6 +49,9 @@ class PreferencesScreen extends StatelessWidget {
   /// The linked account's address, once there is one. `4.1` greets the address
   /// because a player has no name (Q5).
   final String? accountEmail;
+
+  /// What the AkiMath server answered when asked about that account.
+  final String? accountStatus;
 
   /// Distinct days recorded on this device.
   final int daysPractised;
@@ -68,13 +72,21 @@ class PreferencesScreen extends StatelessWidget {
           if (onCreateAccount != null || accountEmail != null) ...<Widget>[
             Text('TU CUENTA', style: BrandText.eyebrow()),
             const SizedBox(height: BrandShape.space3),
-            if (accountEmail != null)
+            if (accountEmail != null) ...<Widget>[
               Text(
                 accountEmail!,
                 key: const Key('preferences-account-email'),
                 style: BrandText.body(),
-              )
-            else
+              ),
+              if (accountStatus != null) ...<Widget>[
+                const SizedBox(height: BrandShape.space2),
+                Text(
+                  accountStatus!,
+                  key: const Key('preferences-account-status'),
+                  style: BrandText.caption(),
+                ),
+              ],
+            ] else
               BrandButton.primary(
                 label: 'Crear cuenta',
                 onPressed: onCreateAccount!,

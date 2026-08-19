@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'dart:async';
+
+import '../../../api/api_client.dart';
 import '../../../api/auth_client.dart';
 import '../../../api/endpoints.dart';
+import '../../../api/me.dart';
 import '../../auth/ui/auth_flow.dart';
 import '../../home/data/day_log_store.dart';
 import '../../home/data/prefs_day_log_store.dart';
@@ -54,6 +58,33 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
   /// slice is for.
   String? _accountEmail;
 
+  /// What the AkiMath server said when asked who this token belongs to.
+  ///
+  /// **The account is only half the chain.** A verified Neon Auth account with
+  /// a JWT proves the provider works; it proves nothing about whether our own
+  /// server accepts that token. So the flow's last act is to ask, and what came
+  /// back is shown — including `no player yet`, which is the truthful answer
+  /// until `POST /players/link` exists.
+  String? _profile;
+
+  Future<void> _askWhoIAm(String accessToken) async {
+    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+    final MeResult result = await api.getMe(accessToken);
+    api.close();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _profile = switch (result) {
+        MeFound(:final Me me) => 'Jugador ${me.playerId} · ${me.ageBand.wireName}',
+        MeNoPlayer() => 'Cuenta lista. Falta vincular un jugador.',
+        MeRejected(:final String tag) => 'El servidor no aceptó la sesión ($tag).',
+        MeFailed(:final int status) => 'El servidor respondió $status.',
+        MeUnreachable() => 'No se pudo alcanzar el servidor.',
+      };
+    });
+  }
+
   void _openAccountFlow() {
     final AuthClient auth = AuthClient(baseUrl: Uri.parse(widget.authBaseUrl));
     Navigator.of(context).push(MaterialPageRoute<void>(
@@ -72,6 +103,9 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
             }
             setState(() => _accountEmail = account.email);
             Navigator.of(context).pop();
+            // The half the provider cannot vouch for: does *our* server accept
+            // the token it just issued?
+            unawaited(_askWhoIAm(account.accessToken));
           },
           onGaveUp: () {
             auth.close();
@@ -105,6 +139,7 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
         daysPractised: _log.days.length,
         streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
         accountEmail: _accountEmail,
+        accountStatus: _profile,
         // Absent rather than broken when the build was given no endpoints.
         onCreateAccount: widget.authBaseUrl.isNotEmpty && _accountEmail == null
             ? _openAccountFlow
