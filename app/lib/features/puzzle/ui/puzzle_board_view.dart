@@ -116,6 +116,15 @@ class PuzzleBoardView extends StatelessWidget {
       aspectRatio: 1,
       child: CandySurface(
         borderRadius: BrandShape.radiusCardMedium,
+        // **Inset, because a square grid does not fit a rounded rectangle.**
+        // Flush to the frame, each corner arc cut across the outermost cells:
+        // a curved ink line crossing straight pink dashes, and a cage that
+        // appeared to run off the board. A 26 px radius intrudes about
+        // `26 × (1 − 1/√2)` ≈ 8 px on the diagonal, so `space2` is the smallest
+        // inset that clears it — and the gap it leaves is what makes the frame
+        // read as the object holding the grid rather than as its outermost
+        // line.
+        padding: const EdgeInsets.all(BrandShape.space2),
         clip: true,
         child: _cells(),
       ),
