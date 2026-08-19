@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../api/auth_client.dart';
+import '../../../api/endpoints.dart';
+import '../../auth/ui/auth_flow.dart';
 import '../../home/data/day_log_store.dart';
 import '../../home/data/prefs_day_log_store.dart';
 import '../../home/policy/day_log.dart';
@@ -28,6 +31,40 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
   late final DayLogStore _store = widget.dayLog ?? const PrefsDayLogStore();
   DayLog _log = DayLog.empty;
 
+  /// The address of the account this device linked, once it has one.
+  ///
+  /// **In memory only, and deliberately.** Persisting a session is its own
+  /// change with its own decision about where a token may be written; until
+  /// then the flow is runnable and the result is visible, which is what the
+  /// slice is for.
+  String? _accountEmail;
+
+  void _openAccountFlow() {
+    final AuthClient auth = AuthClient(baseUrl: Uri.parse(Endpoints.authBaseUrl));
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (BuildContext _) => AppShell(
+        child: AuthFlow(
+          auth: auth,
+          callbackUrl: Endpoints.callbackUrl,
+          today: widget.now(),
+          onLinked: (LinkedAccount account) {
+            auth.close();
+            if (!mounted) {
+              return;
+            }
+            setState(() => _accountEmail = account.email);
+            Navigator.of(context).pop();
+          },
+          onGaveUp: () {
+            auth.close();
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+    ));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +87,10 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
         // skeleton. There is no state in which this screen has nothing to say.
         daysPractised: _log.days.length,
         streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
+        accountEmail: _accountEmail,
+        // Absent rather than broken when the build was given no endpoints.
+        onCreateAccount:
+            Endpoints.configured && _accountEmail == null ? _openAccountFlow : null,
       ),
     );
   }

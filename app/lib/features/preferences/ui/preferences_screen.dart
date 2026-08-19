@@ -8,6 +8,7 @@ import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/verdict.dart';
 import '../../../design/widgets/spec/verdict_copy.dart';
 import '../../../design/widgets/stat_tile.dart';
+import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/verdict_ring.dart';
 
 /// `4.5`, reduced to what F2 can source — the second root, and the one that
@@ -35,7 +36,18 @@ class PreferencesScreen extends StatelessWidget {
     super.key,
     required this.daysPractised,
     required this.streakDays,
+    this.onCreateAccount,
+    this.accountEmail,
   });
+
+  /// Opens the account flow, or null while the build has no endpoints
+  /// configured — a button that can only fail is worse than an absent one, the
+  /// same reading that keeps every toggle off this screen (DR-P2).
+  final VoidCallback? onCreateAccount;
+
+  /// The linked account's address, once there is one. `4.1` greets the address
+  /// because a player has no name (Q5).
+  final String? accountEmail;
 
   /// Distinct days recorded on this device.
   final int daysPractised;
@@ -53,6 +65,22 @@ class PreferencesScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          if (onCreateAccount != null || accountEmail != null) ...<Widget>[
+            Text('TU CUENTA', style: BrandText.eyebrow()),
+            const SizedBox(height: BrandShape.space3),
+            if (accountEmail != null)
+              Text(
+                accountEmail!,
+                key: const Key('preferences-account-email'),
+                style: BrandText.body(),
+              )
+            else
+              BrandButton.primary(
+                label: 'Crear cuenta',
+                onPressed: onCreateAccount!,
+              ),
+            const SizedBox(height: BrandShape.space5),
+          ],
           Text('TU PROGRESO', style: BrandText.eyebrow()),
           const SizedBox(height: BrandShape.space3),
           Row(

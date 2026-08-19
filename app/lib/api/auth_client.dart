@@ -66,6 +66,30 @@ final class AuthUnreachable<T> extends AuthResult<T> {
   final String reason;
 }
 
+/// The four calls the account flow makes, as a seam.
+///
+/// **It exists so a widget test can stand in for the provider.** `testWidgets`
+/// runs in a fake-async zone, so a real socket inside one completes on a clock
+/// the test does not control — `auth_client_test.dart` exercises the real
+/// implementation against a real `HttpServer` in a plain `test()`, which is
+/// where that belongs, and the flow is driven against a double.
+abstract interface class AuthApi {
+  Future<AuthResult<Accepted>> signUp({
+    required String email,
+    required String password,
+    required String callbackUrl,
+  });
+
+  Future<AuthResult<Accepted>> sendVerificationCode(String email);
+
+  Future<AuthResult<AuthSession>> verifyEmail({
+    required String email,
+    required String code,
+  });
+
+  Future<AuthResult<String>> accessToken(AuthSession session);
+}
+
 /// Neon Auth's REST API, as much of it as the account flow needs.
 ///
 /// **A PURE-2 adapter.** It holds no cooldown, no retry and no storage: what a
@@ -81,7 +105,7 @@ final class AuthUnreachable<T> extends AuthResult<T> {
 ///
 /// **`GET /token` answers 401, not 404**, which is how the JWT the AkiMath
 /// server verifies is obtained: sign in or verify to get a session, then ask.
-class AuthClient {
+class AuthClient implements AuthApi {
   AuthClient({
     required Uri baseUrl,
     HttpClient? transport,
@@ -98,6 +122,7 @@ class AuthClient {
   /// **`callbackUrl` must be absolute.** The provider answers `MISSING_ORIGIN`
   /// otherwise — it wants either an `Origin` header or somewhere absolute to
   /// send a browser, and a mobile app has no origin to offer.
+  @override
   Future<AuthResult<Accepted>> signUp({
     required String email,
     required String password,
@@ -120,6 +145,7 @@ class AuthClient {
   /// Needed on its own because `sendVerificationEmailOnSignUp` is off: creating
   /// the account sends nothing, so the app asks when it is ready to show the
   /// code screen.
+  @override
   Future<AuthResult<Accepted>> sendVerificationCode(String email) async {
     final _Answer answer = await _post('email-otp/send-verification-otp', <String, Object?>{
       'email': email,
@@ -131,6 +157,7 @@ class AuthClient {
   }
 
   /// Verifies the address with the code, and signs in if the provider says so.
+  @override
   Future<AuthResult<AuthSession>> verifyEmail({
     required String email,
     required String code,
@@ -140,6 +167,8 @@ class AuthClient {
     return answer.mapSession();
   }
 
+  /// Not on [AuthApi]: the account flow signs in by verifying, and a screen
+  /// that returns to an existing account is a change that does not exist yet.
   Future<AuthResult<AuthSession>> signIn({
     required String email,
     required String password,
@@ -150,6 +179,7 @@ class AuthClient {
   }
 
   /// The JWT the AkiMath server verifies, for a session that has one.
+  @override
   Future<AuthResult<String>> accessToken(AuthSession session) async {
     final _Answer answer = await _get('token', session);
     return answer.map((Map<String, Object?> body) {

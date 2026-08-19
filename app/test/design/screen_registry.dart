@@ -1,3 +1,9 @@
+import 'package:akimath_app/api/me.dart';
+import 'package:akimath_app/features/auth/policy/age_gate.dart';
+import 'package:akimath_app/features/auth/ui/age_gate_screen.dart';
+import 'package:akimath_app/features/auth/ui/create_account_screen.dart';
+import 'package:akimath_app/features/auth/ui/tutor_consent_screen.dart';
+import 'package:akimath_app/features/auth/ui/verify_email_screen.dart';
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
@@ -242,6 +248,47 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
             PuzzleOption(label: label, onOpen: () {}),
         ],
         onStart: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'age gate',
+    build: () => AppShell(
+      child: AgeGateScreen(
+        today: DateTime.utc(2026, 8, 19),
+        onResolved: (AgeBand band, AgeGateRoute route) {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'tutor consent',
+    build: () => AppShell(child: TutorConsentScreen(onBack: () {})),
+  ),
+  RegisteredScreen(
+    label: 'create account',
+    build: () => AppShell(
+      child: CreateAccountScreen(onSubmit: (String email, String password) {}, busy: false),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'create account · rechazada',
+    build: () => AppShell(
+      child: CreateAccountScreen(
+        onSubmit: (String email, String password) {},
+        busy: false,
+        problem: 'Ese correo ya tiene una cuenta.',
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'verify email',
+    build: () => AppShell(
+      child: VerifyEmailScreen(
+        email: 'alguien@ejemplo.com',
+        codeIssuedAt: DateTime.now(),
+        onSubmit: (String _) {},
+        onResend: () {},
+        busy: false,
       ),
     ),
   ),
