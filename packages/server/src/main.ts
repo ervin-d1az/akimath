@@ -1,6 +1,9 @@
 import { startHttpServer } from "./adapters/http-server.js";
+import { createProcessLogger } from "./adapters/logger.js";
 import { createSessionVerifier, remoteKeySet } from "./adapters/session-verifier.js";
 import { readAuthConfig } from "./auth-config.js";
+
+const log = createProcessLogger(process.env);
 
 const port = Number(process.env["PORT"] ?? 3000);
 const version = process.env["APP_VERSION"] ?? "0.1.0";
@@ -11,14 +14,15 @@ const version = process.env["APP_VERSION"] ?? "0.1.0";
 // `auth-config.ts`; this is the one line that acts on it.
 const config = readAuthConfig(process.env);
 if ("problem" in config) {
-  console.error(`akimath-api cannot start: ${config.problem}`);
+  log.error("cannot start", { problem: config.problem });
   process.exit(1);
 }
 
-startHttpServer(
+startHttpServer({
   version,
   port,
-  createSessionVerifier(remoteKeySet(config.jwksUrl), config.issuer),
-);
-console.log(`akimath-api listening on http://localhost:${port}`);
-console.log(`sessions verified against ${config.jwksUrl} for issuer ${config.issuer}`);
+  verify: createSessionVerifier(remoteKeySet(config.jwksUrl), config.issuer),
+  log,
+});
+
+log.info("listening", { port, version, jwksUrl: config.jwksUrl, issuer: config.issuer });

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../src/adapters/http-server.js";
+import { createLogger, type Logger } from "../src/adapters/logger.js";
 import type { SessionVerifier } from "../src/adapters/session-verifier.js";
 import { type Caller, CONTRACTED_OPERATIONS, OPS_ROUTES, route } from "../src/routing.js";
+import { fakeJwt } from "./support/fake-jwt.js";
 
 const VERSION = "1.2.3";
 const NOBODY: Caller = { kind: "absent" };
@@ -25,6 +27,18 @@ function stubVerifier(caller: Caller): SessionVerifier & { seen: (string | undef
   return verify;
 }
 
+/** A logger that keeps its lines instead of printing them. */
+function recordingLogger(): Logger & { lines: string[] } {
+  const lines: string[] = [];
+  const logger = createLogger({
+    level: "debug",
+    write: (line) => lines.push(line),
+    now: () => new Date("2026-08-19T09:15:00.000Z"),
+  }) as Logger & { lines: string[] };
+  logger.lines = lines;
+  return logger;
+}
+
 /** A request through the whole adapter, without opening a socket. */
 async function call(
   method: string,
@@ -38,7 +52,11 @@ async function call(
           method,
           headers: { Authorization: options.header },
         });
-  return createApp(VERSION, stubVerifier(options.caller ?? NOBODY)).fetch(request);
+  return createApp({
+    version: VERSION,
+    verify: stubVerifier(options.caller ?? NOBODY),
+    log: recordingLogger(),
+  }).fetch(request);
 }
 
 describe("the transport returns exactly what the policy decided", () => {
@@ -107,7 +125,7 @@ describe("the version it was given is the version it reports", () => {
   it("a query string is not part of the path", async () => {
     // `route` matches on the path alone; a transport that passed the whole URL
     // would turn every link with a `?utm_source` into a 404.
-    const response = await createApp(VERSION, stubVerifier(NOBODY)).fetch(
+    const response = await createApp({ version: VERSION, verify: stubVerifier(NOBODY), log: recordingLogger() }).fetch(
       new Request("http://localhost/health?from=somewhere"),
     );
 
@@ -126,7 +144,7 @@ describe("the credential reaches the verifier and the verdict reaches the policy
     // code runs. Its *inner* shape is untouched, which is the part `session.ts`
     // has opinions about.
     const verify = stubVerifier(NOBODY);
-    await createApp(VERSION, verify).fetch(
+    await createApp({ version: VERSION, verify: verify, log: recordingLogger() }).fetch(
       new Request("http://localhost/me", { headers: { Authorization: "Bearer  weird " } }),
     );
     expect(verify.seen).toEqual(["Bearer  weird"]);
@@ -134,7 +152,7 @@ describe("the credential reaches the verifier and the verdict reaches the policy
 
   it("hands over undefined when there is no header at all", async () => {
     const verify = stubVerifier(NOBODY);
-    await createApp(VERSION, verify).fetch(new Request("http://localhost/me"));
+    await createApp({ version: VERSION, verify: verify, log: recordingLogger() }).fetch(new Request("http://localhost/me"));
     expect(verify.seen).toEqual([undefined]);
   });
 
@@ -161,5 +179,54 @@ describe("the credential reaches the verifier and the verdict reaches the policy
     for (const caller of [NOBODY, LINKED, { kind: "refused", why: "x" } as Caller]) {
       expect((await call("GET", "/health", { caller })).status).toBe(200);
     }
+  });
+});
+
+describe("every request leaves one line", () => {
+  it("says what was asked, what was answered, and who asked", async () => {
+    const log = recordingLogger();
+    await createApp({ version: VERSION, verify: stubVerifier(LINKED), log }).fetch(
+      new Request("http://localhost/me", { headers: { Authorization: "Bearer good" } }),
+    );
+
+    expect(log.lines).toHaveLength(1);
+    expect(JSON.parse(log.lines[0] ?? "null")).toMatchObject({
+      level: "info",
+      msg: "request",
+      method: "GET",
+      path: "/me",
+      status: 501,
+      caller: "session",
+    });
+  });
+
+  it("names the kind of caller and never the caller", async () => {
+    // A user id on every access line is a per-request record of who was awake.
+    // The kind is what makes a 401 spike diagnosable, and it is all that does.
+    const log = recordingLogger();
+    await createApp({ version: VERSION, verify: stubVerifier(LINKED), log }).fetch(
+      new Request("http://localhost/me", { headers: { Authorization: "Bearer good" } }),
+    );
+    expect(log.lines.join("")).not.toContain(LINKED.kind === "session" ? LINKED.userId : "");
+  });
+
+  it("the credential never reaches the line, whole or in part", async () => {
+    // Belt and braces: the adapter does not log the header, and `log.ts` would
+    // redact it if it did. This asserts the outcome rather than either
+    // mechanism, so removing one of them fails here.
+    const log = recordingLogger();
+    const token = fakeJwt();
+    await createApp({ version: VERSION, verify: stubVerifier(NOBODY), log }).fetch(
+      new Request("http://localhost/me", { headers: { Authorization: `Bearer ${token}` } }),
+    );
+    expect(log.lines.join("")).not.toContain(token);
+  });
+
+  it("a 404 is logged too, because that is the line you go looking for", async () => {
+    const log = recordingLogger();
+    await createApp({ version: VERSION, verify: stubVerifier(NOBODY), log }).fetch(
+      new Request("http://localhost/nope"),
+    );
+    expect(JSON.parse(log.lines[0] ?? "null")).toMatchObject({ status: 404, path: "/nope" });
   });
 });

@@ -1,7 +1,10 @@
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
+import { createProcessLogger } from "../adapters/logger.js";
 import { runMigrations } from "../adapters/migrate-runner.js";
+
+const log = createProcessLogger(process.env);
 
 /**
  * Applies outstanding migrations and says what it applied.
@@ -18,9 +21,9 @@ const which = process.env.MIGRATE_DATABASE_URL
   : "DATABASE_URL";
 
 if (url === undefined) {
-  console.error(
-    "no MIGRATE_DATABASE_URL or DATABASE_URL — refusing to guess a database",
-  );
+  log.error("refusing to guess a database", {
+    wanted: ["MIGRATE_DATABASE_URL", "DATABASE_URL"],
+  });
   process.exit(1);
 }
 
@@ -30,11 +33,13 @@ await client.connect();
 
 try {
   const run = await runMigrations(client, directory);
-  console.log(
-    run.applied.length === 0
-      ? `nothing to apply (${which})`
-      : `applied ${run.applied.length} via ${which}: ${run.applied.join(", ")}`,
-  );
+  // The count is a field rather than a sentence: "how many migrations did that
+  // run apply" is a question somebody asks of a month of logs at once.
+  log.info(run.applied.length === 0 ? "nothing to apply" : "migrations applied", {
+    applied: run.applied.length,
+    files: run.applied,
+    via: which,
+  });
 } finally {
   await client.end();
 }
