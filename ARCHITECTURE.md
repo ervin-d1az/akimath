@@ -247,9 +247,14 @@ invariant true by construction rather than by discipline.
   managed Better Auth, identity in a `neon_auth` schema in our own Postgres, a REST
   API and no SDK in the client. The floor of `>= 1.6.22` this section used to set
   for GHSA-qq9h-g4jm-xgf3 **cannot be met**: the managed version is 1.4.18. The
-  advisory is closed by configuration instead — magic-link off, email+password
-  disabled entirely, registration closed — which removes every precondition it
-  needs. `advanced.ipAddress.disableIpTracking` is **not exposed** by the managed
+  advisory is closed by configuration instead, and since 2026-08-19 the
+  configuration is narrower than it was: **email sign-up is open** (with
+  verification required), and what keeps the advisory shut is that the
+  **magic-link and email-OTP plugins are off**. The exploit needs a passwordless
+  sign-in path to collide with a password registration at the same address, and
+  there is none — `plugin_configs` offers only `magicLink`, `organization` and
+  `phoneNumber`, all false, with no email-OTP plugin at all. **Turning magic-link
+  on reopens it** while the version is below 1.6.22; see ADR 0002's amendment. `advanced.ipAddress.disableIpTracking` is **not exposed** by the managed
   service, which is why ADR 0002 keeps children off it altogether rather than
   trusting a setting that does not exist.
 - **`pg` over TCP, not the Neon serverless driver.** Neon documents TCP for
