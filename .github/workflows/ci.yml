@@ -317,7 +317,15 @@ jobs:
       run:
         working-directory: packages/contract
     steps:
+      # **Full history, because the oasdiff step compares against the base
+      # commit.** The default shallow clone fetches one commit, so
+      # `git cat-file -e "$BASE:contract/openapi.json"` failed for want of the
+      # *commit* rather than the file — and the gate's own "this is its first
+      # appearance" escape swallowed it and exited 0. It had never once run.
+      # `protected-paths` already checks out with depth 0 for the same reason.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -432,6 +440,17 @@ jobs:
           if [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
             echo "no base commit to compare against; nothing to check."
             exit 0
+          fi
+          # **Two questions, not one.** `git cat-file -e "$BASE:<path>"` is
+          # false when the path is absent *and* when the commit is absent, and
+          # conflating them is what hid this gate: a shallow checkout has no
+          # base commit, the escape below read that as "the contract is new",
+          # and the job exited 0 on every pull request since it landed. So ask
+          # about the commit first, and treat its absence as a broken gate
+          # rather than as a passing one (PROC-10).
+          if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            echo "::error::the base commit ${BASE} is not in this clone, so nothing was compared. The checkout is too shallow for this gate."
+            exit 1
           fi
           if ! git cat-file -e "$BASE:contract/openapi.json" 2>/dev/null; then
             echo "the base commit has no contract/openapi.json — this is its first appearance."

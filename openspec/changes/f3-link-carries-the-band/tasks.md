@@ -13,3 +13,6 @@
 
 - [x] 3.1 The breaking gate can be answered with `allow-breaking-contract`.
 - [x] 3.2 All four branches simulated against the pinned `oasdiff`.
+
+- [x] 3.3 The gate is reachable at all: full history, and a base commit that is missing
+      fails loudly instead of passing quietly.

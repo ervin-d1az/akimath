@@ -49,3 +49,25 @@ label (`allow-breaking-contract-please`) → 1, because the match is comma-delim
 Nothing consumes the contract. `app/lib/api/` does not exist, the endpoint returns 401, and there
 is no client anywhere. The same change after a client ships costs a version negotiation. That is
 the whole argument for making it today rather than when the handler is written.
+
+## D5 — The gate it escapes had never run
+
+Pushing this change proved the escape by not needing it: the `contract` job went green on a
+breaking change with no label at all.
+
+`actions/checkout@v7` defaults to a shallow clone of one commit, and the step's own guard reads
+
+```sh
+git cat-file -e "$BASE:contract/openapi.json"
+```
+
+which is false when the **path** is absent and equally false when the **commit** is absent. With
+no base commit in the object database it took the second for the first, printed *"this is its
+first appearance"*, and exited 0 — on every pull request since the gate landed. `protected-paths`
+checks out with `fetch-depth: 0` and has always worked; this job never asked for one.
+
+Two fixes, because either alone leaves the trap: the checkout is deepened, **and** the commit is
+now asked about separately, with its absence treated as a broken gate rather than a passing one.
+That is PROC-10 in its original form — a gate that cannot tell "nothing is wrong" from "nothing
+was checked" is not a gate — and the repository's own comments warn about it in three other
+places.

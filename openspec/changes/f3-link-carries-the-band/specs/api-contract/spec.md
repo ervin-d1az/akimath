@@ -44,3 +44,10 @@ A breaking contract change SHALL fail CI unless a human labelled the pull reques
 - **WHEN** the pull request carries `allow-breaking-contract`
 - **THEN** the job passes, having reported what breaks
   → `.github/workflows/ci.yml`
+
+#### Scenario: The base commit is not in the clone
+
+- **WHEN** the checkout is too shallow to hold the commit being compared against
+- **THEN** the job fails and says so, rather than reporting the contract as new — the failure that
+  had kept this gate from ever running
+  → `.github/workflows/ci.yml`
