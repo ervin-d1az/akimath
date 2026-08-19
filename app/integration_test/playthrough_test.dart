@@ -118,9 +118,19 @@ void main() {
     }
     expect(find.byType(HomeScreen), findsOneWidget, reason: 'never reached the home');
 
-    await tester.tap(find.text('Empezar la serie'));
+    // **Scrolled to first.** The home is taller than the viewport and this
+    // button sits below the fold: `tap` on an off-screen widget hits the
+    // coordinates it *would* occupy, the hit test misses, and the failure looks
+    // like "the series never opened" rather than "the button was not visible".
+    await tester.ensureVisible(find.text('Empezar la serie'));
     await tester.pumpAndSettle();
-    expect(find.byType(RoundScreen), findsOneWidget);
+    await tester.tap(find.text('Empezar la serie'));
+    // Budgeted, like the home above: the series reads the bundled pack through
+    // the real asset bundle, which `pumpAndSettle` can return before.
+    for (int i = 0; i < 20 && find.byType(RoundScreen).evaluate().isEmpty; i++) {
+      await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    }
+    expect(find.byType(RoundScreen), findsOneWidget, reason: 'the series never opened');
 
     // **Two series, not one, and the reason is coverage.** The pack is
     // interleaved so all six families appear inside the first ten items —
@@ -131,7 +141,13 @@ void main() {
 
     for (int series = 0; series < 2; series++) {
       if (series > 0) {
-        await tester.tap(find.text('Empezar la serie'));
+        // **Scrolled to first.** The home is taller than the viewport and this
+    // button sits below the fold: `tap` on an off-screen widget hits the
+    // coordinates it *would* occupy, the hit test misses, and the failure looks
+    // like "the series never opened" rather than "the button was not visible".
+    await tester.ensureVisible(find.text('Empezar la serie'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Empezar la serie'));
         await tester.pumpAndSettle();
       }
       expect(find.byType(RoundScreen), findsOneWidget);

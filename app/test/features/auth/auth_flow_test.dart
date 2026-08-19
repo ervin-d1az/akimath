@@ -139,8 +139,10 @@ void main() {
     await tester.tap(find.text('Crear cuenta').last);
     await tester.pumpAndSettle();
 
-    // Sign-up, then a code request — the provider sends none on sign-up.
-    expect(provider.calls, <String>['signUp', 'sendVerificationCode']);
+    // **One call, not two.** Sign-up already issues the code; asking for
+    // another invalidated the first, and the player who typed the code that
+    // arrived first was told it was wrong.
+    expect(provider.calls, <String>['signUp']);
     expect(find.text('Revisa tu correo'), findsOneWidget);
     expect(find.textContaining('alguien@ejemplo.com'), findsOneWidget);
 

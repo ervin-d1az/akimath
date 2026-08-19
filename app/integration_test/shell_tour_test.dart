@@ -1,4 +1,6 @@
+import 'package:akimath_app/design/brand/brand_drawing_painter.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
+import 'package:akimath_app/features/shell/ui/nav_bar.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
@@ -38,11 +40,27 @@ void main() {
     expect(find.text('Inicio'), findsOneWidget);
     expect(find.text('Ajustes'), findsOneWidget);
 
+    // **And each root carries a mark, not just a word.** The two glyphs are
+    // hand-drawn (`NavGlyphSpec`) and painted rather than laid out, so nothing
+    // in the widget tree names them — a mark that stopped rendering would leave
+    // the labels in place and look like a spacing change. Counting the painters
+    // inside the bar is what notices.
+    final Finder marks = find.descendant(
+      of: find.byType(NavBar),
+      matching: find.byWidgetPredicate(
+        (Widget w) => w is CustomPaint && w.painter is BrandDrawingPainter,
+      ),
+    );
+    expect(marks, findsNWidgets(2), reason: 'one mark per root');
+
     await tester.tap(find.text('Ajustes'));
     await tester.pumpAndSettle();
     expect(find.byType(PreferencesScreen), findsOneWidget);
-    expect(find.text('Acierto'), findsOneWidget);
-    expect(find.text('Se torció'), findsOneWidget);
+    // The legend's own words, which `fix-verdict-copy` changed from `Acierto`
+    // and `Se torció`. This suite kept the old pair for weeks because nothing
+    // ran it — `flutter test` does not reach `integration_test/`.
+    expect(find.text('¡Bien hecho!'), findsOneWidget);
+    expect(find.text('Casi'), findsOneWidget);
 
     await tester.tap(find.text('Inicio'));
     await tester.pumpAndSettle();
