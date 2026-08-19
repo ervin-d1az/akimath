@@ -29,7 +29,7 @@ describeWithDatabase("a player carries a band and never a name", () => {
     // Widening the set is a schema change, never a caller's choice.
     await expect(
       db.client.query(
-        "INSERT INTO players (id, age_band) VALUES ($1, $2)",
+        "INSERT INTO players (id, age_band, auth_user_id) VALUES ($1, $2, gen_random_uuid())",
         [ID, "13_15"],
       ),
     ).rejects.toThrow(/players_age_band_known/);
@@ -40,12 +40,64 @@ describeWithDatabase("a player carries a band and never a name", () => {
     // would be a table nobody can write to.
     for (const [index, band] of ["under_13", "13_17", "adult"].entries()) {
       await expect(
-        db.client.query("INSERT INTO players (id, age_band) VALUES ($1, $2)", [
-          `018f4e3c-0000-7000-8000-00000000000${index + 2}`,
-          band,
-        ]),
+        db.client.query(
+          "INSERT INTO players (id, age_band, auth_user_id) VALUES ($1, $2, gen_random_uuid())",
+          [`018f4e3c-0000-7000-8000-00000000000${index + 2}`, band],
+        ),
       ).resolves.toBeTruthy();
     }
+  });
+
+  it("a row without an account is refused", async () => {
+    // ADR 0002: a `players` row exists because somebody linked. There is no
+    // unlinked player on the server — an unlinked device holds no session and
+    // leaves no row at all.
+    await expect(
+      db.client.query("INSERT INTO players (id, age_band) VALUES ($1, 'adult')", [ID]),
+    ).rejects.toThrow(/auth_user_id/);
+  });
+
+  it("two players cannot share one account", async () => {
+    // `GET /me` returns a single `playerId`, so two rows under one account is a
+    // response the frozen contract cannot express. The day a parent needs two
+    // children under one login, that is a product decision and a new shape —
+    // not something the schema should have quietly allowed in the meantime.
+    const account = "6f2b1c8d-0000-4000-8000-00000000f00d";
+    await db.client.query(
+      "INSERT INTO players (id, age_band, auth_user_id) VALUES ($1, 'adult', $2)",
+      [ID, account],
+    );
+    await expect(
+      db.client.query(
+        "INSERT INTO players (id, age_band, auth_user_id) VALUES (gen_random_uuid(), 'adult', $1)",
+        [account],
+      ),
+    ).rejects.toThrow(/players_one_per_account/);
+  });
+
+  it("nothing in our schema is a foreign key into the managed auth schema", async () => {
+    // `neon_auth` belongs to the provider and migrates on their schedule. A
+    // constraint of ours pointing into it makes our tables a reason their
+    // migration cannot run — and erasure does not need one, because
+    // `DELETE /v1/me` is an explicit path rather than a cascade we would only
+    // discover had fired.
+    //
+    // Swept over every constraint rather than over `players`, because the rule
+    // is about the schema and the next table is where it would break.
+    const result = await db.client.query<{ constraint_name: string; foreign_schema: string }>(
+      `SELECT tc.constraint_name, ccu.table_schema AS foreign_schema
+         FROM information_schema.table_constraints tc
+         JOIN information_schema.constraint_column_usage ccu
+           ON ccu.constraint_name = tc.constraint_name
+          AND ccu.constraint_schema = tc.constraint_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public'`,
+    );
+
+    expect(result.rows.length).toBeGreaterThan(0);
+    console.log(`  players · swept ${result.rows.length} foreign key(s)`);
+    expect(
+      result.rows.filter((row) => row.foreign_schema !== "public").map((row) => row.constraint_name),
+    ).toEqual([]);
   });
 
   // The one table excluded from the sweep below, and the assertion that keeps it

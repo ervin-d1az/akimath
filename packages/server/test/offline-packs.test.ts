@@ -33,7 +33,7 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
   beforeEach(async () => {
     db = await freshDatabase();
     await db.client.query(
-      "INSERT INTO players (id, age_band) VALUES ($1, 'under_13')",
+      "INSERT INTO players (id, age_band, auth_user_id) VALUES ($1, 'under_13', gen_random_uuid())",
       [PLAYER],
     );
   });

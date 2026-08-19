@@ -154,7 +154,7 @@ describeWithDatabase("the job, against a real database", () => {
   beforeEach(async () => {
     db = await freshDatabase();
     await db.client.query(
-      "INSERT INTO players (id, age_band) VALUES ($1, 'adult')",
+      "INSERT INTO players (id, age_band, auth_user_id) VALUES ($1, 'adult', gen_random_uuid())",
       [PLAYER],
     );
     await db.client.query(

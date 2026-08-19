@@ -94,6 +94,7 @@ CREATE TABLE public.players (
     id uuid NOT NULL,
     age_band text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    auth_user_id uuid NOT NULL,
     CONSTRAINT players_age_band_known CHECK ((age_band = ANY (ARRAY['under_13'::text, '13_17'::text, 'adult'::text])))
 );
 
@@ -167,6 +168,14 @@ ALTER TABLE ONLY public.issued_items
 
 ALTER TABLE ONLY public.offline_packs
     ADD CONSTRAINT offline_packs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: players players_one_per_account; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.players
+    ADD CONSTRAINT players_one_per_account UNIQUE (auth_user_id);
 
 
 --
