@@ -257,3 +257,33 @@ describe("every endpoint the documents name is described", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
+
+describe("a player's band is one set, declared once", () => {
+  /** Every `enum` in the document that spells a band, with where it was found. */
+  const bandEnums = NODES.flatMap(({ path, node }) =>
+    typeof node === "object" &&
+    node !== null &&
+    Array.isArray((node as { enum?: unknown }).enum) &&
+    (node as { enum: unknown[] }).enum.includes("under_13")
+      ? [{ path, values: (node as { enum: string[] }).enum }]
+      : [],
+  );
+
+  it("the link request declares one, and so does the profile", () => {
+    // Found by sweeping rather than by naming the two schemas: a third place
+    // that grows a band set is exactly the drift this checks for, and a test
+    // naming today's two cannot see it.
+    expect(bandEnums.map(({ path }) => path).sort()).toEqual([
+      "components.schemas.Me.properties.ageBand",
+      "components.schemas.PlayerLink.properties.ageBand",
+    ]);
+  });
+
+  it("and they are the same set, in the same order", () => {
+    // Order too, not just membership: the document is byte-diffed, so a set
+    // that agrees but reorders is a diff somebody has to read and dismiss.
+    const distinct = new Set(bandEnums.map(({ values }) => JSON.stringify(values)));
+    expect(distinct.size).toBe(1);
+    expect([...distinct][0]).toBe(JSON.stringify(["under_13", "13_17", "adult"]));
+  });
+});

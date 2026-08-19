@@ -143,7 +143,10 @@ OpenAPI half arrives with `f1-contract-emitter`.
   plain PostgreSQL behaviour. ARCHITECTURE.md §8's remaining jobs — compliance, mutation — are
   deliberately absent because the code they guard does not exist; `contract` now runs its `oasdiff`
   half too, version-pinned, failing only on a **breaking** change — a gate that fires on every
-  addition trains people to switch it off. `gate` is the intended required check and is **not
+  addition trains people to switch it off — and that break can be **answered** rather than only
+  obeyed: an `allow-breaking-contract` label on the pull request passes it, the same shape as
+  `allow-protected-edit`, because before v1 ships a breaking change is ordinary and a gate with no
+  way to say yes gets deleted instead. `gate` is the intended required check and is **not
   registered on the `protect-main` ruleset yet**, so today CI is advisory on `main`.
 - **The workspace is declared but not live.** The root `package.json` names
   `pnpm@11.21.0` and `pnpm-workspace.yaml` carries a `catalog:`, but pnpm is not installed

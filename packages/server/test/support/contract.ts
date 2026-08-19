@@ -38,11 +38,26 @@ export interface ContractedOperation {
   readonly statuses: readonly string[];
 }
 
+interface JsonSchema {
+  readonly required?: readonly string[];
+  readonly additionalProperties?: boolean;
+  readonly properties?: Record<string, { type?: string; enum?: readonly string[] }>;
+  readonly $ref?: string;
+}
+
+interface Operation {
+  readonly operationId: string;
+  readonly responses: Record<string, unknown>;
+  readonly requestBody?: {
+    readonly content?: Record<string, { readonly schema?: JsonSchema }>;
+  };
+}
+
 const document = JSON.parse(
   readFileSync(findContract(process.cwd()), "utf8"),
 ) as {
-  paths: Record<string, Record<string, { operationId: string; responses: Record<string, unknown> }>>;
-  components: { schemas: Record<string, unknown> };
+  paths: Record<string, Record<string, Operation>>;
+  components: { schemas: Record<string, JsonSchema> };
 };
 
 /** Every operation the committed contract describes, method upper-cased. */
@@ -65,6 +80,36 @@ export const errorSchema = document.components.schemas["Error"] as {
   additionalProperties: boolean;
   properties: Record<string, { type: string }>;
 };
+
+/**
+ * The request body an operation takes, with its `$ref` followed once.
+ *
+ * **Resolved from the path, not named.** A caller asking for `"PlayerLink"` by
+ * name would go quietly green the day the schema is renamed and the operation
+ * points somewhere else; asking `POST /players/link` what it accepts cannot.
+ *
+ * Throws rather than returning undefined: every use here is a gate, and a gate
+ * that silently checks nothing is worse than no gate (PROC-10).
+ */
+export function requestBodyOf(method: string, path: string): JsonSchema {
+  const operation = document.paths[path]?.[method.toLowerCase()];
+  if (!operation) {
+    throw new Error(`the contract describes no ${method} ${path}`);
+  }
+  const schema = operation.requestBody?.content?.["application/json"]?.schema;
+  if (!schema) {
+    throw new Error(`${method} ${path} declares no JSON request body`);
+  }
+  if (!schema.$ref) {
+    return schema;
+  }
+  const name = schema.$ref.replace("#/components/schemas/", "");
+  const resolved = document.components.schemas[name];
+  if (!resolved) {
+    throw new Error(`${method} ${path} refers to a schema named ${name}, which is absent`);
+  }
+  return resolved;
+}
 
 /**
  * Whether a body satisfies the frozen `Error` schema.

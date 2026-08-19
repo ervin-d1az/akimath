@@ -85,13 +85,38 @@ export const OfflinePackSchema = z.object({
   pack: z.record(z.string(), z.unknown()),
 });
 
+/**
+ * The three bands `players.age_band` accepts, declared once.
+ *
+ * **The band is a routing decision, not a demographic** (`CLAUDE.md`): it is
+ * what sends a player into child protections or not. Two schemas below carry
+ * it, and a set that drifted between them would let a request declare a band
+ * the profile can never report back.
+ */
+const AGE_BANDS = ["under_13", "13_17", "adult"] as const;
+
+/**
+ * What a device sends to attach itself to an account.
+ *
+ * **The band travels with the link, and it has to.** `players.age_band` is NOT
+ * NULL with no default, and ADR 0002 removed the guest sync that used to write
+ * the row first — an unlinked device holds no session and leaves no row, so
+ * this request *is* the row's creation. There is no later request at which the
+ * band could arrive and no earlier one at which it could have.
+ *
+ * It is not read off the account either. Linking is an adult's act, but the
+ * player being linked need not be an adult, and reading `adult` off the
+ * credential would route a child out of their own protections — the one
+ * mistake `age_band` exists to prevent.
+ */
 export const PlayerLinkSchema = z.object({
   playerId: z.uuid(),
+  ageBand: z.enum(AGE_BANDS),
 });
 
 export const MeSchema = z.object({
   playerId: z.uuid(),
-  ageBand: z.enum(["under_13", "13_17", "adult"]),
+  ageBand: z.enum(AGE_BANDS),
   createdAt: z.iso.datetime(),
 });
 
