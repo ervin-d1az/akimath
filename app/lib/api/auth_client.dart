@@ -1,0 +1,313 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:meta/meta.dart';
+
+/// A call that succeeded and returned nothing worth carrying.
+@immutable
+final class Accepted {
+  const Accepted();
+}
+
+/// A Neon Auth session, as the thing needed to ask for a token.
+///
+/// **A cookie, because that is what the provider issues.** Better Auth's
+/// `bearer` plugin would let the session travel in a header, and it is not in
+/// `plugin_configs` — so the session is a `Set-Cookie` value that has to be
+/// carried back. Held opaquely: nothing here parses it, and it is never logged.
+@immutable
+final class AuthSession {
+  const AuthSession(this.cookie);
+
+  /// The cookie header value to send back, verbatim.
+  final String cookie;
+
+  @override
+  String toString() => 'AuthSession(<redacted>)';
+}
+
+/// What an auth call came back as.
+@immutable
+sealed class AuthResult<T> {
+  const AuthResult();
+}
+
+/// The provider did what was asked.
+@immutable
+final class AuthOk<T> extends AuthResult<T> {
+  const AuthOk(this.value);
+  final T value;
+}
+
+/// The provider said no, for a reason a person can act on.
+///
+/// A wrong code, an address already taken, a password too short. `code` is the
+/// provider's own machine-readable tag where it sent one.
+@immutable
+final class AuthRefused<T> extends AuthResult<T> {
+  const AuthRefused({required this.status, required this.code, required this.message});
+  final int status;
+  final String code;
+  final String message;
+}
+
+/// An answer arrived and was not one this client can read.
+@immutable
+final class AuthFailed<T> extends AuthResult<T> {
+  const AuthFailed({required this.status, required this.reason});
+  final int status;
+  final String reason;
+}
+
+/// No answer arrived at all.
+@immutable
+final class AuthUnreachable<T> extends AuthResult<T> {
+  const AuthUnreachable(this.reason);
+  final String reason;
+}
+
+/// The four calls the account flow makes, as a seam.
+///
+/// **It exists so a widget test can stand in for the provider.** `testWidgets`
+/// runs in a fake-async zone, so a real socket inside one completes on a clock
+/// the test does not control — `auth_client_test.dart` exercises the real
+/// implementation against a real `HttpServer` in a plain `test()`, which is
+/// where that belongs, and the flow is driven against a double.
+abstract interface class AuthApi {
+  Future<AuthResult<Accepted>> signUp({
+    required String email,
+    required String password,
+    required String callbackUrl,
+  });
+
+  Future<AuthResult<Accepted>> sendVerificationCode(String email);
+
+  Future<AuthResult<AuthSession>> verifyEmail({
+    required String email,
+    required String code,
+  });
+
+  Future<AuthResult<String>> accessToken(AuthSession session);
+}
+
+/// Neon Auth's REST API, as much of it as the account flow needs.
+///
+/// **A PURE-2 adapter.** It holds no cooldown, no retry and no storage: what a
+/// screen may do next is `features/auth/policy/credential_rules.dart`, which is
+/// pure. This turns one call into one typed result.
+///
+/// **The endpoint shapes were discovered against the running provider**, not
+/// read from an SDK. `POST /email-otp/send-verification-otp` and
+/// `POST /email-otp/verify-email` exist even though the `emailOTP` *plugin* is
+/// disabled — they serve `emailVerificationMethod: "otp"`, which is a different
+/// setting, and that distinction is what lets email sign-up be open while
+/// GHSA-qq9h-g4jm-xgf3 stays shut (ADR 0002's amendment).
+///
+/// **`GET /token` answers 401, not 404**, which is how the JWT the AkiMath
+/// server verifies is obtained: sign in or verify to get a session, then ask.
+class AuthClient implements AuthApi {
+  AuthClient({
+    required Uri baseUrl,
+    HttpClient? transport,
+    this.timeout = const Duration(seconds: 15),
+  }) : _baseUrl = baseUrl,
+       _transport = transport ?? HttpClient();
+
+  final Uri _baseUrl;
+  final HttpClient _transport;
+  final Duration timeout;
+
+  /// Creates an account. No session comes back while verification is required.
+  ///
+  /// **`callbackUrl` must be absolute.** The provider answers `MISSING_ORIGIN`
+  /// otherwise — it wants either an `Origin` header or somewhere absolute to
+  /// send a browser, and a mobile app has no origin to offer.
+  @override
+  Future<AuthResult<Accepted>> signUp({
+    required String email,
+    required String password,
+    required String callbackUrl,
+  }) async {
+    final _Answer answer = await _post('sign-up/email', <String, Object?>{
+      'email': email,
+      'password': password,
+      // The schema wants one and a player has none — Q5, decided: a player has
+      // no name and `players` has no column for one. The address is the only
+      // thing that identifies an account.
+      'name': email,
+      'callbackURL': callbackUrl,
+    });
+    return answer.map((_) => const Accepted());
+  }
+
+  /// Asks for a verification code by email.
+  ///
+  /// Needed on its own because `sendVerificationEmailOnSignUp` is off: creating
+  /// the account sends nothing, so the app asks when it is ready to show the
+  /// code screen.
+  @override
+  Future<AuthResult<Accepted>> sendVerificationCode(String email) async {
+    final _Answer answer = await _post('email-otp/send-verification-otp', <String, Object?>{
+      'email': email,
+      // One of "email-verification" | "sign-in" | "forget-password" |
+      // "change-email", read off the provider's own validation error.
+      'type': 'email-verification',
+    });
+    return answer.map((_) => const Accepted());
+  }
+
+  /// Verifies the address with the code, and signs in if the provider says so.
+  @override
+  Future<AuthResult<AuthSession>> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    final _Answer answer =
+        await _post('email-otp/verify-email', <String, Object?>{'email': email, 'otp': code});
+    return answer.mapSession();
+  }
+
+  /// Not on [AuthApi]: the account flow signs in by verifying, and a screen
+  /// that returns to an existing account is a change that does not exist yet.
+  Future<AuthResult<AuthSession>> signIn({
+    required String email,
+    required String password,
+  }) async {
+    final _Answer answer =
+        await _post('sign-in/email', <String, Object?>{'email': email, 'password': password});
+    return answer.mapSession();
+  }
+
+  /// The JWT the AkiMath server verifies, for a session that has one.
+  @override
+  Future<AuthResult<String>> accessToken(AuthSession session) async {
+    final _Answer answer = await _get('token', session);
+    return answer.map((Map<String, Object?> body) {
+      final Object? token = body['token'];
+      if (token is! String || token.isEmpty) {
+        throw const FormatException('the token response carried no token');
+      }
+      return token;
+    });
+  }
+
+  void close() => _transport.close();
+
+  Future<_Answer> _post(String path, Map<String, Object?> body) =>
+      _send(path, body: body, session: null);
+
+  Future<_Answer> _get(String path, AuthSession session) =>
+      _send(path, body: null, session: session);
+
+  Future<_Answer> _send(
+    String path, {
+    required Map<String, Object?>? body,
+    required AuthSession? session,
+  }) async {
+    // `resolve` against a base that must end in a slash, or the last segment is
+    // replaced rather than appended — `.../neondb/auth` + `token` would ask for
+    // `.../neondb/token`.
+    final Uri url = _slashed(_baseUrl).resolve(path);
+    try {
+      final HttpClientRequest request =
+          body == null ? await _transport.getUrl(url) : await _transport.postUrl(url);
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      if (session != null) {
+        request.headers.set(HttpHeaders.cookieHeader, session.cookie);
+      }
+      if (body != null) {
+        request.headers.contentType = ContentType.json;
+        request.write(json.encode(body));
+      }
+      final HttpClientResponse response = await request.close().timeout(timeout);
+      final String text = await response.transform(utf8.decoder).join();
+      return _Answer(
+        status: response.statusCode,
+        text: text,
+        setCookie: response.headers[HttpHeaders.setCookieHeader] ?? const <String>[],
+      );
+    } on Exception catch (cause) {
+      return _Answer.unreachable(cause.toString());
+    }
+  }
+
+  static Uri _slashed(Uri base) =>
+      base.path.endsWith('/') ? base : base.replace(path: '${base.path}/');
+}
+
+/// One HTTP answer, before it is given a meaning.
+@immutable
+class _Answer {
+  const _Answer({required this.status, required this.text, required this.setCookie})
+    : unreachableReason = null;
+
+  const _Answer.unreachable(String reason)
+    : status = 0,
+      text = '',
+      setCookie = const <String>[],
+      unreachableReason = reason;
+
+  final int status;
+  final String text;
+  final List<String> setCookie;
+  final String? unreachableReason;
+
+  Map<String, Object?> get _body {
+    try {
+      final Object? decoded = json.decode(text);
+      return decoded is Map<String, Object?> ? decoded : const <String, Object?>{};
+    } on FormatException {
+      return const <String, Object?>{};
+    }
+  }
+
+  AuthResult<T> map<T>(T Function(Map<String, Object?> body) onOk) {
+    final AuthResult<T>? early = _early<T>();
+    if (early != null) {
+      return early;
+    }
+    try {
+      return AuthOk<T>(onOk(_body));
+    } on FormatException catch (cause) {
+      return AuthFailed<T>(status: status, reason: cause.message);
+    }
+  }
+
+  AuthResult<AuthSession> mapSession() {
+    final AuthResult<AuthSession>? early = _early<AuthSession>();
+    if (early != null) {
+      return early;
+    }
+    // Every `Set-Cookie` joined, because the provider sends more than one and
+    // dropping the wrong one is a session that works until it does not.
+    final String cookie = setCookie
+        .map((String header) => header.split(';').first.trim())
+        .where((String pair) => pair.isNotEmpty)
+        .join('; ');
+    if (cookie.isEmpty) {
+      return AuthFailed<AuthSession>(
+        status: status,
+        reason: 'the provider accepted the call and set no session cookie',
+      );
+    }
+    return AuthOk<AuthSession>(AuthSession(cookie));
+  }
+
+  AuthResult<T>? _early<T>() {
+    if (unreachableReason != null) {
+      return AuthUnreachable<T>(unreachableReason!);
+    }
+    if (status >= 200 && status < 300) {
+      return null;
+    }
+    if (status >= 400 && status < 500) {
+      final Map<String, Object?> body = _body;
+      return AuthRefused<T>(
+        status: status,
+        code: body['code'] as String? ?? '',
+        message: body['message'] as String? ?? '',
+      );
+    }
+    return AuthFailed<T>(status: status, reason: _body['message'] as String? ?? text);
+  }
+}
