@@ -321,7 +321,9 @@ root is free the same way.
   `BrandColors`, and state comes from `BrandColorRole`. (`Colors.transparent`, used to switch
   Material's tinting off, is the one exception on disk.)
 - Never use a LaTeX library to render math, or the system keyboard for numeric entry.
-- Never hand-write authentication crypto — that is Better Auth's job. (HMAC message
+- Never hand-write authentication crypto — that is Neon Auth's job, and Neon Auth is
+  managed Better Auth. It is also why an unlinked device does not sync: it has no
+  credential the server could verify, and inventing one is exactly this rule. (HMAC message
   construction for offline verification is ours, and is a cross-stack contract.)
 - Never generate puzzles on demand; they go in batches.
 
@@ -334,6 +336,16 @@ Commit email is `geineryodan@gmail.com` — verify `git config user.email` befor
 pull request. Nothing is committed or pushed unless you were asked to.
 
 ## Decided
+
+**Auth is Neon Auth, and nothing syncs until an account exists** —
+`docs/adr/0002-neon-auth-and-no-sync-until-linked.md`, decided 2026-08-19. Neon Auth is managed
+Better Auth with identity in a `neon_auth` schema in our own Postgres and a REST API, so the app
+needs no SDK. It exposes **no anonymous plugin** and **no IP-tracking control**, and every
+session row carries `ipAddress` and `userAgent` — so a child's device never gets a session at
+all. `player_id` is minted on the device, unlinked play is entirely offline, and linking is an
+adult's act and the first server contact. GHSA-qq9h-g4jm-xgf3 is closed by configuration
+(magic-link off, email+password disabled, registration closed) because the managed version,
+1.4.18, is inside its range and cannot be patched by us.
 
 **The Dart API client is hand-written** — `docs/adr/0001-dart-api-client.md`, decided
 2026-08-16 by the F0 spike `f0-dart-client-spike`. `swagger_dart_code_generator` is rejected:
