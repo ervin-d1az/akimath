@@ -26,6 +26,20 @@ function propertyNameFor(column: string): string {
 }
 
 /**
+ * Columns the caller must not be able to set, and where they come from instead.
+ *
+ * **`auth_user_id` is the session's**, and the request body must never carry
+ * it. A body that names the account it is attaching to is an account-takeover
+ * with extra steps: the caller would choose whose player this becomes. So it is
+ * excluded from the "must be in the body" gate below — **by name, with the
+ * source written down**, because an exclusion nobody can read is how the second
+ * one gets added without anybody deciding to.
+ */
+const FROM_THE_SESSION: Readonly<Record<string, string>> = {
+  auth_user_id: "the verified token's subject",
+};
+
+/**
  * The columns the database will not fill in for you.
  *
  * NOT NULL, no default, not generated and not an identity: each of these has to
@@ -71,19 +85,51 @@ describeWithDatabase("the link request can create the row it claims to create", 
     // yet. `POST /players/link` is the one request that creates a `players`
     // row — ADR 0002 removed guest sync, so there is no earlier writer — which
     // makes "the body carries what the row needs" checkable now.
-    const required = await columnsTheCallerMustSupply(db, "players");
+    const unsupplied = await columnsTheCallerMustSupply(db, "players");
+    const required = unsupplied.filter((column) => !(column in FROM_THE_SESSION));
     const body = requestBodyOf("POST", "/players/link");
     const carried = new Set(body.required ?? []);
 
     expect(required.length).toBeGreaterThan(0);
     console.log(
-      `  link request · players needs ${required.length} caller-supplied column(s) → ` +
-        `${required.filter((column) => carried.has(propertyNameFor(column))).length} carried`,
+      `  link request · players needs ${unsupplied.length} value(s) the database will not ` +
+        `supply → ${required.length} from the body, ${unsupplied.length - required.length} ` +
+        `from the session`,
     );
 
     const missing = required.filter((column) => !carried.has(propertyNameFor(column)));
     expect(missing, `POST /players/link carries no ${missing.map(propertyNameFor).join(", ")}`)
       .toEqual([]);
+  });
+
+  it("and the body cannot set the ones the session owns", async () => {
+    // The other half, and the one that matters. The gate above would be
+    // satisfied by putting `authUserId` in the body — and that request would
+    // let any caller with any valid session attach themselves to, or claim,
+    // somebody else's player.
+    const body = requestBodyOf("POST", "/players/link");
+    const offered = new Set([...(body.required ?? []), ...Object.keys(body.properties ?? {})]);
+
+    for (const [column, source] of Object.entries(FROM_THE_SESSION)) {
+      expect(offered, `${propertyNameFor(column)} must come from ${source}`).not.toContain(
+        propertyNameFor(column),
+      );
+    }
+    console.log(
+      `  link request · ${Object.keys(FROM_THE_SESSION).length} session-owned column(s) → ` +
+        `0 settable from the body`,
+    );
+  });
+
+  it("every excluded column is excluded for a reason somebody wrote down", async () => {
+    // An exclusion list with an empty reason is an exclusion list nobody
+    // reviewed. This also fails if the list grows a column the schema does not
+    // have, which is how a stale exclusion silently starts excusing nothing.
+    const unsupplied = new Set(await columnsTheCallerMustSupply(db, "players"));
+    for (const [column, source] of Object.entries(FROM_THE_SESSION)) {
+      expect(source.length, column).toBeGreaterThan(0);
+      expect(unsupplied, `${column} is not a column players requires`).toContain(column);
+    }
   });
 
   it("and the band it carries is a band the database accepts", async () => {
@@ -98,9 +144,11 @@ describeWithDatabase("the link request can create the row it claims to create", 
 
     for (const band of offered) {
       await expect(
-        db.client.query("INSERT INTO players (id, age_band) VALUES (gen_random_uuid(), $1)", [
-          band,
-        ]),
+        db.client.query(
+          "INSERT INTO players (id, age_band, auth_user_id) " +
+            "VALUES (gen_random_uuid(), $1, gen_random_uuid())",
+          [band],
+        ),
       ).resolves.toBeTruthy();
     }
     console.log(`  link request · ${offered.length} offered band(s) → ${offered.length} accepted`);
