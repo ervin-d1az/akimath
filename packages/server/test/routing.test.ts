@@ -5,6 +5,7 @@ import {
   CONTRACTED_OPERATIONS,
   IMPLEMENTED_OPERATIONS,
   matchesTemplate,
+  parametersOf,
   OPS_ROUTES,
   route,
   type Response,
@@ -241,13 +242,34 @@ describe("who is asking changes the answer", () => {
     for (const operationId of IMPLEMENTED_OPERATIONS) {
       const operation = CONTRACTED_OPERATIONS.find((o) => o.operationId === operationId);
       expect(operation, operationId).toBeDefined();
-      const decision = route(operation!.method, operation!.path, VERSION, LINKED);
-      expect(decision, operationId).toEqual({
+      // A concrete path, not the template: `/packs/{packId}` is a pattern and
+      // routing one literally would ask whether the string `{packId}` is a
+      // valid id. Each parameter gets a value here and comes back named.
+      const parameters: Record<string, string> = {};
+      const path = operation!.path.replace(/\{(\w+)\}/g, (_whole, name: string) => {
+        parameters[name] = `a-${name}`;
+        return parameters[name]!;
+      });
+
+      expect(route(operation!.method, path, VERSION, LINKED), operationId).toEqual({
         kind: "dispatch",
         operationId,
         userId: LINKED.kind === "session" ? LINKED.userId : "",
+        parameters,
       });
     }
+  });
+
+  it("a path parameter comes back named, and a literal segment does not", () => {
+    // The router is the one thing that knows which segment is which. A handler
+    // splitting the path itself would be a second, weaker parser of a template
+    // this module already matched — and wrong the day a path gains a segment.
+    expect(parametersOf("/packs/{packId}", "/packs/abc")).toEqual({ packId: "abc" });
+    expect(parametersOf("/me/history", "/me/history")).toEqual({});
+    expect(parametersOf("/a/{one}/b/{two}", "/a/1/b/2")).toEqual({ one: "1", two: "2" });
+    // A half-written template is a literal, the same reading `matchesTemplate`
+    // takes — so it names no parameter rather than quietly capturing one.
+    expect(parametersOf("/packs/{packId", "/packs/abc")).toEqual({});
   });
 
   it("but only for a caller who actually has a session", () => {

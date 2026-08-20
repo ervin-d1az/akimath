@@ -64,6 +64,16 @@ export type Decision =
       readonly kind: "dispatch";
       readonly operationId: string;
       readonly userId: string;
+      /**
+       * The path's own parameters, named by the template that matched.
+       *
+       * **Extracted here rather than in the adapter.** The router is the one
+       * thing that knows `/packs/{packId}` has a `packId` in the second
+       * segment; a handler splitting the path itself would be a second, weaker
+       * parser of a template this module already matched — and it would be
+       * wrong the day a path gains a segment.
+       */
+      readonly parameters: Readonly<Record<string, string>>;
     };
 
 /**
@@ -104,6 +114,7 @@ export const IMPLEMENTED_OPERATIONS: readonly string[] = [
   "deleteMe",
   "getHistory",
   "getMe",
+  "getOfflinePack",
   "issuePack",
   "linkPlayer",
   "submitAttempts",
@@ -149,6 +160,27 @@ export function matchesTemplate(template: string, path: string): boolean {
     }
     return segment === actual;
   });
+}
+
+/**
+ * The parameters a template names, read out of a path that matched it.
+ *
+ * Assumes the match: `matchesTemplate` has already agreed on the segment count,
+ * so every `{name}` has a segment opposite it.
+ */
+export function parametersOf(
+  template: string,
+  path: string,
+): Readonly<Record<string, string>> {
+  const wanted = template.split("/");
+  const given = path.split("/");
+  const parameters: Record<string, string> = {};
+  wanted.forEach((segment, index) => {
+    if (segment.startsWith("{") && segment.endsWith("}")) {
+      parameters[segment.slice(1, -1)] = given[index] ?? "";
+    }
+  });
+  return parameters;
 }
 
 function error(status: number, tag: string, message: string): Response {
@@ -199,7 +231,12 @@ export function route(
       return answer(error(401, "invalid_session", caller.why));
     }
     if (IMPLEMENTED_OPERATIONS.includes(routed.operationId)) {
-      return { kind: "dispatch", operationId: routed.operationId, userId: caller.userId };
+      return {
+        kind: "dispatch",
+        operationId: routed.operationId,
+        userId: caller.userId,
+        parameters: parametersOf(routed.path, path),
+      };
     }
     // **501 once the caller has authenticated.** 401 was the true answer while
     // no session could exist and stops being true the moment one can: refusing

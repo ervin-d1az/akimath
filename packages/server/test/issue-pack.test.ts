@@ -177,6 +177,55 @@ describeWithDatabase("POST /packs, against a real database", () => {
     expect(new Set(salts.rows.map((r) => r.hex)).size).toBe(2);
   });
 
+  it("a pack can be fetched again, and it is the same pack", async () => {
+    // **Rebuilt, not read back.** `offline_packs` stores a manifest and a salt
+    // rather than fifty rows of rendered item — that is what the manifest is
+    // for — so a re-fetch reconstructs. Every digest has to come back
+    // identical or a client that already has attempts against this pack is
+    // holding answers to a different one.
+    const issued = (await (await issue()).json()) as Issued & Record<string, unknown>;
+
+    const again = await app().fetch(
+      new Request(`http://localhost/packs/${issued.packId}`, { method: "GET" }),
+    );
+
+    expect(again.status).toBe(200);
+    expect(await again.json()).toEqual(issued);
+  });
+
+  it("and not somebody else's, which is a 404 rather than a 403", async () => {
+    // Telling the two apart would confirm that a stranger's pack exists.
+    const other = "018f4e3c-0000-7000-8000-00000000ab09";
+    await db.client.query(
+      "INSERT INTO players (id, age_band, auth_user_id) VALUES ($1, 'adult', gen_random_uuid())",
+      [other],
+    );
+    const theirs = await db.client.query<{ id: string }>(
+      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+       VALUES (gen_random_uuid(), $1, '[]'::jsonb, '\\x00', now() + interval '30 days')
+       RETURNING id`,
+      [other],
+    );
+
+    const response = await app().fetch(
+      new Request(`http://localhost/packs/${theirs.rows[0]!.id}`, { method: "GET" }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(((await response.json()) as { error: string }).error).toBe("no_such_pack");
+  });
+
+  it("and a pack that never existed is the same 404", async () => {
+    const response = await app().fetch(
+      new Request("http://localhost/packs/018f4e3c-0000-7000-8000-0000000000ff", {
+        method: "GET",
+      }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(((await response.json()) as { error: string }).error).toBe("no_such_pack");
+  });
+
   it("an account with no player is told to link one first", async () => {
     await db.client.query("DELETE FROM players WHERE auth_user_id = $1", [ACCOUNT]);
 

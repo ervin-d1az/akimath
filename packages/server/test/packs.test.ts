@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   issuedPack,
+  noSuchPackResponse,
+  packOf,
   packExpiry,
   PACK_ITEM_COUNT,
   PACK_LADDER_STEP,
@@ -144,6 +146,51 @@ describe("and it refuses to issue one it would not accept", () => {
     ).toThrow(/nothing to put in a pack/);
   });
 
+  it("a manifest with nothing in it is not a pack", () => {
+    // A stored manifest with no entries is a defect here, not a client's
+    // problem — an empty pack has nothing to play and nothing to grade.
+    expect(() =>
+      packOf({ refs: [], saltHex: SALT, issuedAt: ISSUED_AT, expiresAt: ISSUED_AT }),
+    ).toThrow(/a pack with no items is not one/);
+  });
+
+  it("a manifest spanning two skills declares both, in order", () => {
+    // `packOf` reads a *stored* manifest and nothing says its references all
+    // exercise one skill. Sorted, so the pack is a function of its contents and
+    // not of insertion order — two rebuilds of one row must be identical.
+    const second = registryOf([
+      {
+        id: "spike.other",
+        version: 1,
+        skillId: 4,
+        generate: () => ({
+          prompt: [],
+          answer: { numerator: 2n, denominator: 1n },
+          ladderStep: 3,
+          operator: "-" as const,
+          left: { num: 5, den: 1 },
+          right: { num: 3, den: 1 },
+        }),
+      },
+      ...[...coreRegistry().byKey.values()],
+    ]);
+    const { pack } = packOf({
+      refs: [
+        { templateId: "spike.other", templateVersion: 1, seed: 1n, ladderStep: 3 },
+        { templateId: "arith.integer.subtract", templateVersion: 2, seed: 1n, ladderStep: 3 },
+      ],
+      saltHex: SALT,
+      issuedAt: ISSUED_AT,
+      expiresAt: ISSUED_AT,
+      registry: second,
+    });
+
+    expect(pack.skill_nodes.map((n) => n.skill_id)).toEqual([1, 4]);
+    expect(pack.skill_fallbacks.map((f) => f.skill_id)).toEqual([1, 4]);
+    // And each item is filed under its own template's skill, not the first's.
+    expect(pack.items.map((i) => i.skill_id)).toEqual([4, 1]);
+  });
+
   it("and a pack the frozen validator would reject never leaves", () => {
     // A ladder step outside 1–20 is a pack the client refuses. Catching it here
     // means the failure is a 500 on the server rather than an unreadable pack
@@ -198,5 +245,20 @@ describe("what an issued pack deliberately does not have", () => {
       expect(serialised).not.toContain(`"answer":"${answer}"`);
       expect(serialised).not.toContain(`"canonical":"${answer}"`);
     }
+  });
+});
+
+describe("a pack this player does not have", () => {
+  it("is a 404 that does not say whose it is", () => {
+    // 404 and not 403: a pack id belonging to somebody else and one that never
+    // existed are the same fact to a caller entitled to neither, and telling
+    // them apart would confirm that a stranger's pack exists.
+    expect(noSuchPackResponse()).toEqual({
+      status: 404,
+      body: {
+        error: "no_such_pack",
+        message: "There is no pack with that id for this player.",
+      },
+    });
   });
 });
