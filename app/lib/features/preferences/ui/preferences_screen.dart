@@ -10,6 +10,8 @@ import '../../../design/widgets/spec/verdict_copy.dart';
 import '../../../design/widgets/stat_tile.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/verdict_ring.dart';
+import '../../states/policy/account_state.dart';
+import '../../states/ui/account_state_view.dart';
 
 /// `4.5`, reduced to what F2 can source — the second root, and the one that
 /// gives the shell a bar.
@@ -38,7 +40,8 @@ class PreferencesScreen extends StatelessWidget {
     required this.streakDays,
     this.onCreateAccount,
     this.accountEmail,
-    this.accountStatus,
+    this.accountState = AccountState.none,
+    this.onRetryAccount,
   });
 
   /// Opens the account flow, or null while the build has no endpoints
@@ -50,8 +53,12 @@ class PreferencesScreen extends StatelessWidget {
   /// because a player has no name (Q5).
   final String? accountEmail;
 
-  /// What the AkiMath server answered when asked about that account.
-  final String? accountStatus;
+  /// Where the account stands with our own server. The copy, the hue and
+  /// whether a banner appears at all belong to `features/states/`.
+  final AccountState accountState;
+
+  /// Offered only where retrying could change the answer.
+  final VoidCallback? onRetryAccount;
 
   /// Distinct days recorded on this device.
   final int daysPractised;
@@ -72,21 +79,13 @@ class PreferencesScreen extends StatelessWidget {
           if (onCreateAccount != null || accountEmail != null) ...<Widget>[
             Text('TU CUENTA', style: BrandText.eyebrow()),
             const SizedBox(height: BrandShape.space3),
-            if (accountEmail != null) ...<Widget>[
-              Text(
-                accountEmail!,
-                key: const Key('preferences-account-email'),
-                style: BrandText.body(),
-              ),
-              if (accountStatus != null) ...<Widget>[
-                const SizedBox(height: BrandShape.space2),
-                Text(
-                  accountStatus!,
-                  key: const Key('preferences-account-status'),
-                  style: BrandText.caption(),
-                ),
-              ],
-            ] else
+            if (accountEmail != null)
+              AccountStateView(
+                state: accountState,
+                email: accountEmail,
+                onRetry: onRetryAccount,
+              )
+            else
               BrandButton.primary(
                 label: 'Crear cuenta',
                 onPressed: onCreateAccount!,

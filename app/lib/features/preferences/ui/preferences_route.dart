@@ -5,8 +5,8 @@ import 'dart:async';
 import '../../../api/api_client.dart';
 import '../../../api/auth_client.dart';
 import '../../../api/endpoints.dart';
-import '../../../api/me.dart';
 import '../../auth/ui/auth_flow.dart';
+import '../../states/policy/account_state.dart';
 import '../../home/data/day_log_store.dart';
 import '../../home/data/prefs_day_log_store.dart';
 import '../../home/policy/day_log.dart';
@@ -62,27 +62,31 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
   ///
   /// **The account is only half the chain.** A verified Neon Auth account with
   /// a JWT proves the provider works; it proves nothing about whether our own
-  /// server accepts that token. So the flow's last act is to ask, and what came
-  /// back is shown — including `no player yet`, which is the truthful answer
-  /// until `POST /players/link` exists.
-  String? _profile;
+  /// server accepts that token. So the flow's last act is to ask.
+  ///
+  /// Held as a state rather than a sentence: the copy, the hue and whether
+  /// there is a retry are `features/states/`, and a screen that assembled them
+  /// inline would grow a branch per case and miss the one nobody writes —
+  /// loading, which is not a `MeResult` at all.
+  AccountState _accountState = AccountState.none;
+
+  /// The token this device holds, kept so a failed lookup can be retried.
+  ///
+  /// In memory only: where a session may be written down is its own decision
+  /// and its own change.
+  String? _accessToken;
 
   Future<void> _askWhoIAm(String accessToken) async {
+    _accessToken = accessToken;
+    setState(() => _accountState = AccountState.loading);
+
     final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
     final MeResult result = await api.getMe(accessToken);
     api.close();
     if (!mounted) {
       return;
     }
-    setState(() {
-      _profile = switch (result) {
-        MeFound(:final Me me) => 'Jugador ${me.playerId} · ${me.ageBand.wireName}',
-        MeNoPlayer() => 'Cuenta lista. Falta vincular un jugador.',
-        MeRejected(:final String tag) => 'El servidor no aceptó la sesión ($tag).',
-        MeFailed(:final int status) => 'El servidor respondió $status.',
-        MeUnreachable() => 'No se pudo alcanzar el servidor.',
-      };
-    });
+    setState(() => _accountState = accountStateFor(result));
   }
 
   void _openAccountFlow() {
@@ -139,7 +143,13 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
         daysPractised: _log.days.length,
         streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
         accountEmail: _accountEmail,
-        accountStatus: _profile,
+        accountState: _accountState,
+        // Only offered where retrying could change the answer. A retry on a
+        // refused session would fetch the same refusal.
+        onRetryAccount: _accountState == AccountState.offline ||
+                _accountState == AccountState.serverError
+            ? () => unawaited(_askWhoIAm(_accessToken!))
+            : null,
         // Absent rather than broken when the build was given no endpoints.
         onCreateAccount: widget.authBaseUrl.isNotEmpty && _accountEmail == null
             ? _openAccountFlow
