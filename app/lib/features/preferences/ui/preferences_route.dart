@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import '../../../api/api_client.dart';
+import '../../../api/me.dart';
 import '../../../api/auth_client.dart';
 import '../../../api/endpoints.dart';
 import '../../auth/ui/auth_flow.dart';
 import '../../states/policy/account_state.dart';
+import '../../account/data/player_id_store.dart';
 import '../../account/policy/session.dart';
 import '../../shell/ui/app_shell.dart';
 import '../policy/erasure.dart';
@@ -25,7 +27,23 @@ class PreferencesRoute extends StatefulWidget {
     this.onSessionChanged,
     this.now = DateTime.now,
     this.authBaseUrl = Endpoints.authBaseUrl,
+    this.playerIds,
+    this.link,
   });
+
+  /// Where this device's own player id lives. Injected so a widget test never
+  /// reaches a plugin.
+  final PlayerIdStore? playerIds;
+
+  /// Attaches this device's player to the account. A closure rather than an
+  /// `ApiClient`, the same shape `EraseAccountRoute` takes and for the same
+  /// reason: `testWidgets` runs in a fake-async zone and a real socket inside
+  /// one hangs on `!timersPending`.
+  final Future<LinkResult> Function({
+    required String accessToken,
+    required String playerId,
+    required AgeBand ageBand,
+  })? link;
 
   /// The account this device is signed in to, owned by the shell.
   ///
@@ -56,6 +74,32 @@ class PreferencesRoute extends StatefulWidget {
 }
 
 class _PreferencesRouteState extends State<PreferencesRoute> {
+  @override
+  void initState() {
+    super.initState();
+    _linkIfNeeded(null);
+  }
+
+  @override
+  void didUpdateWidget(PreferencesRoute old) {
+    super.didUpdateWidget(old);
+    _linkIfNeeded(old.session);
+  }
+
+  /// Links whenever a session appears, rather than when a screen calls back.
+  ///
+  /// **The session is the trigger, not the sign-in.** A route that linked from
+  /// the auth flow's callback would leave any other way of getting a session —
+  /// a restored one, a second root — with an account and no player, which is
+  /// exactly the state the app sat in before this existed.
+  void _linkIfNeeded(LinkedSession? before) {
+    final LinkedSession? session = widget.session;
+    if (session == null || session.accessToken == before?.accessToken) {
+      return;
+    }
+    unawaited(_link(session));
+  }
+
 
 
   /// What the AkiMath server said when asked who this token belongs to.
@@ -70,6 +114,58 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
   /// loading, which is not a `MeResult` at all.
   AccountState _accountState = AccountState.none;
 
+
+  /// Attaches this device's player, then asks the server who that is.
+  ///
+  /// **Linking first, and on every sign-in.** An account with no player is the
+  /// state the app used to sit in for ever — nothing called `POST /players/link`
+  /// — so `GET /me` answered 404, and every other operation would have too.
+  /// It is idempotent by nature (the row it would write is the row already
+  /// there), so a returning device re-attaches rather than needing to know
+  /// whether it linked before.
+  ///
+  /// **One round trip, because the link already answers with the profile.**
+  /// `POST /players/link` returns the frozen `Me` — that *is* the server's
+  /// word, so asking `GET /me` straight afterwards would be the same question
+  /// twice. The lookup stays for the retry path, where a failed one can be
+  /// asked again.
+  Future<void> _link(LinkedSession session) async {
+    setState(() => _accountState = AccountState.loading);
+
+    final String playerId =
+        await (widget.playerIds ?? const PrefsPlayerIdStore()).readOrMint();
+    final LinkResult linked = await (widget.link ?? _linkOverASocket)(
+      accessToken: session.accessToken,
+      playerId: playerId,
+      ageBand: session.ageBand,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _accountState = linkStateFor(linked));
+  }
+
+  Future<LinkResult> _linkOverASocket({
+    required String accessToken,
+    required String playerId,
+    required AgeBand ageBand,
+  }) async {
+    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+    try {
+      return await api.linkPlayer(
+        accessToken: accessToken,
+        playerId: playerId,
+        ageBand: ageBand,
+        // The contract requires the header and the server ignores its value:
+        // linking is idempotent by nature rather than by a replay store. The
+        // player id is the one thing that is stable across this device's
+        // retries and unique to it.
+        idempotencyKey: 'link:$playerId',
+      );
+    } finally {
+      api.close();
+    }
+  }
 
   Future<void> _askWhoIAm(String accessToken) async {
     setState(() => _accountState = AccountState.loading);
@@ -137,11 +233,12 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
             widget.onSessionChanged?.call(LinkedSession(
               email: account.email,
               accessToken: account.accessToken,
+              ageBand: account.ageBand,
             ));
             Navigator.of(context).pop();
-            // The half the provider cannot vouch for: does *our* server accept
-            // the token it just issued?
-            unawaited(_askWhoIAm(account.accessToken));
+            // The linking follows from the session existing — see
+            // `didUpdateWidget` — rather than from this callback, so a session
+            // that arrives any other way is linked too.
           },
           onGaveUp: () {
             auth.close();

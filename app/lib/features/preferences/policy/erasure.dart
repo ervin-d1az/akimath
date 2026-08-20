@@ -64,7 +64,10 @@ bool erasureOffered(AccountState state) => switch (state) {
   AccountState.loading ||
   AccountState.rejected ||
   AccountState.offline ||
-  AccountState.serverError => false,
+  AccountState.serverError ||
+  // The account belongs to another device's player; there is nothing of this
+  // one's to erase, and the request would be about somebody else's row.
+  AccountState.otherDevice => false,
 };
 
 /// The label on the door, in Ajustes.

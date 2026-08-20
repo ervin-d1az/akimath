@@ -63,7 +63,51 @@ void main() {
       for (final AccountState state in AccountState.values) {
         expect(() => isOurFault(state), returnsNormally, reason: state.name);
       }
-      expect(AccountState.values, hasLength(7));
+      expect(AccountState.values, hasLength(8));
+    });
+  });
+
+  group('an account already in use on another phone', () {
+    test('is a state of its own, because none of the others is honest', () {
+      // Migration 0003 gives an account one player, so a second device signing
+      // in has to be told something true. It is not an error the player made,
+      // not a refused session, and not something a retry fixes.
+      expect(
+        linkStateFor(const LinkConflict('this account already has a player')),
+        AccountState.otherDevice,
+      );
+    });
+
+    test('and it is not the player´s fault', () {
+      expect(isOurFault(AccountState.otherDevice), isFalse);
+    });
+
+    test('a link maps every way it can fail', () {
+      // The control: a case added to `LinkResult` has to be classified, and
+      // this fails if the switch grows a default instead.
+      final List<LinkResult> every = <LinkResult>[
+        LinkDone(Me(
+          playerId: '018f4e3c-0000-7000-8000-0000000000b1',
+          ageBand: AgeBand.adult,
+          createdAt: DateTime.utc(2026),
+        )),
+        const LinkConflict(''),
+        const LinkMalformed(''),
+        const LinkRejected(tag: '', message: ''),
+        const LinkFailed(status: 0, reason: ''),
+        const LinkUnreachable(''),
+      ];
+
+      expect(
+        every.map(linkStateFor).toSet(),
+        <AccountState>{
+          AccountState.linked,
+          AccountState.otherDevice,
+          AccountState.serverError,
+          AccountState.rejected,
+          AccountState.offline,
+        },
+      );
     });
   });
 }
