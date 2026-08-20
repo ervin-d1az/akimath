@@ -271,7 +271,12 @@ credit.
          ones. Two reverted to HEAD, two kept the mutation, and the suite was green either way.
          Step 0 is the rule that run bought.)*
       2. Invert one assertion or return value, run `cd app && flutter test`, and record the
-         **named** test that went red.
+         **named** test that went red. **Red is the runner's exit status, never a grep over its
+         output.** A pattern matching the failure line is one ANSI escape away from finding
+         nothing, and a Tier 1b check that cannot see red reports the mutation as survived — the
+         one direction that turns evidence into its opposite. Get the name from the output by all
+         means; decide pass or fail from `$?`. *(Reported "STILL GREEN" twice on 2026-08-19 for
+         mutations that did bite.)*
       3. Restore: `git checkout -- <file>` (or `git stash pop`, or the copy), then prove it with
          **two** things pasted into the ledger. Tracked: `git diff --quiet -- <file>` and a
          `flutter test` run back to the count you recorded before the mutation. Untracked:

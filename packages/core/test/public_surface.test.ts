@@ -48,6 +48,11 @@ const PUBLIC_SURFACE = [
   "registryOf",
   "resolve",
   "coreRegistry",
+  // How a reference is written into `offline_packs.template_refs` and read
+  // back. Both ends are here because two packages have to agree about it and
+  // neither owned it — the reader matched a comment rather than a producer.
+  "toManifestEntry",
+  "fromManifestEntry",
 ].sort();
 
 /** Anything that turns a value into text belongs in the contract, not here. */

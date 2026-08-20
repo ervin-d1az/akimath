@@ -44,6 +44,8 @@ export {
 
 export { coreRegistry } from "./templates/index.js";
 
+export { fromManifestEntry, toManifestEntry, type ManifestEntry } from "./manifest.js";
+
 export type {
   GeneratedItem,
   PromptToken,

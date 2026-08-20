@@ -1,5 +1,5 @@
 import type pg from "pg";
-import type { TemplateRef } from "@akimath/core";
+import { fromManifestEntry, type TemplateRef } from "@akimath/core";
 
 import type { AttemptSource } from "../attempts.js";
 
@@ -9,43 +9,20 @@ import type { AttemptSource } from "../attempts.js";
  * **ADAPTER.** SQL and the shape of a row; every decision about what an answer
  * *means* is `../attempts.ts`, which is pure.
  *
- * **A seed is read as a string and converted here.** `issued_items.seed` is
- * `bigint`, OID 20, which node-postgres hands back as a raw string precisely
- * because a JavaScript number cannot hold it. `offline_packs.template_refs` is
- * `jsonb`, parsed with `JSON.parse`, so migration 0002 forbids a numeric seed
- * inside it for the same reason. Both paths therefore arrive as text, and
- * `BigInt(...)` is the one place either becomes a number-like thing.
+ * **Both source tables hand back the same shape, and `@akimath/core` decides
+ * what it means.** `issued_items.seed` is `bigint`, OID 20, which
+ * node-postgres returns as a raw string precisely because a JavaScript number
+ * cannot hold it; `offline_packs.template_refs` is `jsonb`, parsed with
+ * `JSON.parse`, so migration 0002 forbids a numeric seed inside it for the
+ * same reason. So both arrive as `{template_id, template_version, seed,
+ * ladder_step}` with the seed as text, and `fromManifestEntry` is the single
+ * definition of how that is read — shared with the pack builder that will
+ * write it, rather than matched against a comment.
+ *
+ * A malformed entry is answered as "no such item" rather than thrown: it is
+ * the server's problem, and the alternative is a 500 for the whole batch over
+ * one bad row in a pack nobody can fix from the client side.
  */
-
-/** One row of `template_refs`, as migration 0002 constrains it. */
-interface StoredRef {
-  readonly template_id?: unknown;
-  readonly template_version?: unknown;
-  readonly seed?: unknown;
-  readonly ladder_step?: unknown;
-}
-
-function refFrom(stored: StoredRef): TemplateRef | null {
-  const { template_id, template_version, seed, ladder_step } = stored;
-  if (
-    typeof template_id !== "string" ||
-    typeof template_version !== "number" ||
-    typeof seed !== "string" ||
-    typeof ladder_step !== "number"
-  ) {
-    // A malformed manifest is the server's problem, not the caller's — but it
-    // is answered as "no such item" rather than thrown, because the alternative
-    // is a 500 for the whole batch over one bad row in a pack nobody can fix
-    // from the client side.
-    return null;
-  }
-  return {
-    templateId: template_id,
-    templateVersion: template_version,
-    seed: BigInt(seed),
-    ladderStep: ladder_step,
-  };
-}
 
 /**
  * The reference behind an issued item, or null if this player has no such item.
@@ -71,7 +48,7 @@ export async function refForIssuedItem(
     [itemId, playerId],
   );
   const row = result.rows[0];
-  return row === undefined ? null : refFrom(row);
+  return row === undefined ? null : fromManifestEntry(row);
 }
 
 /**
@@ -92,17 +69,14 @@ export async function refForPackItem(
   packId: string,
   index: number,
 ): Promise<TemplateRef | null> {
-  const result = await client.query<{ ref: StoredRef | null }>(
+  const result = await client.query<{ ref: unknown }>(
     `SELECT template_refs -> $3::int AS ref
        FROM offline_packs
       WHERE id = $1::uuid AND player_id = $2::uuid`,
     [packId, playerId, index],
   );
   const row = result.rows[0];
-  if (row === undefined || row.ref === null) {
-    return null;
-  }
-  return refFrom(row.ref);
+  return row === undefined ? null : fromManifestEntry(row.ref);
 }
 
 /** One graded attempt, ready for the table. */

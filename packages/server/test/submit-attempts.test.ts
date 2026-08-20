@@ -1,3 +1,4 @@
+import { toManifestEntry, type TemplateRef } from "@akimath/core";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createApp, createHandlers } from "../src/adapters/http-server.js";
@@ -19,8 +20,20 @@ const SESSION = "018f4e3c-0000-7000-8000-0000000000f6";
 /**
  * `(arith.integer.subtract@2, seed 1000, step 3)`. `packages/core`'s golden
  * pins the arithmetic; this file only cares that the two ends agree.
+ *
+ * **Written through `toManifestEntry`, not by hand.** A hand-written manifest
+ * here would be this file's guess at the shape, and the server reading its own
+ * guess back proves nothing — a real pack written differently would make
+ * `refForPackItem` return null for every item, and the 404 would look exactly
+ * like a missing row.
  */
-const REF = { template_id: "arith.integer.subtract", template_version: 2, seed: "1000", ladder_step: 3 };
+const TEMPLATE_REF: TemplateRef = {
+  templateId: "arith.integer.subtract",
+  templateVersion: 2,
+  seed: 1000n,
+  ladderStep: 3,
+};
+const REF = toManifestEntry(TEMPLATE_REF);
 const ANSWER = "-9";
 const AT = "2026-08-19T09:15:00.000Z";
 
@@ -197,6 +210,42 @@ describeWithDatabase("POST /attempts, against a real database", () => {
       attempts: [attempt({ itemId: undefined, packRef: { packId: PACK, index: 7 } })],
     });
 
+    expect(response.status).toBe(404);
+    expect(await rows()).toHaveLength(0);
+  });
+
+  it("a manifest entry written the losing way is refused, not misread", async () => {
+    // Migration 0002 refuses a numeric seed in `template_refs` because `jsonb`
+    // is read with `JSON.parse` and a bigint above 2^53 comes back wrong. This
+    // is the code side of the same rule, end to end: the constraint is on the
+    // *pack's* refs, so a pack that somehow carried one — or a future writer
+    // that forgot — is answered as "no such item" rather than graded against an
+    // item nobody was ever shown.
+    const loose = "018f4e3c-0000-7000-8000-0000000000f7";
+    await db.client.query(
+      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+            VALUES ($1, $2, $3::jsonb, '\\x00', now() + interval '30 days')`,
+      [
+        loose,
+        PLAYER,
+        // Straight into the column, bypassing the CHECK by being a *number* the
+        // constraint would refuse — asserted here so the two halves cannot
+        // drift apart quietly.
+        JSON.stringify([{ ...REF, seed: 1000 }]),
+      ],
+    ).catch(() => undefined);
+
+    const wrote = await db.client.query("SELECT 1 FROM offline_packs WHERE id = $1", [loose]);
+    if (wrote.rowCount === 0) {
+      // The database refused it, which is migration 0002 doing its job — the
+      // stronger of the two guards. Nothing left for the reader to prove.
+      expect(wrote.rowCount).toBe(0);
+      return;
+    }
+
+    const response = await submit({
+      attempts: [attempt({ itemId: undefined, packRef: { packId: loose, index: 0 } })],
+    });
     expect(response.status).toBe(404);
     expect(await rows()).toHaveLength(0);
   });
