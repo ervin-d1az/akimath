@@ -181,4 +181,55 @@ void main() {
       }
     });
   });
+
+  group('hours and minutes', () {
+    test('reads both units, the way the countdown chip prints them', () {
+      expect(
+        EsMxNumber.hoursAndMinutes(const Duration(hours: 3, minutes: 46)),
+        '3\u202Fh\u202F46\u202Fmin',
+      );
+    });
+
+    test('under an hour drops the hour rather than printing a zero', () {
+      // `0 h 46 min` is a measurement pretending to be precise about a unit it
+      // does not have.
+      expect(
+        EsMxNumber.hoursAndMinutes(const Duration(minutes: 46)),
+        '46\u202Fmin',
+      );
+    });
+
+    test('a whole number of hours drops the minutes', () {
+      expect(
+        EsMxNumber.hoursAndMinutes(const Duration(hours: 3)),
+        '3\u202Fh',
+      );
+    });
+
+    test('under a minute still says a minute', () {
+      // The figure is a runway, and `0 min` reads as *gone*. The day is not
+      // over until it is over — the same reading that lets yesterday keep a
+      // run alive.
+      expect(
+        EsMxNumber.hoursAndMinutes(const Duration(seconds: 30)),
+        '1\u202Fmin',
+      );
+    });
+
+    test('a negative is clamped rather than printed', () {
+      expect(
+        EsMxNumber.hoursAndMinutes(const Duration(minutes: -5)),
+        '1\u202Fmin',
+      );
+    });
+
+    test('every space it emits is the narrow one', () {
+      // A plain space wraps, and this string sits inside a chip sized to its
+      // content — the same reasoning that picked U+202F for thousands.
+      expect(
+        EsMxNumber.hoursAndMinutes(const Duration(hours: 12, minutes: 5)),
+        isNot(contains(' ')),
+      );
+    });
+  });
 }
