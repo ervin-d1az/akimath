@@ -24,6 +24,12 @@ import '../../puzzle/ui/puzzle_screen.dart';
 import '../../puzzle/ui/puzzle_solved_screen.dart';
 import '../../puzzle/ui/word_search_screen.dart';
 import '../../shell/ui/skeleton_block.dart';
+import '../../states/data/streak_notice_store.dart';
+import '../../states/policy/streak_notice.dart';
+import '../../states/ui/streak_at_risk_screen.dart';
+import '../../states/ui/streak_lost_screen.dart';
+import '../policy/broken_run.dart';
+import '../policy/streak_state.dart';
 import 'home_screen.dart';
 
 /// Loads the pack, shows the home, and pushes the series.
@@ -42,6 +48,7 @@ class HomeRoute extends StatefulWidget {
     this.now = DateTime.now,
     this.dayLog,
     this.seriesCursor = const SeriesCursorStore(),
+    this.streakNotices,
   });
 
   final PackReader reader;
@@ -58,6 +65,13 @@ class HomeRoute extends StatefulWidget {
   /// not the first series again. Persisted, or a relaunch would repeat it.
   final SeriesCursorStore seriesCursor;
 
+  /// Where the page-turn record lives.
+  ///
+  /// Defaults to the device's own, so `4.13` is turned once and not once per
+  /// launch. Injected for the same reason [dayLog] is: a test that had to write
+  /// a preference to seed a screen would be testing the preference.
+  final StreakNoticeStore? streakNotices;
+
   @override
   State<HomeRoute> createState() => _HomeRouteState();
 }
@@ -65,7 +79,17 @@ class HomeRoute extends StatefulWidget {
 class _HomeRouteState extends State<HomeRoute> {
   late final Future<Pack> _pack = widget.reader.load();
   late final DayLogStore _dayLog = widget.dayLog ?? const PrefsDayLogStore();
+  late final StreakNoticeStore _notices =
+      widget.streakNotices ?? const PrefsStreakNoticeStore();
   DayLog _log = DayLog.empty;
+
+  /// Whether the launch's streak notice has been dealt with.
+  ///
+  /// **A launch-scoped latch, not a second record.** `_refreshLog` runs again
+  /// every time a series or a board returns, and without this the same screen
+  /// would be pushed on top of the home each time the player came back — which
+  /// is `4.12`'s case exactly, since nothing about it is stored on purpose.
+  bool _noticeSettled = false;
 
   /// How many items have been served, held here as well as read in
   /// `_startSeries`, because the home now *shows* what the next series holds
@@ -76,17 +100,107 @@ class _HomeRouteState extends State<HomeRoute> {
   @override
   void initState() {
     super.initState();
-    _refreshLog();
+    _open();
+  }
+
+  /// The launch: read what is stored, then show what it owes.
+  ///
+  /// **In that order, and only here.** `_refreshLog` runs again on every return
+  /// from a series or a board; the notice must not. Deciding it before the log
+  /// is read would decide it from an empty one, which is `StreakNotice.none`
+  /// for every player.
+  Future<void> _open() async {
+    await _refreshLog();
+    if (!mounted) {
+      return;
+    }
+    await _showNoticeIfDue();
   }
 
   Future<void> _refreshLog() async {
     final DayLog log = await _dayLog.read();
     final int served = await widget.seriesCursor.read();
-    if (mounted) {
-      setState(() {
-        _log = log;
-        _itemsServed = served;
-      });
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _log = log;
+      _itemsServed = served;
+    });
+  }
+
+  /// Shows the streak screen this launch owes, if it owes one.
+  ///
+  /// **Pushed over the home rather than shown instead of it.** The design draws
+  /// both as full screens with a single forward action, and `4.13` is annotated
+  /// *"se pasa la página"* — a page turns onto something. Pushing also means
+  /// the action can start a series through the machinery this route already
+  /// has, rather than a second copy of it living wherever the screen was.
+  ///
+  /// `fullScreenSession` is the same mechanism a series and a board use, which
+  /// is what makes "no navigation affordance" structural.
+  Future<void> _showNoticeIfDue() async {
+    if (_noticeSettled) {
+      return;
+    }
+    // **Set before the first await.** A guard and a set straddling one is two
+    // callers both passing, and both pushing.
+    _noticeSettled = true;
+
+    final DateTime now = widget.now();
+    final DateTime? shown = await _notices.lostShownOn();
+    if (!mounted) {
+      return;
+    }
+
+    final StreakNotice notice = streakNoticeFor(
+      state: streakStateFor(attemptDays: _log.days, now: now),
+      lostShownOn: shown,
+      now: now,
+    );
+    if (notice == StreakNotice.none) {
+      return;
+    }
+
+    if (notice == StreakNotice.lost) {
+      // **Recorded on showing, not on dismissing.** A player who closes the app
+      // from this screen has seen the page turn; asking them to acknowledge it
+      // before it counts would show it again tomorrow for no reason.
+      await _notices.markLostShown(now);
+      if (!mounted) {
+        return;
+      }
+    }
+
+    bool solve = false;
+    await Navigator.of(context).push(
+      fullScreenSession<void>((BuildContext noticeContext) {
+        void leave({required bool andSolve}) {
+          solve = andSolve;
+          Navigator.of(noticeContext).pop();
+        }
+
+        return switch (notice) {
+          StreakNotice.atRisk => StreakAtRiskScreen(
+              days: streakLength(attemptDays: _log.days, today: now),
+              left: hoursLeftToday(now),
+              onSolve: () => leave(andSolve: true),
+              onLater: () => leave(andSolve: false),
+            ),
+          StreakNotice.lost => StreakLostScreen(
+              brokenRun: brokenRunLength(attemptDays: _log.days, now: now),
+              onStart: () => leave(andSolve: true),
+            ),
+          StreakNotice.none => const SizedBox.shrink(),
+        };
+      }),
+    );
+
+    if (solve && mounted) {
+      final Pack pack = await _pack;
+      if (mounted) {
+        await _startSeries(context, pack);
+      }
     }
   }
 
