@@ -42,13 +42,27 @@ void main() {
   });
 
   group('what the app actually has', () {
-    test('the roots that exist today produce a three-tab bar', () {
-      // **This asserted none, then two, and now three**, and the change is the
-      // whole mechanism each time: `visibleTabs` was not touched. A destination
-      // was added to the set below and the rule returned one more.
-      expect(rootsPresentToday, <AppTab>{AppTab.home, AppTab.progress, AppTab.profile});
+    test('the roots that exist today produce a two-tab bar', () {
+      // **This asserted none, then two, then three, and now two again** — and
+      // the change is the whole mechanism every time: `visibleTabs` has never
+      // been touched. A destination was added to or removed from the set below
+      // and the rule returned one more or one fewer.
+      //
+      // It went down because `Avance` absorbed into `Perfil`: no document draws
+      // a progress screen, and every figure it held is one `4.1` puts under the
+      // identity.
+      expect(rootsPresentToday, <AppTab>{AppTab.home, AppTab.profile});
       expect(visibleTabs(rootsPresentToday),
-          <AppTab>[AppTab.home, AppTab.progress, AppTab.profile]);
+          <AppTab>[AppTab.home, AppTab.profile]);
+    });
+
+    test('and progress is still a tab the design names, with no root', () {
+      // Declared rule 1 lists the homes as *inicio, mapa, progreso y perfil*.
+      // A root nobody has drawn is a different fact from a tab that does not
+      // exist, and the enum is where the difference is kept.
+      expect(AppTab.values, contains(AppTab.progress));
+      expect(rootsPresentToday, isNot(contains(AppTab.progress)));
+      expect(visibleTabs(rootsPresentToday), isNot(contains(AppTab.progress)));
     });
 
     test('and they come back in declaration order, not insertion order', () {

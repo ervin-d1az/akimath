@@ -5,19 +5,18 @@ import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/preferences/ui/legend_screen.dart';
 import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
 import 'package:akimath_app/features/profile/ui/profile_screen.dart';
-import 'package:akimath_app/features/progress/ui/progress_screen.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/main.dart' as app;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-/// Walks the shell on a real device: splash, first run, home, the three roots,
-/// and the settings stack above one of them.
+/// Walks the shell on a real device: splash, first run, home, both roots, and
+/// the settings stack above one of them.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('a player can reach both roots', (WidgetTester tester) async {
+  testWidgets('a player can reach both roots and the stack above one', (WidgetTester tester) async {
     app.main();
     await tester.pumpAndSettle(const Duration(seconds: 6));
 
@@ -40,20 +39,22 @@ void main() {
     }
     expect(find.byType(HomeScreen), findsOneWidget, reason: 'never reached the home');
 
-    // The bar exists because a second root does, and it grew when a third did.
+    // The bar exists because a second root does.
     expect(find.text('Inicio'), findsOneWidget);
-    expect(find.text('Avance'), findsOneWidget);
     // **`Perfil`, not `Ajustes`.** Declared rule 1 names the bar's homes as
     // *inicio, mapa, progreso y perfil*; the third root was labelled after a
     // settings screen, which that rule does not name.
     expect(find.text('Perfil'), findsOneWidget);
     expect(find.text('Ajustes'), findsNothing);
+    // And no `Avance`: it absorbed into the profile, which is where the design
+    // draws what it held.
+    expect(find.text('Avance'), findsNothing);
 
     // **And each root carries a mark, not just a word.** A mark that stopped
     // rendering would leave the labels in place and look like a spacing change.
     final Finder marks =
         find.descendant(of: find.byType(NavBar), matching: find.byType(BrandIcon));
-    expect(marks, findsNWidgets(3), reason: 'one mark per root');
+    expect(marks, findsNWidgets(2), reason: 'one mark per root');
 
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
@@ -82,11 +83,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ProfileScreen), findsOneWidget);
 
-    // `Avance` is where the two figures live now — they moved off Ajustes when
-    // it got its own root, because what a player has done is not a setting.
-    await tester.tap(find.text('Avance'));
-    await tester.pumpAndSettle();
-    expect(find.byType(ProgressScreen), findsOneWidget);
+    // **The two figures are here, not on a root of their own.** `Avance` was
+    // invented because the shell needed a second root; no document draws a
+    // progress screen, and every line it held is a line `4.1` puts under the
+    // identity.
     expect(find.text('DÍAS'), findsOneWidget);
     expect(find.text('RACHA'), findsOneWidget);
     // No account on a fresh install, so there is no history section at all —

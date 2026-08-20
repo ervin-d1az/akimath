@@ -37,8 +37,10 @@ void main() {
     testWidgets('every root that exists today', (WidgetTester tester) async {
       await _pump(tester);
       expect(find.text('Inicio'), findsOneWidget);
-      expect(find.text('Avance'), findsOneWidget);
       expect(find.text('Perfil'), findsOneWidget);
+      // `Avance` absorbed into the profile: no document draws a progress
+      // screen, and every figure it held is one `4.1` puts under the identity.
+      expect(find.text('Avance'), findsNothing);
     });
 
     testWidgets('and no two of them carry the same mark', (WidgetTester tester) async {

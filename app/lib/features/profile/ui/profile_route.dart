@@ -8,6 +8,11 @@ import '../../../api/auth_client.dart';
 import '../../../api/endpoints.dart';
 import '../../auth/ui/auth_flow.dart';
 import '../../states/policy/account_state.dart';
+import '../../home/data/day_log_store.dart';
+import '../../home/data/prefs_day_log_store.dart';
+import '../../home/policy/day_log.dart';
+import '../../round/policy/streak_policy.dart';
+import '../policy/history_view.dart';
 import '../../account/data/player_id_store.dart';
 import '../../account/policy/session.dart';
 import '../../shell/ui/app_shell.dart';
@@ -40,6 +45,8 @@ class ProfileRoute extends StatefulWidget {
     this.authBaseUrl = Endpoints.authBaseUrl,
     this.playerIds,
     this.link,
+    this.dayLog,
+    this.fetchHistory,
   });
 
   /// Where this device's own player id lives. Injected so a widget test never
@@ -80,21 +87,75 @@ class ProfileRoute extends StatefulWidget {
   /// Injected, so the streak can be tested by handing it a date.
   final DateTime Function() now;
 
+  /// Where the days practised are kept. Injected so a widget test never
+  /// reaches a plugin.
+  final DayLogStore? dayLog;
+
+  /// Asks the server what this account has played. **A closure**, the same
+  /// shape every other request on this route takes and for the same reason: a
+  /// `testWidgets` runs in a fake-async zone and a real socket inside one hangs
+  /// on `!timersPending`.
+  final Future<HistoryResult> Function(String accessToken)? fetchHistory;
+
   @override
   State<ProfileRoute> createState() => _ProfileRouteState();
 }
 
 class _ProfileRouteState extends State<ProfileRoute> {
+  late final DayLogStore _dayLog = widget.dayLog ?? const PrefsDayLogStore();
+  DayLog _log = DayLog.empty;
+  HistoryResult? _history;
+
   @override
   void initState() {
     super.initState();
     _linkIfNeeded(null);
+    unawaited(_readDayLog());
+    unawaited(_askForHistory());
   }
 
   @override
   void didUpdateWidget(ProfileRoute old) {
     super.didUpdateWidget(old);
     _linkIfNeeded(old.session);
+    // The session may arrive after this screen is built — `IndexedStack` keeps
+    // the roots alive, so signing in elsewhere does not rebuild this one.
+    if (widget.session?.accessToken != old.session?.accessToken) {
+      setState(() => _history = null);
+      unawaited(_askForHistory());
+    }
+  }
+
+  /// **Never waits on the network.** The figures come from storage and are
+  /// always available; a route that fetched both together would hide what the
+  /// device already knows behind a request that may never answer.
+  Future<void> _readDayLog() async {
+    final DayLog log = await _dayLog.read();
+    if (mounted) {
+      setState(() => _log = log);
+    }
+  }
+
+  Future<void> _askForHistory() async {
+    final LinkedSession? session = widget.session;
+    if (session == null) {
+      return;
+    }
+    final HistoryResult result =
+        await (widget.fetchHistory ?? _historyOverASocket)(session.accessToken);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _history = result);
+  }
+
+  Future<HistoryResult> _historyOverASocket(String accessToken) async {
+    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+    try {
+      return await api.getHistory(accessToken);
+    } finally {
+      api.close();
+    }
   }
 
   /// Links whenever a session appears, rather than when a screen calls back.
@@ -306,11 +367,32 @@ class _ProfileRouteState extends State<ProfileRoute> {
 
   @override
   Widget build(BuildContext context) {
+    // **`noAccount` before anything else.** With no session there is no request
+    // in flight, so `loading` would be a wait for something nobody asked for.
+    final HistoryState history = widget.session == null
+        ? HistoryState.noAccount
+        : historyStateFor(_history);
+    final HistoryResult? result = _history;
+
     return AppShell(
       child: ProfileScreen(
         accountEmail: widget.session?.email,
         accountState: _accountState,
         onOpenSettings: _openSettings,
+        // Zero before the store answers and zero for a player who has never
+        // played — the same number, which is why nothing here waits.
+        daysPractised: _log.days.length,
+        streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
+        historyState: history,
+        entries: result is HistoryFound
+            ? result.history.entries
+            : const <HistoryEntry>[],
+        onRetryHistory: canRetryHistory(history)
+            ? () {
+                setState(() => _history = null);
+                unawaited(_askForHistory());
+              }
+            : null,
         // Only offered where retrying could change the answer. A retry on a
         // refused session would fetch the same refusal.
         onRetryAccount: _accountState == AccountState.offline ||

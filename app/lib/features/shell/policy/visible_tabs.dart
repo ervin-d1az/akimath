@@ -13,16 +13,25 @@ enum AppTab { home, skills, progress, profile }
 
 /// The tab roots that exist in the app today.
 ///
-/// **Three, since `Avance` landed** — and that is the whole mechanism by which
-/// the bar grows. Nothing in `visibleTabs` changed either time; a destination
-/// was added and the rule below started returning one more. This constant is
-/// the single place the fact lives, exactly as it was kept for.
+/// **Two, and it went down rather than up.** `Avance` was a root for a while
+/// and is not one now: no document in the design draws a progress screen, and
+/// every figure ours showed is a figure `4.1 Perfil` puts under the identity.
+/// Splitting them left two half-empty screens where the design has one full
+/// one, so the profile absorbed it.
 ///
-/// `skills` arrives at F5. Three live tabs is an honest bar; four with one dead
-/// is the thing this file argues against.
+/// **`AppTab.progress` stays in the enum on purpose.** Declared rule 1 names
+/// the bar's homes as *inicio, mapa, progreso y perfil*, so a progress root is
+/// something the design asks for and nobody has drawn — which is a different
+/// fact from it not existing. This constant is the list of what has a
+/// destination, and it is the one that moves.
+///
+/// That is the whole mechanism by which the bar changes size. Nothing in
+/// `visibleTabs` has changed on any of the three occasions: a destination was
+/// added or removed and the rule below returned one more or one fewer.
+///
+/// `skills` arrives at F5 and needs no edit here beyond its own name.
 const Set<AppTab> rootsPresentToday = <AppTab>{
   AppTab.home,
-  AppTab.progress,
   AppTab.profile,
 };
 

@@ -1,6 +1,6 @@
 import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/api/me_result.dart';
-import 'package:akimath_app/features/progress/policy/progress_view.dart';
+import 'package:akimath_app/features/profile/policy/history_view.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 HistoryEntry _entry() => HistoryEntry(
