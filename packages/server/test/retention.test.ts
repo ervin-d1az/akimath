@@ -94,6 +94,29 @@ describe("the figures live in exactly one module", () => {
   const allSources = sourceFiles(fileURLToPath(new URL("../src", import.meta.url)));
   const instrumented = allSources.some((file) => readFileSync(file, "utf8").includes(marker));
 
+  /// Files where `400` is an HTTP status and not a number of days.
+  ///
+  /// **Named, with the reason, rather than loosening the pattern.** The sweep
+  /// below protects one thing: that nobody restates the retention period
+  /// instead of importing `RETENTION_DAYS`. `400` acquired a second meaning the
+  /// day `linkPlayer` landed and the router learned to answer `400 Bad
+  /// Request`, and a pattern relaxed to accommodate that would stop catching
+  /// the duplication it exists for.
+  ///
+  /// An entry here is a promise that the file has nothing to do with retention.
+  const HTTP_STATUS_FILES: readonly string[] = ["link.ts", "http-server.ts"];
+
+  it.skipIf(instrumented)("every excused file is excused for a reason", () => {
+    // A file that no longer exists would silently excuse nothing.
+    const src = fileURLToPath(new URL("../src", import.meta.url));
+    for (const excused of HTTP_STATUS_FILES) {
+      const found = sourceFiles(src).filter((file) => path.basename(file) === excused);
+      expect(found, `${excused} is excused and absent`).toHaveLength(1);
+      // And it really is an HTTP file, not one quietly holding a day count.
+      expect(readFileSync(found[0]!, "utf8")).not.toMatch(/RETENTION|days/i);
+    }
+  });
+
   it.skipIf(instrumented)("400 appears in retention.ts and nowhere else in src/", () => {
     const src = fileURLToPath(new URL("../src", import.meta.url));
     const files = sourceFiles(src);
@@ -104,6 +127,9 @@ describe("the figures live in exactly one module", () => {
 
     const offenders = files.filter((file) => {
       if (path.basename(file) === "retention.ts") {
+        return false;
+      }
+      if (HTTP_STATUS_FILES.includes(path.basename(file))) {
         return false;
       }
       const contents = readFileSync(file, "utf8");

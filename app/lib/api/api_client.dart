@@ -71,6 +71,66 @@ class ApiClient {
     }
   }
 
+  /// Attaches this device's player to the account the token names.
+  ///
+  /// **The band travels; the account does not.** The server takes the account
+  /// from the verified token and refuses a body that so much as mentions it —
+  /// so there is no parameter here for one, deliberately.
+  ///
+  /// `Idempotency-Key` is required by the contract. The caller supplies it, so
+  /// a retry of *the same* attempt can carry the same key; generating one here
+  /// would make every retry look like a new request.
+  Future<LinkResult> linkPlayer({
+    required String accessToken,
+    required String playerId,
+    required AgeBand ageBand,
+    required String idempotencyKey,
+  }) async {
+    final Uri url = _baseUrl.resolve('players/link');
+    try {
+      final HttpClientRequest request = await _transport.postUrl(url);
+      if (accessToken.trim().isNotEmpty) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $accessToken');
+      }
+      request.headers.set('Idempotency-Key', idempotencyKey);
+      request.headers.contentType = ContentType.json;
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      request.write(json.encode(<String, Object?>{
+        'playerId': playerId,
+        'ageBand': ageBand.wireName,
+      }));
+      final HttpClientResponse response = await request.close().timeout(timeout);
+      final String body = await response.transform(utf8.decoder).join();
+      return _readLink(response.statusCode, body);
+    } on Exception catch (cause) {
+      return LinkUnreachable(cause.toString());
+    }
+  }
+
+  LinkResult _readLink(int status, String body) {
+    final Map<String, Object?> error = _errorOr(body);
+    final String message = error['message'] as String? ?? '';
+    switch (status) {
+      case 200:
+        try {
+          return LinkDone(Me.fromJson(_object(body)));
+        } on FormatException catch (cause) {
+          return LinkFailed(status: status, reason: cause.message);
+        }
+      case 400:
+        return LinkMalformed(message);
+      case 401:
+        return LinkRejected(
+          tag: error['error'] as String? ?? 'unauthenticated',
+          message: message,
+        );
+      case 409:
+        return LinkConflict(message);
+      default:
+        return LinkFailed(status: status, reason: message.isEmpty ? body : message);
+    }
+  }
+
   MeResult _read(int status, String body) {
     switch (status) {
       case 200:

@@ -80,7 +80,7 @@ export const CONTRACTED_OPERATIONS: readonly Route[] = [
  * implementing one is also what stops it advertising itself as unbuilt, and
  * neither half can be satisfied by doing nothing.
  */
-export const IMPLEMENTED_OPERATIONS: readonly string[] = ["getMe"];
+export const IMPLEMENTED_OPERATIONS: readonly string[] = ["getMe", "linkPlayer"];
 
 /**
  * Routes that are deliberately outside the client-facing contract.

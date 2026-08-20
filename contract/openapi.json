@@ -1018,7 +1018,7 @@
             },
             "description": "That method is not routed here."
           },
-          "501": {
+          "409": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1026,7 +1026,7 @@
                 }
               }
             },
-            "description": "Routed and authenticated, but the server has not built it yet."
+            "description": "Already linked — to a different player, or to a different account."
           }
         },
         "summary": "Attach a locally-minted player to the current account."

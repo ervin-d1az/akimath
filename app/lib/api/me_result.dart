@@ -63,3 +63,58 @@ final class MeUnreachable extends MeResult {
   const MeUnreachable(this.reason);
   final String reason;
 }
+
+/// What `POST /players/link` came back as.
+///
+/// Separate from [MeResult] even though both can carry a [Me]: the answers
+/// differ where it matters. A link can be refused because the account already
+/// has a player, and a lookup cannot; a lookup can find nothing, and a link
+/// that found nothing has just created it.
+@immutable
+sealed class LinkResult {
+  const LinkResult();
+}
+
+/// 200 — linked, or already linked to this same player.
+@immutable
+final class LinkDone extends LinkResult {
+  const LinkDone(this.me);
+  final Me me;
+}
+
+/// 409 — this account has another player, or this player has another account.
+@immutable
+final class LinkConflict extends LinkResult {
+  const LinkConflict(this.message);
+  final String message;
+}
+
+/// 400 — the request was wrong before it reached the database.
+@immutable
+final class LinkMalformed extends LinkResult {
+  const LinkMalformed(this.message);
+  final String message;
+}
+
+/// 401 — no session, or one the server would not accept.
+@immutable
+final class LinkRejected extends LinkResult {
+  const LinkRejected({required this.tag, required this.message});
+  final String tag;
+  final String message;
+}
+
+/// An answer arrived and was not one this client can read.
+@immutable
+final class LinkFailed extends LinkResult {
+  const LinkFailed({required this.status, required this.reason});
+  final int status;
+  final String reason;
+}
+
+/// No answer arrived at all.
+@immutable
+final class LinkUnreachable extends LinkResult {
+  const LinkUnreachable(this.reason);
+  final String reason;
+}
