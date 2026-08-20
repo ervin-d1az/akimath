@@ -221,6 +221,168 @@ void main() {
     });
   });
 
+  group('POST /packs over a real socket', () {
+    Map<String, Object?> issued() => <String, Object?>{
+      'packId': '018f4e3c-0000-7000-8000-0000000000d1',
+      'issuedAt': '2026-08-19T09:15:00.000Z',
+      'expiresAt': '2026-09-18T09:15:00.000Z',
+      'pack': <String, Object?>{'pack_format_version': 1},
+    };
+
+    test('a 200 becomes the pack and the id attempts will name', () async {
+      await serving((HttpRequest request) => _json(request, 200, issued()));
+
+      final IssueResult result = await client.issuePack(_token);
+
+      expect(result, isA<IssueDone>());
+      expect((result as IssueDone).issued.packId, '018f4e3c-0000-7000-8000-0000000000d1');
+      expect(server.requests.single.method, 'POST');
+      expect(server.requests.single.uri.path, '/packs');
+    });
+
+    test('it sends no body, because the player comes from the session', () async {
+      await serving((HttpRequest request) => _json(request, 200, issued()));
+
+      await client.issuePack(_token);
+
+      expect(server.bodies.single, isEmpty);
+    });
+
+    test('a 404 is no player', () async {
+      await serving((HttpRequest request) => _json(request, 404, <String, Object?>{
+        'error': 'no_player',
+        'message': 'link one first',
+      }));
+
+      expect(await client.issuePack(_token), isA<IssueNoPlayer>());
+    });
+
+    test('a 200 that is not a pack is a failure, not a crash', () async {
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'packId': 'x',
+      }));
+
+      expect(await client.issuePack(_token), isA<IssueFailed>());
+    });
+
+    test('no answer at all is unreachable', () async {
+      await serving((HttpRequest request) async {});
+      await server.close();
+
+      expect(await client.issuePack(_token), isA<IssueUnreachable>());
+    });
+  });
+
+  group('POST /attempts over a real socket', () {
+    List<AttemptSubmission> batch() => <AttemptSubmission>[
+      AttemptSubmission(
+        packRef: const PackRef(packId: '018f4e3c-0000-7000-8000-0000000000d1', index: 0),
+        sessionId: '018f4e3c-0000-7000-8000-0000000000d2',
+        answer: '13',
+        at: DateTime.utc(2026, 8, 19, 9, 15),
+        elapsed: const Duration(milliseconds: 4200),
+      ),
+    ];
+
+    test('a 200 becomes one verdict per attempt', () async {
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'verdicts': <Object?>[
+          <String, Object?>{
+            'packRef': <String, Object?>{
+              'packId': '018f4e3c-0000-7000-8000-0000000000d1',
+              'index': 0,
+            },
+            'ok': true,
+            'payload': <String, Object?>{},
+          },
+        ],
+      }));
+
+      final SyncResult result = await client.submitAttempts(
+        accessToken: _token,
+        attempts: batch(),
+      );
+
+      expect(result, isA<SyncDone>());
+      expect((result as SyncDone).verdicts.single.ok, isTrue);
+      expect(server.requests.single.uri.path, '/attempts');
+    });
+
+    test('and the body carries the attempts and nothing else', () async {
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'verdicts': <Object?>[],
+      }));
+
+      await client.submitAttempts(accessToken: _token, attempts: batch());
+
+      final Map<String, Object?> sent =
+          json.decode(server.bodies.single) as Map<String, Object?>;
+      expect(sent.keys.toList(), <String>['attempts']);
+      expect((sent['attempts']! as List<Object?>), hasLength(1));
+    });
+
+    test('a wrong answer is a success, not a failure', () async {
+      // Every verdict may be `ok: false` and the sync still worked. What the
+      // cases are about is whether the batch was *recorded*.
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'verdicts': <Object?>[
+          <String, Object?>{'itemId': _playerId, 'ok': false, 'payload': <String, Object?>{}},
+        ],
+      }));
+
+      final SyncResult result =
+          await client.submitAttempts(accessToken: _token, attempts: batch());
+
+      expect(result, isA<SyncDone>());
+      expect((result as SyncDone).verdicts.single.ok, isFalse);
+    });
+
+    test('a 400 is a batch to drop, and a 404 a batch that landed nowhere', () async {
+      await serving((HttpRequest request) => _json(request, 400, <String, Object?>{
+        'error': 'malformed',
+        'message': 'attempts[0].answer must be a string',
+      }));
+      expect(
+        await client.submitAttempts(accessToken: _token, attempts: batch()),
+        isA<SyncMalformed>(),
+      );
+
+      client.close();
+      await server.close();
+      await serving((HttpRequest request) => _json(request, 404, <String, Object?>{
+        'error': 'no_such_item',
+        'message': 'attempts[0] names an item this player does not have',
+      }));
+      final SyncResult missing =
+          await client.submitAttempts(accessToken: _token, attempts: batch());
+      expect(missing, isA<SyncNoSuchItem>());
+      expect((missing as SyncNoSuchItem).tag, 'no_such_item');
+    });
+
+    test('a 200 whose verdicts are not verdicts is a failure', () async {
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'verdicts': <Object?>['nope'],
+      }));
+
+      expect(
+        await client.submitAttempts(accessToken: _token, attempts: batch()),
+        isA<SyncFailed>(),
+      );
+    });
+
+    test('no answer at all is unreachable, and the batch is worth keeping', () async {
+      // The one case a retry is for. The server drops a duplicate by itself
+      // (migration 0004), so resending is safe.
+      await serving((HttpRequest request) async {});
+      await server.close();
+
+      expect(
+        await client.submitAttempts(accessToken: _token, attempts: batch()),
+        isA<SyncUnreachable>(),
+      );
+    });
+  });
+
   group('GET /me/history over a real socket', () {
     Map<String, Object?> entry() => <String, Object?>{
       'kind': 'series',

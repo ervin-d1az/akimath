@@ -86,7 +86,7 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1600 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1674 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **Ajustes has a way out.** `features/preferences/` carries the erasure flow: a text door under
@@ -99,6 +99,16 @@ format and its OpenAPI half.
   A 204 is read as a success **without parsing a body**: a client that reads it the way it reads
   `GET /me` turns an erasure into a `FormatException`, and that is the one error here a retry
   cannot fix, because the row is already gone.
+  **`api/sync.dart` can ask for a pack and send back what was answered** — `issuePack` and
+  `submitAttempts`, the two halves of the offline loop from the device's side. An
+  `AttemptSubmission` refuses on the device to name neither source or both, because a 400 a player
+  waits for is worse than a batch that never leaves; it carries **no verdict**, because the frozen
+  schema has nowhere to put one; and `elapsedMs` travels, because the server cannot derive time on
+  task — a pack item has no `issued_at` of its own. The four failures are told apart by what a
+  client should *do*: a 400 is a batch to drop, a 404 is a batch that landed nowhere, and
+  unreachable is the one worth keeping, because the server drops a duplicate by itself (0004).
+  Nothing calls either yet — the play loop still reads the bundled asset, and pointing it at an
+  issued pack is the next change.
   **All six frozen stimulus families draw and grade** — arithmetic, number series, matrix,
   analogy, the function machine and figurate. `content/model/stimulus_reader.dart` holds the six
   hand-written parsers and `test/content/model/stimulus_fixture_test.dart` checks each against
