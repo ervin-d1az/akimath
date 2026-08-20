@@ -173,9 +173,9 @@ format and its OpenAPI half.
   definition of both. Verifying is `HMAC(pack_salt, canonicalize(what was typed))` against what the
   pack already carries, through the same two functions the pack builder used, so **the server never
   learns an authored answer** — it holds a digest and can only confirm or deny a guess, which is a
-  stronger position than rederivation leaves it in. `GET /packs/{packId}` cannot rebuild such a pack
-  and answers 404: grading needs only the digest, a re-fetch needs the *content*, and storing that
-  is the next decision.
+  stronger position than rederivation leaves it in. A pack of authored items is re-fetched by
+  rebuilding the content the row names (migration 0006); a pack that carried digests and named no
+  content could not be rebuilt, and nothing writes that combination.
   **`POST /attempts` grades by rederiving, and that is the invariant made true by construction.**
   A submission carries no `ok` — `readAttemptBatch` refuses a body that mentions one, along with
   every other unknown property — so the server resolves the recorded

@@ -17,12 +17,11 @@ import {
 import { erasureResponse } from "../erasure.js";
 import { historyResponse, HISTORY_LIMIT } from "../history.js";
 import {
-  issuedPack,
+  issuedCopy,
   noSuchPackResponse,
   offlinePackResponse,
   packExpiry,
   packOf,
-  PACK_ITEM_COUNT,
 } from "../packs.js";
 import { conflictResponse, linkOutcome, readLinkRequest } from "../link.js";
 import { noPlayerResponse, profileResponse } from "../players.js";
@@ -30,6 +29,7 @@ import { route, type HandlerAnswer } from "../routing.js";
 import type { Logger } from "./logger.js";
 import { recentSessions } from "./history-repository.js";
 import { insertPack, packFor } from "./pack-repository.js";
+import { shippedPacks, type ShippedPack } from "./shipped-packs.js";
 import {
   entryForPackItem,
   insertAttempts,
@@ -90,6 +90,14 @@ export interface HandlerEnvironment {
   readonly randomHex: (bytes: number) => string;
   /** A signed 64-bit seed, matching `issued_items.seed` and the manifest. */
   readonly randomSeed: () => bigint;
+  /**
+   * The packs this build can issue, read on first use.
+   *
+   * A function rather than a map, so a bad artifact fails where a test can see
+   * it instead of at import (PROC-5 step 0b), and so a test can hand over one
+   * of its own without touching the filesystem.
+   */
+  readonly shippedPacks: () => ReadonlyMap<string, ShippedPack>;
 }
 
 const PLATFORM: HandlerEnvironment = {
@@ -99,7 +107,17 @@ const PLATFORM: HandlerEnvironment = {
   // reachable — a generator that only ever produced positives would exercise
   // half the seed space and hide every sign bug in rederivation.
   randomSeed: () => BigInt.asIntN(64, randomBytes(8).readBigUInt64BE()),
+  shippedPacks,
 };
+
+/**
+ * Which shipped pack a new issuance is a copy of.
+ *
+ * One today. When there are several, choosing between them is a product
+ * decision — and it is the same decision as "which pack does this player need
+ * next", which is rating's, which is F4.
+ */
+const ISSUED_CONTENT = "starter";
 
 export function createHandlers(
   database: RequestDatabase,
@@ -196,7 +214,45 @@ export function createHandlers(
         if (stored === null) {
           return noSuchPackResponse();
         }
-        return offlinePackResponse(packId, packOf(stored));
+
+        // **Two ways to rebuild, and the row says which.** A copy names content
+        // this build holds; a generated pack is described entirely by its
+        // manifest. Either way the body is reconstructed rather than stored —
+        // 158 KB per issuance, identical for every player, is a table that
+        // grows and says nothing new.
+        if (stored.contentId !== null) {
+          const content = environment.shippedPacks().get(stored.contentId);
+          if (content === undefined) {
+            // The build no longer ships it. A 404 is the honest answer: the row
+            // is real and the content is gone, and there is nothing the caller
+            // can do that a different status would help with.
+            return noSuchPackResponse();
+          }
+          return offlinePackResponse(
+            packId,
+            issuedCopy({
+              content: content.pack,
+              issuedAt: stored.issuedAt,
+              expiresAt: stored.expiresAt,
+            }),
+          );
+        }
+
+        const refs = stored.entries.map(templateRefOf);
+        if (refs.some((ref) => ref === null)) {
+          // A digest entry has no reference, so a generated pack carrying one
+          // cannot be rebuilt. Nothing writes that combination today.
+          return noSuchPackResponse();
+        }
+        return offlinePackResponse(
+          packId,
+          packOf({
+            refs: refs as NonNullable<(typeof refs)[number]>[],
+            saltHex: stored.saltHex,
+            issuedAt: stored.issuedAt,
+            expiresAt: stored.expiresAt,
+          }),
+        );
       }),
 
     // **Issuing is the first step of the offline loop, and nothing had one.**
@@ -210,22 +266,31 @@ export function createHandlers(
           return noPlayerResponse();
         }
 
+        // **A copy of the content the app already ships**, not twenty
+        // generated subtractions. `issuedPack` still exists and still works;
+        // nothing should prefer it while there is one template family, and
+        // 0005 is what made the better pack gradeable at all.
+        const content = environment.shippedPacks().get(ISSUED_CONTENT);
+        if (content === undefined) {
+          // Unreachable while the build ships one, and thrown rather than
+          // answered: a server with no content is not a client's problem.
+          throw new Error(`this build ships no pack called "${ISSUED_CONTENT}"`);
+        }
+
         const issuedAt = environment.now();
-        const issued = issuedPack({
-          saltHex: environment.randomHex(16),
-          seeds: Array.from({ length: PACK_ITEM_COUNT }, () => environment.randomSeed()),
-          issuedAt,
-        });
+        const expiresAt = packExpiry(issuedAt);
+        const issued = issuedCopy({ content: content.pack, issuedAt, expiresAt });
 
         const packId = await insertPack(client, {
           playerId,
+          contentId: content.id,
           // One skill per issued pack today, and the column is nullable for the
           // day that stops being true. Taken from the items rather than assumed.
           skillId: issued.pack.skill_nodes[0]!.skill_id,
           manifest: issued.manifest,
           saltHex: issued.pack.pack_salt,
           issuedAt,
-          expiresAt: packExpiry(issuedAt),
+          expiresAt,
         });
 
         return offlinePackResponse(packId, issued);

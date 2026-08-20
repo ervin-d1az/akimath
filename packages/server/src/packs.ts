@@ -5,6 +5,7 @@ import {
   type Item,
   type Pack,
 } from "@akimath/contract";
+import { toDigestEntry } from "@akimath/core";
 import {
   coreRegistry,
   fallbackDiagnosis,
@@ -241,5 +242,55 @@ export function noSuchPackResponse(): Response {
       error: "no_such_pack",
       message: "There is no pack with that id for this player.",
     },
+  };
+}
+
+/**
+ * A shipped pack, issued as a copy of itself.
+ *
+ * **The content a player would actually choose.** Eighty items across six
+ * families and thirty-five boards, against the twenty integer subtractions
+ * `issuedPack` can generate — and until 0005 the generated ones were the only
+ * pack anything could grade, so the worse content was the only content the
+ * loop reached.
+ *
+ * **Every entry is a digest.** The artifact records what each item *is*, not
+ * what made it: an authored item never had a template, and a generated one's
+ * seed is not written into the pack it ends up in. So all eighty are graded by
+ * verifying `HMAC(pack_salt, canonicalize(what was typed))` — and the server
+ * never learns any of the eighty answers.
+ *
+ * **The two timestamps are the row's, not the artifact's.** A pack built in
+ * August and issued in November is playable for a month from November; the
+ * artifact's own window belongs to the build, and neither timestamp is
+ * digested, so replacing them changes no item.
+ *
+ * **The puzzles come through untouched and have no manifest entries.** A puzzle
+ * leaves no row in any table, so nothing can grade one, and `(packId, index)`
+ * addresses `items` — a boards entry would shift every index after it.
+ */
+export function issuedCopy(options: {
+  readonly content: Pack;
+  readonly issuedAt: Date;
+  readonly expiresAt: Date;
+}): IssuedPack {
+  const pack: Pack = {
+    ...options.content,
+    issued_at: instant(options.issuedAt),
+    expires_at: instant(options.expiresAt),
+  };
+
+  // Validated, for the reason `packOf` is: the same check the client runs, so a
+  // pack this server would not accept never leaves it.
+  const checked = parsePack(pack);
+  if (!checked.ok) {
+    throw new Error(`the issued copy is not a pack: ${checked.tag}`);
+  }
+
+  return {
+    pack: checked.pack,
+    manifest: checked.pack.items.map((item) =>
+      toDigestEntry({ digest: item.answer.digest, skillId: item.skill_id }),
+    ),
   };
 }

@@ -18,6 +18,14 @@ import {
  */
 export interface PackToStore {
   readonly playerId: string;
+  /**
+   * Which shipped pack this row is a copy of, or null when it is generated.
+   *
+   * A generated pack is fully described by its manifest; a copy names content
+   * the server already holds, because the body is 158 KB and it is the same
+   * 158 KB for every player.
+   */
+  readonly contentId: string | null;
   /** The one skill an issued pack draws from today. */
   readonly skillId: number;
   readonly manifest: readonly ManifestEntry[];
@@ -44,9 +52,9 @@ export async function insertPack(
 ): Promise<string> {
   const result = await client.query<{ id: string }>(
     `INSERT INTO offline_packs
-       (id, player_id, skill_id, item_refs, pack_salt, issued_at, expires_at)
+       (id, player_id, skill_id, item_refs, pack_salt, issued_at, expires_at, content_id)
      VALUES (gen_random_uuid(), $1::uuid, $2::smallint, $3::jsonb,
-             decode($4, 'hex'), $5::timestamptz, $6::timestamptz)
+             decode($4, 'hex'), $5::timestamptz, $6::timestamptz, $7)
      RETURNING id`,
     [
       pack.playerId,
@@ -55,6 +63,7 @@ export async function insertPack(
       pack.saltHex,
       pack.issuedAt.toISOString(),
       pack.expiresAt.toISOString(),
+      pack.contentId,
     ],
   );
   const row = result.rows[0];
@@ -66,7 +75,10 @@ export async function insertPack(
 
 /** A stored pack, as far as the database can say what one is. */
 export interface StoredPack {
-  readonly refs: readonly TemplateRef[];
+  /** Names the shipped content this row copies, or null when it is generated. */
+  readonly contentId: string | null;
+  /** One per item, in stored order, whichever kind each turned out to be. */
+  readonly entries: readonly ManifestEntry[];
   readonly saltHex: string;
   readonly issuedAt: Date;
   readonly expiresAt: Date;
@@ -87,14 +99,6 @@ export interface StoredPack {
  * A manifest entry that will not read makes the whole pack null rather than a
  * pack with a hole in it: `(packId, index)` addresses items by position, and a
  * pack that quietly dropped one would shift every index after it.
- *
- * **A pack carrying authored items cannot be rebuilt, and answers 404 today.**
- * A digest entry has no reference, so there is nothing to regenerate the item
- * from — the digest identifies an answer, not a prompt. `POST /attempts` grades
- * such an item perfectly well, because grading only needs the digest; what a
- * re-fetch needs is the *content*, which lives in the pack body and is not
- * stored. Serving it back means storing it, and that is the next decision
- * rather than a silent hole here.
  */
 export async function packFor(
   client: pg.ClientBase,
@@ -106,11 +110,13 @@ export async function packFor(
     salt_hex: string;
     issued_at: Date;
     expires_at: Date;
+    content_id: string | null;
   }>(
     `SELECT item_refs,
             encode(pack_salt, 'hex') AS salt_hex,
             issued_at,
-            expires_at
+            expires_at,
+            content_id
        FROM offline_packs
       WHERE id = $1::uuid AND player_id = $2::uuid`,
     [packId, playerId],
@@ -120,20 +126,17 @@ export async function packFor(
     return null;
   }
 
-  const refs: TemplateRef[] = [];
-  for (const entry of row.item_refs) {
-    const read = fromManifestEntry(entry);
-    const ref = read === null ? null : templateRefOf(read);
-    if (ref === null) {
-      // A digest entry has no reference and never will. `GET /packs/{packId}`
-      // rebuilds from references, so a pack carrying authored items cannot be
-      // rebuilt — see `packFor`'s own note.
+  const entries: ManifestEntry[] = [];
+  for (const value of row.item_refs) {
+    const entry = fromManifestEntry(value);
+    if (entry === null) {
       return null;
     }
-    refs.push(ref);
+    entries.push(entry);
   }
   return {
-    refs,
+    contentId: row.content_id,
+    entries,
     saltHex: row.salt_hex,
     issuedAt: row.issued_at,
     expiresAt: row.expires_at,

@@ -82,6 +82,7 @@ CREATE TABLE public.offline_packs (
     pack_salt bytea NOT NULL,
     issued_at timestamp with time zone DEFAULT now() NOT NULL,
     expires_at timestamp with time zone NOT NULL,
+    content_id text,
     CONSTRAINT offline_packs_refs_are_an_array CHECK ((jsonb_typeof(item_refs) = 'array'::text)),
     CONSTRAINT offline_packs_seeds_are_strings CHECK ((NOT jsonb_path_exists(item_refs, '$[*]."seed"?(@.type() != "string")'::jsonpath)))
 );

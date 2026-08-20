@@ -1,14 +1,14 @@
 import { createHmac } from "node:crypto";
 
-import { parsePack, storedAnswer } from "@akimath/contract";
-import { coreRegistry, fromManifestEntry, rederive, templateRefOf } from "@akimath/core";
+import { canonicalize, parsePack } from "@akimath/contract";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createApp, createHandlers } from "../src/adapters/http-server.js";
 import { createLogger } from "../src/adapters/logger.js";
 import { createRequestDatabase, type RequestDatabase } from "../src/adapters/request-database.js";
-import { PACK_ITEM_COUNT } from "../src/packs.js";
+import { readShippedPacks } from "../src/adapters/shipped-packs.js";
 import type { Caller } from "../src/routing.js";
+import { authoredAnswers } from "./support/authored.js";
 import { describeWithDatabase, freshDatabase, type TestDatabase } from "./support/database.js";
 
 const ACCOUNT = "6f2b1c8d-0000-4000-8000-00000000ab01";
@@ -19,6 +19,10 @@ const AT = "2026-08-19T09:15:00.000Z";
 describeWithDatabase("POST /packs, against a real database", () => {
   let db: TestDatabase;
   let requests: RequestDatabase;
+
+  const shipped = readShippedPacks().get("starter")!.pack;
+  /** The plaintext answers the built pack only ever carries as digests. */
+  const answers = authoredAnswers();
 
   const app = () =>
     createApp({
@@ -44,7 +48,13 @@ describeWithDatabase("POST /packs, against a real database", () => {
 
   interface Issued {
     readonly packId: string;
-    readonly pack: { readonly items: { readonly answer: { readonly digest: string } }[] };
+    readonly pack: {
+      readonly items: { readonly answer: { readonly digest: string }; readonly skill_id: number }[];
+      readonly puzzles: unknown[];
+      readonly pack_salt: string;
+      readonly issued_at: string;
+      readonly expires_at: string;
+    };
   }
 
   beforeEach(async () => {
@@ -61,7 +71,10 @@ describeWithDatabase("POST /packs, against a real database", () => {
     await db.close();
   });
 
-  it("answers a pack the client would accept", async () => {
+  it("answers the content the app already ships", async () => {
+    // Eighty items and the boards, not twenty generated subtractions. Until
+    // 0005 made an authored item gradeable, the worse pack was the only one
+    // anything could sync.
     const response = await issue();
 
     expect(response.status).toBe(200);
@@ -69,69 +82,63 @@ describeWithDatabase("POST /packs, against a real database", () => {
     expect(Object.keys(body).sort()).toEqual(["expiresAt", "issuedAt", "pack", "packId"]);
     const checked = parsePack(body.pack);
     expect(checked.ok, checked.ok ? "" : checked.tag).toBe(true);
-    expect(body.pack.items).toHaveLength(PACK_ITEM_COUNT);
+    expect(body.pack.items).toHaveLength(shipped.items.length);
+    expect(body.pack.puzzles).toHaveLength(shipped.puzzles.length);
   });
 
-  it("and writes one row carrying one reference per item", async () => {
+  it("and the window is the issuance's, not the build's", async () => {
+    const body = (await (await issue()).json()) as Issued;
+
+    expect(body.pack.issued_at).not.toBe(shipped.issued_at);
+    expect(new Date(body.pack.expires_at).getTime())
+      .toBeGreaterThan(new Date(body.pack.issued_at).getTime());
+  });
+
+  it("it writes one row naming the content, with one entry per item", async () => {
     const body = (await (await issue()).json()) as Issued;
 
     const row = await db.client.query<{
       player_id: string;
-      item_refs: unknown[];
+      item_refs: { kind: string; digest: string; skill_id: number }[];
       pack_salt: Buffer;
-      skill_id: number;
-    }>("SELECT player_id, item_refs, pack_salt, skill_id FROM offline_packs WHERE id = $1", [
-      body.packId,
-    ]);
+      content_id: string | null;
+    }>(
+      `SELECT player_id, item_refs, pack_salt, content_id
+         FROM offline_packs WHERE id = $1`,
+      [body.packId],
+    );
     expect(row.rows[0]?.player_id).toBe(PLAYER);
-    expect(row.rows[0]?.item_refs).toHaveLength(PACK_ITEM_COUNT);
-    // Sixteen bytes in the column, thirty-two hex characters in the format.
+    // **A name, not the body.** 158 KB per issuance, identical for every
+    // player, is a table that grows and says nothing new each time.
+    expect(row.rows[0]?.content_id).toBe("starter");
+    expect(row.rows[0]?.item_refs).toHaveLength(shipped.items.length);
+    expect(row.rows[0]?.item_refs[0]?.kind).toBe("digest");
     expect(row.rows[0]?.pack_salt.length).toBe(16);
-    expect(row.rows[0]?.skill_id).toBe(1);
   });
 
   it("the manifest it stored is the pack it answered with", async () => {
     // The seam that has no other guard: the row is what grading reads, and the
-    // body is what the player plays. Compared through the database rather than
-    // through the response, because a manifest that never landed would pass a
-    // check that only looked at what was returned.
+    // body is what the player plays.
     const body = (await (await issue()).json()) as Issued;
-    const stored = await db.client.query<{ item_refs: unknown[]; pack_salt: Buffer }>(
-      "SELECT item_refs, pack_salt FROM offline_packs WHERE id = $1",
-      [body.packId],
-    );
-    const refs = stored.rows[0]!.item_refs;
-    const salt = stored.rows[0]!.pack_salt.toString("hex");
+    const stored = await db.client.query<{
+      item_refs: { digest: string; skill_id: number }[];
+    }>("SELECT item_refs FROM offline_packs WHERE id = $1", [body.packId]);
 
-    refs.forEach((entry, index) => {
-      const generated = rederive(coreRegistry(), templateRefOf(fromManifestEntry(entry)!)!);
-      const { canonical } = storedAnswer(
-        generated.answer.numerator,
-        generated.answer.denominator,
-      );
-      // HMAC recomputed here rather than through `answerDigest`, so the
-      // assertion is an independent derivation from the bytes the database
-      // holds — calling the production function would only prove it agrees
-      // with itself.
-      expect(body.pack.items[index]!.answer.digest, `item ${index}`).toBe(
-        createHmac("sha256", Buffer.from(salt, "hex")).update(canonical, "utf8").digest("hex"),
-      );
+    stored.rows[0]!.item_refs.forEach((entry, index) => {
+      expect(entry.digest, `item ${index}`).toBe(body.pack.items[index]!.answer.digest);
+      expect(entry.skill_id, `item ${index}`).toBe(body.pack.items[index]!.skill_id);
     });
   });
 
-  it("**the loop closes**: an item it issued grades when it comes back", async () => {
-    // Issue, answer, sync, graded. Every step through the real endpoints and a
-    // real database, which is the first time this path has existed end to end.
+  it("**the loop closes on authored content**, which is the whole point", async () => {
+    // Issue, answer, sync, graded — on an item **nobody can rederive**. The
+    // answer comes from the authoring source, which is the only place it exists
+    // in plaintext: the pack carries a digest, and so does the server.
     const body = (await (await issue()).json()) as Issued;
-    const stored = await db.client.query<{ item_refs: unknown[] }>(
-      "SELECT item_refs FROM offline_packs WHERE id = $1",
-      [body.packId],
-    );
-    const generated = rederive(coreRegistry(), templateRefOf(fromManifestEntry(stored.rows[0]!.item_refs[0])!)!);
-    const right = storedAnswer(
-      generated.answer.numerator,
-      generated.answer.denominator,
-    ).canonical;
+
+    const right = answers[0]!;
+    const wrong = `${right}0`;
+    expect(canonicalize(right).ok, right).toBe(true);
 
     const response = await sync([
       {
@@ -144,7 +151,7 @@ describeWithDatabase("POST /packs, against a real database", () => {
       {
         packRef: { packId: body.packId, index: 1 },
         sessionId: SESSION,
-        answer: "definitivamente no",
+        answer: wrong,
         clientTs: AT,
         elapsedMs: 900,
       },
@@ -163,26 +170,9 @@ describeWithDatabase("POST /packs, against a real database", () => {
     ]);
   });
 
-  it("two issues are two packs, with different salts", async () => {
-    const first = (await (await issue()).json()) as Issued;
-    const second = (await (await issue()).json()) as Issued;
-
-    expect(second.packId).not.toBe(first.packId);
-    const count = await db.client.query("SELECT 1 FROM offline_packs");
-    expect(count.rowCount).toBe(2);
-    // Different salts, so one player's two packs are not comparable either.
-    const salts = await db.client.query<{ hex: string }>(
-      "SELECT encode(pack_salt, 'hex') AS hex FROM offline_packs",
-    );
-    expect(new Set(salts.rows.map((r) => r.hex)).size).toBe(2);
-  });
-
   it("a pack can be fetched again, and it is the same pack", async () => {
-    // **Rebuilt, not read back.** `offline_packs` stores a manifest and a salt
-    // rather than fifty rows of rendered item — that is what the manifest is
-    // for — so a re-fetch reconstructs. Every digest has to come back
-    // identical or a client that already has attempts against this pack is
-    // holding answers to a different one.
+    // Rebuilt from the content it names plus the row's own window — not read
+    // back from a stored body.
     const issued = (await (await issue()).json()) as Issued & Record<string, unknown>;
 
     const again = await app().fetch(
@@ -191,6 +181,20 @@ describeWithDatabase("POST /packs, against a real database", () => {
 
     expect(again.status).toBe(200);
     expect(await again.json()).toEqual(issued);
+  });
+
+  it("two issues are two packs of the same content", async () => {
+    const first = (await (await issue()).json()) as Issued;
+    const second = (await (await issue()).json()) as Issued;
+
+    expect(second.packId).not.toBe(first.packId);
+    expect((await db.client.query("SELECT 1 FROM offline_packs")).rowCount).toBe(2);
+    // **The same salt, and that is not a leak.** A copy shares the content's
+    // salt because its digests were taken under it. The salt ships *inside*
+    // every pack anyway, and every player gets the same content — so one
+    // player's digests say nothing about another's that installing the app
+    // would not.
+    expect(second.pack.pack_salt).toBe(first.pack.pack_salt);
   });
 
   it("and not somebody else's, which is a 404 rather than a 403", async () => {
@@ -224,6 +228,23 @@ describeWithDatabase("POST /packs, against a real database", () => {
 
     expect(response.status).toBe(404);
     expect(((await response.json()) as { error: string }).error).toBe("no_such_pack");
+  });
+
+  it("a row naming content this build no longer ships is a 404", async () => {
+    // The row is real and the content is gone. There is nothing the caller can
+    // do that a different status would help with.
+    const gone = "018f4e3c-0000-7000-8000-00000000ab0a";
+    await db.client.query(
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at, content_id)
+       VALUES ($1, $2, '[]'::jsonb, '\\x00', now() + interval '30 days', 'a-pack-from-2019')`,
+      [gone, PLAYER],
+    );
+
+    const response = await app().fetch(
+      new Request(`http://localhost/packs/${gone}`, { method: "GET" }),
+    );
+
+    expect(response.status).toBe(404);
   });
 
   it("an account with no player is told to link one first", async () => {

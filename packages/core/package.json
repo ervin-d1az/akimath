@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./pack/starter.json": "./pack/starter.json"
   },
   "types": "./src/index.ts",
   "description": "AkiMath domain core: the rederivation machine. Zero runtime dependencies.",
