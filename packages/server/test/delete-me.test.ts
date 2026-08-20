@@ -75,8 +75,9 @@ describeWithDatabase("DELETE /me, against a real database", () => {
       [pack, player],
     );
     await db.client.query(
-      `INSERT INTO attempts (id, player_id, issued_item_id, skill_id, is_correct, elapsed_ms, answered_at)
-            VALUES ($1, $2, $3, 1, true, 1200, now())`,
+      `INSERT INTO attempts (id, player_id, issued_item_id, skill_id, is_correct,
+                             elapsed_ms, answered_at, session_id)
+            VALUES ($1, $2, $3, 1, true, 1200, now(), gen_random_uuid())`,
       [attempt, player, item],
     );
     await db.client.query(

@@ -250,6 +250,66 @@ describeWithDatabase("POST /attempts, against a real database", () => {
     expect(await rows()).toHaveLength(0);
   });
 
+  it("the session travels, so a history can be grouped by it", async () => {
+    // Every submission has carried a `sessionId` since the freeze and the table
+    // had no column for it, which is why `GET /me/history` had nothing to build
+    // a series out of. Migration 0004 is the answer to that open question.
+    await submit({ attempts: [attempt()] });
+
+    const [row] = await db.client.query<{ session_id: string }>(
+      "SELECT session_id FROM attempts",
+    ).then((r) => r.rows);
+    expect(row?.session_id).toBe(SESSION);
+  });
+
+  it("sent twice, it records once and answers the same thing", async () => {
+    // The retry this endpoint used to double. `attempts` accepts no UPDATE and
+    // no DELETE from the request path, so nothing could have cleaned it up —
+    // the counts would simply have been wrong, and the rating with them.
+    //
+    // Idempotent *by nature*: the verdicts are recomputed from the same inputs
+    // rather than replayed from a store, the same way `linkPlayer` is.
+    const first = await submit({ attempts: [attempt()] });
+    const second = await submit({ attempts: [attempt()] });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(await second.json()).toEqual(await first.json());
+    expect(await rows()).toHaveLength(1);
+  });
+
+  it("and the database refuses a duplicate even when nothing asked it nicely", async () => {
+    // The reader refuses a repeated source and the insert says `ON CONFLICT DO
+    // NOTHING`, so neither path can produce one. This is the constraint itself,
+    // proven directly — the guard that is still there when a future writer
+    // forgets both.
+    await submit({ attempts: [attempt()] });
+
+    await expect(
+      db.client.query(
+        `INSERT INTO attempts
+           (id, player_id, issued_item_id, skill_id, is_correct, elapsed_ms, answered_at, session_id)
+         VALUES (gen_random_uuid(), $1, $2, 1, true, 10, now(), $3)`,
+        [PLAYER, ITEM, SESSION],
+      ),
+    ).rejects.toThrow(/attempts_one_per_issued_item/);
+
+    await db.client.query(
+      `INSERT INTO attempts
+         (id, player_id, pack_id, pack_index, skill_id, is_correct, elapsed_ms, answered_at, session_id)
+       VALUES (gen_random_uuid(), $1, $2, 0, 1, true, 10, now(), $3)`,
+      [PLAYER, PACK, SESSION],
+    );
+    await expect(
+      db.client.query(
+        `INSERT INTO attempts
+           (id, player_id, pack_id, pack_index, skill_id, is_correct, elapsed_ms, answered_at, session_id)
+         VALUES (gen_random_uuid(), $1, $2, 0, 1, true, 10, now(), $3)`,
+        [PLAYER, PACK, SESSION],
+      ),
+    ).rejects.toThrow(/attempts_one_per_pack_item/);
+  });
+
   it("an account with no player is told to link one first", async () => {
     await db.client.query("DELETE FROM players WHERE auth_user_id = $1", [ACCOUNT]);
 

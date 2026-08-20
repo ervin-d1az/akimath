@@ -178,16 +178,25 @@ describeWithDatabase("the job, against a real database", () => {
   const PLAYER = "018f4e3c-0000-7000-8000-0000000000f1";
   let db: TestDatabase;
 
-  /** An attempt aged by `days`, hung off the offline pack. */
+  /**
+   * An attempt aged by `days`, hung off the offline pack.
+   *
+   * **A different `pack_index` each time**, because migration 0004 allows one
+   * attempt per item and these are several attempts by one player against one
+   * pack. The index is derived from the id rather than counted, so the helper
+   * stays a function of its arguments.
+   */
   async function aged(id: string, days: number): Promise<void> {
+    const index = Number.parseInt(id.slice(-2), 16);
     await db.client.query(
       `INSERT INTO attempts
          (id, player_id, pack_id, pack_index, skill_id, is_correct,
-          elapsed_ms, answered_at, created_at)
-       VALUES ($1, $2, $3, 1, 1, true, 4200,
+          elapsed_ms, answered_at, created_at, session_id)
+       VALUES ($1, $2, $3, $5::smallint, 1, true, 4200,
                now() - ($4 || ' days')::interval,
-               now() - ($4 || ' days')::interval)`,
-      [id, PLAYER, PACK, String(days)],
+               now() - ($4 || ' days')::interval,
+               gen_random_uuid())`,
+      [id, PLAYER, PACK, String(days), index],
     );
   }
 
