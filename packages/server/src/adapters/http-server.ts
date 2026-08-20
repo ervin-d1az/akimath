@@ -21,7 +21,6 @@ import {
   noSuchPackResponse,
   offlinePackResponse,
   packExpiry,
-  packOf,
 } from "../packs.js";
 import { conflictResponse, linkOutcome, readLinkRequest } from "../link.js";
 import { noPlayerResponse, profileResponse } from "../players.js";
@@ -215,40 +214,30 @@ export function createHandlers(
           return noSuchPackResponse();
         }
 
-        // **Two ways to rebuild, and the row says which.** A copy names content
-        // this build holds; a generated pack is described entirely by its
-        // manifest. Either way the body is reconstructed rather than stored —
-        // 158 KB per issuance, identical for every player, is a table that
-        // grows and says nothing new.
-        if (stored.contentId !== null) {
-          const content = environment.shippedPacks().get(stored.contentId);
-          if (content === undefined) {
-            // The build no longer ships it. A 404 is the honest answer: the row
-            // is real and the content is gone, and there is nothing the caller
-            // can do that a different status would help with.
-            return noSuchPackResponse();
-          }
-          return offlinePackResponse(
-            packId,
-            issuedCopy({
-              content: content.pack,
-              issuedAt: stored.issuedAt,
-              expiresAt: stored.expiresAt,
-            }),
-          );
-        }
-
-        const refs = stored.entries.map(templateRefOf);
-        if (refs.some((ref) => ref === null)) {
-          // A digest entry has no reference, so a generated pack carrying one
-          // cannot be rebuilt. Nothing writes that combination today.
+        // **Rebuilt from the content it names, never read back from a body.**
+        // The artifact is 158 KB and it is the same 158 KB for every player, so
+        // the row records which pack it is a copy of and the two instants that
+        // are its own. Neither instant is digested, so nothing an attempt is
+        // graded against moves.
+        //
+        // Every row has a `content_id`: `POST /packs` is the only thing that
+        // writes one and it always issues a copy. A row without one would be a
+        // pack this build cannot describe, and it is answered the same way as
+        // content the build no longer ships.
+        const content =
+          stored.contentId === null
+            ? undefined
+            : environment.shippedPacks().get(stored.contentId);
+        if (content === undefined) {
+          // The build no longer ships it. A 404 is the honest answer: the row
+          // is real and the content is gone, and there is nothing the caller
+          // can do that a different status would help with.
           return noSuchPackResponse();
         }
         return offlinePackResponse(
           packId,
-          packOf({
-            refs: refs as NonNullable<(typeof refs)[number]>[],
-            saltHex: stored.saltHex,
+          issuedCopy({
+            content: content.pack,
             issuedAt: stored.issuedAt,
             expiresAt: stored.expiresAt,
           }),

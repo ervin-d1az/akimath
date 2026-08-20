@@ -128,9 +128,9 @@ format and its OpenAPI half.
 - **A scaffold, plus the frozen schema.** `packages/server` routes one endpoint, `GET /health`,
   through a pure `route()` function, and now also holds the database:
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
-  append-only) plus four forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
+  append-only) plus five forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **363 tests, green, 99.16% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **360 tests, green, 98.92% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -207,10 +207,16 @@ format and its OpenAPI half.
   `(packId, index)` could not address it and nothing could grade it. `src/packs.ts` builds the pack
   and its manifest *together and in the same order* — one list seen from the two ends of the
   offline loop — and `test/issue-pack.test.ts` closes it for real: issue, rederive the answer from
-  the row the server wrote, sync it, and watch it come back `ok: true`. **Said plainly: an issued
-  pack is twenty integer subtractions**, worse content than the seventy authored items the app
-  ships, and nothing should prefer it until there is a second template family or a rating to move
-  the ladder. What landed is the mechanism, which had no first step. `storedAnswer` lives in
+  the row the server wrote, sync it, and watch it come back `ok: true`. **What is issued is a copy of the pack the app
+  already ships** — eighty items across six families and thirty-five boards. Migration 0006 adds
+  `content_id`: the row *names* the content rather than storing it, because the artifact is 158 KB
+  and it is the same 158 KB for every player, which is `ARCHITECTURE.md` §4's manifest argument one
+  level up. `GET /packs/{packId}` rebuilds from that name plus the row's own window, so a re-fetch
+  is byte-identical and neither instant is digested. A copy shares the content's salt, and that is
+  not a leak: the salt ships inside every pack and every player gets the same content. The
+  generator that made twenty subtractions is **gone** — after 0005 both kinds were equally
+  gradeable, only one was worth playing, and code nothing calls is a claim about the server that is
+  not true. `storedAnswer` lives in
   `packages/contract` so the pack builder and the server make one decision about shape and
   spelling — that is the bug from #50 and a second copy is how it returns.
   **`GET /me/history` is a session at a time.** The frozen shape asks for a `score` and a `title`
@@ -257,7 +263,7 @@ format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 103 of the 363 report as skipped rather than passing quietly.
+  run; leave it unset and 102 of the 360 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
@@ -323,8 +329,10 @@ format and its OpenAPI half.
   addition trains people to switch it off — and that break can be **answered** rather than only
   obeyed: an `allow-breaking-contract` label on the pull request passes it, the same shape as
   `allow-protected-edit`, because before v1 ships a breaking change is ordinary and a gate with no
-  way to say yes gets deleted instead. `gate` is the intended required check and is **not
-  registered on the `protect-main` ruleset yet**, so today CI is advisory on `main`.
+  way to say yes gets deleted instead. `gate` is registered on the `protect-main` ruleset, so **CI blocks a merge into `main`**. Its
+  checks report a few seconds after a push and `gh pr merge` refuses until they do, with *"the base
+  branch policy prohibits the merge"* — which reads like a permissions problem and is a timing
+  one.
 - **The workspace is declared but not live.** The root `package.json` names
   `pnpm@11.21.0` and `pnpm-workspace.yaml` carries a `catalog:`, but pnpm is not installed
   and `packages/server` still pins its own `typescript@^5.7.2` against the catalog's
