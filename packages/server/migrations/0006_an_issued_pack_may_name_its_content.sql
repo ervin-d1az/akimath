@@ -1,0 +1,35 @@
+-- 0006 · an issued pack may name the content it is a copy of.
+--
+-- `POST /packs` generated its items, and that was the only pack it could
+-- describe: `item_refs` says how to *rebuild* each item, and rebuilding is
+-- something only a template can do. So the pack a player was issued was twenty
+-- integer subtractions, while the app shipped eighty authored items and
+-- thirty-five boards that nobody could sync — worse content, offered by the
+-- only path that worked.
+--
+-- 0005 made an authored item **gradeable** by carrying its answer's digest.
+-- This makes one **issuable**, by recording which shipped pack the row is a
+-- copy of.
+--
+-- **A name, not the body.** The built pack is 158 KB and it is the same 158 KB
+-- for every player; a copy per issuance is a table that grows by a sixth of a
+-- megabyte per pack and says nothing new each time. `ARCHITECTURE.md` §4 chose
+-- a manifest over fifty rows for the same reason, and this is the same trade
+-- one level up: the server already holds the artifact, so the row needs only to
+-- say which one.
+--
+-- **Nullable, and that is the discriminator.** A generated pack is fully
+-- described by its manifest and names no content; a copy names one and its
+-- manifest carries the digests that grade it. `GET /packs/{packId}` reads this
+-- column to decide which way to rebuild.
+--
+-- `text` rather than an enum: the set of shipped packs is content, it will grow
+-- and shrink with the app, and a migration per pack name is a migration nobody
+-- will write. An unknown name is a 404 from a server that no longer ships it,
+-- which is the honest answer.
+--
+-- Forward-only, as an ALTER: 0001 has been applied and the runner refuses to
+-- start when a recorded checksum moves.
+
+ALTER TABLE offline_packs
+  ADD COLUMN content_id text;
