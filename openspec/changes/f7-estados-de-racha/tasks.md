@@ -63,5 +63,18 @@
   green. That is the constant being a product decision bracketed by two clock
   times rather than restated by a test — 15:00 steady against 20:14 at risk. A
   shift to 15 or to 21 is red.
-- [ ] 5.3 Tier 2 — both screens on the simulator, reached by seeding the log
-  rather than by rooting `main.dart` at them.
+- [x] 5.3 Tier 2 — both screens on the iPhone 17 simulator, reached by seeding
+  the log rather than by rooting `main.dart` at them:
+  `integration_test/streak_notice_tour_test.dart`, two cases, green. Looking at
+  them found two defects no suite had:
+  - **`fullScreenSession` carried no `SafeArea`**, so Aki sat under the Dynamic
+    Island. Six screens go through that route and all six carried their own;
+    the seventh forgot. Now the route insets and the six inner ones are no-ops.
+  - **`CenteredStateView` was top-aligned** where the design's body is
+    `justify-content:center`, leaving a short state with its headline near the
+    status bar over a hand's depth of empty cream.
+
+  One drift left and it is not this change's: the flame and the arrow render as
+  the stand-in characters `▲` and `→`. Every glyph in the app does —
+  `f0-brand-icons` owns transcribing all fourteen, and it is unblocked now that
+  the design digests are reachable.

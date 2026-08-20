@@ -82,7 +82,15 @@ Route<T> fullScreenSession<T>(WidgetBuilder builder) {
     fullscreenDialog: true,
     builder: (BuildContext context) => Scaffold(
       backgroundColor: BrandColors.cream,
-      body: Builder(builder: builder),
+      // **The route insets, not each screen.** Six screens went through here
+      // and all six carried their own `SafeArea`; the seventh did not, and its
+      // Aki sat under the Dynamic Island on a real phone. Six remembering and
+      // one forgetting is the definition of a rule that belongs in one place,
+      // which is the same argument this function was extracted for. The six
+      // inner ones are now no-ops — a nested `SafeArea` sees no padding left to
+      // consume — and they stay, because each is inside a `Scaffold` its screen
+      // owns and the design registry pumps some of them directly.
+      body: SafeArea(child: Builder(builder: builder)),
     ),
   );
 }
