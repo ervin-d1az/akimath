@@ -309,7 +309,7 @@ export function buildOpenApiDocument(): unknown {
               ...(json(ref("History")) as object),
             },
             ...errors,
-            ...notImplemented,
+            // No `notImplemented`: this one is built.
           },
         },
       },

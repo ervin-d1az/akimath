@@ -14,6 +14,7 @@ import {
   type GradedAttempt,
 } from "../attempts.js";
 import { erasureResponse } from "../erasure.js";
+import { historyResponse, HISTORY_LIMIT } from "../history.js";
 import {
   issuedPack,
   offlinePackResponse,
@@ -24,6 +25,7 @@ import { conflictResponse, linkOutcome, readLinkRequest } from "../link.js";
 import { noPlayerResponse, profileResponse } from "../players.js";
 import { route, type HandlerAnswer } from "../routing.js";
 import type { Logger } from "./logger.js";
+import { recentSessions } from "./history-repository.js";
 import { insertPack } from "./pack-repository.js";
 import {
   insertAttempts,
@@ -160,6 +162,18 @@ export function createHandlers(
         return verdictsResponse(graded);
       });
     },
+
+    // **A history entry is a session, not an attempt.** The frozen shape asks
+    // for a score and a title, and neither means anything about one answered
+    // item — which is why `session_id` had to be persisted first (0004).
+    getHistory: ({ userId }) =>
+      database.inRequestRole(async (client) => {
+        const playerId = await playerIdForAccount(client, userId);
+        if (playerId === null) {
+          return noPlayerResponse();
+        }
+        return historyResponse(await recentSessions(client, playerId, HISTORY_LIMIT));
+      }),
 
     // **Issuing is the first step of the offline loop, and nothing had one.**
     // `GET /packs/{packId}` fetched by an id that nothing minted, so

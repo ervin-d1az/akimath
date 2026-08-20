@@ -102,6 +102,7 @@ export const CONTRACTED_OPERATIONS: readonly Route[] = [
  */
 export const IMPLEMENTED_OPERATIONS: readonly string[] = [
   "deleteMe",
+  "getHistory",
   "getMe",
   "issuePack",
   "linkPlayer",
