@@ -1,6 +1,7 @@
 import 'package:akimath_app/design/widgets/candy_surface.dart';
 import 'package:akimath_app/features/round/ui/stimulus/hidden_operation_view.dart';
 import 'package:flutter/material.dart';
+import 'package:akimath_app/design/icons/brand_icon.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The frozen golden: `2 › 7`, `5 › 16`, query 9. The rule is `×3 + 1`.
@@ -46,9 +47,20 @@ void main() {
       // the numbers in front of them.
       await _pump(tester);
 
+      // **Asked of the glyph, not of a character.** These lines used to read
+      // `find.text('→')`, which was true of the stand-in and says nothing now
+      // that a glyph is geometry. What has to hold is unchanged: the mark
+      // between the two numbers is `mapsTo` — *becomes* — and never `forward`,
+      // whose stand-in `›` set between numerals reads as `>`.
       expect(find.text('›'), findsNothing);
       expect(find.text('>'), findsNothing);
-      expect(find.text('→'), findsWidgets);
+
+      final Iterable<BrandGlyph> bridges = tester
+          .widgetList<BrandIcon>(find.byType(BrandIcon))
+          .map((BrandIcon icon) => icon.glyph);
+      expect(bridges, isNotEmpty);
+      expect(bridges, everyElement(isNot(BrandGlyph.forward)));
+      expect(bridges, contains(BrandGlyph.mapsTo));
     });
   });
 

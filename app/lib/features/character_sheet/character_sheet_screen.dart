@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../design/brand/aki.dart';
 import '../../design/brand/app_icon.dart';
+import '../../design/icons/brand_icon.dart';
+import '../../design/icons/spec/icon_paths.dart';
 import '../../design/tokens/tokens.dart';
 import '../../design/widgets/candy_surface.dart';
 import '../../design/widgets/speech_bubble.dart';
@@ -42,6 +44,16 @@ class CharacterSheetScreen extends StatelessWidget {
             ),
             const SizedBox(height: BrandShape.space4),
             const _IconAndContext(),
+            const SizedBox(height: BrandShape.space7),
+            Text('LOS GLIFOS', style: BrandText.sectionTitle()),
+            const SizedBox(height: BrandShape.space2),
+            Text(
+              'Trazados tal cual vienen del diseño · el grosor es del glifo, '
+              'no del tamaño',
+              style: BrandText.body(color: BrandColors.muted),
+            ),
+            const SizedBox(height: BrandShape.space4),
+            const _GlyphSheet(),
           ],
         ),
       ),
@@ -363,6 +375,60 @@ class _StillToDecide extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+/// Every transcribed glyph, at one size, with its name under it.
+///
+/// **The place a human compares the transcription against the design.** The
+/// rest of this screen exists so Aki can be checked by eye against
+/// `Aki Hoja de Personaje.dc.html`; this is the same job for §2.6 of
+/// `AkiMath Perfil y Estados.dc.html` and its siblings. A parser test can say
+/// the geometry lands inside its viewBox, and cannot say the flame looks like a
+/// flame.
+///
+/// It reads `iconPaths` rather than a hand-written list, so a glyph added to
+/// the set appears here without anyone remembering to add it — the same
+/// mistake `nav_glyph_spec.dart`'s fork counter was fixed for.
+class _GlyphSheet extends StatelessWidget {
+  const _GlyphSheet();
+
+  static const double _drawn = 28;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: BrandShape.space3,
+      runSpacing: BrandShape.space3,
+      children: <Widget>[
+        for (final BrandGlyph glyph in iconPaths.keys)
+          CandySurface(
+            width: 88,
+            borderRadius: BrandShape.radiusControl,
+            shadowOffset: BrandShape.shadowPill,
+            padding: const EdgeInsets.symmetric(
+              horizontal: BrandShape.space2,
+              vertical: BrandShape.space3,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                SizedBox(
+                  height: _drawn,
+                  child: Center(child: BrandIcon(glyph, size: _drawn)),
+                ),
+                const SizedBox(height: BrandShape.space2),
+                Text(
+                  glyph.name,
+                  textAlign: TextAlign.center,
+                  style: BrandText.caption(size: 11),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

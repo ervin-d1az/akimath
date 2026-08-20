@@ -2,6 +2,7 @@ import 'package:akimath_app/design/icons/brand_icon.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/design/widgets/verdict_ring.dart';
 import 'package:flutter/widgets.dart';
+import 'package:akimath_app/design/painting/dashed_border_painter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _host(Widget child) => Directionality(
@@ -63,15 +64,14 @@ void main() {
       await tester.pumpWidget(
         _host(const VerdictRing(Verdict.correct, size: 44, color: mono)),
       );
-      final bool correctIsDashed =
-          find.byType(CustomPaint).evaluate().isNotEmpty;
+      final bool correctIsDashed = _isDashed(tester);
       final BrandGlyph correctGlyph =
           tester.widget<BrandIcon>(find.byType(BrandIcon)).glyph;
 
       await tester.pumpWidget(
         _host(const VerdictRing(Verdict.wrong, size: 44, color: mono)),
       );
-      final bool wrongIsDashed = find.byType(CustomPaint).evaluate().isNotEmpty;
+      final bool wrongIsDashed = _isDashed(tester);
       final BrandGlyph wrongGlyph =
           tester.widget<BrandIcon>(find.byType(BrandIcon)).glyph;
 
@@ -106,3 +106,15 @@ void main() {
     });
   });
 }
+
+/// Whether the ring around the glyph is drawn dashed.
+///
+/// **Asks the painter, not "does a `CustomPaint` exist".** That proxy held only
+/// while the dashed ring was the one painter on the tree; it stopped
+/// discriminating the day glyphs became geometry, because `BrandIcon` is a
+/// `CustomPaint` too and both verdicts then had one. A test that silently
+/// stopped comparing anything is worse than one that failed, and this one did
+/// fail — which is the only reason it is now asking the right question.
+bool _isDashed(WidgetTester tester) => tester
+    .widgetList<CustomPaint>(find.byType(CustomPaint))
+    .any((CustomPaint paint) => paint.foregroundPainter is DashedBorderPainter);
