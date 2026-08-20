@@ -117,6 +117,24 @@ void main() {
       expect(fills, contains(BrandColors.yellow));
     });
 
+    testWidgets('the wider card is the one the design draws wider',
+        (WidgetTester tester) async {
+      // `4.1` puts its left card at `flex 1.3` against the right one's `1` —
+      // the slot that holds a label, a numeral and a delta line beside one that
+      // holds a two-digit count. Fill is half the hierarchy; width is the
+      // other, and nothing asserted it until a falsification could not find a
+      // test to kill.
+      await pump(tester, daysPractised: 13, streakDays: 5);
+
+      double cardWidth(String unit) => tester
+          .getSize(find
+              .ancestor(of: find.text(unit), matching: find.byType(CandySurface))
+              .first)
+          .width;
+
+      expect(cardWidth('practicando'), greaterThan(cardWidth('días seguidos')));
+    });
+
     testWidgets('each figure names its unit', (WidgetTester tester) async {
       // A bare number in a box is a number somebody has to guess at.
       await pump(tester, daysPractised: 13, streakDays: 5);
