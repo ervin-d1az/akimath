@@ -232,14 +232,35 @@ export function readAttemptBatch(body: unknown): readonly Attempt[] | Response {
   }
 
   const read: Attempt[] = [];
+  const seen = new Map<string, number>();
   for (const [index, value] of attempts.entries()) {
     const attempt = readAttempt(value, `attempts[${index}]`);
     if ("status" in attempt) {
       return attempt;
     }
+    // **One attempt per item, and a batch is where that is cheapest to say.**
+    // Migration 0004 makes it a unique index, so the insert would quietly keep
+    // one of the two and answer as if both landed. Refusing here means the
+    // client is told which two rows disagreed rather than left to wonder why
+    // its count is short.
+    const key = sourceKey(attempt.source);
+    const first = seen.get(key);
+    if (first !== undefined) {
+      return bad(
+        `attempts[${index}] names the same item as attempts[${first}]; an item is answered once.`,
+      );
+    }
+    seen.set(key, index);
     read.push(attempt);
   }
   return read;
+}
+
+/** How two attempts are recognised as being about the same item. */
+export function sourceKey(source: AttemptSource): string {
+  return source.kind === "issued"
+    ? `issued:${source.itemId}`
+    : `pack:${source.packId}:${source.index}`;
 }
 
 /**

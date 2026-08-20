@@ -28,6 +28,12 @@ const submission = (over: Record<string, unknown> = {}): Record<string, unknown>
 
 const batch = (...attempts: unknown[]): unknown => ({ attempts });
 
+/** `n` attempts against `n` different items — one per item is now the rule. */
+const distinct = (n: number): Record<string, unknown>[] =>
+  Array.from({ length: n }, (_unused, index) =>
+    submission({ itemId: `018f4e3c-0000-7000-8000-${index.toString(16).padStart(12, "0")}` }),
+  );
+
 const refusal = (body: unknown): { status: number; error: string; message: string } => {
   const read = readAttemptBatch(body);
   if (Array.isArray(read)) {
@@ -91,8 +97,9 @@ describe("a batch is read", () => {
     expect(readAttemptBatch(batch(submission({ elapsedMs: 0 })))).toHaveLength(1);
     expect(readAttemptBatch(batch(submission({ elapsedMs: ATTEMPT_ELAPSED_MS_MAX })))).toHaveLength(1);
     expect(readAttemptBatch(batch(submission({ itemId: undefined, packRef: { packId: PACK, index: 0 } })))).toHaveLength(1);
-    const atTheLimit = Array.from({ length: ATTEMPTS_PER_BATCH_MAX }, () => submission());
-    expect(readAttemptBatch({ attempts: atTheLimit })).toHaveLength(ATTEMPTS_PER_BATCH_MAX);
+    expect(readAttemptBatch({ attempts: distinct(ATTEMPTS_PER_BATCH_MAX) })).toHaveLength(
+      ATTEMPTS_PER_BATCH_MAX,
+    );
   });
 
   it("a timestamp the frozen pattern allows, in each of its shapes", () => {
@@ -132,7 +139,9 @@ describe("or refused, with the reason and the index", () => {
     ],
     [
       "more attempts than a batch may carry",
-      { attempts: Array.from({ length: ATTEMPTS_PER_BATCH_MAX + 1 }, () => submission()) },
+      // Distinct items, so the size is what refuses it and not the duplicate
+      // rule — a test that could pass for two reasons proves neither.
+      { attempts: distinct(ATTEMPTS_PER_BATCH_MAX + 1) },
       `A batch carries at most ${ATTEMPTS_PER_BATCH_MAX} attempts; this one carries ${ATTEMPTS_PER_BATCH_MAX + 1}.`,
     ],
     ["an attempt that is null", batch(null), "attempts[0] must be a JSON object."],
@@ -273,6 +282,22 @@ describe("or refused, with the reason and the index", () => {
       `attempts[0].elapsedMs must be a whole number of milliseconds between 0 and ${ATTEMPT_ELAPSED_MS_MAX}.`,
     ],
     [
+      "a batch naming the same issued item twice",
+      // Migration 0004 makes this a unique index, so the insert would keep one
+      // of the two and answer as if both landed. Told here instead.
+      batch(submission(), submission()),
+      "attempts[1] names the same item as attempts[0]; an item is answered once.",
+    ],
+    [
+      "a batch naming the same pack item twice, however far apart",
+      batch(
+        submission({ itemId: undefined, packRef: { packId: PACK, index: 2 } }),
+        submission(),
+        submission({ itemId: undefined, packRef: { packId: PACK, index: 2 } }),
+      ),
+      "attempts[2] names the same item as attempts[0]; an item is answered once.",
+    ],
+    [
       "the second attempt, named by its index",
       // A batch of fifty with one bad row is undiagnosable from "the body was
       // malformed", and the client cannot bisect a request it has already sent.
@@ -307,6 +332,20 @@ describe("or refused, with the reason and the index", () => {
     }
     // And one that is not a string at all, which `INSTANT.exec` would coerce.
     expect(refusal(batch(submission({ clientTs: 0 }))).status).toBe(400);
+  });
+
+  it("but two different items in one batch are fine, including the same pack", () => {
+    // The control: the rule is one attempt per *item*, not one per pack and not
+    // one per batch.
+    expect(
+      readAttemptBatch(
+        batch(
+          submission({ itemId: undefined, packRef: { packId: PACK, index: 0 } }),
+          submission({ itemId: undefined, packRef: { packId: PACK, index: 1 } }),
+          submission(),
+        ),
+      ),
+    ).toHaveLength(3);
   });
 
   it("reports how many refusals it checked", () => {

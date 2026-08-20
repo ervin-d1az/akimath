@@ -32,10 +32,32 @@ function sourcesUnder(directory: string, prefix = ""): readonly string[] {
   });
 }
 
+/**
+ * A file's code, without its prose.
+ *
+ * **The gate below reads for `DELETE FROM`, and a doc comment saying "accepts
+ * no UPDATE and no DELETE from the request path" matches it.** That is not a
+ * hypothetical: `attempt-repository.ts` explains the invariant it upholds and
+ * was reported as breaking it. A rule that fires on its own explanation gets
+ * switched off, so the prose comes out first — the same fix
+ * `app/test/design/no_spinner_test.dart` needed for the same reason.
+ *
+ * Block comments and whole-line `//` comments only. A trailing `//` is left
+ * alone because stripping it would have to understand strings, and nothing
+ * here writes SQL after one.
+ */
+function codeOf(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .split("\n")
+    .filter((line) => !/^\s*(\/\/|\*)/.test(line))
+    .join("\n");
+}
+
 describe("there is one way to delete a player", () => {
   const sources = sourcesUnder(SRC);
   const naming = (needle: RegExp): readonly string[] =>
-    sources.filter((relative) => needle.test(readFileSync(join(SRC, relative), "utf8")));
+    sources.filter((relative) => needle.test(codeOf(readFileSync(join(SRC, relative), "utf8"))));
 
   it("reports what it scanned, and scanning nothing is a failure", () => {
     // PROC-10, and this one resolves its root from `import.meta.url`, which
@@ -46,6 +68,15 @@ describe("there is one way to delete a player", () => {
 
   it("the erasure role is named in exactly two files: its definition and its caller", () => {
     expect([...naming(/\binErasureRole\b/)].sort()).toEqual([THE_CALLER, THE_DEFINITION].sort());
+  });
+
+  it("the prose is stripped before the scan, and the stripping works", () => {
+    // The control for `codeOf`. Without it the two assertions below pass for a
+    // reason unrelated to the code they are about.
+    expect(codeOf("/** DELETE FROM x */\nconst a = 1;")).not.toMatch(/DELETE\s+FROM/i);
+    expect(codeOf("// DELETE FROM x\nconst a = 1;")).not.toMatch(/DELETE\s+FROM/i);
+    expect(codeOf(' * no DELETE from anywhere\nconst a = 1;')).not.toMatch(/DELETE\s+FROM/i);
+    expect(codeOf('client.query("DELETE FROM players");')).toMatch(/DELETE\s+FROM/i);
   });
 
   it("and nothing else in the request path writes a DELETE", () => {

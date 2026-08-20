@@ -114,9 +114,9 @@ format and its OpenAPI half.
 - **A scaffold, plus the frozen schema.** `packages/server` routes one endpoint, `GET /health`,
   through a pure `route()` function, and now also holds the database:
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
-  append-only), the forward-only runner split pure/adapter as `src/migrate.ts` versus
+  append-only) plus three forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **300 tests, green, 98.93% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **307 tests, green, 98.94% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -161,11 +161,15 @@ format and its OpenAPI half.
   `zod`, and the test says so.
   An attempt names **exactly one source**, mirroring `attempts_one_source`, and a batch is one
   transaction: every source is resolved before anything is written, so an unknown item is a 404
-  naming its index with nothing recorded. **A retry records the batch twice.** There is no
-  idempotency key on this operation and no unique key to hang an `ON CONFLICT` on, and closing it
-  needs a decision nobody has made — the natural key would have to tell a retry from a legitimate
-  replay of the same pack item, and whether replaying is a feature is not settled. Nothing calls
-  the endpoint yet; the change that makes it reachable is where this has to be answered. **It does not delete the Neon Auth
+  naming its index with nothing recorded. **A retry is harmless**, decided 2026-08-19 and made so
+  by migration 0004: an item is answered **once**, two partial unique indexes say so, and the
+  insert is `ON CONFLICT DO NOTHING` — the verdicts are recomputed from the same inputs, so the
+  second answer is the first, idempotent by nature the way `linkPlayer` is. A batch naming the
+  same item twice is refused before any of it is read, because keeping one of two rows and
+  answering as if both landed is worse than saying so. The constraint is the thing to argue with
+  if replaying a series ever becomes a feature, which is the right place for that argument.
+  0004 also persists **`session_id`**, which every submission has carried since the freeze with
+  nowhere to land — it is what a `GET /me/history` entry will be grouped by. **It does not delete the Neon Auth
   account** — identity lives in the provider's `neon_auth` schema and this service holds no
   credential that could remove it, so the email and the sign-in survive the call. That scope is
   written into the operation's `description` in `contract/openapi.json` rather than left for a
@@ -186,7 +190,7 @@ format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 76 of the 300 report as skipped rather than passing quietly.
+  run; leave it unset and 82 of the 307 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the

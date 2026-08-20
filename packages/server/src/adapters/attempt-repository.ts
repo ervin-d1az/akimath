@@ -83,6 +83,7 @@ export async function refForPackItem(
 export interface AttemptRow {
   readonly playerId: string;
   readonly source: AttemptSource;
+  readonly sessionId: string;
   readonly skillId: number;
   readonly isCorrect: boolean;
   readonly elapsedMs: number;
@@ -101,12 +102,18 @@ export interface AttemptRow {
  * so correctness does not depend on it; two hundred round trips instead of one
  * does.
  *
- * **No `ON CONFLICT`, and no unique key to hang one on.** A client that retries
- * a batch after a timeout records it twice. That is a real gap, it is written
- * down in `CLAUDE.md`, and closing it needs a decision this change does not
- * make: the natural key would have to distinguish a retry from a legitimate
- * replay of the same pack item, and whether replaying is a product feature is
- * not settled.
+ * **`ON CONFLICT DO NOTHING`, over migration 0004's two partial unique
+ * indexes.** A client whose sync timed out and resent the batch would
+ * otherwise double every row it carried, on a table that accepts no UPDATE and
+ * no DELETE from the request path — nothing could clean it up, and the counts
+ * would stay wrong. The verdicts are recomputed from the same inputs, so the
+ * second answer is the first one: idempotent by nature rather than by a replay
+ * store, the same way `linkPlayer` is.
+ *
+ * It also absorbs a duplicate *within* one statement, which Postgres allows for
+ * `DO NOTHING` — but `readAttemptBatch` refuses that case first, because
+ * keeping one of two rows and answering as if both landed is worse than saying
+ * so.
  */
 export async function insertAttempts(
   client: pg.ClientBase,
@@ -115,9 +122,10 @@ export async function insertAttempts(
   if (rows.length === 0) {
     return 0;
   }
+  const PER_ROW = 8;
   const values: unknown[] = [];
   const tuples = rows.map((row, position) => {
-    const at = position * 7;
+    const at = position * PER_ROW;
     values.push(
       row.playerId,
       row.source.kind === "issued" ? row.source.itemId : null,
@@ -126,19 +134,25 @@ export async function insertAttempts(
       row.skillId,
       row.isCorrect,
       row.elapsedMs,
+      row.sessionId,
     );
     return (
       `(gen_random_uuid(), $${at + 1}::uuid, $${at + 2}::uuid, $${at + 3}::uuid, ` +
       `$${at + 4}::smallint, $${at + 5}::smallint, $${at + 6}::boolean, ` +
-      `$${at + 7}::integer, $${rows.length * 7 + position + 1}::timestamptz)`
+      `$${at + 7}::integer, $${at + 8}::uuid, ` +
+      // The timestamps go last, all together, so a row's own parameters stay a
+      // contiguous run and the arithmetic above has one stride rather than two.
+      `$${rows.length * PER_ROW + position + 1}::timestamptz)`
     );
   });
   values.push(...rows.map((row) => row.answeredAt));
 
   const result = await client.query(
     `INSERT INTO attempts
-       (id, player_id, issued_item_id, pack_id, pack_index, skill_id, is_correct, elapsed_ms, answered_at)
-     VALUES ${tuples.join(", ")}`,
+       (id, player_id, issued_item_id, pack_id, pack_index, skill_id, is_correct,
+        elapsed_ms, session_id, answered_at)
+     VALUES ${tuples.join(", ")}
+     ON CONFLICT DO NOTHING`,
     values,
   );
   return result.rowCount ?? 0;

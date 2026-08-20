@@ -154,8 +154,9 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
     await expect(
       db.client.query(
         `INSERT INTO attempts
-           (id, player_id, pack_id, pack_index, skill_id, is_correct, elapsed_ms, answered_at)
-         VALUES ($1, $2, $3, 7, 1, true, 4200, now())`,
+           (id, player_id, pack_id, pack_index, skill_id, is_correct, elapsed_ms,
+            answered_at, session_id)
+         VALUES ($1, $2, $3, 7, 1, true, 4200, now(), gen_random_uuid())`,
         ["018f4e3c-0000-7000-8000-0000000000cc", PLAYER, PACK],
       ),
     ).resolves.toBeTruthy();
@@ -180,8 +181,8 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
       db.client.query(
         `INSERT INTO attempts
            (id, player_id, issued_item_id, pack_id, pack_index, skill_id,
-            is_correct, elapsed_ms, answered_at)
-         VALUES ($1, $2, $3, $4, 7, 1, true, 4200, now())`,
+            is_correct, elapsed_ms, answered_at, session_id)
+         VALUES ($1, $2, $3, $4, 7, 1, true, 4200, now(), gen_random_uuid())`,
         [
           "018f4e3c-0000-7000-8000-0000000000ee",
           PLAYER,

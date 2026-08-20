@@ -36,6 +36,7 @@ CREATE TABLE public.attempts (
     elapsed_ms integer NOT NULL,
     answered_at timestamp with time zone NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    session_id uuid NOT NULL,
     CONSTRAINT attempts_elapsed_ms_check CHECK ((elapsed_ms >= 0)),
     CONSTRAINT attempts_one_source CHECK ((((issued_item_id IS NOT NULL) AND (pack_id IS NULL) AND (pack_index IS NULL)) OR ((issued_item_id IS NULL) AND (pack_id IS NOT NULL) AND (pack_index IS NOT NULL))))
 );
@@ -218,10 +219,31 @@ CREATE INDEX attempts_created_idx ON public.attempts USING btree (created_at);
 
 
 --
+-- Name: attempts_one_per_issued_item; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX attempts_one_per_issued_item ON public.attempts USING btree (issued_item_id) WHERE (issued_item_id IS NOT NULL);
+
+
+--
+-- Name: attempts_one_per_pack_item; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX attempts_one_per_pack_item ON public.attempts USING btree (pack_id, pack_index) WHERE (pack_id IS NOT NULL);
+
+
+--
 -- Name: attempts_player_answered_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX attempts_player_answered_idx ON public.attempts USING btree (player_id, answered_at);
+
+
+--
+-- Name: attempts_session_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX attempts_session_idx ON public.attempts USING btree (player_id, session_id);
 
 
 --

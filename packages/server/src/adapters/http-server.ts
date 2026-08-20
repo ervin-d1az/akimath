@@ -110,6 +110,7 @@ export function createHandlers(database: RequestDatabase): Handlers {
           rows.push({
             playerId,
             source: attempt.source,
+            sessionId: attempt.sessionId,
             // The template knows which skill it exercises; nothing in the
             // recorded reference else does, and `attempts.skill_id` is NOT NULL.
             skillId: resolve(coreRegistry(), ref).skillId,

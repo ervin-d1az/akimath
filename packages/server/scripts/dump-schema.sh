@@ -11,6 +11,13 @@
 #     unpinned dump differs from itself. `--restrict-key` fixes it.
 #   · The header records the server and client versions. Those churn on a patch
 #     bump of either and say nothing about the schema, so they are stripped.
+#   · **How the database was *created* leaks into the dump.** A `public` schema
+#     recreated by hand (`DROP SCHEMA public CASCADE; CREATE SCHEMA public`) is
+#     owned by whoever ran it and grants PUBLIC nothing, so pg_dump emits a
+#     `REVOKE USAGE ON SCHEMA public FROM PUBLIC` that a `createdb`-fresh
+#     database does not. CI creates a database; regenerate against one too —
+#     `dropdb --if-exists <name> && createdb <name>`, never a schema recreate,
+#     or the snapshot picks up a line CI will diff against.
 #   · **A managed provider adds its own roles and grants.** Dumping the Neon
 #     database appends two `ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin ...
 #     TO neon_superuser` lines — the platform's, not ours. They are a third
