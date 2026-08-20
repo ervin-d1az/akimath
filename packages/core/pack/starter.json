@@ -1847,7 +1847,7 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "3a1a193ba12c93bdcd9381d3f64eb9ad7d61530c5e157a1708fb990807468a28"
+        "digest": "b8d666d70d2a381150e21819dc8bc44ae0c5d643b1dddfb17e44d419361fb7c9"
       },
       "diagnosis": {
         "diagnosis_version": 1,
@@ -1897,7 +1897,7 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "1dac8eb75546b65d28fc40d7e139e66e8f4d25a9906d3b2b414a860739be420f"
+        "digest": "9da906ed607d4db43ab7bd202270f2c321d92e0171d496abf66a71b988499d46"
       },
       "diagnosis": {
         "diagnosis_version": 1,
@@ -1947,7 +1947,7 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "7776d7ce5886dc227900c670c59017d80bff63419edd01f847ca7789efcbe203"
+        "digest": "1805e3332067e547850b358798b2b4d8a307ce105151b9e837b37b6e49a0b3fe"
       },
       "diagnosis": {
         "diagnosis_version": 1,
@@ -1997,7 +1997,7 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "9b867504e884854e698c3526539f1a19edf5e99ba9b52adc19533594876f8767"
+        "digest": "a5c0adbd9d33ae48f65c3b8ca01adb1cb4eaa23030e5c942cf629a3be9b50a30"
       },
       "diagnosis": {
         "diagnosis_version": 1,
@@ -2047,7 +2047,7 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "7776d7ce5886dc227900c670c59017d80bff63419edd01f847ca7789efcbe203"
+        "digest": "1805e3332067e547850b358798b2b4d8a307ce105151b9e837b37b6e49a0b3fe"
       },
       "diagnosis": {
         "diagnosis_version": 1,
@@ -2097,22 +2097,11 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "8f5dbfae1fd76f6c1aecf2dcc5a9d5fc855cb2a0a9454a451edb5fea3b36f921"
+        "digest": "646ee462373a629c40862fe49db072c54fb922b545a67ce507bf28af89b68c68"
       },
       "diagnosis": {
         "diagnosis_version": 1,
         "distractors": [
-          {
-            "digest": "646ee462373a629c40862fe49db072c54fb922b545a67ce507bf28af89b68c68",
-            "diagnosis": {
-              "misconception": "subtracted_in_reverse",
-              "steps": [
-                "Fíjate en cuál número va primero.",
-                "Quita el segundo al primero, en ese orden."
-              ],
-              "explain": "Al restar, el orden importa: 8 − 3 y 3 − 8 no dan lo mismo. El primer número es del que quitas; el segundo es lo que quitas."
-            }
-          },
           {
             "digest": "1911e0e536b1950de9c2cfe86161c26a18862176829ec2bcb97a795356fb2416",
             "diagnosis": {
@@ -2147,7 +2136,7 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "2d44ae163652ef54a9c23478d6ebf1dfe359492b424f7bee2846ad0db14e3e18"
+        "digest": "ef67f42df41c42855660048155bb066bb7c6507213881b74c58cf2e54c4caa4d"
       },
       "diagnosis": {
         "diagnosis_version": 1,
@@ -2197,7 +2186,7 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "61aa98ce70ce3cbfa847a66b34ee8be7c75aeb08ad1c95aca20e121074503851"
+        "digest": "5555e796f00982110ec1bb9629a0c9e6b5b6087dd9eb903f073e8745ebd2cbf1"
       },
       "diagnosis": {
         "diagnosis_version": 1,
@@ -2247,7 +2236,7 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "e5672cb04e56f610fbc0065af7ce9cf95ac72caeda42a15fdbaee482ffb567c6"
+        "digest": "eb5c3ead352f49405e43d46ff43db9bfe95bc2243035ee12342e4e92bd503473"
       },
       "diagnosis": {
         "diagnosis_version": 1,
@@ -2297,7 +2286,7 @@
       },
       "answer": {
         "shape": "integer",
-        "digest": "983aa2dc622ac41f2cebb5fc21fcb1e89fca7fbf5c2cf89256b24e090c2c254b"
+        "digest": "46d40eb621d202ea1548ff90e646b009e904f8064d52d01c00222ae3c9751d8e"
       },
       "diagnosis": {
         "diagnosis_version": 1,

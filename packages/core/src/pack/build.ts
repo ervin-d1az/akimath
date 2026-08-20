@@ -89,10 +89,18 @@ function fromTemplate(
   // The template carries an exact `Rational` and never a string, because
   // rendering belongs to the contract — which already owns what `5/4` looks
   // like and is checked against Dart on the same fixture.
-  const canonical = renderCanonicalAnswer(
-    generated.answer.numerator,
-    generated.answer.denominator,
-  );
+  //
+  // **The shape and the spelling are one decision, and used to be two.** This
+  // always passed a denominator, so a whole answer of −9 was digested as
+  // `-9/1` while `answer.shape` beside it said `integer`. `canonicalize("-9")`
+  // is `-9`, whose digest is different — so every generated item in the built
+  // pack was ungradeable, and the distractor guard below never fired either,
+  // because it compares against this string. Deriving both from one `shape` is
+  // what stops them disagreeing again.
+  const shape = generated.answer.denominator === 1n ? "integer" : "fraction";
+  const canonical = shape === "integer"
+    ? renderCanonicalAnswer(generated.answer.numerator)
+    : renderCanonicalAnswer(generated.answer.numerator, generated.answer.denominator);
 
   return {
     skill_id: template.skillId,
@@ -107,7 +115,7 @@ function fromTemplate(
       },
     } as Item["stimulus"],
     answer: {
-      shape: generated.answer.denominator === 1n ? "integer" : "fraction",
+      shape,
       digest: answerDigest(declaration.packSalt, canonical),
     },
     diagnosis: diagnosisFor(generated, canonical, declaration.packSalt, misconceptions),

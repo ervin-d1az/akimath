@@ -185,6 +185,12 @@ format and its OpenAPI half.
   `src/pack/` lifts authored items and template-generated ones into one pack, and
   `npm run build:pack` emits `packages/core/pack/starter.json` — 80 items across six families and
   5 puzzles, byte-identical on a second run, which is what makes the CI diff mean something.
+  **Every generated item in it used to be ungradeable** and is not any more: the answer's *shape*
+  and the *spelling* the digest was taken over were computed separately, so a whole answer of −9
+  was digested as `-9/1` while the field beside it said `integer` — and `canonicalize("-9")` is
+  `-9`. The same mismatch disabled the guard that drops a distractor equal to the right answer,
+  so one item shipped a `subtracted_in_reverse` diagnosis whose digest *was* its own answer.
+  Latent only because the app ships the authored pack. Both now come from one `shape`.
   Item generation beyond the one template family is still unwritten. **A template declares which
   skill it exercises** (`Template.skillId`), because `attempts.skill_id` is `NOT NULL` and nothing
   on the wire carries it — an attempt names an item, an item is a `TemplateRef`, and neither
