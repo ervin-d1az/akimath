@@ -1,3 +1,5 @@
+import type { AnswerShape } from "./answer.js";
+
 /**
  * Answer canonicalization — the one module both stacks must agree on
  * character for character. `ARCHITECTURE.md` §1 lists it as a cross-stack
@@ -167,4 +169,31 @@ export function requireStoredCanonical(stored: string): CanonResult {
     return folded;
   }
   return folded.value === stored ? folded : reject("not_canonical");
+}
+
+/**
+ * How an exact answer is written down, shape and spelling together.
+ *
+ * **One decision, because two was a bug.** `packages/core`'s pack builder used
+ * to compute `answer.shape` and the string the digest is taken over
+ * separately, and the string always carried a denominator — so a whole answer
+ * of −9 was digested as `-9/1` while the field beside it said `integer`, and
+ * `canonicalize("-9")` is `-9`. Every generated item in the built pack was
+ * ungradeable, and the guard that drops a distractor equal to the right answer
+ * silently stopped firing, because it compares strings.
+ *
+ * Anything that turns a `(numerator, denominator)` into a stored answer calls
+ * this — the builder, and the server when it issues a pack — so the two cannot
+ * disagree again.
+ */
+export interface StoredAnswer {
+  readonly shape: AnswerShape;
+  /** Exactly what `canonicalize` returns for what a keypad can type. */
+  readonly canonical: string;
+}
+
+export function storedAnswer(numerator: bigint, denominator: bigint): StoredAnswer {
+  return denominator === 1n
+    ? { shape: "integer", canonical: renderCanonicalAnswer(numerator) }
+    : { shape: "fraction", canonical: renderCanonicalAnswer(numerator, denominator) };
 }

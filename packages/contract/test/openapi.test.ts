@@ -270,7 +270,12 @@ describe("the answer never travels and the prompt travels rendered", () => {
 });
 
 describe("every endpoint the documents name is described", () => {
-  it("covers the three the client spike measured and the five §5 names", () => {
+  it("covers the three the client spike measured, the five §5 names, and issuance", () => {
+    // `/packs` joined them on 2026-08-19. `GET /packs/{packId}` fetches by an
+    // id and nothing minted one, so `offline_packs` could only ever be empty
+    // and a pack attempt could never reach `POST /attempts`. A path the
+    // documents do not name is still a decision, which is why this list is
+    // written out rather than derived.
     const paths = Object.keys((committed["paths"] as Record<string, unknown>)).sort();
     expect(paths).toEqual(
       [
@@ -279,6 +284,7 @@ describe("every endpoint the documents name is described", () => {
         "/me",
         "/me/history",
         "/me/standing",
+        "/packs",
         "/packs/{packId}",
         "/players/link",
       ].sort(),

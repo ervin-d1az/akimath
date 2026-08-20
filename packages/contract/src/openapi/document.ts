@@ -170,6 +170,39 @@ export function buildOpenApiDocument(): unknown {
           },
         },
       },
+      "/packs": {
+        post: {
+          operationId: "issuePack",
+          summary: "Issue a new offline pack to the player.",
+          // **The ninth operation, added 2026-08-19.** `GET /packs/{packId}`
+          // fetches a pack by an id, and nothing minted one — `offline_packs`
+          // could only ever be empty, so `POST /attempts` could never be
+          // reached by a pack attempt. This is what mints it.
+          //
+          // **No request body.** The player comes from the session, the same
+          // reason `PlayerLink` refuses an account id: a body that named whose
+          // pack to issue would be a caller issuing into somebody else's row.
+          // What the pack *contains* is the server's decision, not the
+          // client's — difficulty is a rating question and rating is F4.
+          //
+          // **No `Idempotency-Key`, unlike `POST /players/link`.** Issuing is
+          // not idempotent by nature: each call is a new pack, legitimately.
+          // A retried request leaves a second pack, and a second pack is
+          // harmless — both are valid, both rederive, and the client uses the
+          // one it received. Requiring a header the server could not honour
+          // would teach clients it means something.
+          description:
+            "Every item in an issued pack is generated from a template, so " +
+            "every one can be rederived and graded at sync. Authored content " +
+            "and puzzles are not issued this way: they carry no template " +
+            "reference, so `(packId, index)` could not address them.",
+          responses: {
+            "200": { description: "The pack.", ...(json(ref("OfflinePack")) as object) },
+            ...errors,
+            // No `notImplemented`: this one is built.
+          },
+        },
+      },
       "/packs/{packId}": {
         get: {
           operationId: "getOfflinePack",

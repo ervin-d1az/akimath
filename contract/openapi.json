@@ -935,6 +935,65 @@
         "summary": "The player's rating per skill."
       }
     },
+    "/packs": {
+      "post": {
+        "description": "Every item in an issued pack is generated from a template, so every one can be rederived and graded at sync. Authored content and puzzles are not issued this way: they carry no template reference, so `(packId, index)` could not address them.",
+        "operationId": "issuePack",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflinePack"
+                }
+              }
+            },
+            "description": "The pack."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The request was malformed."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No valid session."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such resource."
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "That method is not routed here."
+          }
+        },
+        "summary": "Issue a new offline pack to the player."
+      }
+    },
     "/packs/{packId}": {
       "get": {
         "operationId": "getOfflinePack",

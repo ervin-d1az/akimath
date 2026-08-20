@@ -91,6 +91,10 @@ describe("the package's public surface", () => {
         "parseStimulus",
         "renderCanonicalAnswer",
         "requireStoredCanonical",
+  // Shape and spelling, decided together. Two callers derive a stored answer —
+  // the pack builder and the server issuing a pack — and computing them
+  // separately is the bug that made every generated item ungradeable.
+  "storedAnswer",
       ].sort(),
     );
 

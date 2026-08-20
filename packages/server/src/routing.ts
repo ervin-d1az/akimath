@@ -86,6 +86,7 @@ export const CONTRACTED_OPERATIONS: readonly Route[] = [
   { method: "GET", path: "/me", operationId: "getMe" },
   { method: "GET", path: "/me/history", operationId: "getHistory" },
   { method: "GET", path: "/me/standing", operationId: "getStanding" },
+  { method: "POST", path: "/packs", operationId: "issuePack" },
   { method: "GET", path: "/packs/{packId}", operationId: "getOfflinePack" },
   { method: "POST", path: "/players/link", operationId: "linkPlayer" },
 ];
@@ -102,6 +103,7 @@ export const CONTRACTED_OPERATIONS: readonly Route[] = [
 export const IMPLEMENTED_OPERATIONS: readonly string[] = [
   "deleteMe",
   "getMe",
+  "issuePack",
   "linkPlayer",
   "submitAttempts",
 ];
