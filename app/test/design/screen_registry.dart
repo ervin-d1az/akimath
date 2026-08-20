@@ -21,8 +21,7 @@ import 'package:akimath_app/features/preferences/ui/legend_screen.dart';
 import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
 import 'package:akimath_app/features/profile/ui/profile_screen.dart';
 import 'package:akimath_app/api/history.dart';
-import 'package:akimath_app/features/progress/policy/progress_view.dart';
-import 'package:akimath_app/features/progress/ui/progress_screen.dart';
+import 'package:akimath_app/features/profile/policy/history_view.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_solved_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
@@ -493,6 +492,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.loading,
         onRetryAccount: null,
         onOpenSettings: () {},
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.noAccount,
       ),
     ),
   ),
@@ -504,6 +506,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.noPlayer,
         onRetryAccount: null,
         onOpenSettings: () {},
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.noAccount,
       ),
     ),
   ),
@@ -515,6 +520,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.offline,
         onRetryAccount: () {},
         onOpenSettings: () {},
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.noAccount,
       ),
     ),
   ),
@@ -526,6 +534,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.serverError,
         onRetryAccount: () {},
         onOpenSettings: () {},
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.noAccount,
       ),
     ),
   ),
@@ -537,6 +548,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.rejected,
         onRetryAccount: null,
         onOpenSettings: () {},
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.noAccount,
       ),
     ),
   ),
@@ -557,6 +571,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.none,
         onOpenSettings: () {},
         onCreateAccount: () {},
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.noAccount,
       ),
     ),
   ),
@@ -568,6 +585,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       child: ProfileScreen(
         accountState: AccountState.none,
         onOpenSettings: () {},
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.noAccount,
       ),
     ),
   ),
@@ -704,9 +724,12 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
-    label: 'avance · sin cuenta',
+    label: 'perfil · sin cuenta',
     build: () => AppShell(
-      child: ProgressScreen(
+      child: ProfileScreen(
+        accountState: AccountState.none,
+        onOpenSettings: _nothing,
+        onCreateAccount: _nothing,
         daysPractised: 12,
         streakDays: 5,
         historyState: HistoryState.noAccount,
@@ -714,9 +737,12 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
-    label: 'avance · cargando',
+    label: 'perfil · historial cargando',
     build: () => AppShell(
-      child: ProgressScreen(
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.linked,
+        onOpenSettings: _nothing,
         daysPractised: 12,
         streakDays: 5,
         historyState: HistoryState.loading,
@@ -724,9 +750,12 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
-    label: 'avance · con historial',
+    label: 'perfil · con historial',
     build: () => AppShell(
-      child: ProgressScreen(
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.linked,
+        onOpenSettings: _nothing,
         daysPractised: 41,
         streakDays: 7,
         historyState: HistoryState.ready,
@@ -750,9 +779,12 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
-    label: 'avance · sin conexión',
+    label: 'perfil · historial sin conexión',
     build: () => AppShell(
-      child: ProgressScreen(
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.linked,
+        onOpenSettings: _nothing,
         daysPractised: 12,
         streakDays: 5,
         historyState: HistoryState.offline,
@@ -767,6 +799,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.otherDevice,
         onOpenSettings: () {},
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.noAccount,
       ),
     ),
   ),
