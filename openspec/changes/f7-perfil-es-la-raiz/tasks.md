@@ -35,8 +35,12 @@
 ## 5. Evidence
 
 - [x] 5.1 Tier 1 — analyze, tests, metrics, with the counts stated.
-- [ ] 5.2 Tier 1b — falsification over the row list, the header's fit and the
-  tab stack.
+- [x] 5.2 Tier 1b — 10 falsifications, 10 killed: the header ceasing to fit,
+  a chevron on a row that opens nothing, the value moving past the chevron,
+  an undesigned row appearing, `rowCount` drifting from the list, the tab
+  called Ajustes again, two tabs sharing a mark, the tab losing its own
+  navigator, a system back never reaching it, and the state view drawing
+  the address a second time.
 - [x] 5.3 Tier 2 — the tab, the push and the pop on the simulator.
 
 ---
