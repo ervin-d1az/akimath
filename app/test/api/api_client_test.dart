@@ -221,6 +221,90 @@ void main() {
     });
   });
 
+  group('DELETE /me over a real socket', () {
+    test('a 204 with no body is an erasure', () async {
+      await serving((HttpRequest request) async {
+        request.response.statusCode = 204;
+      });
+
+      final EraseResult result = await client.eraseMe(_token);
+
+      expect(result, isA<EraseDone>());
+      expect(server.requests.single.method, 'DELETE');
+      expect(server.requests.single.uri.path, '/me');
+      expect(
+        server.requests.single.headers.value(HttpHeaders.authorizationHeader),
+        'Bearer $_token',
+      );
+    });
+
+    test('and it does not try to read a body that is not there', () async {
+      // A 204 carries none by definition. A client that parses one anyway turns
+      // a successful erasure into a `FormatException` the player sees as a
+      // failure — and then does not retry, because the row really is gone.
+      await serving((HttpRequest request) async {
+        request.response.statusCode = 204;
+      });
+
+      expect(await client.eraseMe(_token), isA<EraseDone>());
+    });
+
+    test('a 404 is nothing left to erase, not a failure', () async {
+      await serving((HttpRequest request) => _json(request, 404, <String, Object?>{
+        'error': 'no_player',
+        'message': 'This account has no player, so there is nothing to erase.',
+      }));
+
+      expect(await client.eraseMe(_token), isA<EraseNothingThere>());
+    });
+
+    test('a 401 keeps its tag', () async {
+      await serving((HttpRequest request) => _json(request, 401, <String, Object?>{
+        'error': 'invalid_session',
+        'message': 'that token expired',
+      }));
+
+      final EraseResult result = await client.eraseMe(_token);
+
+      expect(result, isA<EraseRejected>());
+      expect((result as EraseRejected).tag, 'invalid_session');
+      expect(result.message, 'that token expired');
+    });
+
+    test('a blank token sends no header at all', () async {
+      await serving((HttpRequest request) => _json(request, 401, <String, Object?>{
+        'error': 'unauthenticated',
+        'message': 'no session',
+      }));
+
+      await client.eraseMe('   ');
+
+      expect(
+        server.requests.single.headers.value(HttpHeaders.authorizationHeader),
+        isNull,
+      );
+    });
+
+    test('anything else is a failure carrying its status', () async {
+      await serving((HttpRequest request) => _json(request, 500, <String, Object?>{
+        'error': 'internal',
+        'message': 'That went wrong on our side.',
+      }));
+
+      final EraseResult result = await client.eraseMe(_token);
+
+      expect(result, isA<EraseFailed>());
+      expect((result as EraseFailed).status, 500);
+    });
+
+    test('no answer at all is unreachable', () async {
+      await serving((HttpRequest request) async {});
+      await server.close();
+
+      expect(await client.eraseMe(_token), isA<EraseUnreachable>());
+    });
+  });
+
   group('POST /players/link over a real socket', () {
     Future<LinkResult> link({String token = _token, String key = 'k-1'}) => client.linkPlayer(
       accessToken: token,

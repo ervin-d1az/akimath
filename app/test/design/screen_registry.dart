@@ -14,6 +14,8 @@ import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/features/preferences/policy/erasure.dart';
+import 'package:akimath_app/features/preferences/ui/erase_account_screen.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_solved_screen.dart';
@@ -625,6 +627,52 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       ),
       onContinue: () {},
       onClose: () {},
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · con puerta de borrado',
+    build: () => AppShell(
+      child: PreferencesScreen(
+        daysPractised: 3,
+        streakDays: 2,
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.linked,
+        onEraseData: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'borrar datos · la pregunta',
+    build: () => AppShell(
+      child: EraseAccountScreen(
+        step: null,
+        onConfirm: () {},
+        onCancel: () {},
+        onDone: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'borrar datos · sin conexión',
+    build: () => AppShell(
+      child: EraseAccountScreen(
+        step: ErasureStep.offline,
+        onConfirm: () {},
+        onCancel: () {},
+        onDone: () {},
+        onRetry: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'borrar datos · listo',
+    build: () => AppShell(
+      child: EraseAccountScreen(
+        step: ErasureStep.gone,
+        onConfirm: () {},
+        onCancel: () {},
+        onDone: () {},
+      ),
     ),
   ),
 ];

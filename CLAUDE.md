@@ -72,9 +72,19 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1205 Flutter tests, green — the last 30 of them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1423 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
+  **Ajustes has a way out.** `features/preferences/` carries the erasure flow: a text door under
+  the account, drawn only where `erasureOffered` says a session could carry the request, and a
+  full screen rather than a dialog because the question has to fit a sentence about what
+  *survives* — the address stays registered with the identity provider, which is not ours to
+  delete. `policy/erasure.dart` is pure and holds the copy; `ui/erase_account_route.dart` takes
+  the request as a **closure** rather than an `ApiClient`, which is what lets a `testWidgets`
+  drive the whole sequence — a real socket inside a fake-async zone hangs on `!timersPending`.
+  A 204 is read as a success **without parsing a body**: a client that reads it the way it reads
+  `GET /me` turns an erasure into a `FormatException`, and that is the one error here a retry
+  cannot fix, because the row is already gone.
   **All six frozen stimulus families draw and grade** — arithmetic, number series, matrix,
   analogy, the function machine and figurate. `content/model/stimulus_reader.dart` holds the six
   hand-written parsers and `test/content/model/stimulus_fixture_test.dart` checks each against

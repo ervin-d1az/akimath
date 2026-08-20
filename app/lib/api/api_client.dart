@@ -107,6 +107,49 @@ class ApiClient {
     }
   }
 
+  /// Erases the player behind the token, and everything referencing them.
+  ///
+  /// **It does not delete the account.** Identity lives with Neon Auth; the
+  /// server holds no credential that could remove it, and says so in the
+  /// operation's description. The email and the sign-in survive this call.
+  ///
+  /// A success is a 204 and therefore has no body to read — see [EraseResult].
+  Future<EraseResult> eraseMe(String accessToken) async {
+    final Uri url = _baseUrl.resolve('me');
+    try {
+      final HttpClientRequest request = await _transport.deleteUrl(url);
+      if (accessToken.trim().isNotEmpty) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $accessToken');
+      }
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final HttpClientResponse response = await request.close().timeout(timeout);
+      // Drained even on a 204, where it is empty: an unread response body holds
+      // the connection open until the client is closed.
+      final String body = await response.transform(utf8.decoder).join();
+      return _readErase(response.statusCode, body);
+    } on Exception catch (cause) {
+      return EraseUnreachable(cause.toString());
+    }
+  }
+
+  EraseResult _readErase(int status, String body) {
+    final Map<String, Object?> error = _errorOr(body);
+    final String message = error['message'] as String? ?? '';
+    switch (status) {
+      case 204:
+        return const EraseDone();
+      case 404:
+        return const EraseNothingThere();
+      case 401:
+        return EraseRejected(
+          tag: error['error'] as String? ?? 'unauthenticated',
+          message: message,
+        );
+      default:
+        return EraseFailed(status: status, reason: message.isEmpty ? body : message);
+    }
+  }
+
   LinkResult _readLink(int status, String body) {
     final Map<String, Object?> error = _errorOr(body);
     final String message = error['message'] as String? ?? '';
