@@ -13,7 +13,7 @@ const PACK = "018f4e3c-0000-7000-8000-0000000000bb";
 /**
  * Fifty references, the shape the pack builder will emit.
  *
- * **The seed is a JSON string.** `template_refs` is `jsonb`, and node-postgres
+ * **The seed is a JSON string.** `item_refs` is `jsonb`, and node-postgres
  * parses jsonb with `JSON.parse`, so a seed above 2^53 stored as a JSON number
  * comes back a different number. Migration 0002 refuses one at the database.
  */
@@ -47,13 +47,13 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
     // revalidate every offline item, and the data model cannot pay four
     // downloads a day times fifty rows.
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
        VALUES ($1, $2, $3::jsonb, $4, now() + interval '7 days')`,
       [PACK, PLAYER, JSON.stringify(fiftyRefs), Buffer.from("salt")],
     );
 
     const rows = await db.client.query<{ refs: number }>(
-      `SELECT jsonb_array_length(template_refs) AS refs
+      `SELECT jsonb_array_length(item_refs) AS refs
          FROM offline_packs WHERE id = $1`,
       [PACK],
     );
@@ -64,11 +64,11 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
 
   it("a seed survives the round trip through jsonb exactly", async () => {
     // The whole reason 0002 exists. `issued_items.seed` is `bigint`, which
-    // pg-types hands back as a raw string and is therefore safe; `template_refs`
+    // pg-types hands back as a raw string and is therefore safe; `item_refs`
     // is `jsonb`, which it hands to `JSON.parse`. Same seed, two storage paths,
     // and only one of them used to be lossy.
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
        VALUES ($1, $2, $3::jsonb, $4, now() + interval '7 days')`,
       [
         PACK,
@@ -81,7 +81,7 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
     );
 
     const read = await db.client.query<{ refs: { seed: string }[] }>(
-      "SELECT template_refs AS refs FROM offline_packs WHERE id = $1",
+      "SELECT item_refs AS refs FROM offline_packs WHERE id = $1",
       [PACK],
     );
     const seed = read.rows[0]?.refs[0]?.seed;
@@ -96,7 +96,7 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
     // schema in the frozen pack format would still be perfectly happy with it.
     await expect(
       db.client.query(
-        `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+        `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
          VALUES ($1, $2, $3::jsonb, $4, now() + interval '7 days')`,
         [
           PACK,
@@ -116,7 +116,7 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
     // started minting full-width ones — which is to say, in production.
     await expect(
       db.client.query(
-        `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+        `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
          VALUES ($1, $2, $3::jsonb, $4, now() + interval '7 days')`,
         [
           PACK,
@@ -146,7 +146,7 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
 
   it("an attempt names an offline item by pack and index", async () => {
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
        VALUES ($1, $2, $3::jsonb, $4, now() + interval '7 days')`,
       [PACK, PLAYER, JSON.stringify(fiftyRefs), Buffer.from("salt")],
     );
@@ -166,7 +166,7 @@ describeWithDatabase("an offline pack is one row, not one row per item", () => {
     // Exactly one source, or "where did this item come from" has two answers
     // and rederivation has none.
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
        VALUES ($1, $2, '[]'::jsonb, $3, now() + interval '7 days')`,
       [PACK, PLAYER, Buffer.from("salt")],
     );

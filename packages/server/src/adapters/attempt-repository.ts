@@ -1,5 +1,5 @@
 import type pg from "pg";
-import { fromManifestEntry, type TemplateRef } from "@akimath/core";
+import { fromManifestEntry, templateRefOf, type ManifestEntry, type TemplateRef } from "@akimath/core";
 
 import type { AttemptSource } from "../attempts.js";
 
@@ -9,10 +9,10 @@ import type { AttemptSource } from "../attempts.js";
  * **ADAPTER.** SQL and the shape of a row; every decision about what an answer
  * *means* is `../attempts.ts`, which is pure.
  *
- * **Both source tables hand back the same shape, and `@akimath/core` decides
+ * **Both source tables hand back a manifest entry, and `@akimath/core` decides
  * what it means.** `issued_items.seed` is `bigint`, OID 20, which
  * node-postgres returns as a raw string precisely because a JavaScript number
- * cannot hold it; `offline_packs.template_refs` is `jsonb`, parsed with
+ * cannot hold it; `offline_packs.item_refs` is `jsonb`, parsed with
  * `JSON.parse`, so migration 0002 forbids a numeric seed inside it for the
  * same reason. So both arrive as `{template_id, template_version, seed,
  * ladder_step}` with the seed as text, and `fromManifestEntry` is the single
@@ -48,11 +48,18 @@ export async function refForIssuedItem(
     [itemId, playerId],
   );
   const row = result.rows[0];
-  return row === undefined ? null : fromManifestEntry(row);
+  if (row === undefined) {
+    return null;
+  }
+  // An issued item is always a template — that is what `issued_items` records —
+  // so this is the one place the entry is expected to have a reference. A row
+  // that somehow does not is answered as "no such item" rather than thrown.
+  const entry = fromManifestEntry({ kind: "template", ...row });
+  return entry === null ? null : templateRefOf(entry);
 }
 
 /**
- * The reference behind a pack item, or null.
+ * What the pack recorded at that index, and the salt it was digested under.
  *
  * **An expired pack still grades.** `expires_at` governs whether a device may
  * keep *playing* a pack, and a phone that was offline for a fortnight is
@@ -63,20 +70,31 @@ export async function refForIssuedItem(
  * a fifty-item pack is one jsonb value, and a batch of fifty attempts against
  * it would otherwise fetch it fifty times.
  */
-export async function refForPackItem(
+export interface PackItemSource {
+  readonly entry: ManifestEntry;
+  /** 32 lowercase hex. Needed to verify a digest entry and harmless otherwise. */
+  readonly saltHex: string;
+}
+
+export async function entryForPackItem(
   client: pg.ClientBase,
   playerId: string,
   packId: string,
   index: number,
-): Promise<TemplateRef | null> {
-  const result = await client.query<{ ref: unknown }>(
-    `SELECT template_refs -> $3::int AS ref
+): Promise<PackItemSource | null> {
+  const result = await client.query<{ ref: unknown; salt_hex: string }>(
+    `SELECT item_refs -> $3::int         AS ref,
+            encode(pack_salt, 'hex')     AS salt_hex
        FROM offline_packs
       WHERE id = $1::uuid AND player_id = $2::uuid`,
     [packId, playerId, index],
   );
   const row = result.rows[0];
-  return row === undefined ? null : fromManifestEntry(row.ref);
+  if (row === undefined) {
+    return null;
+  }
+  const entry = fromManifestEntry(row.ref);
+  return entry === null ? null : { entry, saltHex: row.salt_hex };
 }
 
 /** One graded attempt, ready for the table. */

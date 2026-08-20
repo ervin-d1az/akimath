@@ -131,7 +131,7 @@ describeWithDatabase("a player carries a band and never a name", () => {
     const forbidden = /name|birth|dob|nombre|apellido|fecha_nac/i;
     const offenders = result.rows
       // `table_name` and `column_name` are the catalogue's own words, and
-      // `template_id`/`template_refs` are not personal data; the check is about
+      // `template_id`/`item_refs` are not personal data; the check is about
       // columns that would *hold* a person's name.
       .filter((row) => forbidden.test(row.column_name))
       .map((row) => `${row.table_name}.${row.column_name}`);

@@ -70,7 +70,7 @@ describeWithDatabase("DELETE /me, against a real database", () => {
       [item, player],
     );
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
             VALUES ($1, $2, '[]'::jsonb, '\\x00', now())`,
       [pack, player],
     );

@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 
 import { parsePack, storedAnswer } from "@akimath/contract";
-import { coreRegistry, fromManifestEntry, rederive } from "@akimath/core";
+import { coreRegistry, fromManifestEntry, rederive, templateRefOf } from "@akimath/core";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createApp, createHandlers } from "../src/adapters/http-server.js";
@@ -77,14 +77,14 @@ describeWithDatabase("POST /packs, against a real database", () => {
 
     const row = await db.client.query<{
       player_id: string;
-      template_refs: unknown[];
+      item_refs: unknown[];
       pack_salt: Buffer;
       skill_id: number;
-    }>("SELECT player_id, template_refs, pack_salt, skill_id FROM offline_packs WHERE id = $1", [
+    }>("SELECT player_id, item_refs, pack_salt, skill_id FROM offline_packs WHERE id = $1", [
       body.packId,
     ]);
     expect(row.rows[0]?.player_id).toBe(PLAYER);
-    expect(row.rows[0]?.template_refs).toHaveLength(PACK_ITEM_COUNT);
+    expect(row.rows[0]?.item_refs).toHaveLength(PACK_ITEM_COUNT);
     // Sixteen bytes in the column, thirty-two hex characters in the format.
     expect(row.rows[0]?.pack_salt.length).toBe(16);
     expect(row.rows[0]?.skill_id).toBe(1);
@@ -96,15 +96,15 @@ describeWithDatabase("POST /packs, against a real database", () => {
     // through the response, because a manifest that never landed would pass a
     // check that only looked at what was returned.
     const body = (await (await issue()).json()) as Issued;
-    const stored = await db.client.query<{ template_refs: unknown[]; pack_salt: Buffer }>(
-      "SELECT template_refs, pack_salt FROM offline_packs WHERE id = $1",
+    const stored = await db.client.query<{ item_refs: unknown[]; pack_salt: Buffer }>(
+      "SELECT item_refs, pack_salt FROM offline_packs WHERE id = $1",
       [body.packId],
     );
-    const refs = stored.rows[0]!.template_refs;
+    const refs = stored.rows[0]!.item_refs;
     const salt = stored.rows[0]!.pack_salt.toString("hex");
 
     refs.forEach((entry, index) => {
-      const generated = rederive(coreRegistry(), fromManifestEntry(entry)!);
+      const generated = rederive(coreRegistry(), templateRefOf(fromManifestEntry(entry)!)!);
       const { canonical } = storedAnswer(
         generated.answer.numerator,
         generated.answer.denominator,
@@ -123,11 +123,11 @@ describeWithDatabase("POST /packs, against a real database", () => {
     // Issue, answer, sync, graded. Every step through the real endpoints and a
     // real database, which is the first time this path has existed end to end.
     const body = (await (await issue()).json()) as Issued;
-    const stored = await db.client.query<{ template_refs: unknown[] }>(
-      "SELECT template_refs FROM offline_packs WHERE id = $1",
+    const stored = await db.client.query<{ item_refs: unknown[] }>(
+      "SELECT item_refs FROM offline_packs WHERE id = $1",
       [body.packId],
     );
-    const generated = rederive(coreRegistry(), fromManifestEntry(stored.rows[0]!.template_refs[0])!);
+    const generated = rederive(coreRegistry(), templateRefOf(fromManifestEntry(stored.rows[0]!.item_refs[0])!)!);
     const right = storedAnswer(
       generated.answer.numerator,
       generated.answer.denominator,
@@ -201,7 +201,7 @@ describeWithDatabase("POST /packs, against a real database", () => {
       [other],
     );
     const theirs = await db.client.query<{ id: string }>(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
        VALUES (gen_random_uuid(), $1, '[]'::jsonb, '\\x00', now() + interval '30 days')
        RETURNING id`,
       [other],

@@ -223,7 +223,7 @@ describeWithDatabase("the job, against a real database", () => {
       [PLAYER],
     );
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
        VALUES ($1, $2, '[]'::jsonb, $3, now() + interval '7 days')`,
       [PACK, PLAYER, Buffer.from("salt")],
     );
@@ -280,7 +280,7 @@ describeWithDatabase("the job, against a real database", () => {
     // and left every pack behind for ever.
     const spent = "018f4e3c-0000-7000-8000-0000000003a1";
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
        VALUES ($1, $2, '[]'::jsonb, $3, now() - interval '401 days')`,
       [spent, PLAYER, Buffer.from("salt")],
     );
@@ -300,7 +300,7 @@ describeWithDatabase("the job, against a real database", () => {
     // `NOT EXISTS` is what makes it unreachable by construction.
     const spent = "018f4e3c-0000-7000-8000-0000000003a2";
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
        VALUES ($1, $2, '[]'::jsonb, $3, now() - interval '401 days')`,
       [spent, PLAYER, Buffer.from("salt")],
     );

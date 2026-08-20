@@ -1,5 +1,11 @@
-import { canonicalize, renderCanonicalAnswer } from "@akimath/contract";
-import { coreRegistry, rederive, type TemplateRef, type TemplateRegistry } from "@akimath/core";
+import { answerDigest, canonicalize, renderCanonicalAnswer } from "@akimath/contract";
+import {
+  coreRegistry,
+  rederive,
+  resolve,
+  type TemplateRef,
+  type TemplateRegistry,
+} from "@akimath/core";
 
 import type { Response } from "./routing.js";
 
@@ -294,6 +300,79 @@ export function gradeAnswer(
       ? renderCanonicalAnswer(generated.answer.numerator)
       : renderCanonicalAnswer(generated.answer.numerator, generated.answer.denominator);
   return typed.value === expected;
+}
+
+/**
+ * What an answer is checked against, and how.
+ *
+ * **Two kinds, because there are two ways to know an answer is right.** A
+ * template is *rederived* — regenerate the item and compare canonical
+ * spellings. A digest is *verified* — recompute
+ * `HMAC(pack_salt, canonicalize(what was typed))` and compare it to what the
+ * pack already carries.
+ *
+ * The second exists because authored content cannot be rederived: an authored
+ * item has no template reference. Seventy of the eighty items the app ships are
+ * authored, so without it the pack a player actually plays could never be
+ * synced.
+ *
+ * **On the digest path the server never learns the answer.** It holds a digest
+ * and can only confirm or deny a guess — which is a stronger position than
+ * rederivation leaves it in, not a weaker one.
+ */
+export type GradingSource =
+  | { readonly kind: "template"; readonly ref: TemplateRef }
+  | {
+      readonly kind: "digest";
+      readonly digest: string;
+      readonly saltHex: string;
+      /** From the manifest, because `attempts.skill_id` is NOT NULL and there
+       * is no template to ask. */
+      readonly skillId: number;
+    };
+
+/** A verdict and the skill it belongs to — the two facts a row needs. */
+export interface Graded {
+  readonly ok: boolean;
+  readonly skillId: number;
+}
+
+/**
+ * Grades one answer against whichever kind of source recorded it.
+ *
+ * **One call for both facts.** The skill comes from the template on one path
+ * and from the manifest on the other, and a caller resolving it separately
+ * would have to know which — which is the branch this function exists to own.
+ */
+export function gradeSource(
+  source: GradingSource,
+  answer: string,
+  registry: TemplateRegistry = coreRegistry(),
+): Graded {
+  if (source.kind === "digest") {
+    return { ok: matchesDigest(source.digest, source.saltHex, answer), skillId: source.skillId };
+  }
+  return {
+    ok: gradeAnswer(source.ref, answer, registry),
+    skillId: resolve(registry, source.ref).skillId,
+  };
+}
+
+/**
+ * Whether what was typed digests to what the pack carries.
+ *
+ * **The same two functions the pack builder used**, from `packages/contract`:
+ * `canonicalize` folds what a keypad can produce and `answerDigest` is the
+ * HMAC. A third spelling of either here is exactly the drift R2 names, and the
+ * pack builder has already been bitten by one (`packages/core` #50).
+ *
+ * An answer the canonicalizer refuses is **wrong, not an error**, the same as
+ * on the rederivation path: a learner can type nonsense, and nonsense is a
+ * wrong answer.
+ */
+export function matchesDigest(digest: string, saltHex: string, answer: string): boolean {
+  const typed = canonicalize(answer);
+  return typed.ok && answerDigest(saltHex, typed.value) === digest;
 }
 
 /** One graded attempt, ready to be answered with. */

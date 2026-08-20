@@ -1,5 +1,10 @@
 import type pg from "pg";
-import { fromManifestEntry, type ManifestEntry, type TemplateRef } from "@akimath/core";
+import {
+  fromManifestEntry,
+  templateRefOf,
+  type ManifestEntry,
+  type TemplateRef,
+} from "@akimath/core";
 
 /**
  * Writing an issued pack down.
@@ -39,7 +44,7 @@ export async function insertPack(
 ): Promise<string> {
   const result = await client.query<{ id: string }>(
     `INSERT INTO offline_packs
-       (id, player_id, skill_id, template_refs, pack_salt, issued_at, expires_at)
+       (id, player_id, skill_id, item_refs, pack_salt, issued_at, expires_at)
      VALUES (gen_random_uuid(), $1::uuid, $2::smallint, $3::jsonb,
              decode($4, 'hex'), $5::timestamptz, $6::timestamptz)
      RETURNING id`,
@@ -82,6 +87,14 @@ export interface StoredPack {
  * A manifest entry that will not read makes the whole pack null rather than a
  * pack with a hole in it: `(packId, index)` addresses items by position, and a
  * pack that quietly dropped one would shift every index after it.
+ *
+ * **A pack carrying authored items cannot be rebuilt, and answers 404 today.**
+ * A digest entry has no reference, so there is nothing to regenerate the item
+ * from — the digest identifies an answer, not a prompt. `POST /attempts` grades
+ * such an item perfectly well, because grading only needs the digest; what a
+ * re-fetch needs is the *content*, which lives in the pack body and is not
+ * stored. Serving it back means storing it, and that is the next decision
+ * rather than a silent hole here.
  */
 export async function packFor(
   client: pg.ClientBase,
@@ -89,12 +102,12 @@ export async function packFor(
   packId: string,
 ): Promise<StoredPack | null> {
   const result = await client.query<{
-    template_refs: unknown[];
+    item_refs: unknown[];
     salt_hex: string;
     issued_at: Date;
     expires_at: Date;
   }>(
-    `SELECT template_refs,
+    `SELECT item_refs,
             encode(pack_salt, 'hex') AS salt_hex,
             issued_at,
             expires_at
@@ -108,9 +121,13 @@ export async function packFor(
   }
 
   const refs: TemplateRef[] = [];
-  for (const entry of row.template_refs) {
-    const ref = fromManifestEntry(entry);
+  for (const entry of row.item_refs) {
+    const read = fromManifestEntry(entry);
+    const ref = read === null ? null : templateRefOf(read);
     if (ref === null) {
+      // A digest entry has no reference and never will. `GET /packs/{packId}`
+      // rebuilds from references, so a pack carrying authored items cannot be
+      // rebuilt — see `packFor`'s own note.
       return null;
     }
     refs.push(ref);

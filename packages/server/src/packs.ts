@@ -29,7 +29,7 @@ import type { Response } from "./routing.js";
  * **Every item is generated from a template, and that is a constraint rather
  * than a simplification.** An attempt against a pack item names it by
  * `(packId, index)` and the server grades it by rederiving
- * `template_refs[index]` — so an item with no template reference cannot be
+ * `item_refs[index]` — so an item with no template reference cannot be
  * graded at all. Authored content carries none. It is therefore not issued this
  * way, and the contract's operation says so.
  *
@@ -117,7 +117,7 @@ export function issuedPack(options: IssueOptions): IssuedPack {
 }
 
 export interface RebuildOptions {
-  /** Read back from `offline_packs.template_refs`, in stored order. */
+  /** Read back from `offline_packs.item_refs`, in stored order. */
   readonly refs: readonly TemplateRef[];
   readonly saltHex: string;
   readonly issuedAt: Date;
