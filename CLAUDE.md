@@ -116,7 +116,7 @@ format and its OpenAPI half.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only) plus three forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **342 tests, green, 99.01% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **346 tests, green, 99.01% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -195,10 +195,15 @@ format and its OpenAPI half.
   `smallint` in five tables and a name in none of them. The operation declares no parameters, so
   `HISTORY_LIMIT` is the server's cap and it is stated in `src/history.ts` rather than buried in
   the query.
-  Two things issuance leaves: `runRetention` deletes `diag_events` and `attempts` and never
-  `offline_packs`, so a latent gap is now live; and `GET /packs/{packId}` is still 501, because a
-  rebuilt pack reflects *current* copy and whether a re-fetch may differ from what was issued is
-  its own decision. **It does not delete the Neon Auth
+  **The retention job sweeps what issuance leaves.** `runRetention` used to delete `diag_events`
+  and `attempts` and keep every pack for ever; issuance turned that from theoretical into live. It
+  now sweeps `offline_packs` past their window and `issued_items` too — last, and behind a
+  `NOT EXISTS`, because both are referenced with `ON DELETE CASCADE` and deleting one early would
+  take a child's answered history with it. `RETENTION_DAYS.sources` is keyed on when a source
+  *stopped being usable*, so a pack outlives every attempt that could reference it by arithmetic,
+  and the guard makes it true by construction. One thing issuance still leaves:
+  `GET /packs/{packId}` is 501, because a rebuilt pack reflects *current* copy and whether a
+  re-fetch may differ from what was issued is its own decision. **It does not delete the Neon Auth
   account** — identity lives in the provider's `neon_auth` schema and this service holds no
   credential that could remove it, so the email and the sign-in survive the call. That scope is
   written into the operation's `description` in `contract/openapi.json` rather than left for a
@@ -219,7 +224,7 @@ format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 92 of the 342 report as skipped rather than passing quietly.
+  run; leave it unset and 96 of the 346 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the

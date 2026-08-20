@@ -21,6 +21,8 @@ import { retentionCutoffs } from "../retention.js";
 export interface RetentionRun {
   readonly attempts: number;
   readonly diagEvents: number;
+  readonly offlinePacks: number;
+  readonly issuedItems: number;
 }
 
 export async function runRetention(
@@ -40,8 +42,37 @@ export async function runRetention(
     [cutoffs.attempts],
   );
 
+  // **The two tables an attempt can point at, and they go last.** Both are
+  // referenced with `ON DELETE CASCADE`, so sweeping either before the attempts
+  // above would take answered history with it — the opposite of what a
+  // retention job is for. `POST /packs` made this live: until something issued
+  // a pack, `offline_packs` was empty and the gap was theoretical.
+  //
+  // **`NOT EXISTS` rather than trust in the arithmetic.** The cutoff is keyed
+  // on the end of the usable window, so nothing referencing these rows should
+  // have survived the deletes above — but "should" is what the cascade would
+  // silently disprove, once, in production. The guard makes it structural: a
+  // row with an attempt still on it is not deleted, whatever the dates say.
+  const offlinePacks = await client.query(
+    `DELETE FROM offline_packs
+      WHERE expires_at < $1
+        AND NOT EXISTS (SELECT 1 FROM attempts WHERE attempts.pack_id = offline_packs.id)`,
+    [cutoffs.sources],
+  );
+  // Nothing writes `issued_items` yet — `GET /items/next` is still 501 — so
+  // this sweeps an empty table today. It is here because the gap is the same
+  // gap, and finding it the second time is not cheaper than finding it once.
+  const issuedItems = await client.query(
+    `DELETE FROM issued_items
+      WHERE issued_at < $1
+        AND NOT EXISTS (SELECT 1 FROM attempts WHERE attempts.issued_item_id = issued_items.id)`,
+    [cutoffs.sources],
+  );
+
   return {
     attempts: attempts.rowCount ?? 0,
     diagEvents: diagEvents.rowCount ?? 0,
+    offlinePacks: offlinePacks.rowCount ?? 0,
+    issuedItems: issuedItems.rowCount ?? 0,
   };
 }
