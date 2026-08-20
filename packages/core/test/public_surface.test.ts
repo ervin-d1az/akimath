@@ -37,6 +37,17 @@ const PUBLIC_SURFACE = [
   "mix64",
   "rejectionLimit",
   "wordAt",
+  // The rederivation machine, and the versions this build ships. The server
+  // grades an attempt by resolving the recorded reference and regenerating the
+  // item, so these are the surface it consumes. `coreRegistry()` is a call and
+  // not the constant, because every export here is a function — a registry is a
+  // `Map` behind an interface, and a `Map` carries methods. It holds retired
+  // versions too: an issued item can never stop being rederivable.
+  "issuable",
+  "rederive",
+  "registryOf",
+  "resolve",
+  "coreRegistry",
 ].sort();
 
 /** Anything that turns a value into text belongs in the contract, not here. */

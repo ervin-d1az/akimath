@@ -1,7 +1,6 @@
-import { rederive, registryOf, type TemplateRegistry } from "./registry.js";
+import { rederive } from "./registry.js";
 import type { TemplateRef } from "./template.js";
-import { arithIntegerSubtractV1 } from "./templates/arith-integer-subtract/v1.js";
-import { arithIntegerSubtractV2 } from "./templates/arith-integer-subtract/v2.js";
+import { CORE_REGISTRY } from "./templates/index.js";
 
 /**
  * Every template version, generating at a fixed ladder of seeds.
@@ -10,11 +9,6 @@ import { arithIntegerSubtractV2 } from "./templates/arith-integer-subtract/v2.js
  * version impossible to land quietly: a version is frozen history, so any diff
  * here on an existing row is a defect rather than an update.
  */
-export const CORE_REGISTRY: TemplateRegistry = registryOf([
-  arithIntegerSubtractV1,
-  arithIntegerSubtractV2,
-]);
-
 /** Seeds spanning the signed range, including both extremes. */
 export const SEED_LADDER: readonly bigint[] = [
   0n,

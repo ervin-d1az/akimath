@@ -9,7 +9,7 @@ const valid = (over: Record<string, unknown> = {}): unknown => ({
   issued_at: "2026-08-18T00:00:00.000Z",
   expires_at: "2026-11-18T00:00:00.000Z",
   sources: [
-    { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 5, skill_id: 1 },
+    { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 5 },
     { kind: "authored", path: "../../app/assets/packs/starter.json", skill_id: 1 },
   ],
   ...over,
@@ -36,7 +36,7 @@ describe("a declaration says what to build", () => {
       valid({
         sources: [
           { kind: "authored", path: "a.json", skill_id: 1 },
-          { kind: "template", template_id: "t", template_version: 1, ladder_step: 1, count: 1, skill_id: 1 },
+          { kind: "template", template_id: "t", template_version: 1, ladder_step: 1, count: 1 },
           { kind: "authored", path: "b.json", skill_id: 1 },
         ],
       }),
@@ -71,8 +71,8 @@ describe("a malformed declaration is refused, naming the field", () => {
     ["a local time with an offset", { issued_at: "2026-01-01T00:00:00.000-06:00" }, "issued_at"],
     ["no sources at all", { sources: [] }, "sources"],
     ["a source of an unknown kind", { sources: [{ kind: "divination", skill_id: 1 }] }, "kind"],
-    ["a template source with no count", { sources: [{ kind: "template", template_id: "t", template_version: 1, ladder_step: 1, skill_id: 1 }] }, "count"],
-    ["a ladder step outside 1..20", { sources: [{ kind: "template", template_id: "t", template_version: 1, ladder_step: 21, count: 1, skill_id: 1 }] }, "ladder_step"],
+    ["a template source with no count", { sources: [{ kind: "template", template_id: "t", template_version: 1, ladder_step: 1 }] }, "count"],
+    ["a ladder step outside 1..20", { sources: [{ kind: "template", template_id: "t", template_version: 1, ladder_step: 21, count: 1 }] }, "ladder_step"],
     ["an authored source with no path", { sources: [{ kind: "authored", skill_id: 1 }] }, "path"],
     ["a source with no skill", { sources: [{ kind: "authored", path: "a.json" }] }, "skill_id"],
   ];
@@ -90,5 +90,41 @@ describe("a malformed declaration is refused, naming the field", () => {
     for (const junk of [null, 42, "text", []]) {
       expect(() => parseDeclaration(junk)).toThrow();
     }
+  });
+});
+
+describe("a template source does not state its skill", () => {
+  const templateSource = (over: Record<string, unknown> = {}) => ({
+    kind: "template",
+    template_id: "arith.integer.subtract",
+    template_version: 2,
+    ladder_step: 3,
+    count: 5,
+    ...over,
+  });
+
+  it("reads one that omits it", () => {
+    const d = parseDeclaration(valid({ sources: [templateSource()] }));
+
+    expect(d.sources[0]).toMatchObject({ kind: "template", templateId: "arith.integer.subtract" });
+    // The field is gone from the parsed shape, not merely unread — `build.ts`
+    // resolves it from the template, and leaving a `skillId` here would give it
+    // something to prefer.
+    expect(d.sources[0]).not.toHaveProperty("skillId");
+  });
+
+  it("and refuses one that states it, rather than ignoring it", () => {
+    // The template knows which skill it exercises (`Template.skillId`). A
+    // declaration that says so too is a second place to be wrong, and the wrong
+    // one would be the pack's — items filed under a skill their template does
+    // not exercise, rated against the wrong `user_skills` row. Refused rather
+    // than ignored, because an ignored field looks like it works.
+    expect(() => parseDeclaration(valid({ sources: [templateSource({ skill_id: 1 })] })))
+      .toThrow(/skill_id/);
+  });
+
+  it("while an authored source still needs one, because nothing else knows", () => {
+    expect(() => parseDeclaration(valid({ sources: [{ kind: "authored", path: "a.json" }] })))
+      .toThrow(/skill_id/);
   });
 });

@@ -23,7 +23,6 @@ export interface TemplateSource {
   readonly templateVersion: number;
   readonly ladderStep: number;
   readonly count: number;
-  readonly skillId: number;
 }
 
 /** Items read from a hand-authored file and lifted into the frozen envelope. */
@@ -145,14 +144,20 @@ function requireInstant(from: Record<string, unknown>, field: string): string {
 
 function parseSource(value: unknown, index: number): Source {
   const raw = object(value, `sources[${index}]`);
-  // Read lazily: a puzzle source belongs to no skill, and demanding one would
-  // be inventing a field the pack format does not have for puzzles.
-  const skillId = raw["kind"] === "puzzles"
-    ? 0
-    : requireInt(raw, "skill_id", 1, Number.MAX_SAFE_INTEGER);
-
   switch (raw["kind"]) {
     case "template":
+      // **No `skill_id` here.** The template knows which skill it exercises
+      // (`Template.skillId`), and `build.ts` resolves it from the registry. A
+      // declaration that states it too is a second place to be wrong, and the
+      // wrong one would be the pack's — items filed under a skill their
+      // template does not exercise, rated against the wrong `user_skills` row.
+      // Refused rather than ignored: an ignored field looks like it works.
+      if (raw["skill_id"] !== undefined) {
+        fail(
+          "skill_id",
+          "belongs to the template, not to the source that runs it; remove it",
+        );
+      }
       return {
         kind: "template",
         templateId: requireString(raw, "template_id"),
@@ -162,10 +167,15 @@ function parseSource(value: unknown, index: number): Source {
         // slower than finding it out here.
         ladderStep: requireInt(raw, "ladder_step", 1, 20),
         count: requireInt(raw, "count", 1, 1000),
-        skillId,
       };
     case "authored":
-      return { kind: "authored", path: requireString(raw, "path"), skillId };
+      // An authored file carries no template, so nothing else can say which
+      // skill its items belong to.
+      return {
+        kind: "authored",
+        path: requireString(raw, "path"),
+        skillId: requireInt(raw, "skill_id", 1, Number.MAX_SAFE_INTEGER),
+      };
     case "puzzles":
       return { kind: "puzzles", path: requireString(raw, "path") };
     default:

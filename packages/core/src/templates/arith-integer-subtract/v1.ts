@@ -55,5 +55,9 @@ export function generateV1(ref: TemplateRef): GeneratedItem {
 export const arithIntegerSubtractV1: Template = Object.freeze({
   id: "arith.integer.subtract",
   version: 1,
+  // Skill 1, the same one `content/pack.declaration.json` files its authored
+  // items under. The declaration no longer says so for a template source: it
+  // is read from here, so the two cannot disagree.
+  skillId: 1,
   generate: generateV1,
 });

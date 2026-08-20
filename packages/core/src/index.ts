@@ -33,3 +33,21 @@ export {
   wordAt,
   type WordSource,
 } from "./prng/splitmix64.js";
+
+export {
+  issuable,
+  rederive,
+  registryOf,
+  resolve,
+  type TemplateRegistry,
+} from "./registry.js";
+
+export { coreRegistry } from "./templates/index.js";
+
+export type {
+  GeneratedItem,
+  PromptToken,
+  Template,
+  TemplateRef,
+  Term,
+} from "./template.js";

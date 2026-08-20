@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { DiagnosisCopy } from "@akimath/contract";
 import { describe, expect, it } from "vitest";
 
-import { CORE_REGISTRY } from "../../src/golden.js";
+import { CORE_REGISTRY } from "../../src/templates/index.js";
 import { registryOf } from "../../src/registry.js";
 import type { Template } from "../../src/template.js";
 import { buildPack } from "../../src/pack/build.js";
@@ -44,7 +44,7 @@ const declaration = (over: Record<string, unknown> = {}) =>
     issued_at: "2026-08-18T00:00:00.000Z",
     expires_at: "2026-11-18T00:00:00.000Z",
     sources: [
-      { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 5, skill_id: 1 },
+      { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 5 },
       { kind: "authored", path: AUTHORED_PATH, skill_id: 1 },
     ],
     ...over,
@@ -182,6 +182,7 @@ describe("a generated answer is shaped by what the template produced", () => {
     const fractional: Template = {
       id: "spike.fraction",
       version: 1,
+      skillId: 1,
       generate: (ref) => ({
         prompt: [],
         answer: { numerator: 5n, denominator: 4n },
@@ -194,7 +195,7 @@ describe("a generated answer is shaped by what the template produced", () => {
 
     const { pack } = buildPack(
       declaration({
-        sources: [{ kind: "template", template_id: "spike.fraction", template_version: 1, ladder_step: 2, count: 1, skill_id: 1 }],
+        sources: [{ kind: "template", template_id: "spike.fraction", template_version: 1, ladder_step: 2, count: 1 }],
       }),
       { ...inputs(), registry: registryOf([fractional]) },
     );
@@ -204,7 +205,7 @@ describe("a generated answer is shaped by what the template produced", () => {
 
   it("calls a whole answer an integer", () => {
     const { pack } = buildPack(declaration({
-      sources: [{ kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 1, skill_id: 1 }],
+      sources: [{ kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 1 }],
     }), inputs());
     expect(pack.items[0]?.answer.shape).toBe("integer");
   });
@@ -231,8 +232,8 @@ describe("the same declaration always produces the same pack", () => {
     const { pack } = buildPack(
       declaration({
         sources: [
-          { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 3, skill_id: 1 },
-          { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 3, skill_id: 1 },
+          { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 3 },
+          { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 3 },
         ],
       }),
       inputs(),
@@ -273,14 +274,34 @@ describe("every skill can answer for itself", () => {
   });
 
   it("declares a node for every distinct skill, not just the first", () => {
+    // The second skill comes from a **template that says so**, not from a
+    // declaration that overrode one: the declaration no longer states a skill
+    // for a template source, so this is the only way two of them can appear.
+    const otherSkill: Template = {
+      id: "spike.other-skill",
+      version: 1,
+      skillId: 4,
+      generate: (ref) => ({
+        prompt: [],
+        answer: { numerator: 2n, denominator: 1n },
+        ladderStep: ref.ladderStep,
+        operator: "-",
+        left: { num: 5, den: 1 },
+        right: { num: 3, den: 1 },
+      }),
+    };
+
     const { pack } = buildPack(
       declaration({
         sources: [
           { kind: "authored", path: AUTHORED_PATH, skill_id: 1 },
-          { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 2, skill_id: 4 },
+          { kind: "template", template_id: "spike.other-skill", template_version: 1, ladder_step: 3, count: 2 },
         ],
       }),
-      inputs(new Map([[1, FALLBACK], [4, FALLBACK]])),
+      {
+        ...inputs(new Map([[1, FALLBACK], [4, FALLBACK]])),
+        registry: registryOf([otherSkill]),
+      },
     );
     expect(pack.skill_nodes.map((n) => n.skill_id)).toEqual([1, 4]);
   });

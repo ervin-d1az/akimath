@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { answerDigest, type DiagnosisCopy } from "@akimath/contract";
 import { describe, expect, it } from "vitest";
 
-import { CORE_REGISTRY } from "../../src/golden.js";
+import { CORE_REGISTRY } from "../../src/templates/index.js";
 import { buildPack } from "../../src/pack/build.js";
 import { parseDeclaration } from "../../src/pack/declaration.js";
 import { predictDistractors } from "../../src/pack/distractors.js";
@@ -29,7 +29,7 @@ const build = (count: number, misconceptions = MISCONCEPTIONS) =>
       issued_at: "2026-08-18T00:00:00.000Z",
       expires_at: "2026-11-18T00:00:00.000Z",
       sources: [
-        { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count, skill_id: 1 },
+        { kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count },
       ],
     }),
     {

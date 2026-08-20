@@ -185,7 +185,15 @@ format and its OpenAPI half.
   `src/pack/` lifts authored items and template-generated ones into one pack, and
   `npm run build:pack` emits `packages/core/pack/starter.json` — 80 items across six families and
   5 puzzles, byte-identical on a second run, which is what makes the CI diff mean something.
-  Item generation beyond the one template family is still unwritten. **The math compositor is
+  Item generation beyond the one template family is still unwritten. **A template declares which
+  skill it exercises** (`Template.skillId`), because `attempts.skill_id` is `NOT NULL` and nothing
+  on the wire carries it — an attempt names an item, an item is a `TemplateRef`, and neither
+  `issued_items` nor `offline_packs.template_refs` records a skill. The pack declaration used to
+  state it a second time next to a template source and now **refuses** to: two places stating one
+  fact is one place that can be wrong, and the wrong one would be the pack's. The rederivation
+  machine is on the package's front door — `registryOf`, `resolve`, `rederive`, `issuable` and
+  `coreRegistry()`, the last a *call* because every export is a function and a registry is a `Map`
+  behind an interface. **The math compositor is
   built**: `EsMxNumber`, `FractionMetrics`, `MathNode` (pure) and `MathView` + `FractionGlyph`
   (adapters) are landed and tested. Spike B cleared its criterion on 2026-08-16 — see
   `openspec/changes/f1b-math-compositor/spike-b/`.
