@@ -116,7 +116,7 @@ format and its OpenAPI half.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only), the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **299 tests, green, 98.93% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **300 tests, green, 98.93% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -186,7 +186,7 @@ format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 75 of the 299 report as skipped rather than passing quietly.
+  run; leave it unset and 76 of the 300 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
@@ -218,7 +218,11 @@ format and its OpenAPI half.
   fact is one place that can be wrong, and the wrong one would be the pack's. The rederivation
   machine is on the package's front door — `registryOf`, `resolve`, `rederive`, `issuable` and
   `coreRegistry()`, the last a *call* because every export is a function and a registry is a `Map`
-  behind an interface. **The math compositor is
+  behind an interface. **`toManifestEntry`/`fromManifestEntry` are there too**: how a
+  `TemplateRef` is written into `offline_packs.template_refs` and read back is one definition
+  now, shared by the builder that will write it and the server that already reads it. It used
+  to be a reader matching a comment in ARCHITECTURE, and a mismatch would have made
+  `refForPackItem` return null for every real pack — a 404 indistinguishable from a missing row. **The math compositor is
   built**: `EsMxNumber`, `FractionMetrics`, `MathNode` (pure) and `MathView` + `FractionGlyph`
   (adapters) are landed and tested. Spike B cleared its criterion on 2026-08-16 — see
   `openspec/changes/f1b-math-compositor/spike-b/`.
