@@ -614,6 +614,7 @@
     },
     "/me": {
       "delete": {
+        "description": "Deletes the player row and everything that references it: attempts, issued items, offline packs, skill ratings and diagnosis events. Aggregates that carry no player identifier are unaffected. This does not delete the Neon Auth account — the email and the sign-in survive it, and removing those is a separate act at the identity provider.",
         "operationId": "deleteMe",
         "responses": {
           "204": {
@@ -658,19 +659,9 @@
               }
             },
             "description": "That method is not routed here."
-          },
-          "501": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
-        "summary": "Erase the player and everything recorded about them."
+        "summary": "Erase the player and everything this service recorded about them."
       },
       "get": {
         "operationId": "getMe",

@@ -6,6 +6,25 @@ export interface Response {
 }
 
 /**
+ * A response the contract gives no body.
+ *
+ * **A separate type rather than an optional `body`**, because the two are not
+ * the same mistake. An optional field makes "I forgot the body" and "there is
+ * no body" indistinguishable, and the adapter cannot tell a deliberate 204 from
+ * a handler that fell through. This way the absence is stated, and a 204
+ * carrying a body does not compile.
+ *
+ * `route()` never returns one: every decision it makes has something to say.
+ * Only a handler can, and today only `deleteMe` does.
+ */
+export interface NoContent {
+  readonly status: 204;
+}
+
+/** What a handler may answer: a body, or the deliberate absence of one. */
+export type HandlerAnswer = Response | NoContent;
+
+/**
  * Who is asking, as the adapter resolved it.
  *
  * **Three cases, because a 401 with one meaning cannot be diagnosed.** A client
@@ -80,7 +99,7 @@ export const CONTRACTED_OPERATIONS: readonly Route[] = [
  * implementing one is also what stops it advertising itself as unbuilt, and
  * neither half can be satisfied by doing nothing.
  */
-export const IMPLEMENTED_OPERATIONS: readonly string[] = ["getMe", "linkPlayer"];
+export const IMPLEMENTED_OPERATIONS: readonly string[] = ["deleteMe", "getMe", "linkPlayer"];
 
 /**
  * Routes that are deliberately outside the client-facing contract.

@@ -92,3 +92,32 @@ export async function insertPlayer(
   }
   return row;
 }
+
+/**
+ * Deletes the account's player, and says whether there was one.
+ *
+ * **The cascade is the erasure.** Five tables reference `players (id)` with
+ * `ON DELETE CASCADE` — `issued_items`, `offline_packs`, `attempts`,
+ * `user_skills`, `diag_events` — so one statement takes all of them, and
+ * `test/delete-me.test.ts` counts the rows in every one rather than trusting
+ * the schema to still say that. Referential actions run as the referencing
+ * table's owner, so those child rows go whatever the deleting role is granted;
+ * the grants exist for the retention job, which deletes from two of them
+ * directly.
+ *
+ * **This must be called under `retention_job`.** `app_request` holds DELETE on
+ * no table at all (`test/grants.test.ts`), which is what makes the
+ * append-only-attempts invariant structural rather than a promise.
+ *
+ * `rowCount` rather than `RETURNING`: the caller is deciding between 204 and
+ * 404 and has no use for the row it just destroyed.
+ */
+export async function deletePlayerForAccount(
+  client: pg.ClientBase,
+  accountId: string,
+): Promise<boolean> {
+  const result = await client.query("DELETE FROM players WHERE auth_user_id = $1::uuid", [
+    accountId,
+  ]);
+  return (result.rowCount ?? 0) > 0;
+}
