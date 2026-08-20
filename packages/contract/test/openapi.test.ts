@@ -208,6 +208,30 @@ describe("the answer never travels and the prompt travels rendered", () => {
     expect(submit.description).toMatch(/exactly one/i);
   });
 
+  it("a verdict echoes whichever source the submission named", () => {
+    // A pack attempt has no `itemId` — identity is `(packId, index)` — so a
+    // required one was a field the server could not fill for half the paths it
+    // serves. Order is the primary correlation and the echo is what lets a
+    // client check it rather than trust it.
+    const schemas = (committed["components"] as { schemas: Record<string, Record<string, unknown>> })
+      .schemas;
+    const verdict = schemas["Verdict"] as {
+      properties: Record<string, Record<string, unknown>>;
+      required: string[];
+    };
+    const submission = schemas["AttemptSubmission"] as {
+      properties: Record<string, Record<string, unknown>>;
+    };
+
+    expect(Object.keys(verdict.properties).sort()).toEqual(
+      ["itemId", "ok", "packRef", "payload"],
+    );
+    expect([...verdict.required].sort()).toEqual(["ok", "payload"]);
+    // The echo is the submission's own shape, not a second spelling of it.
+    expect(verdict.properties["itemId"]).toEqual(submission.properties["itemId"]);
+    expect(verdict.properties["packRef"]).toEqual(submission.properties["packRef"]);
+  });
+
   it("time on task is bounded, because nothing else bounds it", () => {
     // `attempts.elapsed_ms` is NOT NULL and client-supplied: `issued_at → clientTs`
     // is wall-clock latency, not time on task, and a pack item has no `issued_at`
