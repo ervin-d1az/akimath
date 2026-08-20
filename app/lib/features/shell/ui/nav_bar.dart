@@ -171,7 +171,12 @@ class _Tab extends StatelessWidget {
   static BrandDrawing _markFor(AppTab tab, Color ink) {
     final BrandDrawing drawing = switch (tab) {
       AppTab.profile => NavGlyphSpec.settings,
-      AppTab.home || AppTab.skills || AppTab.progress => NavGlyphSpec.home,
+      AppTab.progress => NavGlyphSpec.progress,
+      // `skills` has no root and no mark of its own yet; it never reaches here
+      // because `visibleTabs` does not hand it over. Sharing the house until
+      // F5 is a decision that costs nothing while nothing can see it — and
+      // `nav_bar_test.dart` fails the moment two *drawn* tabs share a mark.
+      AppTab.home || AppTab.skills => NavGlyphSpec.home,
     };
     return BrandDrawing(
       viewBox: drawing.viewBox,

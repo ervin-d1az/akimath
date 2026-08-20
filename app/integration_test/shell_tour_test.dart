@@ -3,6 +3,7 @@ import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/shell/ui/nav_bar.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
+import 'package:akimath_app/features/progress/ui/progress_screen.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/main.dart' as app;
 import 'package:flutter/material.dart';
@@ -36,8 +37,9 @@ void main() {
     }
     expect(find.byType(HomeScreen), findsOneWidget, reason: 'never reached the home');
 
-    // The bar exists because a second root does.
+    // The bar exists because a second root does, and it grew when a third did.
     expect(find.text('Inicio'), findsOneWidget);
+    expect(find.text('Avance'), findsOneWidget);
     expect(find.text('Ajustes'), findsOneWidget);
 
     // **And each root carries a mark, not just a word.** The two glyphs are
@@ -51,7 +53,7 @@ void main() {
         (Widget w) => w is CustomPaint && w.painter is BrandDrawingPainter,
       ),
     );
-    expect(marks, findsNWidgets(2), reason: 'one mark per root');
+    expect(marks, findsNWidgets(3), reason: 'one mark per root');
 
     await tester.tap(find.text('Ajustes'));
     await tester.pumpAndSettle();
@@ -62,9 +64,18 @@ void main() {
     expect(find.text('¡Bien hecho!'), findsOneWidget);
     expect(find.text('Casi'), findsOneWidget);
 
+    // `Avance` is where the two figures live now — they moved off Ajustes when
+    // it got its own root, because what a player has done is not a setting.
+    await tester.tap(find.text('Avance'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProgressScreen), findsOneWidget);
+    expect(find.text('DÍAS'), findsOneWidget);
+    expect(find.text('RACHA'), findsOneWidget);
+    // No account on a fresh install, so the history is an invitation.
+    expect(find.textContaining('Crea una cuenta'), findsOneWidget);
+
     await tester.tap(find.text('Inicio'));
     await tester.pumpAndSettle();
     expect(find.byType(HomeScreen), findsOneWidget, reason: 'the home lost its state');
-    expect(find.text('RACHA'), findsOneWidget);
   });
 }
