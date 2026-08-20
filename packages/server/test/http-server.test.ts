@@ -206,12 +206,15 @@ describe("the credential reaches the verifier and the verdict reaches the policy
 
 describe("every request leaves one line", () => {
   it("says what was asked, what was answered, and who asked", async () => {
-    // `/me/history` rather than `/me`: this app has no handlers, and `/me` is
-    // now dispatched. An operation the router still answers itself is what
-    // keeps this test about the log line.
+    // **A path the contract does not describe**, and it is the third address
+    // this test has used. It was `/me`, then `/me/history`, and each moved the
+    // day that operation gained a handler — this app passes `NO_HANDLERS`, so a
+    // dispatched operation logs an error line as well and the count goes to
+    // two. A 404 is answered by the router itself and always will be, so the
+    // test is about the log line rather than about which endpoints exist.
     const log = recordingLogger();
     await createApp({ version: VERSION, verify: stubVerifier(LINKED), log, handlers: NO_HANDLERS }).fetch(
-      new Request("http://localhost/me/history", { headers: { Authorization: "Bearer good" } }),
+      new Request("http://localhost/nothing-here", { headers: { Authorization: "Bearer good" } }),
     );
 
     expect(log.lines).toHaveLength(1);
@@ -219,8 +222,8 @@ describe("every request leaves one line", () => {
       level: "info",
       msg: "request",
       method: "GET",
-      path: "/me/history",
-      status: 501,
+      path: "/nothing-here",
+      status: 404,
       caller: "session",
     });
   });

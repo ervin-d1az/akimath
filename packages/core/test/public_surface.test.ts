@@ -58,6 +58,9 @@ const PUBLIC_SURFACE = [
   // request path is ambient IO in the one package that forbids it.
   "misconceptionCopy",
   "fallbackDiagnosis",
+  // What a skill is called. `skill_id` is a smallint in five tables and a name
+  // in none of them, and `GET /me/history` has to put a title on an entry.
+  "skillName",
 ].sort();
 
 /** Anything that turns a value into text belongs in the contract, not here. */

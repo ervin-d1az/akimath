@@ -51,6 +51,8 @@ export { fromManifestEntry, toManifestEntry, type ManifestEntry } from "./manife
 // `toString`. A caller wants the copy, not the key that finds it.
 export { fallbackDiagnosis, misconceptionCopy } from "./pack/misconceptions.js";
 
+export { skillName } from "./pack/skill-names.js";
+
 export type {
   GeneratedItem,
   PromptToken,
