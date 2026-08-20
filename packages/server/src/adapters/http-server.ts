@@ -1,11 +1,27 @@
 import { serve, type ServerType } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 
+import { coreRegistry, resolve } from "@akimath/core";
+
+import {
+  gradeAnswer,
+  readAttemptBatch,
+  unknownSourceResponse,
+  verdictsResponse,
+  type Attempt,
+  type GradedAttempt,
+} from "../attempts.js";
 import { erasureResponse } from "../erasure.js";
 import { conflictResponse, linkOutcome, readLinkRequest } from "../link.js";
-import { profileResponse } from "../players.js";
+import { noPlayerResponse, profileResponse } from "../players.js";
 import { route, type HandlerAnswer } from "../routing.js";
 import type { Logger } from "./logger.js";
+import {
+  insertAttempts,
+  refForIssuedItem,
+  refForPackItem,
+  type AttemptRow,
+} from "./attempt-repository.js";
 import {
   accountForPlayer,
   deletePlayerForAccount,
@@ -61,6 +77,53 @@ export function createHandlers(database: RequestDatabase): Handlers {
         erasureResponse(await deletePlayerForAccount(client, userId)),
       ),
 
+    // **The server grades; the client only reports what it typed.** §4's
+    // invariant is that no field on a submission asserts a verdict, so the
+    // answer is checked by rederiving the item from the reference the database
+    // recorded — `readAttemptBatch` refuses a body that carries one anyway.
+    submitAttempts: async ({ userId, body }) => {
+      const read = readAttemptBatch(body);
+      // `"status" in read`, not `Array.isArray`: the latter widens a
+      // `readonly Attempt[]` to `any[]` and leaves the other branch un-narrowed.
+      if ("status" in read) {
+        return read;
+      }
+
+      return database.inRequestRole(async (client) => {
+        const playerId = await playerIdForAccount(client, userId);
+        if (playerId === null) {
+          return noPlayerResponse();
+        }
+
+        // **Every source resolved before anything is written.** A batch is one
+        // transaction and one answer; recording the first forty and refusing
+        // the forty-first would leave the client unable to tell what landed.
+        const graded: GradedAttempt[] = [];
+        const rows: AttemptRow[] = [];
+        for (const [index, attempt] of read.entries()) {
+          const ref = await referenceFor(client, playerId, attempt);
+          if (ref === null) {
+            return unknownSourceResponse(index);
+          }
+          const isCorrect = gradeAnswer(ref, attempt.answer);
+          graded.push({ source: attempt.source, ok: isCorrect });
+          rows.push({
+            playerId,
+            source: attempt.source,
+            // The template knows which skill it exercises; nothing in the
+            // recorded reference else does, and `attempts.skill_id` is NOT NULL.
+            skillId: resolve(coreRegistry(), ref).skillId,
+            isCorrect,
+            elapsedMs: attempt.elapsedMs,
+            answeredAt: attempt.clientTs,
+          });
+        }
+
+        await insertAttempts(client, rows);
+        return verdictsResponse(graded);
+      });
+    },
+
     linkPlayer: async ({ userId, body, header }) => {
       const request = readLinkRequest(body, header("Idempotency-Key"));
       if ("status" in request) {
@@ -98,6 +161,17 @@ export function createHandlers(database: RequestDatabase): Handlers {
       });
     },
   };
+}
+
+/** Which of the two source tables an attempt points into. */
+function referenceFor(
+  client: Parameters<typeof refForIssuedItem>[0],
+  playerId: string,
+  attempt: Attempt,
+) {
+  return attempt.source.kind === "issued"
+    ? refForIssuedItem(client, playerId, attempt.source.itemId)
+    : refForPackItem(client, playerId, attempt.source.packId, attempt.source.index);
 }
 
 /**

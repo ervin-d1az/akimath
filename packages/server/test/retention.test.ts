@@ -104,7 +104,7 @@ describe("the figures live in exactly one module", () => {
   /// the duplication it exists for.
   ///
   /// An entry here is a promise that the file has nothing to do with retention.
-  const HTTP_STATUS_FILES: readonly string[] = ["link.ts", "http-server.ts"];
+  const HTTP_STATUS_FILES: readonly string[] = ["link.ts", "http-server.ts", "attempts.ts"];
 
   it.skipIf(instrumented)("every excused file is excused for a reason", () => {
     // A file that no longer exists would silently excuse nothing.

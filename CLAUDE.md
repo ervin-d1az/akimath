@@ -116,7 +116,7 @@ format and its OpenAPI half.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only), the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **231 tests, green, 98.52% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **299 tests, green, 98.93% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -128,8 +128,9 @@ format and its OpenAPI half.
   key set that is *injected*, so the tests run the real function against real Ed25519 keys.
   **`NEON_AUTH_BASE_URL` is not set anywhere yet** — it lives on the Neon console's Auth page and
   is not derivable from the connection string, so `npm run dev` exits 1 until somebody pastes it in.
-  **Three endpoints are implemented, and together they are the account's whole life**: `GET /me`
-  reads the profile, `POST /players/link` creates it, `DELETE /me` erases it. Each verifies the
+  **Four endpoints are implemented.** Three are the account's whole life — `GET /me` reads the
+  profile, `POST /players/link` creates it, `DELETE /me` erases it — and the fourth is the one the
+  rest of the product hangs off. Each verifies the
   token and connects through `src/adapters/request-database.ts`, which opens a transaction and
   `SET LOCAL ROLE`s into a role that is never the owner. `GET /me` answers the frozen `Me` shape,
   or **404 and not 401** when the account has no player yet. `POST /players/link` takes the
@@ -138,7 +139,7 @@ format and its OpenAPI half.
   `route()` returns *an answer* or *whose handler should produce one*, so the surface stays where
   the parity gate reads it, and `IMPLEMENTED_OPERATIONS` is the contract's 501 list inverted,
   checked in both directions — an endpoint stops advertising itself as unbuilt in the same diff
-  that builds it. The other five still answer **501**.
+  that builds it. The other four still answer **501**.
   **Erasure is the one handler that does not run as `app_request`.** That role holds DELETE on no
   table, which is what makes the append-only-attempts invariant structural; `DELETE /me` goes
   through `inErasureRole` (`SET LOCAL ROLE retention_job`) and deletes one `players` row, and the
@@ -146,7 +147,25 @@ format and its OpenAPI half.
   counts the rows in every one rather than trusting the schema to still say so, and
   `template_stats` survives by design because it carries no player id. The hole is kept to one:
   `test/one-way-to-erase.test.ts` names the only two files under `src/` allowed to say
-  `inErasureRole`, the same shape as `one-way-to-log.test.ts`. **It does not delete the Neon Auth
+  `inErasureRole`, the same shape as `one-way-to-log.test.ts`.
+  **`POST /attempts` grades by rederiving, and that is the invariant made true by construction.**
+  A submission carries no `ok` — `readAttemptBatch` refuses a body that mentions one, along with
+  every other unknown property — so the server resolves the recorded
+  `(template_id, template_version, seed, ladder_step)`, regenerates the item and compares canonical
+  spellings. Both halves of "canonical" come from `packages/contract`, the package Dart is
+  golden-tested against, because a third implementation here is exactly R2. `@akimath/core` and
+  `@akimath/contract` are therefore the package's first **first-party** runtime dependencies, kept
+  in their own list in `test/dependency-allowlist.test.ts`: DEP-1 exists to summon a human about
+  third-party code that phones home, a workspace link has no version to pin, and an unsatisfiable
+  rule gets deleted. They are held to `file:../<name>` and to bringing nothing unaudited — today
+  `zod`, and the test says so.
+  An attempt names **exactly one source**, mirroring `attempts_one_source`, and a batch is one
+  transaction: every source is resolved before anything is written, so an unknown item is a 404
+  naming its index with nothing recorded. **A retry records the batch twice.** There is no
+  idempotency key on this operation and no unique key to hang an `ON CONFLICT` on, and closing it
+  needs a decision nobody has made — the natural key would have to tell a retry from a legitimate
+  replay of the same pack item, and whether replaying is a feature is not settled. Nothing calls
+  the endpoint yet; the change that makes it reachable is where this has to be answered. **It does not delete the Neon Auth
   account** — identity lives in the provider's `neon_auth` schema and this service holds no
   credential that could remove it, so the email and the sign-in survive the call. That scope is
   written into the operation's `description` in `contract/openapi.json` rather than left for a
@@ -167,7 +186,7 @@ format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 65 of the 231 report as skipped rather than passing quietly.
+  run; leave it unset and 75 of the 299 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
@@ -175,8 +194,8 @@ format and its OpenAPI half.
   recorded normalisations, and `canon.golden.json`. 189 tests, green, 91.71% mutation score,
   0 clones. **Zod 4.4.3 is the repository's first runtime dependency**, pinned exactly
   because the determinism gate is byte-for-byte.
-- **Does not exist.** Five of the eight contracted endpoints — everything that needs an item, a
-  pack, a rating or a history — no dev environment, no deploy, and
+- **Does not exist.** Four of the eight contracted endpoints — everything that issues an item or a
+  pack, and everything that reads a rating or a history — no dev environment, no deploy, and
   no deployed *application*. **The database is provisioned**: a Neon project (`akimath`,
   `aws-us-east-1`, PostgreSQL 18.4) with both migrations applied, its connection strings in
   `packages/server/.env.local`, which is gitignored. `MIGRATE_DATABASE_URL` is the direct string and

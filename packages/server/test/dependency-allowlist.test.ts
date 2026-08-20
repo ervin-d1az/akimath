@@ -95,6 +95,37 @@ const ALLOWED_RUNTIME_DEPENDENCIES: ReadonlySet<string> = new Set([
   "jose",
 ]);
 
+/**
+ * The packages in this repository that this one depends on.
+ *
+ * **A separate list, because DEP-1 is about a different question.** That rule
+ * exists to stop third-party code that phones home, collects data or runs at
+ * install time; it summons a human because a test cannot judge those. None of
+ * them can be true of a package in this tree: every one is read in this
+ * repository, gated by the same CI, and its own allowlist is checked by its own
+ * suite. Folding them into the list above would make the pin rule ("no caret,
+ * no tilde") unsatisfiable — a workspace link has no version — and the usual
+ * fix for an unsatisfiable rule is to delete it.
+ *
+ * What they are held to instead is below: linked by path rather than fetched,
+ * present on disk, and carrying no third-party runtime dependency this package
+ * has not already audited.
+ */
+const FIRST_PARTY: ReadonlySet<string> = new Set([
+  // Added 2026-08-19 by `f3-attempt-sync`. The rederivation machine: the server
+  // grades an attempt by resolving the recorded `(template_id,
+  // template_version, seed, ladder_step)` and regenerating the item, which is
+  // the whole reason the answer never has to travel. Zero runtime dependencies
+  // of its own, enforced by its own `test/dependency-allowlist.test.ts`.
+  "@akimath/core",
+
+  // Added by the same change. The canonicalizer. Grading compares canonical
+  // spellings, and `packages/contract` is the one that Dart is golden-tested
+  // against — a third implementation written here is exactly the drift risk R2
+  // names. It brings `zod`, pinned exactly, which the assertion below checks.
+  "@akimath/contract",
+]);
+
 interface Manifest {
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly devDependencies?: Readonly<Record<string, string>>;
@@ -114,8 +145,53 @@ describe("the runtime dependency list is a committed allowlist", () => {
   const manifest = readManifest("../package.json");
   const declared = Object.keys(manifest.dependencies ?? {});
 
-  it("declares no runtime dependency the allowlist does not", () => {
-    expect(new Set(declared)).toEqual(ALLOWED_RUNTIME_DEPENDENCIES);
+  const thirdParty = declared.filter((name) => !FIRST_PARTY.has(name));
+
+  it("declares no third-party runtime dependency the allowlist does not", () => {
+    expect(new Set(thirdParty)).toEqual(ALLOWED_RUNTIME_DEPENDENCIES);
+  });
+
+  it("and no first-party one the other list does not", () => {
+    // Both directions. A package in this tree that stops being depended on
+    // should leave the list, or the list stops describing anything.
+    const declaredFirstParty = declared.filter((name) => FIRST_PARTY.has(name));
+    expect(new Set(declaredFirstParty)).toEqual(FIRST_PARTY);
+  });
+
+  it("links a first-party package by path, never by version", () => {
+    // A version range would resolve against a registry that has never heard of
+    // `@akimath/core`, and the failure would be at install time in CI rather
+    // than here.
+    for (const name of FIRST_PARTY) {
+      expect(manifest.dependencies?.[name], name).toBe(
+        `file:../${name.replace("@akimath/", "")}`,
+      );
+    }
+  });
+
+  it("and a first-party package brings nothing this list has not audited", () => {
+    // The transitive half. `@akimath/contract` depends on `zod`; if it ever
+    // grows a second runtime dependency, that package ships inside this one and
+    // has to be audited here — which is exactly what would otherwise be missed,
+    // because the entry above says only "@akimath/contract".
+    const brought = new Set<string>();
+    for (const name of FIRST_PARTY) {
+      const nested = readManifest(`../node_modules/${name}/package.json`);
+      for (const [dependency, range] of Object.entries(nested.dependencies ?? {})) {
+        if (FIRST_PARTY.has(dependency)) {
+          continue;
+        }
+        brought.add(dependency);
+        expect(
+          isExactlyPinned(range),
+          `${name} brings ${dependency} as "${range}"; it ships, so it is pinned exactly`,
+        ).toBe(true);
+      }
+    }
+    console.log(
+      `  dependency allowlist · first-party → ${FIRST_PARTY.size} package(s) bringing ${[...brought].join(", ") || "nothing"}`,
+    );
+    expect([...brought].sort()).toEqual(["zod"]);
   });
 
   it("reports what it scanned, and scanning nothing is a failure", () => {
@@ -126,8 +202,14 @@ describe("the runtime dependency list is a committed allowlist", () => {
     );
   });
 
-  it("pins every runtime dependency exactly", () => {
+  it("pins every third-party runtime dependency exactly", () => {
+    // First-party ones are excluded because a workspace link has no version to
+    // pin — they are held to `file:../<name>` above instead, which is a
+    // stronger statement: it cannot resolve to anything but this tree.
     for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {
+      if (FIRST_PARTY.has(name)) {
+        continue;
+      }
       expect(
         isExactlyPinned(range),
         `${name} is declared as "${range}"; runtime dependencies are pinned exactly`,
