@@ -155,4 +155,36 @@ void main() {
       expect(() => seriesPlan(pack(20), from: -1), throwsRangeError);
     });
   });
+
+  group('the positions the series is drawn from', () {
+    test('are the ones the items come from, so nothing recomputes the wrap', () {
+      // A synced attempt names `(packId, index)` — the pack format gives its
+      // items no identifier, so position *is* identity. A caller deriving it
+      // separately would be a second implementation of the one rule that says
+      // which item a player just answered.
+      final List<Item> nine = pack(9);
+
+      for (final int from in <int>[0, 1, 5, 8, 9, 14]) {
+        final List<int> indices = seriesIndices(nine.length, from: from);
+        expect(
+          seriesPlan(nine, from: from),
+          indices.map((int i) => nine[i]).toList(),
+          reason: 'from $from',
+        );
+      }
+    });
+
+    test('they wrap the way the plan wraps', () {
+      expect(seriesIndices(9, from: 7), <int>[7, 8, 0, 1, 2]);
+    });
+
+    test('an empty pack has none', () {
+      expect(seriesIndices(0), isEmpty);
+      expect(seriesIndices(-1), isEmpty);
+    });
+
+    test('and a pack shorter than a series gives every position once', () {
+      expect(seriesIndices(3), <int>[0, 1, 2]);
+    });
+  });
 }
