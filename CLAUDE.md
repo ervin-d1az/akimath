@@ -235,8 +235,20 @@ format and its OpenAPI half.
   `NEON_AUTH_BASE_URL` (PURE; a missing or plaintext one **refuses startup** rather than turning
   into a 401 per request), and `src/adapters/session-verifier.ts` verifies the EdDSA JWT against a
   key set that is *injected*, so the tests run the real function against real Ed25519 keys.
-  **`NEON_AUTH_BASE_URL` is not set anywhere yet** — it lives on the Neon console's Auth page and
-  is not derivable from the connection string, so `npm run dev` exits 1 until somebody pastes it in.
+  **The server runs.** It had never started, and the recorded reason —
+  *`NEON_AUTH_BASE_URL` is not set anywhere yet* — stopped being true the day somebody pasted it
+  into `.env.local` and stayed in this file for weeks. All three variables were there; `npm run
+  dev` was `tsx watch src/main.ts`, which reads none of them. The three scripts that run against a
+  real environment now carry `--env-file=.env.local`, and `test/scripts-load-their-env.test.ts`
+  keeps it that way — while asserting the **suite** does not, because a test run that picked up a
+  live `DATABASE_URL` would be a test run against Neon.
+  The refusal to boot without a key set is right and stays: a server answering 401 to everything
+  reads as broken authentication rather than as a missing variable.
+  **`PORT` defaults to 3000**, and `.env.local` overrides it to 8787 on this machine, which is what
+  the app's `--dart-define=AKIMATH_API_BASE_URL` points at.
+  **`npm run retention` still cannot run**: `RETENTION_DATABASE_URL` is deliberately its own
+  credential for the `retention_job` role rather than a borrow of the request path's, and nobody
+  has minted that password. A different kind of blocker from a missing flag.
   **Seven endpoints are implemented.** Three are the account's whole life — `GET /me` reads the
   profile, `POST /players/link` creates it, `DELETE /me` erases it — three are the offline loop,
   `POST /packs` issuing, `GET /packs/{packId}` fetching again and `POST /attempts` grading, and

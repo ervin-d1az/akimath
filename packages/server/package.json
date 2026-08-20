@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch --env-file=.env.local src/main.ts",
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -17,8 +17,8 @@
     "mutation": "stryker run",
     "dry": "jscpd src",
     "verify": "npm run typecheck && npm run test",
-    "migrate": "tsx src/cli/migrate.ts",
-    "retention": "tsx src/cli/retention.ts",
+    "migrate": "tsx --env-file=.env.local src/cli/migrate.ts",
+    "retention": "tsx --env-file=.env.local src/cli/retention.ts",
     "schema:dump": "./scripts/dump-schema.sh"
   },
   "dependencies": {
