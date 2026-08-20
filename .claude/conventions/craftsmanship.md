@@ -255,11 +255,21 @@ credit.
       the rules XML that would define its test commands does not exist, so do not write that
       command as if it ran. The substitute is a **falsification step**, and because it edits
       versioned production code its mechanism is part of the rule, not a detail:
-      1. For a **tracked** file, `git stash push -- <file>` is the safe form; otherwise edit in
-         place and be ready to `git checkout -- <file>`. For an **untracked** file — a new file in
-         a session that has not committed — neither works: `git stash push` will not take an
-         untracked path and `git checkout --` has nothing to restore from. Copy it out of the tree
-         first, and record a `shasum -a 256` of it.
+      0. **Commit the change first, then falsify.** Every restore below is a restore *to
+         something*, and until the work is committed there is nothing safe to restore to. This
+         is the cheap fix for both traps in step 1, and it costs one commit.
+      1. For a **tracked file with no uncommitted changes**, `git checkout -- <file>` is correct.
+         For a **tracked file carrying this session's uncommitted work**, it is not: it restores
+         to HEAD and silently deletes the change you are testing, mutation and feature together —
+         a green suite afterwards is green because the feature is gone. Use
+         `git stash push -- <file>` / `git stash pop`, or the copy below. For an **untracked**
+         file — a new file in a session that has not committed — neither works: `git stash push`
+         will not take an untracked path and `git checkout --` has nothing to restore from. Copy
+         it out of the tree first, and record a `shasum -a 256` of it.
+         *(All three failed in one run on 2026-08-19: four falsifications restored with
+         `git checkout --` across two tracked files holding uncommitted work and two untracked
+         ones. Two reverted to HEAD, two kept the mutation, and the suite was green either way.
+         Step 0 is the rule that run bought.)*
       2. Invert one assertion or return value, run `cd app && flutter test`, and record the
          **named** test that went red.
       3. Restore: `git checkout -- <file>` (or `git stash pop`, or the copy), then prove it with

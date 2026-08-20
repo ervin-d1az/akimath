@@ -10,6 +10,7 @@ import '../../../design/widgets/spec/verdict_copy.dart';
 import '../../../design/widgets/stat_tile.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/verdict_ring.dart';
+import '../policy/erasure.dart';
 import '../../states/policy/account_state.dart';
 import '../../states/ui/account_state_view.dart';
 
@@ -42,7 +43,13 @@ class PreferencesScreen extends StatelessWidget {
     this.accountEmail,
     this.accountState = AccountState.none,
     this.onRetryAccount,
+    this.onEraseData,
   });
+
+  /// Opens the erasure flow, or null where this device holds no session that
+  /// could carry the request — see `erasureOffered`. Absent rather than dead,
+  /// the same reading that keeps every toggle off this screen (DR-P2).
+  final VoidCallback? onEraseData;
 
   /// Opens the account flow, or null while the build has no endpoints
   /// configured — a button that can only fail is worse than an absent one, the
@@ -79,13 +86,23 @@ class PreferencesScreen extends StatelessWidget {
           if (onCreateAccount != null || accountEmail != null) ...<Widget>[
             Text('TU CUENTA', style: BrandText.eyebrow()),
             const SizedBox(height: BrandShape.space3),
-            if (accountEmail != null)
+            if (accountEmail != null) ...<Widget>[
               AccountStateView(
                 state: accountState,
                 email: accountEmail,
                 onRetry: onRetryAccount,
-              )
-            else
+              ),
+              if (onEraseData != null) ...<Widget>[
+                const SizedBox(height: BrandShape.space3),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: BrandButton.text(
+                    label: erasureDoorLabel,
+                    onPressed: onEraseData!,
+                  ),
+                ),
+              ],
+            ] else
               BrandButton.primary(
                 label: 'Crear cuenta',
                 onPressed: onCreateAccount!,

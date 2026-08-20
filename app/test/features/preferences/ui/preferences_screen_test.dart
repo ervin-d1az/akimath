@@ -1,7 +1,9 @@
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/design/widgets/spec/verdict_copy.dart';
 import 'package:akimath_app/design/widgets/verdict_ring.dart';
+import 'package:akimath_app/features/preferences/policy/erasure.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
+import 'package:akimath_app/features/states/policy/account_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,6 +11,9 @@ Future<void> _pump(
   WidgetTester tester, {
   int daysPractised = 12,
   int streakDays = 5,
+  String? accountEmail,
+  AccountState accountState = AccountState.none,
+  VoidCallback? onEraseData,
 }) async {
   tester.view
     ..physicalSize = const Size(390, 844)
@@ -21,6 +26,9 @@ Future<void> _pump(
         body: PreferencesScreen(
           daysPractised: daysPractised,
           streakDays: streakDays,
+          accountEmail: accountEmail,
+          accountState: accountState,
+          onEraseData: onEraseData,
         ),
       ),
     ),
@@ -138,6 +146,53 @@ void main() {
       ]) {
         expect(all, isNot(contains(absent)), reason: '"$absent" appeared');
       }
+    });
+  });
+
+  group('the door out of an account', () {
+    testWidgets('is drawn where a session could carry the request',
+        (WidgetTester tester) async {
+      await _pump(
+        tester,
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.linked,
+        onEraseData: () {},
+      );
+
+      expect(find.text(erasureDoorLabel), findsOneWidget);
+    });
+
+    testWidgets('and is absent rather than dead when it could only fail',
+        (WidgetTester tester) async {
+      // The route decides that — `erasureOffered` — and hands null. A control
+      // that can only produce an error is worse than no control (DR-P2), which
+      // is the same reading that keeps every toggle off this screen.
+      await _pump(
+        tester,
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.rejected,
+      );
+
+      expect(find.text(erasureDoorLabel), findsNothing);
+    });
+
+    testWidgets('pressing it asks the caller, and asks nothing itself',
+        (WidgetTester tester) async {
+      // No dialog from here. The question is a screen of its own, because it
+      // has to fit a sentence about what survives, and a Material dialog is not
+      // a surface this app draws.
+      int opened = 0;
+      await _pump(
+        tester,
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.linked,
+        onEraseData: () => opened++,
+      );
+
+      await tester.tap(find.text(erasureDoorLabel));
+      await tester.pumpAndSettle();
+
+      expect(opened, 1);
     });
   });
 }

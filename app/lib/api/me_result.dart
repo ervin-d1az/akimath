@@ -118,3 +118,56 @@ final class LinkUnreachable extends LinkResult {
   const LinkUnreachable(this.reason);
   final String reason;
 }
+
+/// What `DELETE /me` came back as.
+///
+/// **A 204 carries no body**, so unlike the other two unions the success case
+/// holds nothing. That is the whole reason it is separate: a client that reads
+/// this one the way it reads `GET /me` turns a successful erasure into a
+/// `FormatException`, and the player is told it failed while the row is
+/// already gone — the one error here that cannot be recovered by retrying.
+@immutable
+sealed class EraseResult {
+  const EraseResult();
+}
+
+/// 204 — the player and everything referencing them are gone.
+@immutable
+final class EraseDone extends EraseResult {
+  const EraseDone();
+}
+
+/// 404 — the session is good and there was no player under it.
+///
+/// **Not a failure.** The player asked for there to be nothing left, and there
+/// is nothing left. It is a separate case from [EraseDone] because the two are
+/// different facts to a developer reading a log, and the same outcome to a
+/// player reading a screen — `features/preferences/policy/erasure.dart` is
+/// where they are collapsed, deliberately and in one place.
+@immutable
+final class EraseNothingThere extends EraseResult {
+  const EraseNothingThere();
+}
+
+/// 401 — no session, or one the server would not accept.
+@immutable
+final class EraseRejected extends EraseResult {
+  const EraseRejected({required this.tag, required this.message});
+  final String tag;
+  final String message;
+}
+
+/// An answer arrived and was not one this client can read.
+@immutable
+final class EraseFailed extends EraseResult {
+  const EraseFailed({required this.status, required this.reason});
+  final int status;
+  final String reason;
+}
+
+/// No answer arrived at all.
+@immutable
+final class EraseUnreachable extends EraseResult {
+  const EraseUnreachable(this.reason);
+  final String reason;
+}

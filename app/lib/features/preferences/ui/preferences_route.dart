@@ -12,6 +12,8 @@ import '../../home/data/prefs_day_log_store.dart';
 import '../../home/policy/day_log.dart';
 import '../../round/policy/streak_policy.dart';
 import '../../shell/ui/app_shell.dart';
+import '../policy/erasure.dart';
+import 'erase_account_route.dart';
 import 'preferences_screen.dart';
 
 /// Reads the day log and hands the screen two numbers.
@@ -89,6 +91,44 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
     setState(() => _accountState = accountStateFor(result));
   }
 
+  /// The one destructive act, and it is a full screen rather than a dialog.
+  ///
+  /// The question needs a sentence about what survives the call — the address
+  /// stays registered with the identity provider, which is not ours to delete —
+  /// and that does not fit in an alert. It is also not a surface this app draws.
+  void _openEraseFlow() {
+    final String token = _accessToken!;
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (BuildContext _) => AppShell(
+        child: EraseAccountRoute(
+          erase: () async {
+            final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+            try {
+              return await api.eraseMe(token);
+            } finally {
+              api.close();
+            }
+          },
+          onClose: (bool erased) {
+            Navigator.of(context).pop();
+            if (!erased || !mounted) {
+              return;
+            }
+            // Forgotten here as well as there. Leaving the address on screen
+            // after the row is gone would be the app disagreeing with the
+            // server about whether this device is linked.
+            setState(() {
+              _accountEmail = null;
+              _accessToken = null;
+              _accountState = AccountState.none;
+            });
+          },
+        ),
+      ),
+    ));
+  }
+
   void _openAccountFlow() {
     final AuthClient auth = AuthClient(baseUrl: Uri.parse(widget.authBaseUrl));
     Navigator.of(context).push(MaterialPageRoute<void>(
@@ -153,6 +193,11 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
         // Absent rather than broken when the build was given no endpoints.
         onCreateAccount: widget.authBaseUrl.isNotEmpty && _accountEmail == null
             ? _openAccountFlow
+            : null,
+        // Only where a session exists that the request could travel on.
+        // `erasureOffered` is the judgement; the token is the fact.
+        onEraseData: erasureOffered(_accountState) && _accessToken != null
+            ? _openEraseFlow
             : null,
       ),
     );
