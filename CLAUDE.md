@@ -490,15 +490,23 @@ root is free the same way.
   presses); a screen with nothing to press is legitimate and named in the summary rather than
   failed.
 
+- **Nothing watches you while you work.** `test/design/quiet_while_you_solve_test.dart` walks
+  every solving surface — the item in all six families, `0.3 Primer reto`, and all five boards, 13
+  screens today — and asserts Aki is on none of them and nothing on them reads as a clock. Both
+  halves have their opposite asserted too: she *is* on the verdict screens, in `slip` for a wrong
+  answer and `correct` for a right one, and the verdict screen *may* say how long it took. A rule
+  that only ever said "absent" would be satisfied by deleting her.
+
 **Encoded as a constant, not yet enforced:**
 - Success and error must be distinguishable by **shape**, not only hue — deuteranopia
   collapses green and coral. `BrandColorRole` still exposes `.color`; ARCHITECTURE.md §6
   wants a `Verdict` type on top that does not.
 
 **Design intent, no code yet to enforce it:**
-- Aki has exactly one body part that can be lost and come back: **the curl of her tail**. She
-  does not scold, does not look disappointed, and does not appear while you are solving.
-- No visible timer. Time is measured quietly.
+- Aki has exactly one body part that can be lost and come back: **the curl of her tail** — drawn,
+  and `AkiPose.slip` is on the error screen, but nothing checks that the tail is the *only* thing
+  that moves. She does not scold and does not look disappointed, which is copy and drawing rather
+  than something a predicate can read.
 
 **System invariants for the parts not yet built** (verbatim from ARCHITECTURE.md §4–§5):
 - *The prompt travels rendered. The answer never travels online. Offline, a membership
