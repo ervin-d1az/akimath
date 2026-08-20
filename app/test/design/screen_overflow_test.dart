@@ -205,6 +205,13 @@ Future<List<String>> pumpAndCollectOverflows(
           builder: (BuildContext context) => MediaQuery(
             data: MediaQuery.of(context).copyWith(
               textScaler: TextScaler.linear(viewport.textScale),
+              // **The hardware, applied here for the same reason.** `SafeArea`
+              // reads `padding` off the nearest `MediaQuery`, and `WidgetsApp`
+              // builds its own from the view — so a wrapper above `MaterialApp`
+              // would be overridden and every screen would keep getting all 844
+              // pixels, which is what let a 24-pixel overflow reach a device.
+              padding: viewport.padding,
+              viewPadding: viewport.padding,
             ),
             child: screen,
           ),

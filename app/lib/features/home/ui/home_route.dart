@@ -173,28 +173,26 @@ class _HomeRouteState extends State<HomeRoute> {
     }
 
     bool solve = false;
-    await Navigator.of(context).push(
-      fullScreenSession<void>((BuildContext noticeContext) {
-        void leave({required bool andSolve}) {
-          solve = andSolve;
-          Navigator.of(noticeContext).pop();
-        }
+    await pushSession<void>(context, (BuildContext noticeContext) {
+      void leave({required bool andSolve}) {
+        solve = andSolve;
+        Navigator.of(noticeContext).pop();
+      }
 
-        return switch (notice) {
-          StreakNotice.atRisk => StreakAtRiskScreen(
-              days: streakLength(attemptDays: _log.days, today: now),
-              left: hoursLeftToday(now),
-              onSolve: () => leave(andSolve: true),
-              onLater: () => leave(andSolve: false),
-            ),
-          StreakNotice.lost => StreakLostScreen(
-              brokenRun: brokenRunLength(attemptDays: _log.days, now: now),
-              onStart: () => leave(andSolve: true),
-            ),
-          StreakNotice.none => const SizedBox.shrink(),
-        };
-      }),
-    );
+      return switch (notice) {
+        StreakNotice.atRisk => StreakAtRiskScreen(
+          days: streakLength(attemptDays: _log.days, today: now),
+          left: hoursLeftToday(now),
+          onSolve: () => leave(andSolve: true),
+          onLater: () => leave(andSolve: false),
+        ),
+        StreakNotice.lost => StreakLostScreen(
+          brokenRun: brokenRunLength(attemptDays: _log.days, now: now),
+          onStart: () => leave(andSolve: true),
+        ),
+        StreakNotice.none => const SizedBox.shrink(),
+      };
+    });
 
     if (solve && mounted) {
       final Pack pack = await _pack;
@@ -210,7 +208,9 @@ class _HomeRouteState extends State<HomeRoute> {
       future: _pack,
       builder: (BuildContext context, AsyncSnapshot<Pack> snapshot) {
         if (snapshot.hasError) {
-          return const AppShell(child: _HomeMessage('No se pudo abrir el paquete de retos.'));
+          return const AppShell(
+            child: _HomeMessage('No se pudo abrir el paquete de retos.'),
+          );
         }
         final Pack? pack = snapshot.data;
         if (pack == null) {
@@ -218,7 +218,9 @@ class _HomeRouteState extends State<HomeRoute> {
         }
         if (pack.isExpiredAt(widget.now().toUtc())) {
           return const AppShell(
-            child: _HomeMessage('Estos retos ya vencieron. Conéctate para recibir nuevos.'),
+            child: _HomeMessage(
+              'Estos retos ya vencieron. Conéctate para recibir nuevos.',
+            ),
           );
         }
 
@@ -229,10 +231,7 @@ class _HomeRouteState extends State<HomeRoute> {
               attemptDays: _log.days,
               today: widget.now(),
             ),
-            weekMarks: weekMarks(
-              attemptDays: _log.days,
-              today: widget.now(),
-            ),
+            weekMarks: weekMarks(attemptDays: _log.days, today: widget.now()),
             // **The plan the player is about to be served**, not the pack in
             // general. `_startSeries` calls `seriesPlan` with the same cursor,
             // so the row cannot promise a family the series will not draw.
@@ -245,8 +244,10 @@ class _HomeRouteState extends State<HomeRoute> {
             // day's, from a pure policy. Empty when the pack carries none,
             // which makes the section absent rather than disabled.
             puzzles: <PuzzleOption>[
-              for (final Puzzle puzzle
-                  in puzzlesOfDay(pack.puzzles, today: widget.now()))
+              for (final Puzzle puzzle in puzzlesOfDay(
+                pack.puzzles,
+                today: widget.now(),
+              ))
                 PuzzleOption(
                   label: puzzleName(puzzle),
                   onOpen: () => _startPuzzle(context, puzzle),
@@ -273,40 +274,36 @@ class _HomeRouteState extends State<HomeRoute> {
     // sitting, not a reaction test.
     final DateTime startedAt = widget.now();
 
-    await Navigator.of(context).push(
-      fullScreenSession<void>(
-        (BuildContext sessionContext) {
-          void leave() => Navigator.of(sessionContext).pop();
-          void solved() => _showSolved(sessionContext, puzzle, startedAt);
-          // **The route records, the screens report** (design D3). The two
-          // formats commit differently — a value on a board, a word claimed —
-          // and the same IO decision written into both screens would be free
-          // to diverge the first time one of them changed.
-          void practised() => unawaited(_dayLog.record(widget.now()));
-          // **Exhaustive over the sealed type**, so a sixth format outside
-          // `BoardPuzzle` is a compile error rather than a screen that never
-          // opens. It replaced an `is! KenKenPuzzle` guard that returned
-          // silently for everything else — which left four of the five shipped
-          // formats unreachable from the home.
-          return switch (puzzle) {
-            WordSearchPuzzle() => WordSearchScreen(
-                puzzle: puzzle,
-                onClose: leave,
-                onSolved: solved,
-                onPractised: practised,
-              ),
-            // Every numeric board is the same screen: it takes the board, the
-            // pad and the entry policy from the puzzle itself.
-            BoardPuzzle() => PuzzleScreen(
-                puzzle: puzzle,
-                onClose: leave,
-                onSolved: solved,
-                onPractised: practised,
-              ),
-          };
-        },
-      ),
-    );
+    await pushSession<void>(context, (BuildContext sessionContext) {
+      void leave() => Navigator.of(sessionContext).pop();
+      void solved() => _showSolved(sessionContext, puzzle, startedAt);
+      // **The route records, the screens report** (design D3). The two
+      // formats commit differently — a value on a board, a word claimed —
+      // and the same IO decision written into both screens would be free
+      // to diverge the first time one of them changed.
+      void practised() => unawaited(_dayLog.record(widget.now()));
+      // **Exhaustive over the sealed type**, so a sixth format outside
+      // `BoardPuzzle` is a compile error rather than a screen that never
+      // opens. It replaced an `is! KenKenPuzzle` guard that returned
+      // silently for everything else — which left four of the five shipped
+      // formats unreachable from the home.
+      return switch (puzzle) {
+        WordSearchPuzzle() => WordSearchScreen(
+          puzzle: puzzle,
+          onClose: leave,
+          onSolved: solved,
+          onPractised: practised,
+        ),
+        // Every numeric board is the same screen: it takes the board, the
+        // pad and the entry policy from the puzzle itself.
+        BoardPuzzle() => PuzzleScreen(
+          puzzle: puzzle,
+          onClose: leave,
+          onSolved: solved,
+          onPractised: practised,
+        ),
+      };
+    });
     // The puzzle may have recorded today. Re-read rather than add a day to what
     // this screen holds: the store is the source of truth, and a screen that
     // increments locally is how it ends up showing a figure the store would not
@@ -376,20 +373,19 @@ class _HomeRouteState extends State<HomeRoute> {
       return;
     }
 
-    await Navigator.of(context).push(
-      fullScreenSession<void>(
-        (BuildContext sessionContext) => _SeriesSession(
-          items: plan,
-          fallbackDiagnosis: pack.fallbackDiagnosis,
-          now: widget.now,
-          attemptDays: _log.days,
-          dayLog: _dayLog,
-          // Advanced when the series is *finished*, not when it is started:
-          // a player who closes a series halfway has not been served those
-          // items in any sense worth remembering.
-          onFinishedSeries: (int played) => widget.seriesCursor.advance(played),
-          onDone: () => Navigator.of(sessionContext).maybePop(),
-        ),
+    await pushSession<void>(
+      context,
+      (BuildContext sessionContext) => _SeriesSession(
+        items: plan,
+        fallbackDiagnosis: pack.fallbackDiagnosis,
+        now: widget.now,
+        attemptDays: _log.days,
+        dayLog: _dayLog,
+        // Advanced when the series is *finished*, not when it is started:
+        // a player who closes a series halfway has not been served those
+        // items in any sense worth remembering.
+        onFinishedSeries: (int played) => widget.seriesCursor.advance(played),
+        onDone: () => Navigator.of(sessionContext).maybePop(),
       ),
     );
     // The series may have recorded today. Re-read rather than assume: the store
@@ -438,11 +434,11 @@ class _HomeMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(BrandShape.space6),
-          child: Text(text, textAlign: TextAlign.center, style: BrandText.body()),
-        ),
-      );
+    child: Padding(
+      padding: const EdgeInsets.all(BrandShape.space6),
+      child: Text(text, textAlign: TextAlign.center, style: BrandText.body()),
+    ),
+  );
 }
 
 /// The round, then its summary.
