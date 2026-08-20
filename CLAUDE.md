@@ -390,10 +390,22 @@ what `npm run verify` chains. Run `--fatal-infos` locally or the hook will surpr
 Mutation and jscpd are the deeper pass (tier 1b below), run when the logic under change is
 worth them.
 
-Two tools are installed but are **not commands here**: `dart run mutation_test` has no rules
-XML, and `dart run dart_code_linter:metrics analyze lib` reports nothing at all because
-`app/analysis_options.yaml` carries no `dart_code_linter:` block — it is green by
-construction, so it is not evidence until someone configures it.
+One tool is installed and is **not a command here**: `dart run mutation_test` has no rules XML,
+so it is green by construction and is not evidence. The Dart substitute for mutation is the
+falsification step in the rulebook's PROC-5.
+
+The metrics tool **is** configured now, and CI runs it:
+
+```sh
+# Flutter — from app/, and part of the `dart` CI job
+dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning
+```
+
+`--set-exit-on-violation-level` is not optional decoration. Measured: without it — and even with
+`--fatal-warnings` — the command prints its warnings and exits **0**, which is the same
+green-by-construction trap one level deeper. The thresholds in `analysis_options.yaml` are set at
+what the code does today, so the next function past one is a decision somebody makes on purpose;
+they ratchet down as the code gets simpler and never up to accommodate it.
 
 ## Workflow
 

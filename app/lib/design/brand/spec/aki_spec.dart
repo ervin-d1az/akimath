@@ -19,6 +19,45 @@ enum AkiPose {
 /// A straight whisker, root to tip.
 typedef _Whisker = (Offset root, Offset tip);
 
+/// Where each feature of Aki's face sits, as one named thing.
+///
+/// **Eleven coordinates, and they were eleven parameters.** `dart_code_linter`
+/// called that out the day the metrics were configured, and it was right for a
+/// reason a number does not say: the three poses are three *instances of one
+/// layout*, and passing them as a loose bag of doubles hid that. Naming the
+/// concept makes the poses comparable at a glance — the only fields that move
+/// between `base`, `correct` and `slip` are the brow and the mouth.
+///
+/// The call sites read exactly as they did: named arguments inside a const
+/// constructor.
+class _FaceLayout {
+  const _FaceLayout({
+    required this.headCenterY,
+    required this.foreheadY,
+    required this.foreheadControlY,
+    required this.browY,
+    required this.browControlY,
+    required this.muzzleTop,
+    required this.noseY,
+    required this.mouth,
+    required this.eyeY,
+    required this.catchlightY,
+    required this.whiskerY,
+  });
+
+  final double headCenterY;
+  final double foreheadY;
+  final double foreheadControlY;
+  final double browY;
+  final double browControlY;
+  final double muzzleTop;
+  final double noseY;
+  final _Mouth mouth;
+  final double eyeY;
+  final double catchlightY;
+  final double whiskerY;
+}
+
 /// Aki's geometry, described as data.
 ///
 /// A direct translation of `Aki.dc.html` and `AkiCara.dc.html`. Coordinates are
@@ -184,8 +223,8 @@ abstract final class AkiSpec {
             CubicTo(Offset(166, 72), Offset(170, 52), Offset(180, 50)),
           ],
         ),
-        ..._face(
-          headCenterY: 96,
+        ..._face(const _FaceLayout(
+            headCenterY: 96,
           foreheadY: 54,
           foreheadControlY: 46,
           browY: 72,
@@ -196,7 +235,7 @@ abstract final class AkiSpec {
           eyeY: 88,
           catchlightY: 83,
           whiskerY: 79,
-        ),
+        )),
       ],
     );
   }
@@ -239,8 +278,8 @@ abstract final class AkiSpec {
             CubicTo(Offset(164, 64), Offset(172, 42), Offset(182, 40)),
           ],
         ),
-        ..._face(
-          headCenterY: 96,
+        ..._face(const _FaceLayout(
+            headCenterY: 96,
           foreheadY: 54,
           foreheadControlY: 46,
           browY: 70,
@@ -251,7 +290,7 @@ abstract final class AkiSpec {
           eyeY: 88,
           catchlightY: 83,
           whiskerY: 79,
-        ),
+        )),
       ],
     );
   }
@@ -292,8 +331,8 @@ abstract final class AkiSpec {
             CubicTo(Offset(166, 78), Offset(170, 58), Offset(180, 56)),
           ],
         ),
-        ..._face(
-          headCenterY: 100,
+        ..._face(const _FaceLayout(
+            headCenterY: 100,
           foreheadY: 58,
           foreheadControlY: 50,
           browY: 78,
@@ -304,7 +343,7 @@ abstract final class AkiSpec {
           eyeY: 94,
           catchlightY: 89,
           whiskerY: 85,
-        ),
+        )),
         // Dust from where the old curl let go.
         const InkDot(
           center: Offset(206, 136),
@@ -422,19 +461,19 @@ abstract final class AkiSpec {
   /// The three poses move this block vertically and reshape the brows and the
   /// mouth. Nothing else about the face changes — the eyes never narrow and
   /// never look away.
-  static List<BrandMark> _face({
-    required double headCenterY,
-    required double foreheadY,
-    required double foreheadControlY,
-    required double browY,
-    required double browControlY,
-    required double muzzleTop,
-    required double noseY,
-    required _Mouth mouth,
-    required double eyeY,
-    required double catchlightY,
-    required double whiskerY,
-  }) {
+  static List<BrandMark> _face(_FaceLayout f) {
+    final double headCenterY = f.headCenterY;
+    final double foreheadY = f.foreheadY;
+    final double foreheadControlY = f.foreheadControlY;
+    final double browY = f.browY;
+    final double browControlY = f.browControlY;
+    final double muzzleTop = f.muzzleTop;
+    final double noseY = f.noseY;
+    final _Mouth mouth = f.mouth;
+    final double eyeY = f.eyeY;
+    final double catchlightY = f.catchlightY;
+    final double whiskerY = f.whiskerY;
+
     final List<_Whisker> whiskers = <_Whisker>[
       (Offset(80, whiskerY), Offset(71, whiskerY - 7)),
       (Offset(78, whiskerY + 7), Offset(67, whiskerY + 6)),
