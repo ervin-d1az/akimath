@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { serve, type ServerType } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 
@@ -12,10 +14,17 @@ import {
   type GradedAttempt,
 } from "../attempts.js";
 import { erasureResponse } from "../erasure.js";
+import {
+  issuedPack,
+  offlinePackResponse,
+  packExpiry,
+  PACK_ITEM_COUNT,
+} from "../packs.js";
 import { conflictResponse, linkOutcome, readLinkRequest } from "../link.js";
 import { noPlayerResponse, profileResponse } from "../players.js";
 import { route, type HandlerAnswer } from "../routing.js";
 import type { Logger } from "./logger.js";
+import { insertPack } from "./pack-repository.js";
 import {
   insertAttempts,
   refForIssuedItem,
@@ -61,7 +70,34 @@ export type Handlers = Readonly<
   Record<string, (request: HandlerRequest) => Promise<HandlerAnswer>>
 >;
 
-export function createHandlers(database: RequestDatabase): Handlers {
+/**
+ * The two things a handler cannot compute.
+ *
+ * **Injected, not imported.** Issuing a pack needs a clock and a source of
+ * randomness, and a module that reaches for either is one no test can pin.
+ * Defaults come from the platform, so the production wiring says nothing.
+ */
+export interface HandlerEnvironment {
+  readonly now: () => Date;
+  /** Lowercase hex, `bytes` long in bytes. The pack salt is sixteen. */
+  readonly randomHex: (bytes: number) => string;
+  /** A signed 64-bit seed, matching `issued_items.seed` and the manifest. */
+  readonly randomSeed: () => bigint;
+}
+
+const PLATFORM: HandlerEnvironment = {
+  now: () => new Date(),
+  randomHex: (bytes) => randomBytes(bytes).toString("hex"),
+  // Read as unsigned and shifted into the signed range, so the whole column is
+  // reachable — a generator that only ever produced positives would exercise
+  // half the seed space and hide every sign bug in rederivation.
+  randomSeed: () => BigInt.asIntN(64, randomBytes(8).readBigUInt64BE()),
+};
+
+export function createHandlers(
+  database: RequestDatabase,
+  environment: HandlerEnvironment = PLATFORM,
+): Handlers {
   return {
     getMe: ({ userId }) =>
       database.inRequestRole(async (client) =>
@@ -124,6 +160,38 @@ export function createHandlers(database: RequestDatabase): Handlers {
         return verdictsResponse(graded);
       });
     },
+
+    // **Issuing is the first step of the offline loop, and nothing had one.**
+    // `GET /packs/{packId}` fetched by an id that nothing minted, so
+    // `offline_packs` could only ever be empty and a pack attempt could never
+    // reach `POST /attempts`.
+    issuePack: ({ userId }) =>
+      database.inRequestRole(async (client) => {
+        const playerId = await playerIdForAccount(client, userId);
+        if (playerId === null) {
+          return noPlayerResponse();
+        }
+
+        const issuedAt = environment.now();
+        const issued = issuedPack({
+          saltHex: environment.randomHex(16),
+          seeds: Array.from({ length: PACK_ITEM_COUNT }, () => environment.randomSeed()),
+          issuedAt,
+        });
+
+        const packId = await insertPack(client, {
+          playerId,
+          // One skill per issued pack today, and the column is nullable for the
+          // day that stops being true. Taken from the items rather than assumed.
+          skillId: issued.pack.skill_nodes[0]!.skill_id,
+          manifest: issued.manifest,
+          saltHex: issued.pack.pack_salt,
+          issuedAt,
+          expiresAt: packExpiry(issuedAt),
+        });
+
+        return offlinePackResponse(packId, issued);
+      }),
 
     linkPlayer: async ({ userId, body, header }) => {
       const request = readLinkRequest(body, header("Idempotency-Key"));

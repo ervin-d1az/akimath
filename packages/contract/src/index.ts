@@ -12,7 +12,14 @@ export {
   renderCanonicalAnswer,
   requireStoredCanonical,
 } from "./canon.js";
-export type { AnswerAccepted, AnswerRejected, CanonResult, RejectionTag } from "./canon.js";
+export { storedAnswer } from "./canon.js";
+export type {
+  AnswerAccepted,
+  AnswerRejected,
+  CanonResult,
+  RejectionTag,
+  StoredAnswer,
+} from "./canon.js";
 
 export { buildCanonGolden, CANON_INPUTS } from "./canon-vectors.js";
 export type { CanonGolden, CanonVector } from "./canon-vectors.js";

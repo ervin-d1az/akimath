@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { readFixture } from "./fixture-files.js";
 import {
+  storedAnswer,
   canonicalize,
   CHAR_MAP,
   renderCanonicalAnswer,
@@ -207,5 +208,36 @@ describe("rendering is the inverse of canonicalizing, by construction", () => {
     // Guessing from the value would make these the same call.
     expect(renderCanonicalAnswer(4n)).toBe("4");
     expect(renderCanonicalAnswer(4n, 1n)).toBe("4/1");
+  });
+});
+
+describe("a stored answer decides its shape and its spelling together", () => {
+  it("a whole answer is whole, and says so", () => {
+    // The bug this exists to make unrepeatable: `-9` digested as `-9/1` while
+    // the shape beside it said `integer`. Every generated item in the built
+    // pack was ungradeable, and the distractor guard — which compares
+    // strings — stopped firing.
+    expect(storedAnswer(-9n, 1n)).toEqual({ shape: "integer", canonical: "-9" });
+    expect(storedAnswer(0n, 1n)).toEqual({ shape: "integer", canonical: "0" });
+    expect(storedAnswer(42n, 1n)).toEqual({ shape: "integer", canonical: "42" });
+  });
+
+  it("and a fraction keeps its denominator, unreduced", () => {
+    // Unreduced on purpose: `canonicalize` does not fold `4/8` to `1/2`, so a
+    // renderer that did would make the shipped pack's own answers ungradeable.
+    expect(storedAnswer(5n, 4n)).toEqual({ shape: "fraction", canonical: "5/4" });
+    expect(storedAnswer(4n, 8n)).toEqual({ shape: "fraction", canonical: "4/8" });
+    expect(storedAnswer(-3n, 2n)).toEqual({ shape: "fraction", canonical: "-3/2" });
+  });
+
+  it("and what it writes is what a keypad produces", () => {
+    // The round trip that makes a digest reachable: whatever this stores, the
+    // learner's own canonicalised input must equal it.
+    for (const [numerator, denominator] of [[-9n, 1n], [5n, 4n], [0n, 1n], [7n, 7n]] as const) {
+      const stored = storedAnswer(numerator, denominator);
+      const typed = canonicalize(stored.canonical);
+      expect(typed.ok, stored.canonical).toBe(true);
+      expect(typed.ok && typed.value).toBe(stored.canonical);
+    }
   });
 });
