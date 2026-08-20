@@ -97,8 +97,23 @@ export const AttemptSubmissionSchema = z.object({
   elapsedMs: z.int().min(0).max(ATTEMPT_ELAPSED_MS_MAX),
 });
 
+/**
+ * One graded attempt, echoing the source it graded.
+ *
+ * **The same two optionals as the submission, for the same reason.** A pack
+ * attempt has no `itemId` — identity for a pack item is `(packId, index)` — so
+ * a required one was a field the server could not fill for half the paths it
+ * has to serve. Whichever the submission carried comes back on the verdict.
+ *
+ * Order is still the primary correlation: the operation returns one verdict per
+ * attempt, in the order submitted. The echo is what lets a client check that
+ * rather than trust it.
+ */
 export const VerdictSchema = z.object({
-  itemId: z.uuid(),
+  /** Echoed from the submission. Absent when `packRef` is present. */
+  itemId: z.uuid().optional(),
+  /** Echoed from the submission. Absent when `itemId` is present. */
+  packRef: OfflinePackRefSchema.optional(),
   ok: z.boolean(),
   /**
    * The diagnosis, opaque on the wire.
