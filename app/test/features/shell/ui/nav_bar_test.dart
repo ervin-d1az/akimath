@@ -40,9 +40,10 @@ void main() {
     });
 
     testWidgets('it names no tab that has no root', (WidgetTester tester) async {
+      // `Avance` left this list when it got a root, which is the list doing its
+      // job: it names what is *not* there, so it shrinks as the app grows.
       await _pump(tester);
       expect(find.text('Mapa'), findsNothing);
-      expect(find.text('Avance'), findsNothing);
     });
   });
 

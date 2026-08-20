@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import 'history.dart';
 import 'me.dart';
 
 /// What a profile lookup came back as — the shape of the answer, not the
@@ -169,5 +170,52 @@ final class EraseFailed extends EraseResult {
 @immutable
 final class EraseUnreachable extends EraseResult {
   const EraseUnreachable(this.reason);
+  final String reason;
+}
+
+/// What `GET /me/history` came back as.
+///
+/// Separate from the other three because its 200 carries something none of them
+/// do — a list that is legitimately empty. A player who has linked and not yet
+/// synced has *no* history and that is not an error, not a 404, and not a
+/// state a screen should apologise for.
+@immutable
+sealed class HistoryResult {
+  const HistoryResult();
+}
+
+/// 200 — the sessions, newest first. Possibly none of them.
+@immutable
+final class HistoryFound extends HistoryResult {
+  const HistoryFound(this.history);
+  final History history;
+}
+
+/// 404 — the session is good and no player is linked to it.
+@immutable
+final class HistoryNoPlayer extends HistoryResult {
+  const HistoryNoPlayer();
+}
+
+/// 401 — no session, or one the server would not accept.
+@immutable
+final class HistoryRejected extends HistoryResult {
+  const HistoryRejected({required this.tag, required this.message});
+  final String tag;
+  final String message;
+}
+
+/// An answer arrived and was not one this client can read.
+@immutable
+final class HistoryFailed extends HistoryResult {
+  const HistoryFailed({required this.status, required this.reason});
+  final int status;
+  final String reason;
+}
+
+/// No answer arrived at all.
+@immutable
+final class HistoryUnreachable extends HistoryResult {
+  const HistoryUnreachable(this.reason);
   final String reason;
 }

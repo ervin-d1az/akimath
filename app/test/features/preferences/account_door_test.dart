@@ -1,4 +1,3 @@
-import 'package:akimath_app/features/home/data/day_log_store.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,7 +13,6 @@ void main() {
   Future<void> pump(WidgetTester tester, {required String authBaseUrl}) async {
     await tester.pumpWidget(MaterialApp(
       home: PreferencesRoute(
-        dayLog: InMemoryDayLogStore(),
         now: () => DateTime.utc(2026, 8, 19),
         authBaseUrl: authBaseUrl,
       ),

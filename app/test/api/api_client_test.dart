@@ -221,6 +221,92 @@ void main() {
     });
   });
 
+  group('GET /me/history over a real socket', () {
+    Map<String, Object?> entry() => <String, Object?>{
+      'kind': 'series',
+      'title': 'Restas',
+      'at': '2026-08-19T09:15:00.000Z',
+      'score': '4/5',
+      'ratingDelta': null,
+    };
+
+    test('a 200 becomes the sessions it carried', () async {
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'entries': <Object?>[entry()],
+      }));
+
+      final HistoryResult result = await client.getHistory(_token);
+
+      expect(result, isA<HistoryFound>());
+      expect((result as HistoryFound).history.entries.single.title, 'Restas');
+      expect(server.requests.single.uri.path, '/me/history');
+      expect(server.requests.single.method, 'GET');
+    });
+
+    test('an empty list is a success, not a failure', () async {
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'entries': <Object?>[],
+      }));
+
+      final HistoryResult result = await client.getHistory(_token);
+
+      expect(result, isA<HistoryFound>());
+      expect((result as HistoryFound).history.isEmpty, isTrue);
+    });
+
+    test('a 404 is no player, which is not an error either', () async {
+      await serving((HttpRequest request) => _json(request, 404, <String, Object?>{
+        'error': 'no_player',
+        'message': 'This account has no player yet.',
+      }));
+
+      expect(await client.getHistory(_token), isA<HistoryNoPlayer>());
+    });
+
+    test('a 401 keeps its tag', () async {
+      await serving((HttpRequest request) => _json(request, 401, <String, Object?>{
+        'error': 'invalid_session',
+        'message': 'that token expired',
+      }));
+
+      final HistoryResult result = await client.getHistory(_token);
+
+      expect(result, isA<HistoryRejected>());
+      expect((result as HistoryRejected).tag, 'invalid_session');
+    });
+
+    test('a 200 that is not a history is a failure, not a crash', () async {
+      // A server that broke the contract. It is not a history, so it cannot be
+      // `HistoryFound`, and it is not the caller's fault.
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'entries': <Object?>[<String, Object?>{'kind': 'series'}],
+      }));
+
+      expect(await client.getHistory(_token), isA<HistoryFailed>());
+    });
+
+    test('a blank token sends no header at all', () async {
+      await serving((HttpRequest request) => _json(request, 401, <String, Object?>{
+        'error': 'unauthenticated',
+        'message': 'no session',
+      }));
+
+      await client.getHistory('  ');
+
+      expect(
+        server.requests.single.headers.value(HttpHeaders.authorizationHeader),
+        isNull,
+      );
+    });
+
+    test('no answer at all is unreachable', () async {
+      await serving((HttpRequest request) async {});
+      await server.close();
+
+      expect(await client.getHistory(_token), isA<HistoryUnreachable>());
+    });
+  });
+
   group('DELETE /me over a real socket', () {
     test('a 204 with no body is an erasure', () async {
       await serving((HttpRequest request) async {

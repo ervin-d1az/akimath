@@ -7,10 +7,7 @@ import '../../../api/auth_client.dart';
 import '../../../api/endpoints.dart';
 import '../../auth/ui/auth_flow.dart';
 import '../../states/policy/account_state.dart';
-import '../../home/data/day_log_store.dart';
-import '../../home/data/prefs_day_log_store.dart';
-import '../../home/policy/day_log.dart';
-import '../../round/policy/streak_policy.dart';
+import '../../account/policy/session.dart';
 import '../../shell/ui/app_shell.dart';
 import '../policy/erasure.dart';
 import 'erase_account_route.dart';
@@ -24,12 +21,22 @@ import 'preferences_screen.dart';
 class PreferencesRoute extends StatefulWidget {
   const PreferencesRoute({
     super.key,
-    this.dayLog,
+    this.session,
+    this.onSessionChanged,
     this.now = DateTime.now,
     this.authBaseUrl = Endpoints.authBaseUrl,
   });
 
-  final DayLogStore? dayLog;
+  /// The account this device is signed in to, owned by the shell.
+  ///
+  /// **Lifted out of this route when `Avance` arrived.** Two roots have to
+  /// agree about whether there is an account — one signs in and the other shows
+  /// what the account holds — and the only place that can hold that is their
+  /// common ancestor.
+  final LinkedSession? session;
+
+  /// Reports a sign-in, or a sign-out when the account is erased.
+  final ValueChanged<LinkedSession?>? onSessionChanged;
 
   /// Where Neon Auth is, defaulting to the build's own `--dart-define`.
   ///
@@ -49,16 +56,7 @@ class PreferencesRoute extends StatefulWidget {
 }
 
 class _PreferencesRouteState extends State<PreferencesRoute> {
-  late final DayLogStore _store = widget.dayLog ?? const PrefsDayLogStore();
-  DayLog _log = DayLog.empty;
 
-  /// The address of the account this device linked, once it has one.
-  ///
-  /// **In memory only, and deliberately.** Persisting a session is its own
-  /// change with its own decision about where a token may be written; until
-  /// then the flow is runnable and the result is visible, which is what the
-  /// slice is for.
-  String? _accountEmail;
 
   /// What the AkiMath server said when asked who this token belongs to.
   ///
@@ -72,14 +70,8 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
   /// loading, which is not a `MeResult` at all.
   AccountState _accountState = AccountState.none;
 
-  /// The token this device holds, kept so a failed lookup can be retried.
-  ///
-  /// In memory only: where a session may be written down is its own decision
-  /// and its own change.
-  String? _accessToken;
 
   Future<void> _askWhoIAm(String accessToken) async {
-    _accessToken = accessToken;
     setState(() => _accountState = AccountState.loading);
 
     final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
@@ -97,7 +89,7 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
   /// stays registered with the identity provider, which is not ours to delete —
   /// and that does not fit in an alert. It is also not a surface this app draws.
   void _openEraseFlow() {
-    final String token = _accessToken!;
+    final String token = widget.session!.accessToken;
     Navigator.of(context).push(MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (BuildContext _) => AppShell(
@@ -118,11 +110,8 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
             // Forgotten here as well as there. Leaving the address on screen
             // after the row is gone would be the app disagreeing with the
             // server about whether this device is linked.
-            setState(() {
-              _accountEmail = null;
-              _accessToken = null;
-              _accountState = AccountState.none;
-            });
+            setState(() => _accountState = AccountState.none);
+            widget.onSessionChanged?.call(null);
           },
         ),
       ),
@@ -145,7 +134,10 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
             if (!mounted) {
               return;
             }
-            setState(() => _accountEmail = account.email);
+            widget.onSessionChanged?.call(LinkedSession(
+              email: account.email,
+              accessToken: account.accessToken,
+            ));
             Navigator.of(context).pop();
             // The half the provider cannot vouch for: does *our* server accept
             // the token it just issued?
@@ -161,42 +153,27 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _read();
-  }
-
-  Future<void> _read() async {
-    final DayLog log = await _store.read();
-    if (mounted) {
-      setState(() => _log = log);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return AppShell(
       child: PreferencesScreen(
         // Zero before the store answers, and zero for a player who has never
         // played — the same number, which is why nothing here waits on a
         // skeleton. There is no state in which this screen has nothing to say.
-        daysPractised: _log.days.length,
-        streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
-        accountEmail: _accountEmail,
+        accountEmail: widget.session?.email,
         accountState: _accountState,
         // Only offered where retrying could change the answer. A retry on a
         // refused session would fetch the same refusal.
         onRetryAccount: _accountState == AccountState.offline ||
                 _accountState == AccountState.serverError
-            ? () => unawaited(_askWhoIAm(_accessToken!))
+            ? () => unawaited(_askWhoIAm(widget.session!.accessToken))
             : null,
         // Absent rather than broken when the build was given no endpoints.
-        onCreateAccount: widget.authBaseUrl.isNotEmpty && _accountEmail == null
+        onCreateAccount: widget.authBaseUrl.isNotEmpty && widget.session == null
             ? _openAccountFlow
             : null,
         // Only where a session exists that the request could travel on.
         // `erasureOffered` is the judgement; the token is the fact.
-        onEraseData: erasureOffered(_accountState) && _accessToken != null
+        onEraseData: erasureOffered(_accountState) && widget.session != null
             ? _openEraseFlow
             : null,
       ),

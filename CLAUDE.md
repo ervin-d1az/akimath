@@ -59,9 +59,20 @@ format and its OpenAPI half.
   sizes, the counter chip and the baseline meter — and the two verdict screens, `03 Acierto` and
   `04 Error`, which show time and streak and **no rating**: F2 has no server, so nothing on them is
   a figure sync could later contradict. `features/shell/` is the frame: cream, a banner slot, and a
-  **bottom bar with two roots** — `Inicio` and `Ajustes`. `visibleTabs` returns nothing while one
-  root exists, so the bar was absent by rule rather than by omission, and it appeared when
-  preferences did. The app opens on **`FirstRunGate`**, which reads one
+  **bottom bar with three roots** — `Inicio`, `Avance` and `Ajustes`. `visibleTabs` returns nothing
+  while one root exists, so the bar was absent by rule rather than by omission; it appeared when
+  preferences did and grew when `Avance` landed, both times without the policy being touched.
+  **`features/progress/` is `Avance`**, and it has two halves that fail independently: the figures
+  the device knows — days practised, the current run, moved out of Ajustes because what a player
+  has done is not a setting — and the history the server knows, from `GET /me/history`. No account
+  is an **invitation**, not an error; an empty history is told rather than apologised for; only the
+  three states somebody has to act on get a banner, and a refused session gets no retry because
+  asking twice with a dead token gets the same refusal. **No rating and no accuracy**: both are F4
+  and `ratingDelta` comes back null, and a screen printing `±0` would be inventing a figure. The
+  session that makes any of it possible is held by `RootScaffold` — two roots have to agree about
+  whether there is an account, and their common ancestor is the only place that can hold it. In
+  memory only; `LinkedSession.toString` does not carry the token, because `toString` reaches logs
+  and crash reports. The app opens on **`FirstRunGate`**, which reads one
   boolean and shows either the first run — `0.2 Bienvenida`, then `0.3 Primer reto`, a fixed teaching
   item that reads no pack, records no day and shows no streak — or the **home**: Aki, the
   `RETO DEL DÍA` preview composed by the real compositor, the week strip, and
@@ -72,7 +83,7 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1423 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1600 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **Ajustes has a way out.** `features/preferences/` carries the erasure flow: a text door under
