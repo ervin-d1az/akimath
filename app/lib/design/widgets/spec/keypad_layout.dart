@@ -54,9 +54,41 @@ final class FractionFace extends KeyFace {
   final String denominator;
 }
 
+/// What pressing a key does, as a role rather than a colour.
+///
+/// **The design fills a key by what it does**: digits and the comma are white,
+/// the operator strip is the accent, backspace is quiet and submit is the
+/// action green. The pads shipped entirely white, which threw all four away —
+/// and the only one a reader could have inferred from the glyph is the
+/// backspace.
+///
+/// A role and not a `Color`, so this module stays what it is. The same split
+/// `Verdict` uses: the pure type carries an outline and a glyph and no hue, and
+/// the adapter beside it is the only thing that knows what green is.
+enum KeyRole {
+  /// A number or the decimal comma. White.
+  digit,
+
+  /// Something done *to* a number — the fraction bar, the sign, the power.
+  /// The accent, because an operator is not a verdict and not the action.
+  operator,
+
+  /// Takes a character back. Quiet.
+  erase,
+
+  /// Sends the answer. The action green, and **one per pad** — *"en una
+  /// pantalla solo un elemento lo lleva"*.
+  commit,
+}
+
 /// One key.
 class KeypadKey {
-  const KeypadKey({required this.id, required this.face, this.emits});
+  const KeypadKey({
+    required this.id,
+    required this.face,
+    this.emits,
+    this.role = KeyRole.digit,
+  });
 
   /// Stable identity, reported to the caller on press.
   final String id;
@@ -69,6 +101,13 @@ class KeypadKey {
   /// keypad itself never assembles these into an answer; that rule lives with
   /// the contract, not on the client (design D4).
   final String? emits;
+
+  /// What pressing it does, which is what the design fills it by.
+  ///
+  /// Defaults to [KeyRole.digit] because thirty of the thirty-eight keys across
+  /// the three pads are digits, and declaring it on each would bury the six
+  /// that are not.
+  final KeyRole role;
 }
 
 /// A pad: an ordered list of keys and how many columns to wrap them into.
@@ -115,19 +154,38 @@ class KeypadLayout {
         id: 'fraction',
         face: FractionFace(numerator: 'a', denominator: 'b'),
         emits: '/',
+        role: KeyRole.operator,
       ),
       KeypadKey(id: '4', face: TextFace('4'), emits: '4'),
       KeypadKey(id: '5', face: TextFace('5'), emits: '5'),
       KeypadKey(id: '6', face: TextFace('6'), emits: '6'),
-      KeypadKey(id: 'negate', face: TextFace(_negateFace), emits: _minus),
+      KeypadKey(
+        id: 'negate',
+        face: TextFace(_negateFace),
+        emits: _minus,
+        role: KeyRole.operator,
+      ),
       KeypadKey(id: '1', face: TextFace('1'), emits: '1'),
       KeypadKey(id: '2', face: TextFace('2'), emits: '2'),
       KeypadKey(id: '3', face: TextFace('3'), emits: '3'),
-      KeypadKey(id: 'square', face: TextFace(_squareFace), emits: _squared),
+      KeypadKey(
+        id: 'square',
+        face: TextFace(_squareFace),
+        emits: _squared,
+        role: KeyRole.operator,
+      ),
       KeypadKey(id: 'decimal', face: TextFace(_decimal), emits: _decimal),
       KeypadKey(id: '0', face: TextFace('0'), emits: '0'),
-      KeypadKey(id: 'backspace', face: IconFace(BrandGlyph.backspace)),
-      KeypadKey(id: 'submit', face: IconFace(BrandGlyph.submit)),
+      KeypadKey(
+        id: 'backspace',
+        face: IconFace(BrandGlyph.backspace),
+        role: KeyRole.erase,
+      ),
+      KeypadKey(
+        id: 'submit',
+        face: IconFace(BrandGlyph.submit),
+        role: KeyRole.commit,
+      ),
     ],
   );
 
@@ -149,7 +207,11 @@ class KeypadLayout {
       KeypadKey(id: '7', face: TextFace('7'), emits: '7'),
       KeypadKey(id: '8', face: TextFace('8'), emits: '8'),
       KeypadKey(id: '9', face: TextFace('9'), emits: '9'),
-      KeypadKey(id: 'backspace', face: IconFace(BrandGlyph.backspace)),
+      KeypadKey(
+        id: 'backspace',
+        face: IconFace(BrandGlyph.backspace),
+        role: KeyRole.erase,
+      ),
     ],
   );
 
@@ -170,9 +232,17 @@ class KeypadLayout {
       KeypadKey(id: '7', face: TextFace('7'), emits: '7'),
       KeypadKey(id: '8', face: TextFace('8'), emits: '8'),
       KeypadKey(id: '9', face: TextFace('9'), emits: '9'),
-      KeypadKey(id: 'backspace', face: IconFace(BrandGlyph.backspace)),
+      KeypadKey(
+        id: 'backspace',
+        face: IconFace(BrandGlyph.backspace),
+        role: KeyRole.erase,
+      ),
       KeypadKey(id: '0', face: TextFace('0'), emits: '0'),
-      KeypadKey(id: 'enter', face: IconFace(BrandGlyph.submit)),
+      KeypadKey(
+        id: 'enter',
+        face: IconFace(BrandGlyph.submit),
+        role: KeyRole.commit,
+      ),
     ],
   );
 

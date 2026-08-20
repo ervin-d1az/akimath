@@ -39,6 +39,18 @@ class KeypadKeyView extends StatelessWidget {
   /// one and make a 3×3's pad a different shape from a 6×6's.
   final bool available;
 
+  /// The fill the key's role earns.
+  ///
+  /// **The one place a role becomes a colour.** The layout is pure and names a
+  /// role; this is the adapter that knows what the accent and the action are,
+  /// the same split `Verdict` and `VerdictRing` already use.
+  Color get _fill => switch (data.role) {
+        KeyRole.digit => BrandColors.surface,
+        KeyRole.operator => BrandColors.pinkSoft,
+        KeyRole.erase => BrandColors.quiet,
+        KeyRole.commit => BrandColorRole.action.color,
+      };
+
   @override
   Widget build(BuildContext context) {
     if (!available) {
@@ -51,25 +63,36 @@ class KeypadKeyView extends StatelessWidget {
       // The comment here used to claim the surface was absent. It never was,
       // and an integration test pressing an unavailable key on the device is
       // what found the two out of step.
-      return Opacity(
-        opacity: 0.35,
-        child: IgnorePointer(
-          child: PressableSurface(
-            onPressed: () {},
-            height: height,
-            borderRadius: BrandShape.radiusPill,
-            shadow: BrandShape.shadowTile,
-            child: Center(child: _face()),
+      return KeyedSubtree(
+        key: ValueKey<String>('keypad.${data.id}'),
+        child: Opacity(
+          opacity: 0.35,
+          child: IgnorePointer(
+            child: PressableSurface(
+              onPressed: () {},
+              height: height,
+              background: _fill,
+              borderRadius: BrandShape.radiusPill,
+              shadow: BrandShape.shadowTile,
+              child: Center(child: _face()),
+            ),
           ),
         ),
       );
     }
-    return PressableSurface(
-      onPressed: () => onPressed(data),
-      height: height,
-      borderRadius: BrandShape.radiusPill,
-      shadow: BrandShape.shadowTile,
-      child: Center(child: _face()),
+    return KeyedSubtree(
+      // **Keyed by id.** A test asking what colour the submit key is otherwise
+      // has to find it by the glyph inside it, which is how it ends up
+      // asserting against the wrong one of two keys drawing the same arrow.
+      key: ValueKey<String>('keypad.${data.id}'),
+      child: PressableSurface(
+        onPressed: () => onPressed(data),
+        height: height,
+        background: _fill,
+        borderRadius: BrandShape.radiusPill,
+        shadow: BrandShape.shadowTile,
+        child: Center(child: _face()),
+      ),
     );
   }
 
