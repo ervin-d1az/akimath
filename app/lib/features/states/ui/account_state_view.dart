@@ -43,14 +43,19 @@ class AccountStateView extends StatelessWidget {
       AccountState.rejected => 'Tu sesión caducó. Vuelve a entrar.',
       AccountState.serverError => 'No pudimos consultar tu cuenta.',
       AccountState.offline => 'Sin conexión. Tus retos siguen aquí.',
+      // One account, one player (migration 0003). Which phone the account
+      // belongs to is a choice nobody has designed, so this says what is true
+      // and offers nothing it cannot do.
+      AccountState.otherDevice => 'Esta cuenta ya se está usando en otro teléfono.',
       AccountState.none || AccountState.loading => null,
     };
 
     // Only the two states somebody has to act on get a banner. `linked` and
     // `noPlayer` are ordinary and read as plain text; a banner on every state
     // is a banner nobody reads.
-    final bool banner =
-        state == AccountState.serverError || state == AccountState.offline;
+    final bool banner = state == AccountState.serverError ||
+        state == AccountState.offline ||
+        state == AccountState.otherDevice;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

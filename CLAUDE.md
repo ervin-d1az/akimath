@@ -86,7 +86,7 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1697 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1729 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **Ajustes has a way out.** `features/preferences/` carries the erasure flow: a text door under
@@ -107,10 +107,19 @@ format and its OpenAPI half.
   task — a pack item has no `issued_at` of its own. The four failures are told apart by what a
   client should *do*: a 400 is a batch to drop, a 404 is a batch that landed nowhere, and
   unreachable is the one worth keeping, because the server drops a duplicate by itself (0004).
-  Nothing calls either yet, and the reason is one step further back: **nothing in the app calls
-  `linkPlayer`**, so an account is made and no player is ever attached to it — which is why the
-  account section draws `noPlayer` and why `POST /packs` and `GET /me/history` would both answer
-  404 for a real player today. Linking is the next change; the pieces waiting on it are
+  **The device links its player as soon as it has a session**, which is what makes any of the
+  server reachable: until it did, an account was created and no player was ever attached, so
+  `GET /me` answered 404 for ever and every operation built on it was unreachable. The trigger is
+  the *session appearing*, not the sign-in callback, so a session arriving any other way is linked
+  too. The id is minted on the device and kept (`PrefsPlayerIdStore`) — a fresh one per launch
+  would 409 on every launch after the first — and it is **version 4 by construction**, because the
+  frozen `PlayerLink` pins a version and a variant nibble and sixteen random bytes fail that about
+  one time in eight. The band travels from the age gate, never off the credential: linking is an
+  adult's act and the player need not be an adult. One round trip, because `POST /players/link`
+  already answers the frozen `Me`. An account that already has another device's player is
+  **`AccountState.otherDevice`** — one account, one player (0003), and which phone it belongs to is
+  a choice nobody has designed, so the app says so and offers nothing it cannot do. Still waiting
+  on the play loop:
   `features/sync/`, which remembers an answered pack item until the server has it. That journal is
   persisted rather than held in memory, because play is offline and sync is not: a player answers
   on a bus and the batch goes days and several launches later. It keeps at most what one batch can

@@ -31,6 +31,16 @@ enum AccountState {
   /// plan is explicit: *"Sin conexión no es un error del usuario: va en
   /// amarillo."*
   offline,
+
+  /// The account already has a player, and it is not this device's.
+  ///
+  /// **A state of its own, because none of the others is honest about it.** It
+  /// is not an error the player made, not a refused session, and not something
+  /// a retry fixes: migration 0003 gives an account one player, so signing in
+  /// on a second phone means choosing which one the account belongs to. That
+  /// choice is a product decision nobody has made, so the app says what is true
+  /// and stops.
+  otherDevice,
 }
 
 /// The state a profile lookup put the section in.
@@ -54,5 +64,26 @@ bool isOurFault(AccountState state) => switch (state) {
   AccountState.loading ||
   AccountState.linked ||
   AccountState.noPlayer ||
-  AccountState.offline => false,
+  AccountState.offline ||
+  AccountState.otherDevice => false,
+};
+
+/// The state a link attempt put the section in.
+///
+/// **Separate from [accountStateFor], because a link can fail in a way a
+/// lookup cannot.** An account that already has another device's player is a
+/// 409, and there is no `MeResult` that means it.
+///
+/// A successful link does not land here: the caller asks `GET /me` next, and
+/// what the *server* says the profile is beats what this device just tried to
+/// make it. That is the same reading `POST /players/link` answers a `Me` with.
+AccountState linkStateFor(LinkResult result) => switch (result) {
+  LinkDone() => AccountState.linked,
+  LinkConflict() => AccountState.otherDevice,
+  // A malformed link is this app's bug, not the player's — and it reads as
+  // ours, because it is.
+  LinkMalformed() => AccountState.serverError,
+  LinkRejected() => AccountState.rejected,
+  LinkFailed() => AccountState.serverError,
+  LinkUnreachable() => AccountState.offline,
 };

@@ -723,6 +723,15 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       ),
     ),
   ),
+  RegisteredScreen(
+    label: 'ajustes · cuenta en otro teléfono',
+    build: () => AppShell(
+      child: PreferencesScreen(
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.otherDevice,
+      ),
+    ),
+  ),
 ];
 
 /// A callback for a registry entry, so a screen can be drawn with its control

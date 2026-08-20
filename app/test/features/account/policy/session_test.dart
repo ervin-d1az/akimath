@@ -1,10 +1,12 @@
 import 'package:akimath_app/features/account/policy/session.dart';
+import 'package:akimath_app/api/me.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const LinkedSession session = LinkedSession(
     email: 'alguien@ejemplo.com',
     accessToken: 'a.bearer.token',
+    ageBand: AgeBand.adult,
   );
 
   test('it carries the address, because a player has no name', () {
@@ -21,15 +23,15 @@ void main() {
   test('two sessions for the same account and token are the same session', () {
     expect(
       session,
-      const LinkedSession(email: 'alguien@ejemplo.com', accessToken: 'a.bearer.token'),
+      const LinkedSession(email: 'alguien@ejemplo.com', accessToken: 'a.bearer.token', ageBand: AgeBand.adult),
     );
     expect(
       session.hashCode,
-      const LinkedSession(email: 'alguien@ejemplo.com', accessToken: 'a.bearer.token').hashCode,
+      const LinkedSession(email: 'alguien@ejemplo.com', accessToken: 'a.bearer.token', ageBand: AgeBand.adult).hashCode,
     );
     expect(
       session,
-      isNot(const LinkedSession(email: 'alguien@ejemplo.com', accessToken: 'otro')),
+      isNot(const LinkedSession(email: 'alguien@ejemplo.com', accessToken: 'otro', ageBand: AgeBand.adult)),
     );
   });
 }
