@@ -4,12 +4,14 @@ import 'dart:io';
 
 import 'history.dart';
 import 'me.dart';
+import 'sync.dart';
 import 'me_result.dart';
 
 // Re-exported so a caller that fetches and a caller that only reads the result
 // both need one import.
 export 'history.dart';
 export 'me_result.dart';
+export 'sync.dart';
 
 /// The one place in the app that opens a socket.
 ///
@@ -106,6 +108,112 @@ class ApiClient {
       return _readLink(response.statusCode, body);
     } on Exception catch (cause) {
       return LinkUnreachable(cause.toString());
+    }
+  }
+
+  /// Asks for a pack to play offline.
+  ///
+  /// **No body and no `Idempotency-Key`.** The player comes from the session,
+  /// and issuing is not idempotent by nature: a retried request leaves a second
+  /// valid pack, which is harmless. The contract requires neither.
+  Future<IssueResult> issuePack(String accessToken) async {
+    final Uri url = _baseUrl.resolve('packs');
+    try {
+      final HttpClientRequest request = await _transport.postUrl(url);
+      if (accessToken.trim().isNotEmpty) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $accessToken');
+      }
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final HttpClientResponse response = await request.close().timeout(timeout);
+      final String body = await response.transform(utf8.decoder).join();
+      return _readIssue(response.statusCode, body);
+    } on Exception catch (cause) {
+      return IssueUnreachable(cause.toString());
+    }
+  }
+
+  IssueResult _readIssue(int status, String body) {
+    final Map<String, Object?> error = _errorOr(body);
+    final String message = error['message'] as String? ?? '';
+    switch (status) {
+      case 200:
+        try {
+          return IssueDone(IssuedPack.fromJson(_object(body)));
+        } on FormatException catch (cause) {
+          return IssueFailed(status: status, reason: cause.message);
+        }
+      case 404:
+        return const IssueNoPlayer();
+      case 401:
+        return IssueRejected(
+          tag: error['error'] as String? ?? 'unauthenticated',
+          message: message,
+        );
+      default:
+        return IssueFailed(status: status, reason: message.isEmpty ? body : message);
+    }
+  }
+
+  /// Sends a session's answers and reads back what they were worth.
+  ///
+  /// **The batch is one transaction on the far side.** Every source is resolved
+  /// before anything is written, so a 404 means *nothing* was recorded — which
+  /// is why that case is worth telling apart from a 400 here.
+  Future<SyncResult> submitAttempts({
+    required String accessToken,
+    required List<AttemptSubmission> attempts,
+  }) async {
+    final Uri url = _baseUrl.resolve('attempts');
+    try {
+      final HttpClientRequest request = await _transport.postUrl(url);
+      if (accessToken.trim().isNotEmpty) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $accessToken');
+      }
+      request.headers.contentType = ContentType.json;
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      request.write(json.encode(<String, Object?>{
+        'attempts': attempts.map((AttemptSubmission a) => a.toJson()).toList(),
+      }));
+      final HttpClientResponse response = await request.close().timeout(timeout);
+      final String body = await response.transform(utf8.decoder).join();
+      return _readSync(response.statusCode, body);
+    } on Exception catch (cause) {
+      return SyncUnreachable(cause.toString());
+    }
+  }
+
+  SyncResult _readSync(int status, String body) {
+    final Map<String, Object?> error = _errorOr(body);
+    final String message = error['message'] as String? ?? '';
+    switch (status) {
+      case 200:
+        try {
+          final Object? verdicts = _object(body)['verdicts'];
+          if (verdicts is! List<Object?>) {
+            throw const FormatException('verdicts is not a list');
+          }
+          return SyncDone(verdicts
+              .map((Object? v) => v is Map<String, Object?>
+                  ? AttemptVerdict.fromJson(v)
+                  : throw const FormatException('a verdict is not an object'))
+              .toList());
+        } on FormatException catch (cause) {
+          return SyncFailed(status: status, reason: cause.message);
+        }
+      case 400:
+        return SyncMalformed(message);
+      case 404:
+        return SyncNoSuchItem(
+          tag: error['error'] as String? ?? 'no_such_item',
+          message: message,
+        );
+      case 401:
+        return SyncRejected(
+          tag: error['error'] as String? ?? 'unauthenticated',
+          message: message,
+        );
+      default:
+        return SyncFailed(status: status, reason: message.isEmpty ? body : message);
     }
   }
 

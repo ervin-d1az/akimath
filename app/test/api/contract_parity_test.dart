@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/api/me.dart';
+import 'package:akimath_app/api/sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The frozen contract, read rather than restated.
@@ -149,6 +150,76 @@ void main() {
           meProperties['createdAt']! as Map<String, Object?>;
 
       expect(at['pattern'], createdAt['pattern']);
+    });
+  });
+
+  group('the Dart submission is the frozen AttemptSubmission', () {
+    final Map<String, Object?> schema = _schema(contract, 'AttemptSubmission');
+    final List<String> required =
+        (schema['required']! as List<Object?>).cast<String>();
+    final Map<String, Object?> properties =
+        schema['properties']! as Map<String, Object?>;
+
+    Map<String, Object?> sent({bool byPack = true}) => AttemptSubmission(
+      itemId: byPack ? null : '018f4e3c-0000-7000-8000-0000000000c3',
+      packRef: byPack
+          ? const PackRef(packId: '018f4e3c-0000-7000-8000-0000000000c1', index: 0)
+          : null,
+      sessionId: '018f4e3c-0000-7000-8000-0000000000c2',
+      answer: '13',
+      at: DateTime.utc(2026, 8, 19, 9, 15),
+      elapsed: const Duration(milliseconds: 4200),
+    ).toJson();
+
+    test('the gate read a real schema', () {
+      expect(required, isNotEmpty);
+      // ignore: avoid_print
+      print('  api parity · AttemptSubmission → ${required.length} required field(s), '
+          '${properties.length} in all');
+    });
+
+    test('it sends every field the schema requires', () {
+      for (final Map<String, Object?> body in <Map<String, Object?>>[
+        sent(),
+        sent(byPack: false),
+      ]) {
+        expect(body.keys.toSet(), containsAll(required));
+      }
+    });
+
+    test('and no field the schema does not describe', () {
+      // `additionalProperties: false` means the server refuses one, so a field
+      // here that is not there is a batch that comes back a 400.
+      for (final Map<String, Object?> body in <Map<String, Object?>>[
+        sent(),
+        sent(byPack: false),
+      ]) {
+        expect(properties.keys.toSet(), containsAll(body.keys));
+      }
+    });
+
+    test('exactly one source, which the schema cannot say and the server does', () {
+      // Both are optional in the document — 3.0.3 has no union the hand-written
+      // client could read — so the rule lives in the operation's description
+      // and in two enforcements. This is the client's.
+      expect(required, isNot(contains('itemId')));
+      expect(required, isNot(contains('packRef')));
+      expect(sent().containsKey('itemId'), isFalse);
+      expect(sent(byPack: false).containsKey('packRef'), isFalse);
+
+      final Map<String, Object?> operation =
+          ((contract['paths']! as Map<String, Object?>)['/attempts']!
+              as Map<String, Object?>)['post']! as Map<String, Object?>;
+      expect(operation['description'], contains('exactly one'));
+    });
+
+    test('and time on task stays inside the bound the schema sets', () {
+      final Map<String, Object?> elapsed =
+          properties['elapsedMs']! as Map<String, Object?>;
+
+      expect(elapsed['minimum'], 0);
+      expect(elapsed['maximum'], isA<int>());
+      expect(sent()['elapsedMs'], lessThanOrEqualTo(elapsed['maximum']! as int));
     });
   });
 

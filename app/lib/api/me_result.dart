@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import 'history.dart';
+import 'sync.dart';
 import 'me.dart';
 
 /// What a profile lookup came back as — the shape of the answer, not the
@@ -217,5 +218,109 @@ final class HistoryFailed extends HistoryResult {
 @immutable
 final class HistoryUnreachable extends HistoryResult {
   const HistoryUnreachable(this.reason);
+  final String reason;
+}
+
+/// What `POST /packs` came back as.
+@immutable
+sealed class IssueResult {
+  const IssueResult();
+}
+
+/// 200 — a pack, and the id every attempt against it will name.
+@immutable
+final class IssueDone extends IssueResult {
+  const IssueDone(this.issued);
+  final IssuedPack issued;
+}
+
+/// 404 — the session is good and no player is linked to it.
+@immutable
+final class IssueNoPlayer extends IssueResult {
+  const IssueNoPlayer();
+}
+
+/// 401 — no session, or one the server would not accept.
+@immutable
+final class IssueRejected extends IssueResult {
+  const IssueRejected({required this.tag, required this.message});
+  final String tag;
+  final String message;
+}
+
+/// An answer arrived and was not one this client can read.
+@immutable
+final class IssueFailed extends IssueResult {
+  const IssueFailed({required this.status, required this.reason});
+  final int status;
+  final String reason;
+}
+
+/// No answer arrived at all.
+@immutable
+final class IssueUnreachable extends IssueResult {
+  const IssueUnreachable(this.reason);
+  final String reason;
+}
+
+/// What `POST /attempts` came back as.
+///
+/// **A refusal is not the same as a wrong answer.** Every verdict in [SyncDone]
+/// may be `ok: false` and the sync still succeeded; the cases below are about
+/// whether the batch was *recorded*, which is the only thing a client has to
+/// decide anything about.
+@immutable
+sealed class SyncResult {
+  const SyncResult();
+}
+
+/// 200 — one verdict per attempt, in the order submitted.
+@immutable
+final class SyncDone extends SyncResult {
+  const SyncDone(this.verdicts);
+  final List<AttemptVerdict> verdicts;
+}
+
+/// 400 — the batch was wrong before it reached the database.
+///
+/// **Not retryable, and that matters.** A client that resends a malformed batch
+/// resends it for ever; this is the one failure a device has to drop rather
+/// than keep.
+@immutable
+final class SyncMalformed extends SyncResult {
+  const SyncMalformed(this.message);
+  final String message;
+}
+
+/// 404 — an attempt names something this player does not have, or the account
+/// has no player. Nothing in the batch was recorded.
+@immutable
+final class SyncNoSuchItem extends SyncResult {
+  const SyncNoSuchItem({required this.tag, required this.message});
+  final String tag;
+  final String message;
+}
+
+/// 401 — no session, or one the server would not accept.
+@immutable
+final class SyncRejected extends SyncResult {
+  const SyncRejected({required this.tag, required this.message});
+  final String tag;
+  final String message;
+}
+
+/// An answer arrived and was not one this client can read.
+@immutable
+final class SyncFailed extends SyncResult {
+  const SyncFailed({required this.status, required this.reason});
+  final int status;
+  final String reason;
+}
+
+/// No answer arrived at all. **Keep the batch**: this is the case a retry is
+/// for, and the server drops a duplicate by itself (migration 0004).
+@immutable
+final class SyncUnreachable extends SyncResult {
+  const SyncUnreachable(this.reason);
   final String reason;
 }
