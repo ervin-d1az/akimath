@@ -1,15 +1,21 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import type { DiagnosisCopy } from "@akimath/contract";
+import {
+  answerDigest,
+  canonicalize,
+  renderCanonicalAnswer,
+  type DiagnosisCopy,
+} from "@akimath/contract";
 import { describe, expect, it } from "vitest";
 
 import { CORE_REGISTRY } from "../../src/templates/index.js";
-import { registryOf } from "../../src/registry.js";
+import { rederive, registryOf } from "../../src/registry.js";
 import type { Template } from "../../src/template.js";
 import { buildPack } from "../../src/pack/build.js";
 import { parseDeclaration } from "../../src/pack/declaration.js";
 import { parseMisconceptions } from "../../src/pack/misconceptions.js";
+import { seedAt } from "../../src/pack/seeds.js";
 import { AUTHORED_PACK_PATH } from "../authored-pack.js";
 
 const AUTHORED_PATH = "../../app/assets/packs/starter.json";
@@ -201,6 +207,63 @@ describe("a generated answer is shaped by what the template produced", () => {
     );
 
     expect(pack.items[0]?.answer.shape).toBe("fraction");
+  });
+
+  it("and spells it the way a learner types it, so the digest matches", () => {
+    // **The bug this test was written for.** `answer.shape` and the spelling
+    // the digest is taken over were computed separately, and the spelling
+    // always passed a denominator — so a whole answer of −9 was stored as the
+    // digest of `-9/1` while the shape said `integer`. A player typing `-9`
+    // canonicalises to `-9`, whose digest is different, so **every generated
+    // item in the built pack was ungradeable.** Latent only because the app
+    // ships the authored pack; it would have surfaced the day the built one
+    // did.
+    const declared = declaration({
+      sources: [{ kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 10 }],
+    });
+    const { pack } = buildPack(declared, inputs());
+
+    expect(pack.items).toHaveLength(10);
+    pack.items.forEach((item, index) => {
+      const generated = rederive(CORE_REGISTRY, {
+        templateId: "arith.integer.subtract",
+        templateVersion: 2,
+        seed: seedAt(declared.seedBase, index),
+        ladderStep: 3,
+      });
+      // Exactly what the keypad produces: a whole number, with no denominator.
+      const typed = renderCanonicalAnswer(generated.answer.numerator);
+      const canonical = canonicalize(typed);
+      expect(canonical.ok, typed).toBe(true);
+      expect(item.answer.shape).toBe("integer");
+      expect(item.answer.digest, `item ${index} answers ${typed}`).toBe(
+        answerDigest(pack.pack_salt, canonical.ok ? canonical.value : ""),
+      );
+    });
+  });
+
+  it("and no distractor it ships collides with the answer it sits beside", () => {
+    // The guard in `distractors.ts` compares strings, so it only works if
+    // `build.ts` hands it the same spelling it digests. That was the second
+    // half of the same bug: the correct answer went in as `0/1` while the
+    // predictions were spelled `0`, and a pack could ship a distractor telling
+    // a right answer it was a known mistake. Checked here rather than in
+    // `diagnosis.test.ts`, because the unit already passes — what needed
+    // pinning is that the builder agrees with itself.
+    const { pack } = buildPack(declaration({
+      sources: [{ kind: "template", template_id: "arith.integer.subtract", template_version: 2, ladder_step: 3, count: 10 }],
+    }), inputs());
+
+    let distractors = 0;
+    for (const item of pack.items) {
+      for (const distractor of item.diagnosis?.distractors ?? []) {
+        distractors += 1;
+        expect(distractor.digest).not.toBe(item.answer.digest);
+      }
+    }
+    // PROC-10: zero distractors would make the loop above vacuous.
+    expect(distractors).toBeGreaterThan(0);
+    console.log(`  distractor collision · checked ${distractors} distractor(s)`);
   });
 
   it("calls a whole answer an integer", () => {
