@@ -86,7 +86,7 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1674 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1697 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **Ajustes has a way out.** `features/preferences/` carries the erasure flow: a text door under
@@ -107,8 +107,17 @@ format and its OpenAPI half.
   task — a pack item has no `issued_at` of its own. The four failures are told apart by what a
   client should *do*: a 400 is a batch to drop, a 404 is a batch that landed nowhere, and
   unreachable is the one worth keeping, because the server drops a duplicate by itself (0004).
-  Nothing calls either yet — the play loop still reads the bundled asset, and pointing it at an
-  issued pack is the next change.
+  Nothing calls either yet, and the reason is one step further back: **nothing in the app calls
+  `linkPlayer`**, so an account is made and no player is ever attached to it — which is why the
+  account section draws `noPlayer` and why `POST /packs` and `GET /me/history` would both answer
+  404 for a real player today. Linking is the next change; the pieces waiting on it are
+  `features/sync/`, which remembers an answered pack item until the server has it. That journal is
+  persisted rather than held in memory, because play is offline and sync is not: a player answers
+  on a bus and the batch goes days and several launches later. It keeps at most what one batch can
+  carry — the server refuses more than two hundred, so a longer journal could never be flushed —
+  and what survives a failed sync is decided in one place: a batch that landed is gone, a batch the
+  server could not read is **dropped** because resending a malformed one resends it for ever, and a
+  refused session or no answer at all is **kept**, which is what the journal is for.
   **All six frozen stimulus families draw and grade** — arithmetic, number series, matrix,
   analogy, the function machine and figurate. `content/model/stimulus_reader.dart` holds the six
   hand-written parsers and `test/content/model/stimulus_fixture_test.dart` checks each against

@@ -46,16 +46,29 @@ int seriesStart(int itemsPlayed, int packSize) {
 ///
 /// No item repeats inside one series, whatever the offset: the count is clamped
 /// to the pack, so a pack of three yields three and not the same one twice.
-List<Item> seriesPlan(List<Item> pack, {int from = 0}) {
-  if (pack.isEmpty) {
-    return const <Item>[];
-  }
-  final int start = seriesStart(from, pack.length);
-  final int count = seriesLength < pack.length ? seriesLength : pack.length;
+List<Item> seriesPlan(List<Item> pack, {int from = 0}) =>
+    seriesIndices(pack.length, from: from)
+        .map((int index) => pack[index])
+        .toList(growable: false);
 
-  return List<Item>.generate(
+/// Which positions in the pack the next series is, in order.
+///
+/// **The positions, not the items, because a synced attempt names one.** An
+/// answer against a pack item travels as `(packId, index)` — the pack format
+/// gives its items no identifier, so position *is* identity
+/// (`ARCHITECTURE.md` §4). A caller recomputing the wrap from `seriesStart`
+/// would be a second implementation of the one rule that decides which item a
+/// player just answered.
+List<int> seriesIndices(int packLength, {int from = 0}) {
+  if (packLength <= 0) {
+    return const <int>[];
+  }
+  final int start = seriesStart(from, packLength);
+  final int count = seriesLength < packLength ? seriesLength : packLength;
+
+  return List<int>.generate(
     count,
-    (int offset) => pack[(start + offset) % pack.length],
+    (int offset) => (start + offset) % packLength,
     growable: false,
   );
 }
