@@ -6,7 +6,7 @@ import { resolve } from "../registry.js";
 import { CORE_REGISTRY } from "../templates/index.js";
 import { buildPack } from "../pack/build.js";
 import { parseDeclaration } from "../pack/declaration.js";
-import { parseMisconceptions } from "../pack/misconceptions.js";
+import { fallbackDiagnosis, misconceptionCopy } from "../pack/misconceptions.js";
 import { flag } from "./flags.js";
 
 /**
@@ -31,23 +31,14 @@ const here = (relative: string): string =>
  * file when it fails" is precisely the behaviour worth proving.
  */
 const DECLARATION = path.resolve(flag("declaration", here("../../content/pack.declaration.json")));
-const MISCONCEPTIONS = path.resolve(flag("misconceptions", here("../../content/misconceptions.json")));
 const OUT = path.resolve(flag("out", here("../../pack/starter.json")));
 
-/** The skill every item currently belongs to, until the map exists at F5. */
-const FALLBACK_MISCONCEPTION = "no_specific_diagnosis";
-
 function main(): void {
-  const misconceptions = parseMisconceptions(
-    JSON.parse(readFileSync(MISCONCEPTIONS, "utf8")),
-  );
-  const fallbackCopy = misconceptions.get(FALLBACK_MISCONCEPTION);
-  if (fallbackCopy === undefined) {
-    throw new TypeError(
-      `the copy file declares no "${FALLBACK_MISCONCEPTION}", so a wrong answer ` +
-        `matching no distractor would have nothing to say`,
-    );
-  }
+  // The copy is a value in `src/pack/misconception-copy.ts` now, not a file
+  // this script reads: `packages/server` issues packs inside a request and
+  // needs the same words, and one source is the only way the two agree.
+  const misconceptions = misconceptionCopy();
+  const fallbackCopy = fallbackDiagnosis();
 
   const declaration = parseDeclaration(
     JSON.parse(readFileSync(DECLARATION, "utf8")),

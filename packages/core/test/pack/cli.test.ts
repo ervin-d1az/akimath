@@ -58,7 +58,7 @@ const validDeclaration = (over: Record<string, unknown> = {}): unknown => ({
 describe("the builder writes a pack", () => {
   it("emits one and reports what it built", () => {
     const w = workspace(validDeclaration());
-    const r = run(["--declaration", w.declarationPath, "--misconceptions", REAL_MISCONCEPTIONS, "--out", w.out]);
+    const r = run(["--declaration", w.declarationPath, "--out", w.out]);
 
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/80 items|70 items/);
@@ -69,7 +69,7 @@ describe("the builder writes a pack", () => {
 describe("a refusal writes nothing and damages nothing", () => {
   it("exits non-zero and leaves no file where none existed", () => {
     const w = workspace(validDeclaration({ pack_salt: "not-a-salt" }));
-    const r = run(["--declaration", w.declarationPath, "--misconceptions", REAL_MISCONCEPTIONS, "--out", w.out]);
+    const r = run(["--declaration", w.declarationPath, "--out", w.out]);
 
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/pack_salt/);
@@ -80,11 +80,11 @@ describe("a refusal writes nothing and damages nothing", () => {
     // The failure `dump-schema.sh` had: truncating the output before the
     // producer has run, so a bad run destroys the committed artifact.
     const w = workspace(validDeclaration());
-    run(["--declaration", w.declarationPath, "--misconceptions", REAL_MISCONCEPTIONS, "--out", w.out]);
+    run(["--declaration", w.declarationPath, "--out", w.out]);
     const before = readFileSync(w.out, "utf8");
 
     writeFileSync(w.declarationPath, JSON.stringify(validDeclaration({ seed_base: "oops" })), "utf8");
-    const r = run(["--declaration", w.declarationPath, "--misconceptions", REAL_MISCONCEPTIONS, "--out", w.out]);
+    const r = run(["--declaration", w.declarationPath, "--out", w.out]);
 
     expect(r.status).toBe(1);
     expect(readFileSync(w.out, "utf8")).toBe(before);
@@ -103,23 +103,18 @@ describe("a refusal writes nothing and damages nothing", () => {
       "utf8",
     );
 
-    const r = run(["--declaration", w.declarationPath, "--misconceptions", REAL_MISCONCEPTIONS, "--out", w.out]);
+    const r = run(["--declaration", w.declarationPath, "--out", w.out]);
 
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/unknown_index_out_of_range/);
     expect(() => readFileSync(w.out, "utf8")).toThrow();
   });
 
-  it("refuses when the copy file has no fallback misconception", () => {
-    const w = workspace(validDeclaration());
-    const copy = path.join(w.dir, "copy.json");
-    writeFileSync(copy, JSON.stringify({ some_other_thing: { steps: ["x"], explain: "y" } }), "utf8");
-
-    const r = run(["--declaration", w.declarationPath, "--misconceptions", copy, "--out", w.out]);
-
-    expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/no_specific_diagnosis/);
-  });
+  // The copy is no longer a file this script is pointed at, so "the file has no
+  // fallback" is a scenario that cannot happen any more. The guarantee did not
+  // go away — it moved to `fallbackDiagnosis()`, which throws rather than
+  // handing back undefined, and `test/pack/misconceptions.test.ts` holds it
+  // there. Named here so the deletion reads as a move.
 });
 
 describe("the committed pack is the one the declaration produces", () => {

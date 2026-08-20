@@ -222,7 +222,16 @@ format and its OpenAPI half.
   fact is one place that can be wrong, and the wrong one would be the pack's. The rederivation
   machine is on the package's front door — `registryOf`, `resolve`, `rederive`, `issuable` and
   `coreRegistry()`, the last a *call* because every export is a function and a registry is a `Map`
-  behind an interface. **`toManifestEntry`/`fromManifestEntry` are there too**: how a
+  behind an interface. **The diagnosis copy is a value**, not `content/misconceptions.json`, which
+  is deleted: `packages/server` issues packs inside a request and needs the same words, and reading
+  another package's content directory from a request path is ambient IO in the one package that
+  forbids it. `misconceptionCopy()` and `fallbackDiagnosis()` are the front door; the prose lives in
+  `src/pack/misconception-copy.ts` and is the one file excluded from mutation testing, because every
+  mutant there blanks a Spanish sentence and the only test that could kill one would restate it.
+  It is parsed **on first use and not at module load**, which is not a style choice: a
+  module-scope parse turns a bad edit into an import failure, every file importing it dies before
+  its assertions run, and Stryker scores those mutants as survived. `misconceptions.ts` read
+  56.31 that way and 93.27 once the parse was deferred, with the same tests. **`toManifestEntry`/`fromManifestEntry` are there too**: how a
   `TemplateRef` is written into `offline_packs.template_refs` and read back is one definition
   now, shared by the builder that will write it and the server that already reads it. It used
   to be a reader matching a comment in ARCHITECTURE, and a mismatch would have made

@@ -258,6 +258,15 @@ credit.
       0. **Commit the change first, then falsify.** Every restore below is a restore *to
          something*, and until the work is committed there is nothing safe to restore to. This
          is the cheap fix for both traps in step 1, and it costs one commit.
+      0b. **A mutant Stryker calls survived, and a hand falsification kills, is a finding about
+         the code — usually module-scope work.** Anything a module *does* at import time
+         (`const PARSED = parse(...)`) turns a bad edit into an **import** failure, and an import
+         failure is not a test failure: every file importing it dies before its assertions run,
+         and Stryker scores the mutant as survived. The fix is not to argue with the tool. Defer
+         the work to first use, and the mutant fails where it can be seen. *(2026-08-19:
+         `packages/core`'s `misconceptions.ts` read 56.31 with 42 survivors while a hand
+         falsification of one of them went red. Making the parse lazy took it to 93.27 with the
+         same tests.)*
       1. For a **tracked file with no uncommitted changes**, `git checkout -- <file>` is correct.
          For a **tracked file carrying this session's uncommitted work**, it is not: it restores
          to HEAD and silently deletes the change you are testing, mutation and feature together —
