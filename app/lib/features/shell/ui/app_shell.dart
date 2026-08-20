@@ -77,6 +77,12 @@ class AppShell extends StatelessWidget {
 /// screen with no navigation affordance, and the only way out is the screen's
 /// own close control. Routing it rather than swapping a tab body is what makes
 /// that true structurally instead of by each screen remembering to hide things.
+///
+/// **Push it with [pushSession].** A session pushed onto a tab's own navigator
+/// sits *under* the bottom bar: a player mid-item can tap away, and the screen
+/// is laid out for 106 pixels it does not have. That is not hypothetical — it
+/// is what happened the day each tab got its own stack, and a device found it
+/// as a 24-pixel overflow.
 Route<T> fullScreenSession<T>(WidgetBuilder builder) {
   return MaterialPageRoute<T>(
     fullscreenDialog: true,
@@ -94,3 +100,16 @@ Route<T> fullScreenSession<T>(WidgetBuilder builder) {
     ),
   );
 }
+
+/// Opens a session over everything, including the bar.
+///
+/// **`rootNavigator: true`, and that is the whole point of the function.**
+/// `Navigator.of(context)` finds the nearest one, which since `TabStack` is the
+/// tab's — so a plain push leaves the bar drawn under a round. Declared rule 1
+/// says the opposite, and the difference is not cosmetic: the bar is a way out
+/// of a session that is supposed to have exactly one.
+///
+/// Every caller that opens a round, a board or a streak notice goes through
+/// here, so the choice is made once rather than remembered at each site.
+Future<T?> pushSession<T>(BuildContext context, WidgetBuilder builder) =>
+    Navigator.of(context, rootNavigator: true).push(fullScreenSession<T>(builder));

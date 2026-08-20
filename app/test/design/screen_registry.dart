@@ -39,9 +39,45 @@ import 'package:flutter/widgets.dart';
 /// 1.3 is the text size a child's device arrives with more often than not.
 enum ScreenViewport {
   designPhone('390×844', Size(390, 844), 1),
-  designPhoneLargeText('390×844 · textScaler 1.3', Size(390, 844), 1.3);
+  designPhoneLargeText('390×844 · textScaler 1.3', Size(390, 844), 1.3),
 
-  const ScreenViewport(this.label, this.physicalSize, this.textScale);
+  /// The same phone with the hardware in the way.
+  ///
+  /// **Added because a device found an overflow this gate could not.** Both
+  /// viewports above are flat 390×844 rectangles with `padding` zero, so
+  /// `SafeArea` takes nothing and a screen gets every pixel. No phone this app
+  /// ships to is like that. Measured on the iPhone 17 the app is developed
+  /// against: **402×874, padding 62 top and 34 bottom**, so a screen has 778 —
+  /// and the difference is where a 24-pixel overflow hid.
+  ///
+  /// The numbers are the measured ones rather than a guess: a probe printed
+  /// `MediaQuery.of(context)` on the device, because the design's 390×844 is a
+  /// drawing convention and not a phone.
+  notchedPhone(
+    '402×874 · con muescas',
+    Size(402, 874),
+    1,
+    padding: EdgeInsets.only(top: 62, bottom: 34),
+  ),
+
+  /// The same phone, the same hardware, and the text setting the app is gated
+  /// for. The genuine worst case, and the one the design never drew.
+  notchedPhoneLargeText(
+    '402×874 · con muescas · textScaler 1.3',
+    Size(402, 874),
+    1.3,
+    padding: EdgeInsets.only(top: 62, bottom: 34),
+  );
+
+  const ScreenViewport(
+    this.label,
+    this.physicalSize,
+    this.textScale, {
+    this.padding = EdgeInsets.zero,
+  });
+
+  /// What the hardware takes before a screen gets any of it.
+  final EdgeInsets padding;
 
   /// How the viewport is named in a test title and in a failure.
   final String label;
