@@ -5,7 +5,7 @@ import 'package:akimath_app/api/me.dart';
 import 'package:akimath_app/features/account/data/player_id_store.dart';
 import 'package:akimath_app/features/account/policy/player_id.dart';
 import 'package:akimath_app/features/account/policy/session.dart';
-import 'package:akimath_app/features/preferences/ui/preferences_route.dart';
+import 'package:akimath_app/features/profile/ui/profile_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,7 +38,7 @@ void main() {
   }) async {
     asked = <({String token, String playerId, AgeBand band})>[];
     await tester.pumpWidget(MaterialApp(
-      home: PreferencesRoute(
+      home: ProfileRoute(
         session: session,
         playerIds: InMemoryPlayerIdStore(),
         authBaseUrl: 'https://auth.example/neondb/auth',

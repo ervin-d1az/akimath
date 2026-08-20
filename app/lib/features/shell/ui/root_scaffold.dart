@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../account/policy/session.dart';
 import '../../home/ui/home_route.dart';
-import '../../preferences/ui/preferences_route.dart';
+import '../../profile/ui/profile_route.dart';
 import '../../progress/ui/progress_route.dart';
 import '../policy/visible_tabs.dart';
 import 'nav_bar.dart';
+import 'tab_stack.dart';
 
 /// The three roots and the bar between them.
 ///
@@ -33,33 +34,68 @@ class _RootScaffoldState extends State<RootScaffold> {
   /// In memory only — where a token may be written down is its own decision.
   LinkedSession? _session;
 
+  /// One navigator per tab, so a pushed screen lands **under** the bar.
+  ///
+  /// The settings screens sit above the profile root and the design says the
+  /// bar stays: *"Aquí sí va la barra inferior."* A push onto the app's root
+  /// navigator covers the whole `Scaffold`, which is what the app did until a
+  /// device caught it.
+  ///
+  /// Every tab gets one, including the two that push nothing today — a wrapper
+  /// applied only where it is needed now is one the next root will be missing.
+  final Map<AppTab, GlobalKey<NavigatorState>> _stacks =
+      <AppTab, GlobalKey<NavigatorState>>{
+    for (final AppTab tab in AppTab.values) tab: GlobalKey<NavigatorState>(),
+  };
+
   @override
   Widget build(BuildContext context) {
     final List<AppTab> tabs = visibleTabs(rootsPresentToday);
     final int index = tabs.indexOf(_current);
 
-    return Scaffold(
-      backgroundColor: BrandColors.cream,
-      body: IndexedStack(
-        index: index < 0 ? 0 : index,
-        children: <Widget>[
-          for (final AppTab tab in tabs) _rootFor(tab),
-        ],
+    return PopScope(
+      // **The tab's stack answers a back press first.** Without this the first
+      // press leaves the app, discarding a stack the player can see — which
+      // reads as a crash rather than as navigation.
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) {
+          return;
+        }
+        // **The app's own navigator, captured before the await.** Reaching for
+        // it through `context` afterwards is the gap the analyzer names, and
+        // the guard that would satisfy it — `mounted` — is about this State and
+        // not about that context.
+        final NavigatorState app = Navigator.of(context);
+        final bool handled = await TabStack.popTab(_stacks[_current]!);
+        if (!handled) {
+          app.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: BrandColors.cream,
+        body: IndexedStack(
+          index: index < 0 ? 0 : index,
+          children: <Widget>[
+            for (final AppTab tab in tabs)
+              TabStack(navigatorKey: _stacks[tab], child: _rootFor(tab)),
+          ],
+        ),
+        bottomNavigationBar: tabs.length < 2
+            ? null
+            : NavBar(
+                tabs: tabs,
+                current: _current,
+                onSelect: (AppTab tab) => setState(() => _current = tab),
+              ),
       ),
-      bottomNavigationBar: tabs.length < 2
-          ? null
-          : NavBar(
-              tabs: tabs,
-              current: _current,
-              onSelect: (AppTab tab) => setState(() => _current = tab),
-            ),
     );
   }
 
   Widget _rootFor(AppTab tab) => switch (tab) {
         AppTab.home => const HomeRoute(),
         AppTab.progress => ProgressRoute(session: _session),
-        AppTab.profile => PreferencesRoute(
+        AppTab.profile => ProfileRoute(
             session: _session,
             onSessionChanged: (LinkedSession? session) =>
                 setState(() => _session = session),

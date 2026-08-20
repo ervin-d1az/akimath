@@ -11,17 +11,28 @@ import '../../states/policy/account_state.dart';
 import '../../account/data/player_id_store.dart';
 import '../../account/policy/session.dart';
 import '../../shell/ui/app_shell.dart';
-import '../policy/erasure.dart';
-import 'erase_account_route.dart';
-import 'preferences_screen.dart';
+import '../../preferences/policy/erasure.dart';
+import '../../preferences/ui/account_screen.dart';
+import '../../preferences/ui/erase_account_route.dart';
+import '../../preferences/ui/legend_screen.dart';
+import '../../preferences/ui/settings_list_screen.dart';
+import 'profile_screen.dart';
 
-/// Reads the day log and hands the screen two numbers.
+/// The profile root, and the stack it pushes.
 ///
-/// The adapter half, and it is small on purpose: everything this root shows is
-/// already computed by policies the home uses, so there is nothing here to get
-/// wrong except the reading.
-class PreferencesRoute extends StatefulWidget {
-  const PreferencesRoute({
+/// **Renamed from `ProfileRoute` and moved, rather than rewritten.**
+/// Declared rule 1 names the bar's homes as *inicio, mapa, progreso y perfil*;
+/// the third root was Ajustes, which that rule does not name. Everything about
+/// the account — linking on a session appearing, the sign-in flow, the erasure
+/// — is unchanged and only re-parented; a review that finds logic moving inside
+/// one of them has found something worth asking about (D6).
+///
+/// It owns the pushes because it owns the session and the token: `Cuenta`'s
+/// erasure needs both, and a screen that took an `ApiClient` could not be
+/// driven by a `testWidgets` — a real socket inside a fake-async zone hangs on
+/// `!timersPending`, which is why every request here travels as a closure.
+class ProfileRoute extends StatefulWidget {
+  const ProfileRoute({
     super.key,
     this.session,
     this.onSessionChanged,
@@ -70,10 +81,10 @@ class PreferencesRoute extends StatefulWidget {
   final DateTime Function() now;
 
   @override
-  State<PreferencesRoute> createState() => _PreferencesRouteState();
+  State<ProfileRoute> createState() => _ProfileRouteState();
 }
 
-class _PreferencesRouteState extends State<PreferencesRoute> {
+class _ProfileRouteState extends State<ProfileRoute> {
   @override
   void initState() {
     super.initState();
@@ -81,7 +92,7 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
   }
 
   @override
-  void didUpdateWidget(PreferencesRoute old) {
+  void didUpdateWidget(ProfileRoute old) {
     super.didUpdateWidget(old);
     _linkIfNeeded(old.session);
   }
@@ -249,15 +260,57 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
     ));
   }
 
+  /// Pushes a settings screen onto the tab's own navigator.
+  ///
+  /// **Not `fullScreenSession`.** That route exists to make a *session* — a
+  /// round, a board — take the whole screen with no way out but finishing. The
+  /// group badge over `4.1`–`4.7` says the opposite: *"Aquí sí va la barra
+  /// inferior."* So these push under the bar, and the back control is a pop
+  /// rather than a flag on the root.
+  void _push(Widget Function(VoidCallback back) build) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (BuildContext pushed) =>
+          build(() => Navigator.of(pushed).pop()),
+    ));
+  }
+
+  void _openSettings() => _push(
+        (VoidCallback back) => AppShell(
+          child: SettingsListScreen(
+            onBack: back,
+            onOpenAccount: _openAccountDetail,
+            onOpenLegend: () => _push(
+              (VoidCallback back) => AppShell(child: LegendScreen(onBack: back)),
+            ),
+          ),
+        ),
+      );
+
+  void _openAccountDetail() {
+    final String? email = widget.session?.email;
+    if (email == null) {
+      return;
+    }
+    _push(
+      (VoidCallback back) => AppShell(
+        child: AccountScreen(
+          onBack: back,
+          email: email,
+          // Only where a session exists that the request could travel on.
+          // `erasureOffered` is the judgement; the token is the fact.
+          onErase: erasureOffered(_accountState) ? _openEraseFlow : null,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      child: PreferencesScreen(
-        // Zero before the store answers, and zero for a player who has never
-        // played — the same number, which is why nothing here waits on a
-        // skeleton. There is no state in which this screen has nothing to say.
+      child: ProfileScreen(
         accountEmail: widget.session?.email,
         accountState: _accountState,
+        onOpenSettings: _openSettings,
         // Only offered where retrying could change the answer. A retry on a
         // refused session would fetch the same refusal.
         onRetryAccount: _accountState == AccountState.offline ||
@@ -267,11 +320,6 @@ class _PreferencesRouteState extends State<PreferencesRoute> {
         // Absent rather than broken when the build was given no endpoints.
         onCreateAccount: widget.authBaseUrl.isNotEmpty && widget.session == null
             ? _openAccountFlow
-            : null,
-        // Only where a session exists that the request could travel on.
-        // `erasureOffered` is the judgement; the token is the fact.
-        onEraseData: erasureOffered(_accountState) && widget.session != null
-            ? _openEraseFlow
             : null,
       ),
     );

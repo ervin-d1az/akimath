@@ -1,8 +1,8 @@
-import 'package:akimath_app/features/preferences/ui/preferences_route.dart';
+import 'package:akimath_app/features/profile/ui/profile_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Whether the account door is on the settings screen.
+/// Whether the account door is on the profile root.
 ///
 /// **This exists because the claim was made and was wrong.** The route read
 /// `Endpoints.configured`, a compile-time constant no test could vary, so
@@ -12,7 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   Future<void> pump(WidgetTester tester, {required String authBaseUrl}) async {
     await tester.pumpWidget(MaterialApp(
-      home: PreferencesRoute(
+      home: ProfileRoute(
         now: () => DateTime.utc(2026, 8, 19),
         authBaseUrl: authBaseUrl,
       ),
@@ -23,7 +23,6 @@ void main() {
   testWidgets('a configured build offers the door', (WidgetTester tester) async {
     await pump(tester, authBaseUrl: 'https://auth.example/neondb/auth');
 
-    expect(find.text('TU CUENTA'), findsOneWidget);
     expect(find.text('Crear cuenta'), findsOneWidget);
   });
 
@@ -33,7 +32,10 @@ void main() {
     // button, the same reading that keeps every do-nothing toggle off (DR-P2).
     await pump(tester, authBaseUrl: '');
 
-    expect(find.text('TU CUENTA'), findsNothing);
     expect(find.text('Crear cuenta'), findsNothing);
+    // The row still says what is true — there is no account here — because a
+    // screen that vanishes and a screen that says nothing are different
+    // failures and only one of them is this one.
+    expect(find.text('Sin cuenta en este teléfono'), findsOneWidget);
   });
 }

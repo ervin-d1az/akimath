@@ -16,7 +16,10 @@ import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/features/preferences/policy/erasure.dart';
 import 'package:akimath_app/features/preferences/ui/erase_account_screen.dart';
-import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
+import 'package:akimath_app/features/preferences/ui/account_screen.dart';
+import 'package:akimath_app/features/preferences/ui/legend_screen.dart';
+import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
+import 'package:akimath_app/features/profile/ui/profile_screen.dart';
 import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/features/progress/policy/progress_view.dart';
 import 'package:akimath_app/features/progress/ui/progress_screen.dart';
@@ -483,52 +486,57 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
-    label: 'ajustes · cuenta cargando',
+    label: 'perfil · cuenta cargando',
     build: () => AppShell(
-      child: PreferencesScreen(
-                accountEmail: 'alguien@ejemplo.com',
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.loading,
         onRetryAccount: null,
+        onOpenSettings: () {},
       ),
     ),
   ),
   RegisteredScreen(
-    label: 'ajustes · cuenta sin jugador',
+    label: 'perfil · cuenta sin jugador',
     build: () => AppShell(
-      child: PreferencesScreen(
-                accountEmail: 'alguien@ejemplo.com',
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.noPlayer,
         onRetryAccount: null,
+        onOpenSettings: () {},
       ),
     ),
   ),
   RegisteredScreen(
-    label: 'ajustes · cuenta sin conexión',
+    label: 'perfil · cuenta sin conexión',
     build: () => AppShell(
-      child: PreferencesScreen(
-                accountEmail: 'alguien@ejemplo.com',
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.offline,
         onRetryAccount: () {},
+        onOpenSettings: () {},
       ),
     ),
   ),
   RegisteredScreen(
-    label: 'ajustes · cuenta error de servidor',
+    label: 'perfil · cuenta error de servidor',
     build: () => AppShell(
-      child: PreferencesScreen(
-                accountEmail: 'alguien@ejemplo.com',
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.serverError,
         onRetryAccount: () {},
+        onOpenSettings: () {},
       ),
     ),
   ),
   RegisteredScreen(
-    label: 'ajustes · cuenta sesión caducada',
+    label: 'perfil · cuenta sesión caducada',
     build: () => AppShell(
-      child: PreferencesScreen(
-                accountEmail: 'alguien@ejemplo.com',
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.rejected,
         onRetryAccount: null,
+        onOpenSettings: () {},
       ),
     ),
   ),
@@ -541,20 +549,51 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
-    label: 'preferences',
-    // The second root, and the reason the app has a bar at all. In the shell,
-    // because that is the only way it renders.
-    build: () => const AppShell(
-      child: PreferencesScreen(),
+    label: 'perfil',
+    // The third root, and the one declared rule 1 actually names. In the
+    // shell, because that is the only way it renders.
+    build: () => AppShell(
+      child: ProfileScreen(
+        accountState: AccountState.none,
+        onOpenSettings: () {},
+        onCreateAccount: () {},
+      ),
     ),
   ),
   RegisteredScreen(
-    label: 'preferences · nothing played',
-    // A player on their first launch. Zero rather than a dash or a gap, so the
-    // screen has no state in which it says nothing.
-    build: () => const AppShell(
-      child: PreferencesScreen(),
+    label: 'perfil · sin cuenta ni endpoints',
+    // A build given no auth URL. It offers nothing it cannot do and still says
+    // what is true, which are two different things (DR-P2).
+    build: () => AppShell(
+      child: ProfileScreen(
+        accountState: AccountState.none,
+        onOpenSettings: () {},
+      ),
     ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes',
+    build: () => AppShell(
+      child: SettingsListScreen(
+        onBack: () {},
+        onOpenAccount: () {},
+        onOpenLegend: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · cuenta',
+    build: () => AppShell(
+      child: AccountScreen(
+        onBack: () {},
+        email: 'alguien@ejemplo.com',
+        onErase: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · cómo se leen los retos',
+    build: () => AppShell(child: LegendScreen(onBack: () {})),
   ),
   RegisteredScreen(
     label: 'verdict · acierto',
@@ -623,13 +662,11 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
-    label: 'ajustes · con puerta de borrado',
+    label: 'ajustes · cuenta sin puerta de borrado',
+    // No session the request could travel on, so the door is absent rather
+    // than dead — `erasureOffered` is the judgement and the token is the fact.
     build: () => AppShell(
-      child: PreferencesScreen(
-                accountEmail: 'alguien@ejemplo.com',
-        accountState: AccountState.linked,
-        onEraseData: () {},
-      ),
+      child: AccountScreen(onBack: () {}, email: 'alguien@ejemplo.com'),
     ),
   ),
   RegisteredScreen(
@@ -724,11 +761,12 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
-    label: 'ajustes · cuenta en otro teléfono',
+    label: 'perfil · cuenta en otro teléfono',
     build: () => AppShell(
-      child: PreferencesScreen(
+      child: ProfileScreen(
         accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.otherDevice,
+        onOpenSettings: () {},
       ),
     ),
   ),

@@ -390,8 +390,8 @@ class _StillToDecide extends StatelessWidget {
 /// flame.
 ///
 /// It reads `iconPaths` rather than a hand-written list, so a glyph added to
-/// the set appears here without anyone remembering to add it — the same
-/// mistake `nav_glyph_spec.dart`'s fork counter was fixed for.
+/// the set appears here without anyone remembering to add it — the mistake
+/// the deleted nav fork's counter was fixed for after it grew unnoticed.
 class _GlyphSheet extends StatelessWidget {
   const _GlyphSheet();
 
