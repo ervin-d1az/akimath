@@ -21,6 +21,21 @@ export interface RequestDatabase {
   /** Runs `work` as `app_request`, in a transaction that commits or rolls back. */
   readonly inRequestRole: <T>(work: (client: pg.PoolClient) => Promise<T>) => Promise<T>;
   /**
+   * Runs `work` as `retention_job`, the one role holding DELETE.
+   *
+   * **The single sanctioned hole in "the request path cannot delete".**
+   * `CLAUDE.md`'s invariant is that `attempts` accepts DELETE only through the
+   * erasure path and the retention job, *both under this role* — so erasure was
+   * always going to need it, and doing it any other way would mean granting
+   * `app_request` a DELETE it must not have.
+   *
+   * Narrow on purpose, and kept narrow by a test:
+   * `test/one-way-to-erase.test.ts` names the only file under `src/` allowed to
+   * call this, the same shape as `one-way-to-log.test.ts`. A second caller is a
+   * failing build, not a code review someone might skip.
+   */
+  readonly inErasureRole: <T>(work: (client: pg.PoolClient) => Promise<T>) => Promise<T>;
+  /**
    * Runs `work` as the connecting role, with no transaction.
    *
    * **Not for handlers.** It exists so a test can ask what a pooled connection
@@ -46,20 +61,30 @@ export function createRequestDatabase(connectionString: string): RequestDatabase
     }
   };
 
+  // Both roles switch the same way, so the mechanism is written once: the only
+  // difference between a request and an erasure is the name in `SET LOCAL ROLE`,
+  // and a second hand-rolled copy is where the `LOCAL` would eventually be
+  // dropped from one of them.
+  // The type is the two names, not `string`: this is the one place in the
+  // package that interpolates into SQL rather than binding a parameter — `SET
+  // ROLE` takes no parameter — so what can reach it is closed at compile time.
+  const inRole = (role: "app_request" | "retention_job") => <T>(work: (client: pg.PoolClient) => Promise<T>): Promise<T> =>
+    borrow(async (client) => {
+      await client.query("BEGIN");
+      await client.query(`SET LOCAL ROLE ${role}`);
+      try {
+        const result = await work(client);
+        await client.query("COMMIT");
+        return result;
+      } catch (cause) {
+        await client.query("ROLLBACK");
+        throw cause;
+      }
+    });
+
   return {
-    inRequestRole: (work) =>
-      borrow(async (client) => {
-        await client.query("BEGIN");
-        await client.query("SET LOCAL ROLE app_request");
-        try {
-          const result = await work(client);
-          await client.query("COMMIT");
-          return result;
-        } catch (cause) {
-          await client.query("ROLLBACK");
-          throw cause;
-        }
-      }),
+    inRequestRole: inRole("app_request"),
+    inErasureRole: inRole("retention_job"),
     asOwner: (work) => borrow(work),
     close: () => pool.end(),
   };

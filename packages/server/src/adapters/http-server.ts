@@ -1,12 +1,14 @@
 import { serve, type ServerType } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 
+import { erasureResponse } from "../erasure.js";
 import { conflictResponse, linkOutcome, readLinkRequest } from "../link.js";
 import { profileResponse } from "../players.js";
-import { route, type Response as Answer } from "../routing.js";
+import { route, type HandlerAnswer } from "../routing.js";
 import type { Logger } from "./logger.js";
 import {
   accountForPlayer,
+  deletePlayerForAccount,
   findPlayerForAccount,
   insertPlayer,
   playerIdForAccount,
@@ -40,7 +42,7 @@ export interface HandlerRequest {
 }
 
 export type Handlers = Readonly<
-  Record<string, (request: HandlerRequest) => Promise<Answer>>
+  Record<string, (request: HandlerRequest) => Promise<HandlerAnswer>>
 >;
 
 export function createHandlers(database: RequestDatabase): Handlers {
@@ -48,6 +50,15 @@ export function createHandlers(database: RequestDatabase): Handlers {
     getMe: ({ userId }) =>
       database.inRequestRole(async (client) =>
         profileResponse(await findPlayerForAccount(client, userId)),
+      ),
+
+    // **The one handler that does not run as `app_request`.** That role holds
+    // DELETE on no table, deliberately; erasure is the sanctioned exception and
+    // runs under `retention_job`, which is exactly what `CLAUDE.md`'s
+    // append-only invariant says the erasure path does.
+    deleteMe: ({ userId }) =>
+      database.inErasureRole(async (client) =>
+        erasureResponse(await deletePlayerForAccount(client, userId)),
       ),
 
     linkPlayer: async ({ userId, body, header }) => {
@@ -160,10 +171,13 @@ export function createApp({ version, verify, log, handlers }: AppOptions): Hono 
       ms: Date.now() - startedAt,
     });
 
-    return context.json(
-      result.body as Record<string, unknown>,
-      result.status as ContentfulStatus,
-    );
+    // **`body` present or absent, not a status check.** A 204 built with
+    // `context.json` throws inside the Fetch `Response` constructor — a null-body
+    // status cannot carry one — and it throws here, outside `run()`'s try/catch,
+    // so the client would get Hono's 500 rather than the answer the handler gave.
+    return "body" in result
+      ? context.json(result.body as Record<string, unknown>, result.status as ContentfulStatus)
+      : context.body(null, result.status);
   });
 
   return app;
@@ -195,7 +209,7 @@ async function run(
   operationId: string,
   log: Logger,
   request: HandlerRequest,
-): Promise<Answer> {
+): Promise<HandlerAnswer> {
   const handler = handlers[operationId];
   if (handler === undefined) {
     // Unreachable while the test holding `IMPLEMENTED_OPERATIONS` to these keys

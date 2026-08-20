@@ -218,11 +218,24 @@ export function buildOpenApiDocument(): unknown {
         },
         delete: {
           operationId: "deleteMe",
-          summary: "Erase the player and everything recorded about them.",
+          summary: "Erase the player and everything this service recorded about them.",
+          // **The scope is in the contract, not only in the server.** A caller
+          // reading `204 Erased.` would reasonably conclude the account is gone
+          // too, and it is not: identity lives in the provider's `neon_auth`
+          // schema and this service holds no credential that could remove it.
+          // Saying so here is cheaper than a support thread, and it is the one
+          // place both halves of the stack read.
+          description:
+            "Deletes the player row and everything that references it: attempts, " +
+            "issued items, offline packs, skill ratings and diagnosis events. " +
+            "Aggregates that carry no player identifier are unaffected. This does " +
+            "not delete the Neon Auth account — the email and the sign-in survive " +
+            "it, and removing those is a separate act at the identity provider.",
           responses: {
             "204": { description: "Erased." },
             ...errors,
-            ...notImplemented,
+            // No `notImplemented`: this one is built, and the parity gate holds
+            // the contract's 501 list to exactly the operations that are not.
           },
         },
       },

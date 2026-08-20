@@ -113,7 +113,14 @@ describe("the figures live in exactly one module", () => {
       const found = sourceFiles(src).filter((file) => path.basename(file) === excused);
       expect(found, `${excused} is excused and absent`).toHaveLength(1);
       // And it really is an HTTP file, not one quietly holding a day count.
-      expect(readFileSync(found[0]!, "utf8")).not.toMatch(/RETENTION|days/i);
+      //
+      // `retention_job` is struck out first: it is the name of a database role,
+      // not a figure. The erasure path runs under it by invariant, so
+      // `http-server.ts` has to be able to say the word — and a gate that
+      // forbids naming the role you use gets deleted rather than obeyed. What
+      // is left of the pattern still catches a window or a day count.
+      const withoutTheRoleName = readFileSync(found[0]!, "utf8").replaceAll("retention_job", "");
+      expect(withoutTheRoleName).not.toMatch(/RETENTION|days/i);
     }
   });
 

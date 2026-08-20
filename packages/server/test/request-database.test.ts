@@ -100,3 +100,69 @@ describeWithDatabase("the request path connects as app_request", () => {
       .toBeTruthy();
   });
 });
+
+describeWithDatabase("and the erasure path connects as retention_job", () => {
+  let db: TestDatabase;
+  let requests: RequestDatabase;
+
+  beforeEach(async () => {
+    db = await freshDatabase();
+    requests = createRequestDatabase(db.url);
+  });
+
+  afterEach(async () => {
+    await requests.close();
+    await db.close();
+  });
+
+  it("runs work under the one role that holds DELETE", async () => {
+    const who = await requests.inErasureRole(async (client) => {
+      const result = await client.query<{ role: string }>("SELECT current_user AS role");
+      return result.rows[0]?.role;
+    });
+    expect(who).toBe("retention_job");
+  });
+
+  it("and that role really can delete a player, where app_request cannot", async () => {
+    // Both directions in one test, because either alone is satisfiable by
+    // accident: a seam that never switched roles would pass the first half, and
+    // a seam that switched to the owner would pass the second.
+    await db.client.query(
+      "INSERT INTO players (id, age_band, auth_user_id) VALUES ($1, 'adult', $2)",
+      [PLAYER, ACCOUNT],
+    );
+
+    await expect(
+      requests.inRequestRole((client) => client.query("DELETE FROM players")),
+    ).rejects.toThrow(/permission denied/i);
+
+    const gone = await requests.inErasureRole((client) =>
+      client.query("DELETE FROM players WHERE id = $1", [PLAYER]),
+    );
+    expect(gone.rowCount).toBe(1);
+  });
+
+  it("it cannot write, so an erasure cannot become an edit", async () => {
+    // `retention_job` holds SELECT and DELETE and nothing else
+    // (`grants.test.ts` enumerates every table). This is the seam's half of
+    // that: the wider role reached through `inErasureRole` is still narrow in
+    // the direction that matters.
+    await expect(
+      requests.inErasureRole((client) =>
+        client.query(
+          "INSERT INTO players (id, age_band, auth_user_id) VALUES ($1, 'adult', $2)",
+          [PLAYER, ACCOUNT],
+        ),
+      ),
+    ).rejects.toThrow(/permission denied/i);
+  });
+
+  it("and it does not leak to whatever uses the connection next", async () => {
+    await requests.inErasureRole((client) => client.query("SELECT 1"));
+
+    const who = await requests.asOwner((client) =>
+      client.query<{ role: string }>("SELECT current_user AS role"),
+    );
+    expect(who.rows[0]?.role).not.toBe("retention_job");
+  });
+});
