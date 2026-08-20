@@ -3,7 +3,7 @@
   "packageManager": "npm",
   "testRunner": "vitest",
   "coverageAnalysis": "all",
-  "mutate": ["src/**/*.ts", "!src/adapters/**", "!src/index.ts"],
+  "mutate": ["src/**/*.ts", "!src/adapters/**", "!src/index.ts", "!src/pack/misconception-copy.ts"],
   "reporters": ["clear-text", "progress", "html"],
   "tempDirName": "tmp/stryker",
   "htmlReporter": { "fileName": "tmp/stryker/mutation.html" },

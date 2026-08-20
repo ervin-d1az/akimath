@@ -11,15 +11,15 @@ import { predictDistractors } from "../../src/pack/distractors.js";
 import {
   copyStrings,
   FORBIDDEN_WORDS,
+  fallbackDiagnosis,
+  misconceptionCopy,
   parseMisconceptions,
   scoldings,
 } from "../../src/pack/misconceptions.js";
 
 const SALT = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
-const COPY_FILE = fileURLToPath(new URL("../../content/misconceptions.json", import.meta.url));
-const MISCONCEPTIONS = parseMisconceptions(JSON.parse(readFileSync(COPY_FILE, "utf8")));
-
-const FALLBACK = MISCONCEPTIONS.get("no_specific_diagnosis") as DiagnosisCopy;
+const MISCONCEPTIONS = misconceptionCopy();
+const FALLBACK = fallbackDiagnosis();
 
 const build = (count: number, misconceptions = MISCONCEPTIONS) =>
   buildPack(

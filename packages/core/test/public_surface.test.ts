@@ -53,6 +53,11 @@ const PUBLIC_SURFACE = [
   // neither owned it — the reader matched a comment rather than a producer.
   "toManifestEntry",
   "fromManifestEntry",
+  // The diagnosis copy, as a value. `packages/server` issues packs inside a
+  // request and needs the same words the build script uses; a file read in a
+  // request path is ambient IO in the one package that forbids it.
+  "misconceptionCopy",
+  "fallbackDiagnosis",
 ].sort();
 
 /** Anything that turns a value into text belongs in the contract, not here. */

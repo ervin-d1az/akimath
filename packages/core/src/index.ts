@@ -46,6 +46,11 @@ export { coreRegistry } from "./templates/index.js";
 
 export { fromManifestEntry, toManifestEntry, type ManifestEntry } from "./manifest.js";
 
+// `FALLBACK_MISCONCEPTION` stays internal on purpose: it is a string, and every
+// export here is a function so that nothing crossing the boundary can grow a
+// `toString`. A caller wants the copy, not the key that finds it.
+export { fallbackDiagnosis, misconceptionCopy } from "./pack/misconceptions.js";
+
 export type {
   GeneratedItem,
   PromptToken,
