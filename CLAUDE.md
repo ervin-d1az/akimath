@@ -116,7 +116,7 @@ format and its OpenAPI half.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only) plus three forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **307 tests, green, 98.94% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **342 tests, green, 99.01% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -128,9 +128,10 @@ format and its OpenAPI half.
   key set that is *injected*, so the tests run the real function against real Ed25519 keys.
   **`NEON_AUTH_BASE_URL` is not set anywhere yet** — it lives on the Neon console's Auth page and
   is not derivable from the connection string, so `npm run dev` exits 1 until somebody pastes it in.
-  **Four endpoints are implemented.** Three are the account's whole life — `GET /me` reads the
-  profile, `POST /players/link` creates it, `DELETE /me` erases it — and the fourth is the one the
-  rest of the product hangs off. Each verifies the
+  **Six endpoints are implemented.** Three are the account's whole life — `GET /me` reads the
+  profile, `POST /players/link` creates it, `DELETE /me` erases it — two are the offline loop,
+  `POST /packs` issuing and `POST /attempts` grading, and `GET /me/history` reads back what the
+  loop wrote. Each verifies the
   token and connects through `src/adapters/request-database.ts`, which opens a transaction and
   `SET LOCAL ROLE`s into a role that is never the owner. `GET /me` answers the frozen `Me` shape,
   or **404 and not 401** when the account has no player yet. `POST /players/link` takes the
@@ -139,7 +140,7 @@ format and its OpenAPI half.
   `route()` returns *an answer* or *whose handler should produce one*, so the surface stays where
   the parity gate reads it, and `IMPLEMENTED_OPERATIONS` is the contract's 501 list inverted,
   checked in both directions — an endpoint stops advertising itself as unbuilt in the same diff
-  that builds it. The other four still answer **501**.
+  that builds it. The other two still answer **501**.
   **Erasure is the one handler that does not run as `app_request`.** That role holds DELETE on no
   table, which is what makes the append-only-attempts invariant structural; `DELETE /me` goes
   through `inErasureRole` (`SET LOCAL ROLE retention_job`) and deletes one `players` row, and the
@@ -169,7 +170,35 @@ format and its OpenAPI half.
   answering as if both landed is worse than saying so. The constraint is the thing to argue with
   if replaying a series ever becomes a feature, which is the right place for that argument.
   0004 also persists **`session_id`**, which every submission has carried since the freeze with
-  nowhere to land — it is what a `GET /me/history` entry will be grouped by. **It does not delete the Neon Auth
+  nowhere to land — it is what a `GET /me/history` entry is grouped by.
+  **`POST /packs` is the ninth operation, added because there were only eight.**
+  `GET /packs/{packId}` fetched a pack by an id and nothing minted one, so `offline_packs` could
+  only ever be empty and a pack attempt could never reach `POST /attempts`. Issuing takes no body —
+  the player comes from the session — and no `Idempotency-Key`, because issuing is not idempotent
+  by nature and a second pack is harmless. **Every item is template-generated**, and that is a
+  constraint rather than a simplification: an authored item carries no template reference, so
+  `(packId, index)` could not address it and nothing could grade it. `src/packs.ts` builds the pack
+  and its manifest *together and in the same order* — one list seen from the two ends of the
+  offline loop — and `test/issue-pack.test.ts` closes it for real: issue, rederive the answer from
+  the row the server wrote, sync it, and watch it come back `ok: true`. **Said plainly: an issued
+  pack is twenty integer subtractions**, worse content than the seventy authored items the app
+  ships, and nothing should prefer it until there is a second template family or a rating to move
+  the ladder. What landed is the mechanism, which had no first step. `storedAnswer` lives in
+  `packages/contract` so the pack builder and the server make one decision about shape and
+  spelling — that is the bug from #50 and a second copy is how it returns.
+  **`GET /me/history` is a session at a time.** The frozen shape asks for a `score` and a `title`
+  and neither means anything about one answered item. `ratingDelta` is **null** because rating is
+  F4 and a number would be invented; `kind` is always `series`, because a puzzle leaves no row in
+  any table so nothing can report one. A session spanning two skills is **not** named after
+  either — `min(skill_id)` would call it whichever sorts first, which is not a fact about the
+  session. `@akimath/core`'s `skillName()` is where a skill gets a name, since `skill_id` is a
+  `smallint` in five tables and a name in none of them. The operation declares no parameters, so
+  `HISTORY_LIMIT` is the server's cap and it is stated in `src/history.ts` rather than buried in
+  the query.
+  Two things issuance leaves: `runRetention` deletes `diag_events` and `attempts` and never
+  `offline_packs`, so a latent gap is now live; and `GET /packs/{packId}` is still 501, because a
+  rebuilt pack reflects *current* copy and whether a re-fetch may differ from what was issued is
+  its own decision. **It does not delete the Neon Auth
   account** — identity lives in the provider's `neon_auth` schema and this service holds no
   credential that could remove it, so the email and the sign-in survive the call. That scope is
   written into the operation's `description` in `contract/openapi.json` rather than left for a
@@ -190,7 +219,7 @@ format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 82 of the 307 report as skipped rather than passing quietly.
+  run; leave it unset and 92 of the 342 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
@@ -198,8 +227,8 @@ format and its OpenAPI half.
   recorded normalisations, and `canon.golden.json`. 189 tests, green, 91.71% mutation score,
   0 clones. **Zod 4.4.3 is the repository's first runtime dependency**, pinned exactly
   because the determinism gate is byte-for-byte.
-- **Does not exist.** Four of the eight contracted endpoints — everything that issues an item or a
-  pack, and everything that reads a rating or a history — no dev environment, no deploy, and
+- **Does not exist.** Two of the nine contracted endpoints — `GET /items/next`, which needs an
+  issuance policy, and `GET /me/standing`, which needs a rating — plus `GET /packs/{packId}` — no dev environment, no deploy, and
   no deployed *application*. **The database is provisioned**: a Neon project (`akimath`,
   `aws-us-east-1`, PostgreSQL 18.4) with both migrations applied, its connection strings in
   `packages/server/.env.local`, which is gitignored. `MIGRATE_DATABASE_URL` is the direct string and
