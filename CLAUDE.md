@@ -86,7 +86,7 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1886 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1952 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **The streak can say it is about to go, and that it went.** `streakLength` has answered *how
@@ -114,7 +114,18 @@ format and its OpenAPI half.
   Still forked and still counted: `nav_glyph_spec.dart`'s three marks, whose replacement changes
   what the fork's own comparison test means. The character sheet draws the whole set, because a
   parser test can say the geometry lands inside its viewBox and cannot say the flame looks like a
-  flame. **A key's fill says what pressing it does** — `KeyRole` in the pure layout, the colour in
+  flame.
+  **`Perfil` is the third home and `Ajustes` is the stack above it.** Declared rule 1 names the
+  bar's homes as *inicio, mapa, progreso y perfil*; the third root was labelled after a settings
+  screen, which that rule does not name. The content splits along the seam a player feels — who I
+  am is the root, what the app does is the stack — and the stack pushes onto the **tab's own
+  navigator** (`TabStack`) so the bar stays underneath, which is what the group badge over 4.1–4.7
+  says. `RootScaffold`'s `PopScope` lets a system back pop the tab before the app closes. The list
+  holds **two rows, because two destinations exist**; the other four are absent rather than greyed
+  out, and a test pins `Accesibilidad` absent so it turns red the day that row lands. **The nav
+  fork is deleted** — all four marks are transcribed, every tab has its own, and the
+  house-as-fallback that once made two tabs share a mark is gone as well as caught.
+  **A key's fill says what pressing it does** — `KeyRole` in the pure layout, the colour in
   the adapter; all three pads were white, and the design draws digits white, the operator strip
   accent, backspace quiet and submit the action green. Exactly one key on a pad is green, and a
   test says so.
