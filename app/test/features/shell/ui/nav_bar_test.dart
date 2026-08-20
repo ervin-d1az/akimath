@@ -1,3 +1,4 @@
+import 'package:akimath_app/design/brand/brand_drawing_painter.dart';
 import 'package:akimath_app/design/tokens/tokens.dart';
 import 'package:akimath_app/features/shell/policy/visible_tabs.dart';
 import 'package:akimath_app/design/widgets/candy_surface.dart';
@@ -33,10 +34,37 @@ Future<AppTab?> _pump(
 
 void main() {
   group('the bar draws what the policy hands it', () {
-    testWidgets('both roots that exist today', (WidgetTester tester) async {
+    testWidgets('every root that exists today', (WidgetTester tester) async {
       await _pump(tester);
       expect(find.text('Inicio'), findsOneWidget);
+      expect(find.text('Avance'), findsOneWidget);
       expect(find.text('Ajustes'), findsOneWidget);
+    });
+
+    testWidgets('and no two of them carry the same mark', (WidgetTester tester) async {
+      // **This is here because it was false.** `Avance` became a root and the
+      // bar fell through to the house for it, so two tabs carried one mark in
+      // a bar whose whole argument is that the mark is what you learn. Nothing
+      // noticed, because nothing compared them to each other.
+      //
+      // Compared by the drawing rather than by pixels: the marks are painted,
+      // so no widget names them, but each `CustomPaint` holds the
+      // `BrandDrawing` it was given.
+      await _pump(tester);
+
+      final List<Object?> drawings = tester
+          .widgetList<CustomPaint>(find.descendant(
+            of: find.byType(NavBar),
+            matching: find.byWidgetPredicate(
+              (Widget w) => w is CustomPaint && w.painter is BrandDrawingPainter,
+            ),
+          ))
+          .map((CustomPaint p) => (p.painter! as BrandDrawingPainter).drawing)
+          .toList();
+
+      expect(drawings, hasLength(visibleTabs(rootsPresentToday).length));
+      expect(drawings.toSet(), hasLength(drawings.length),
+          reason: 'two tabs share a mark');
     });
 
     testWidgets('it names no tab that has no root', (WidgetTester tester) async {
