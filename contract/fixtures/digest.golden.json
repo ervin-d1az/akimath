@@ -1,0 +1,55 @@
+{
+  "pack_salt_hex": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+  "vectors": [
+    {
+      "canonical": "0",
+      "digest": "6a8aadf45566254ea2cf0dc9a005b1e826d72be26530a591535acae86cf26c78",
+      "stored": "0"
+    },
+    {
+      "canonical": "7",
+      "digest": "b088d635c74da1b61dbe98055042c3659c304d1594371e34eec55976add76302",
+      "stored": "7"
+    },
+    {
+      "canonical": "42",
+      "digest": "25451ab8563d1e3e35dc075c5c45f7a4164cda16d298e27f9251ad6095c38339",
+      "stored": "42"
+    },
+    {
+      "canonical": "-9",
+      "digest": "28cabb5d8b1a162013bc6204bbbbd9b5858d11a8875b888c1067bc66c1f0ea92",
+      "stored": "-9"
+    },
+    {
+      "canonical": "1/2",
+      "digest": "b197d7792af278331cd4d257724401a1c4ab2aad4ff1a74e65d6f0e2a66c4d00",
+      "stored": "1/2"
+    },
+    {
+      "canonical": "2/4",
+      "digest": "227b6eb4c4a0476cedc3a29d318d7042820121ff509c84cdf73aae50412fcaef",
+      "stored": "2/4"
+    },
+    {
+      "canonical": "1/3",
+      "digest": "ff4b2f32c1b1824d9dcb041b29fe367b211f2ce9b2003bb64327753315876ba1",
+      "stored": "1/3"
+    },
+    {
+      "canonical": "-1/2",
+      "digest": "81e55eb143509166d06ec4737bb790c91a0c5004fe908265babc5bb21d5138c0",
+      "stored": "-1/2"
+    },
+    {
+      "canonical": "12/7",
+      "digest": "230deece19dfa0df991bd3b08c94f92f5e0f488fd956fbc162983d316d988e2c",
+      "stored": "12/7"
+    },
+    {
+      "canonical": "100",
+      "digest": "754f85ca5fadea3a6cdfaff7a9a9ca4bd64729bb5bf5dd30e4905c53859e3d43",
+      "stored": "100"
+    }
+  ]
+}

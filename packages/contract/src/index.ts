@@ -22,6 +22,13 @@ export type {
 } from "./canon.js";
 
 export { buildCanonGolden, CANON_INPUTS } from "./canon-vectors.js";
+export {
+  buildDigestGolden,
+  DIGEST_GOLDEN_SALT,
+  DIGEST_INPUTS,
+  type DigestGolden,
+  type DigestVector,
+} from "./digest-vectors.js";
 export type { CanonGolden, CanonVector } from "./canon-vectors.js";
 
 export { canonicalJson } from "./canonical-json.js";
