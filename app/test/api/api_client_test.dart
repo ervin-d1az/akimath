@@ -15,23 +15,26 @@ const String _token = 'a.bearer.token';
 /// socket — real headers, real status line, real body. A fake `HttpClient`
 /// would have proved that the client calls the fake correctly.
 class _Server {
-  _Server(this._socket, this.requests);
+  _Server(this._socket, this.requests, this.bodies);
 
   static Future<_Server> answering(
     Future<void> Function(HttpRequest request) respond,
   ) async {
     final HttpServer socket = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final List<HttpRequest> requests = <HttpRequest>[];
+    final List<String> bodies = <String>[];
     socket.listen((HttpRequest request) async {
       requests.add(request);
+      bodies.add(await utf8.decodeStream(request));
       await respond(request);
       await request.response.close();
     });
-    return _Server(socket, requests);
+    return _Server(socket, requests, bodies);
   }
 
   final HttpServer _socket;
   final List<HttpRequest> requests;
+  final List<String> bodies;
 
   Uri get baseUrl => Uri.parse('http://${_socket.address.host}:${_socket.port}/');
 
@@ -215,6 +218,101 @@ void main() {
       );
 
       expect(await client.getMe(_token), isA<MeUnreachable>());
+    });
+  });
+
+  group('POST /players/link over a real socket', () {
+    Future<LinkResult> link({String token = _token, String key = 'k-1'}) => client.linkPlayer(
+      accessToken: token,
+      playerId: _playerId,
+      ageBand: AgeBand.under13,
+      idempotencyKey: key,
+    );
+
+    test('a 200 becomes the profile the link created', () async {
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'playerId': _playerId,
+        'ageBand': 'under_13',
+        'createdAt': '2026-08-19T09:15:00.000Z',
+      }));
+
+      final LinkResult result = await link();
+      expect(result, isA<LinkDone>());
+      expect((result as LinkDone).me.playerId, _playerId);
+    });
+
+    test('it posts the band and the key, and never the account', () async {
+      // The server takes the account from the token and refuses a body that
+      // mentions it. There is no parameter for one here, so there is nothing
+      // to send by mistake.
+      await serving((HttpRequest request) => _json(request, 200, <String, Object?>{
+        'playerId': _playerId,
+        'ageBand': 'under_13',
+        'createdAt': '2026-08-19T09:15:00.000Z',
+      }));
+
+      await link(key: 'the-key');
+
+      final HttpRequest asked = server.requests.single;
+      expect(asked.method, 'POST');
+      expect(asked.uri.path, '/players/link');
+      expect(asked.headers.value('Idempotency-Key'), 'the-key');
+      expect(asked.headers.value(HttpHeaders.authorizationHeader), 'Bearer $_token');
+      expect(server.bodies.single, contains('"ageBand":"under_13"'));
+      expect(server.bodies.single, isNot(contains('authUserId')));
+    });
+
+    test('a 409 is a conflict a person can read, not a failure', () async {
+      await serving((HttpRequest request) => _json(request, 409, <String, Object?>{
+        'error': 'already_linked',
+        'message': 'This account already has a player.',
+      }));
+
+      final LinkResult result = await link();
+      expect(result, isA<LinkConflict>());
+      expect((result as LinkConflict).message, contains('already has a player'));
+    });
+
+    test('a 400 says what was wrong with the request', () async {
+      await serving((HttpRequest request) => _json(request, 400, <String, Object?>{
+        'error': 'malformed',
+        'message': 'ageBand must be one of under_13, 13_17, adult.',
+      }));
+
+      expect(await link(), isA<LinkMalformed>());
+    });
+
+    test('a 401 keeps its tag', () async {
+      await serving((HttpRequest request) => _json(request, 401, <String, Object?>{
+        'error': 'invalid_session',
+        'message': 'expired',
+      }));
+
+      final LinkResult result = await link();
+      expect((result as LinkRejected).tag, 'invalid_session');
+    });
+
+    test('a 500 and an unreadable 200 are both failures', () async {
+      await serving((HttpRequest request) => _json(request, 500, <String, Object?>{}));
+      expect(await link(), isA<LinkFailed>());
+    });
+
+    test('no answer at all is unreachable', () async {
+      final HttpServer dead = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final Uri gone = Uri.parse('http://${dead.address.host}:${dead.port}/');
+      await dead.close(force: true);
+      final ApiClient orphan = ApiClient(baseUrl: gone);
+      addTearDown(orphan.close);
+
+      expect(
+        await orphan.linkPlayer(
+          accessToken: _token,
+          playerId: _playerId,
+          ageBand: AgeBand.adult,
+          idempotencyKey: 'k',
+        ),
+        isA<LinkUnreachable>(),
+      );
     });
   });
 }

@@ -195,4 +195,54 @@ void main() {
       }
     });
   });
+
+  group('the link the client can now make', () {
+    test('POST /players/link is an operation the contract describes', () {
+      final Map<String, Object?> paths = contract['paths']! as Map<String, Object?>;
+      final Map<String, Object?> post =
+          (paths['/players/link']! as Map<String, Object?>)['post']! as Map<String, Object?>;
+      expect(post['operationId'], 'linkPlayer');
+    });
+
+    test('every status the client maps is one the contract declares', () {
+      final Map<String, Object?> paths = contract['paths']! as Map<String, Object?>;
+      final Map<String, Object?> post =
+          (paths['/players/link']! as Map<String, Object?>)['post']! as Map<String, Object?>;
+      final Set<String> declared =
+          (post['responses']! as Map<String, Object?>).keys.toSet();
+
+      // One branch per status the client has a result type for. 409 is the one
+      // this operation added, and a client that mapped it without the contract
+      // declaring it would be reading a status from memory.
+      expect(declared, containsAll(<String>['200', '400', '401', '409']));
+    });
+
+    test('the request carries what the schema requires and nothing more', () {
+      final Map<String, Object?> link = _schema(contract, 'PlayerLink');
+      final Set<String> required =
+          (link['required']! as List<Object?>).cast<String>().toSet();
+      final Set<String> properties =
+          (link['properties']! as Map<String, Object?>).keys.toSet();
+
+      // What `linkPlayer` sends, spelled here so a field added to the schema
+      // without a parameter fails rather than silently going unsent.
+      expect(required, <String>{'playerId', 'ageBand'});
+      expect(properties, required);
+      expect(link['additionalProperties'], isFalse);
+    });
+
+    test('the header the contract marks required is one the client sends', () {
+      final Map<String, Object?> paths = contract['paths']! as Map<String, Object?>;
+      final Map<String, Object?> post =
+          (paths['/players/link']! as Map<String, Object?>)['post']! as Map<String, Object?>;
+      final List<Object?> parameters = post['parameters']! as List<Object?>;
+      final List<String> requiredHeaders = <String>[
+        for (final Object? p in parameters)
+          if ((p! as Map<String, Object?>)['in'] == 'header' &&
+              (p as Map<String, Object?>)['required'] == true)
+            (p)['name']! as String,
+      ];
+      expect(requiredHeaders, <String>['Idempotency-Key']);
+    });
+  });
 }
