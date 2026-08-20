@@ -4,7 +4,6 @@ import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/api/me_result.dart';
 import 'package:akimath_app/features/account/policy/session.dart';
 import 'package:akimath_app/features/home/data/day_log_store.dart';
-import 'package:akimath_app/features/progress/policy/progress_view.dart';
 import 'package:akimath_app/features/progress/ui/progress_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,7 +53,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(asked, isEmpty);
-    expect(find.text(historyMessage(HistoryState.noAccount)!), findsOneWidget);
+    // No section either: a `HISTORIAL` nothing can ever fill is a promise.
+    expect(find.text('HISTORIAL'), findsNothing);
     expect(find.text('DÍAS'), findsOneWidget);
   });
 

@@ -64,10 +64,13 @@ format and its OpenAPI half.
   preferences did and grew when `Avance` landed, both times without the policy being touched.
   **`features/progress/` is `Avance`**, and it has two halves that fail independently: the figures
   the device knows — days practised, the current run, moved out of Ajustes because what a player
-  has done is not a setting — and the history the server knows, from `GET /me/history`. No account
-  is an **invitation**, not an error; an empty history is told rather than apologised for; only the
-  three states somebody has to act on get a banner, and a refused session gets no retry because
-  asking twice with a dead token gets the same refusal. **No rating and no accuracy**: both are F4
+  has done is not a setting — and the history the server knows, from `GET /me/history`. **The
+  `HISTORIAL` section is absent when there is nothing true to say** — no account, or no sessions —
+  because nothing in the app sends an attempt yet, so a heading there would stay empty however much
+  a player played and the line under it would be a promise the product cannot keep. Same reading as
+  the toggles Ajustes does not draw (DR-P2). The three states somebody has to act on do get the
+  section, and a banner; a refused session gets no retry, because asking twice with a dead token
+  gets the same refusal. **No rating and no accuracy**: both are F4
   and `ratingDelta` comes back null, and a screen printing `±0` would be inventing a figure. The
   session that makes any of it possible is held by `RootScaffold` — two roots have to agree about
   whether there is an account, and their common ancestor is the only place that can hold it. In
