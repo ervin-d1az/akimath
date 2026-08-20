@@ -43,6 +43,23 @@ void main() {
       );
     });
 
+    test('mid-afternoon is still not at risk', () {
+      // **Brackets the constant rather than restating it.** A test asserting
+      // `atRiskFrom == 18` would be killed only by itself. These two — 7:12 in
+      // the morning and 15:00 in the afternoon against 20:14 in the evening —
+      // pin the hour into a range a product decision can move inside without
+      // anyone noticing, and cannot leave without a red build. A falsification
+      // shifting 18 to 17 survives on purpose; shifting it to 15 or to 21 does
+      // not.
+      expect(
+        streakStateFor(
+          attemptDays: run(last: day(2026, 8, 19), length: 13),
+          now: DateTime(2026, 8, 20, 15),
+        ),
+        StreakState.steady,
+      );
+    });
+
     test('the hour it turns is the one the policy names, not one before', () {
       final List<DateTime> days = run(last: day(2026, 8, 19), length: 3);
 
