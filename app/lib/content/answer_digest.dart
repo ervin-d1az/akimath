@@ -23,7 +23,10 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
+import '../design/widgets/spec/verdict.dart';
 import 'model/canon.dart';
+import 'model/item.dart';
+import '../features/round/policy/grading.dart';
 
 /// `HMAC-SHA256(salt, canonicalAnswer)`, lowercase hex.
 ///
@@ -75,3 +78,22 @@ List<int> _bytesOfHex(String hex) {
   }
   return bytes;
 }
+
+/// The verdict for an item, whichever way its answer is known.
+///
+/// **The adapter, and the reason it is one.** `features/round/policy/grading.dart`
+/// is a pure root and cannot import `package:crypto`, so a digest item cannot be
+/// graded there. Rather than thread a hashing closure through a pure function —
+/// which would put the seam in the wrong place and make every caller carry it —
+/// the pure policy keeps the case it can decide and this adds the one it cannot.
+///
+/// Both cases are the same rule: canonicalise what the player typed, compare it
+/// with what the item states. Only the comparison differs, because in one the
+/// item states the answer and in the other it states an HMAC of it.
+Verdict gradeItem(Item item, String typed) => switch (item.answer) {
+      PlainAnswer() => grade(item, typed),
+      DigestAnswer(:final String digest, :final String saltHex) =>
+        answerMatches(saltHex: saltHex, typed: typed, digest: digest)
+            ? Verdict.correct
+            : Verdict.wrong,
+    };

@@ -15,7 +15,7 @@ const Item _threeQuarters = Item(
     PromptToken.operator('+'),
     PromptToken.fraction(numerator: '2', denominator: '4'),
   ]),
-  expected: '5/4',
+  answer: PlainAnswer('5/4'),
   ladderStep: 3,
 );
 
@@ -54,7 +54,7 @@ void main() {
       const Item negative = Item(
         id: 'demo-2',
         stimulus: ArithmeticStimulus(<PromptToken>[PromptToken.text('2 − 9')]),
-        expected: '-7',
+        answer: PlainAnswer('-7'),
         ladderStep: 1,
       );
       expect(grade(negative, '-7'), Verdict.correct);
@@ -85,7 +85,7 @@ void main() {
       const Item broken = Item(
         id: 'broken',
         stimulus: ArithmeticStimulus(<PromptToken>[PromptToken.text('1 + 1')]),
-        expected: ' 002 ',
+        answer: PlainAnswer(' 002 '),
         ladderStep: 1,
       );
       expect(grade(broken, '2'), Verdict.wrong);

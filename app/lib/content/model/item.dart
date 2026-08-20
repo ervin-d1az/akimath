@@ -173,25 +173,75 @@ final class FigurateStimulus extends Stimulus {
   final int unknownIndex;
 }
 
+/// What an item's answer is known as.
+///
+/// **Two ways, because there are two kinds of pack.** The bundled fixture is
+/// authored, shipped and played on one device, so it can carry the answer in
+/// the clear. A pack the server issued cannot: `ARCHITECTURE.md` §4 says the
+/// answer never travels, so the item states an HMAC of it and the device
+/// verifies membership without ever holding the answer.
+///
+/// A sealed type rather than a nullable pair, so a reader cannot build an item
+/// with both and a grader cannot forget one.
+sealed class ItemAnswer {
+  const ItemAnswer();
+}
+
+/// The answer itself, in the canonical form `packages/contract` froze.
+final class PlainAnswer extends ItemAnswer {
+  const PlainAnswer(this.canonical);
+
+  final String canonical;
+}
+
+/// An HMAC of the answer, keyed by the pack's salt.
+///
+/// **The salt travels with the answer, not beside it.** It belongs to the pack,
+/// and a grader that took it as a separate argument would be one a call site
+/// could get wrong — or forget. Carrying it here makes a digest item
+/// self-sufficient and `gradeItem` a two-argument function.
+final class DigestAnswer extends ItemAnswer {
+  const DigestAnswer({required this.digest, required this.saltHex});
+
+  /// Lowercase hex, untruncated.
+  final String digest;
+
+  /// The pack's salt, as hex. Shared by every item in one pack.
+  final String saltHex;
+}
+
 class Item {
   const Item({
     required this.id,
     required this.stimulus,
-    required this.expected,
+    required this.answer,
     required this.ladderStep,
     this.distractors = const <String, Diagnosis>{},
   });
+
 
   final String id;
 
   /// What the item asks. One field, so there is one place to look.
   final Stimulus stimulus;
 
-  /// The answer, in the canonical form `packages/contract` froze.
+  /// How the answer is known: in the clear, or as a digest.
   ///
-  /// Offline this travels with the item, which is what makes a verdict possible
-  /// with no server — and provisional until sync, per the invariant.
-  final String expected;
+  /// Offline either one makes a verdict possible with no server — and
+  /// provisional until sync, per the invariant.
+  final ItemAnswer answer;
+
+  /// The answer in the clear, for the fixture format that has one.
+  ///
+  /// Throws on a digest item, which is the point: a caller reaching for a
+  /// plaintext answer that does not exist has made a mistake worth a stack
+  /// trace rather than a silent empty string.
+  String get expected => switch (answer) {
+        PlainAnswer(:final String canonical) => canonical,
+        DigestAnswer() => throw StateError(
+            'item "$id" states a digest; there is no plaintext answer to read',
+          ),
+      };
 
   /// Difficulty comes from the pack and is **never computed in Dart**.
   final int ladderStep;

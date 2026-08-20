@@ -13,7 +13,7 @@ void main() {
           PromptToken.operator('+'),
           PromptToken.text('1'),
         ]),
-        expected: '7/4',
+        answer: PlainAnswer('7/4'),
         ladderStep: 1,
       );
 
@@ -37,7 +37,7 @@ void main() {
         stimulus: ArithmeticStimulus(<PromptToken>[
           PromptToken.fraction(numerator: '3', denominator: '4'),
         ]),
-        expected: '3/4',
+        answer: PlainAnswer('3/4'),
         ladderStep: 1,
       );
 
@@ -57,7 +57,7 @@ void main() {
           PromptToken.text('4'),
           PromptToken.operator('='),
         ]),
-        expected: '5',
+        answer: PlainAnswer('5'),
         ladderStep: 1,
       );
 
@@ -76,7 +76,7 @@ void main() {
           PromptToken.operator('+'),
           PromptToken.operator('='),
         ]),
-        expected: '1',
+        answer: PlainAnswer('1'),
         ladderStep: 1,
       );
 
@@ -90,7 +90,7 @@ void main() {
       const Item item = Item(
         id: 'i',
         stimulus: ArithmeticStimulus(<PromptToken>[PromptToken.operator('/')]),
-        expected: '1',
+        answer: PlainAnswer('1'),
         ladderStep: 1,
       );
 

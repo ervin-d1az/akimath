@@ -16,7 +16,7 @@ const Item _preview = Item(
     PromptToken.fraction(numerator: '2', denominator: '4'),
     PromptToken.operator('='),
   ]),
-  expected: '5/4',
+  answer: PlainAnswer('5/4'),
   ladderStep: 3,
 );
 
@@ -136,7 +136,7 @@ void main() {
                 preview: Item(
                   id: family.key,
                   stimulus: family.value,
-                  expected: '8',
+                  answer: PlainAnswer('8'),
                   ladderStep: 2,
                 ),
                 streakDays: 3,

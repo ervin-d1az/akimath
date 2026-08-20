@@ -26,7 +26,7 @@ Item _item({Map<String, Diagnosis> distractors = const <String, Diagnosis>{}}) =
         PromptToken.text('17'),
         PromptToken.operator('='),
       ]),
-      expected: '9',
+      answer: PlainAnswer('9'),
       ladderStep: 3,
       distractors: distractors,
     );

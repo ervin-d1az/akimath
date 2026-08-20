@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:akimath_app/content/answer_digest.dart';
 import 'package:akimath_app/content/model/canon.dart';
+import 'package:akimath_app/content/model/item.dart';
+import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The Dart digest, held to the table `packages/contract` emitted.
@@ -136,6 +138,71 @@ void main() {
         answerMatches(saltHex: salt, typed: '7', digest: digest.toUpperCase()),
         isTrue,
       );
+    });
+  });
+
+  group('grading an item, whichever way its answer is known', () {
+    const Stimulus stimulus = ArithmeticStimulus(<PromptToken>[
+      TextToken('5'),
+      OperatorToken('+'),
+      TextToken('8'),
+      OperatorToken('='),
+    ]);
+
+    test('a plaintext item still grades the way it always did', () {
+      const Item item = Item(
+        id: 'claro',
+        stimulus: stimulus,
+        answer: PlainAnswer('13'),
+        ladderStep: 1,
+      );
+
+      expect(gradeItem(item, '13'), Verdict.correct);
+      expect(gradeItem(item, '14'), Verdict.wrong);
+    });
+
+    test('a digest item grades without the answer being in the file', () {
+      // The whole point: the pack states an HMAC, the device says right or
+      // wrong, and the answer is nowhere in the bytes it was handed.
+      final Item item = Item(
+        id: 'digerido',
+        stimulus: stimulus,
+        answer: DigestAnswer(
+          digest: answerDigest(saltHex: salt, canonicalAnswer: '13'),
+          saltHex: salt,
+        ),
+        ladderStep: 1,
+      );
+
+      expect(gradeItem(item, '13'), Verdict.correct);
+      expect(gradeItem(item, '14'), Verdict.wrong);
+    });
+
+    test('and forgives a spelling the same way', () {
+      final Item item = Item(
+        id: 'digerido',
+        stimulus: stimulus,
+        answer: DigestAnswer(
+          digest: answerDigest(saltHex: salt, canonicalAnswer: '13'),
+          saltHex: salt,
+        ),
+        ladderStep: 1,
+      );
+
+      expect(gradeItem(item, ' 013 '), Verdict.correct);
+    });
+
+    test('reading a plaintext answer off a digest item is a mistake, loudly', () {
+      // A caller reaching for an answer that does not exist has made an error
+      // worth a stack trace rather than a silent empty string.
+      final Item item = Item(
+        id: 'digerido',
+        stimulus: stimulus,
+        answer: DigestAnswer(digest: 'a' * 64, saltHex: salt),
+        ladderStep: 1,
+      );
+
+      expect(() => item.expected, throwsStateError);
     });
   });
 }

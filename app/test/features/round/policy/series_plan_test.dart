@@ -10,7 +10,7 @@ Item item(String id) => Item(
         PromptToken.text('1'),
         PromptToken.operator('='),
       ]),
-      expected: '2',
+      answer: PlainAnswer('2'),
       ladderStep: 1,
     );
 

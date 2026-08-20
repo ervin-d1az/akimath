@@ -214,7 +214,7 @@ class Pack {
     final String id = _requireString(entry, 'id');
     return Item(
       id: id,
-      expected: answer,
+      answer: PlainAnswer(answer),
       // Difficulty travels with the item. Rating never runs in Dart.
       ladderStep: _requireInt(entry, 'ladder_step'),
       stimulus: _stimulus(entry),
