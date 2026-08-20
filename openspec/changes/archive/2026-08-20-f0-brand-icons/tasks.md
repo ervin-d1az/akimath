@@ -55,39 +55,39 @@ TDD throughout: each test is written and **seen failing** before the code that s
       The gate reports 21 files under that root today and `brand_glyph.dart` and
       `nav_glyph_spec.dart` are two of them, so it is covered rather than absent, which is better
       than the check asked for.
-- [ ] 2.2 Write `app/test/design/icons/spec/icon_paths_test.dart` for both spec scenarios: backspace
+- [x] 2.2 Write `app/test/design/icons/spec/icon_paths_test.dart` for both spec scenarios: backspace
       resolves to **one** `BrandIconSpec` whether requested at 24 or 23 px; the submit arrow's stroke
       width is 3.2 and the backspace's 2.6.
       **Check:** `flutter test` — two failures. The first asserts spec **identity**, not equal
       rendering, or it will pass for the wrong reason (design D3).
-- [ ] 2.3 Write `app/lib/design/icons/spec/icon_paths.dart`, transcribing path data **verbatim** from
+- [x] 2.3 Write `app/lib/design/icons/spec/icon_paths.dart`, transcribing path data **verbatim** from
       the design digests. Where a digest gives no coordinates, leave the glyph out (design D2).
       **Check:** green; pure-boundary gate now reports the root present with a non-zero count.
-- [ ] 2.4 Record which of the ~21 glyphs were transcribed and which are waiting on a digest.
+- [x] 2.4 Record which of the ~21 glyphs were transcribed and which are waiting on a digest.
       **Check:** the list lives in this change's directory. "21 icons" with no inventory is not a
       count anyone can verify later.
 
 ## 3 · The adapter
 
-- [ ] 3.1 Write a widget test rendering one glyph at two sizes and confirming the painted stroke width
+- [x] 3.1 Write a widget test rendering one glyph at two sizes and confirming the painted stroke width
       matches the spec's, not a normalised default.
       **Check:** red.
-- [ ] 3.2 Write `app/lib/design/icons/brand_icon.dart`. It takes colour and size from the caller and
+- [x] 3.2 Write `app/lib/design/icons/brand_icon.dart`. It takes colour and size from the caller and
       holds no palette (proposal, Non-goals).
       **Check:** green; `no_color_literal_test.dart` green with a **higher** scanned-file count than
       before this change; `flutter analyze --fatal-infos` clean.
 
 ## 4 · Evidence
 
-- [ ] 4.1 **Tier 1** — `flutter analyze --fatal-infos` clean, `flutter test` green, the new total
+- [x] 4.1 **Tier 1** — `flutter analyze --fatal-infos` clean, `flutter test` green, the new total
       written here as a number. Baseline before this change is 135.
       **Check:** the count, recorded when known.
-- [ ] 4.2 **Tier 1b** — no Dart mutation harness is configured, so falsify (PROC-5, which edits
+- [x] 4.2 **Tier 1b** — no Dart mutation harness is configured, so falsify (PROC-5, which edits
       versioned code and is not optional): change the submit arrow's stroke from 3.2 to 3.0 and
       confirm `icon_paths_test.dart` goes red; restore and confirm the suite returns to 4.1's count
       exactly.
       **Check:** the failing assertion quoted, and the restored count matching.
-- [ ] 4.3 **Tier 2** — applies: render a sheet of every transcribed glyph on the iPhone 17 simulator
+- [x] 4.3 **Tier 2** — applies: render a sheet of every transcribed glyph on the iPhone 17 simulator
       and compare against the digests by eye. Transcription errors are exactly the class of defect a
       numeric test cannot catch (design D1).
       **Check:** a screenshot, and `main.dart` restored afterwards **by checksum** — `git diff` is
@@ -131,3 +131,34 @@ So no glyph was invented. What shipped instead:
 by an adapter, under the existing `design/**/spec/` pure root.
 
 255 Flutter tests green, analyze clean.
+
+---
+
+## Done, 2026-08-20 — what was transcribed and what was not
+
+**Sixteen of the twenty-one**: every `BrandGlyph` the app names. Each carries its
+verbatim `d`, its viewBox, the stroke weight the design assigned it and its caps,
+in `design/icons/spec/icon_paths.dart`.
+
+**Five deliberately not**, each with a reason rather than an omission:
+
+- **The four nav marks.** Their data is in hand — `0 0 26 26`, stroke 2.6, home /
+  map / progress / profile. `nav_glyph_spec.dart` is a *named fork* with its own
+  counter and its own drawing-comparison test, and replacing it changes what
+  those two assert. That is a different verification, so it is a different
+  change.
+- **The KenKen mark and the 60×60 server mark.** Also transcribed in the source
+  documents. Neither has a screen yet — the first belongs to `4.1`'s history row
+  and `4.15`'s topic list, the second to `4.10`. A spec entry with no caller is
+  the thing 2.4 exists to prevent.
+
+**One decision made while building, worth recording.** The path data is stored as
+`d` strings and parsed, rather than hand-translated into `Path` calls. D2 says
+transcribe verbatim and never redraw by eye; keeping the string is the only form
+in which that can be *checked by reading*, because the spec file and the design
+document then hold the same characters. `svg_path.dart` is the cost of that
+choice and it is a pure module with thirteen falsifications against it.
+
+**Tier 2 evidence** is `CharacterSheetScreen`'s glyph section, which is
+permanent rather than a throwaway preview: a parser test can say the geometry
+lands inside its viewBox and cannot say the flame looks like a flame.
