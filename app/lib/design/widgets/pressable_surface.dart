@@ -48,6 +48,7 @@ class PressableSurface extends StatefulWidget {
     this.padding = EdgeInsets.zero,
     this.width,
     this.height,
+    this.minHeight,
   }) : assert(
           shadow != null || pressEffect != null,
           'A surface with no shadow cannot travel into it, so it would ship '
@@ -77,6 +78,14 @@ class PressableSurface extends StatefulWidget {
   final double? width;
   final double? height;
 
+  /// A floor rather than a fixed size.
+  ///
+  /// The design states a settings row as `height:62`, and a fixed 62 clips the
+  /// label the moment the player raises the text setting — which this app is
+  /// gated at 1.3 for. `CandySurface` already carries the same field for the
+  /// same reason.
+  final double? minHeight;
+
   @override
   State<PressableSurface> createState() => _PressableSurfaceState();
 }
@@ -95,9 +104,11 @@ class _PressableSurfaceState extends State<PressableSurface> {
     final Offset? shadow = widget.shadow;
     final bool travelling = _down && shadow != null;
 
+    final double? floor = widget.minHeight;
     final Widget surface = Container(
       width: widget.width,
       height: widget.height,
+      constraints: floor == null ? null : BoxConstraints(minHeight: floor),
       padding: widget.padding,
       decoration: BoxDecoration(
         color: widget.background,
