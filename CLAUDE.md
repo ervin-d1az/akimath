@@ -28,6 +28,25 @@ exact `4.4.3` because the pack determinism gate is byte-for-byte.
 **Code, identifiers, comments and docs are in English.** Only end-user-visible text is in
 es-MX.
 
+## Where the design lives
+
+The source of truth for every screen is a **Claude Design project**, reachable through the
+`claude_design` MCP (`/design-login` if a session has no auth):
+
+- project `11887b49-aa66-4b2f-b059-de9100b124c1`
+- `AkiMath Pantallas Base.dc.html` — inicio, reto, acierto, error, mapa
+- `AkiMath Reactivos y Puzzles.dc.html` — the six families and the five boards
+- `AkiMath Primera Vez y Cuenta.dc.html` — onboarding and auth
+- `AkiMath Perfil y Estados.dc.html` — perfil, ajustes and the eight cross-cutting states
+- `AkiMath Marca.dc.html`, `Aki Hoja de Personaje.dc.html`, `TecladoReactivo`, `TecladoPuzzle`
+
+**Read it, do not write it.** `_ds/` is another team's design system and is out of bounds.
+
+Worth stating because it was assumed unreachable and cost real time twice: `f0-brand-icons`
+carried a *"blocked, the digests cannot be opened"* note for weeks, re-checked the morning it
+turned out they could. **The raw `.dc.html` is the primary source** — its `<svg>` elements carry
+verbatim path data, stroke widths and caps that a prose digest paraphrases.
+
 ## Layout
 
 ```
