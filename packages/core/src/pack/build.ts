@@ -7,7 +7,7 @@ import {
   type Pack,
 } from "@akimath/contract";
 
-import { rederive, type TemplateRegistry } from "../registry.js";
+import { rederive, resolve, type TemplateRegistry } from "../registry.js";
 import type { Declaration } from "./declaration.js";
 import { predictDistractors } from "./distractors.js";
 import { liftAuthored, readAuthoredFile } from "./lift.js";
@@ -75,7 +75,11 @@ function fromTemplate(
   seedIndex: number,
   misconceptions: ReadonlyMap<string, DiagnosisCopy>,
 ): Item {
-  const generated = rederive(registry, {
+  // **One resolve, two answers.** The template both generates the item and says
+  // which skill it exercises; asking the registry twice would let a future
+  // `rederive` and a future `resolve` disagree about which version answered.
+  const template = resolve(registry, source);
+  const generated = template.generate({
     templateId: source.templateId,
     templateVersion: source.templateVersion,
     seed: seedAt(declaration.seedBase, seedIndex),
@@ -91,7 +95,7 @@ function fromTemplate(
   );
 
   return {
-    skill_id: source.skillId,
+    skill_id: template.skillId,
     ladder_step: generated.ladderStep,
     keypad: "item",
     stimulus: {

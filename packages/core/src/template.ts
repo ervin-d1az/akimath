@@ -64,6 +64,22 @@ export interface GeneratedItem {
 export interface Template {
   readonly id: string;
   readonly version: number;
+  /**
+   * Which skill this version exercises. Integer, ≥ 1.
+   *
+   * **Here rather than in the pack declaration or the schema.**
+   * `attempts.skill_id` is `NOT NULL` and nothing on the wire supplies it — an
+   * attempt names an item, and an item is a `TemplateRef`. Neither
+   * `issued_items` nor `offline_packs.template_refs` records a skill either. So
+   * the server derives it, and the only thing in a recorded reference that
+   * knows is the template.
+   *
+   * **Per version, not per template.** Reclassifying a skill is a behaviour
+   * change and therefore a new version, never an edit — and an attempt keeps
+   * the skill it was rated against, because `attempts.skill_id` is stored
+   * rather than re-derived.
+   */
+  readonly skillId: number;
   readonly retired?: boolean;
   readonly generate: (ref: TemplateRef) => GeneratedItem;
 }

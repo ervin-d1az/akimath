@@ -2,7 +2,8 @@ import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { CORE_REGISTRY } from "../golden.js";
+import { resolve } from "../registry.js";
+import { CORE_REGISTRY } from "../templates/index.js";
 import { buildPack } from "../pack/build.js";
 import { parseDeclaration } from "../pack/declaration.js";
 import { parseMisconceptions } from "../pack/misconceptions.js";
@@ -52,11 +53,20 @@ function main(): void {
     JSON.parse(readFileSync(DECLARATION, "utf8")),
   );
 
-  // Puzzles belong to no skill, so only the item sources contribute one.
+  // Puzzles belong to no skill, so only the item sources contribute one — and a
+  // template source contributes its *template's*, which is the only place that
+  // fact is written down now.
   const skillIds = new Set(
-    declaration.sources.flatMap((source) =>
-      source.kind === "puzzles" ? [] : [source.skillId],
-    ),
+    declaration.sources.flatMap((source) => {
+      switch (source.kind) {
+        case "puzzles":
+          return [];
+        case "authored":
+          return [source.skillId];
+        case "template":
+          return [resolve(CORE_REGISTRY, source).skillId];
+      }
+    }),
   );
 
   const { pack, report } = buildPack(declaration, {
