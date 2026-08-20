@@ -60,7 +60,21 @@ TDD throughout: each test is written and **seen failing** before the widget that
       `Offset(3, 5)` and confirm `no_geometry_literal_test.dart` goes red; restore and confirm the
       suite returns to 5.1's count exactly.
       **Check:** the failing assertion quoted, and the restored count matching.
-- [ ] 5.3 **Tier 2** — **the resting half is evidenced; the travel is not, and the reason is tooling.**
+- [x] 5.3 **Tier 2** — **both halves are evidenced now.** The travel closed 2026-08-20 by
+      `app/integration_test/press_travel_test.dart`, running on the iPhone 17 simulator: a keypad
+      key is held with `startGesture` in the *shipping build*, its shadow goes from one hard
+      `(3,5)` to none, and the painted surface moves by exactly the shadow's own offset. Released,
+      both come back. The control presses an unavailable key and asserts it does not move.
+      **Two things the device corrected.** The travel is applied *inside* `PressableSurface` — the
+      widget's own box never moves, because the shadow's space is reserved on both axes and the
+      surface travels within it — so the first run measured `Offset.zero` on a key that was
+      visibly sunk, which is exactly how "the press does nothing in the device build" looked in
+      2026-08-17's attempt. And an unavailable key **does** carry a `PressableSurface`, behind an
+      `IgnorePointer`; the widget's comment claimed the surface was absent and had been wrong
+      since F0.
+      What is still a human's: *does it read as sinking rather than sliding*. A measurement cannot
+      answer that and this one does not pretend to.
+      · Superseded detail from the original entry:
       · **`evidence/controls-resting.png`, iPhone 17, 2026-08-17.** All four control kinds the change
         owns, at real device density: primary button shadow (4,6), keypad key (3,5), `IconButtonTile`
         (3,4) at 48×48, and the text action with **no shadow at all** — which is `PressEffect.none`

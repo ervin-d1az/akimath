@@ -328,7 +328,9 @@ flutter test
 # Tier 2, on a booted simulator. **`flutter test` does not reach
 # `integration_test/`**, which is how three of these suites sat broken for
 # weeks against copy that had changed under them. Run them when a screen or a
-# flow moves.
+# flow moves. Five suites, six cases: the playthrough, the shell's three roots,
+# every board format opened from the home, the press travel measured in the
+# shipping build, and the account tour, which skips itself without endpoints.
 #   xcrun simctl list devices booted        # take the id
 #   flutter test integration_test -d <id>
 #   # the account tour needs the endpoints, and skips itself without them:

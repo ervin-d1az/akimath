@@ -42,9 +42,15 @@ class KeypadKeyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!available) {
-      // Not a `PressableSurface`: an unavailable key must not travel under a
-      // thumb, because travel is the app's whole language for "that did
-      // something".
+      // **Still a `PressableSurface`, behind an `IgnorePointer`.** It has to
+      // be: the key keeps its size, its radius and its resting shadow, so the
+      // pad does not reflow when a key becomes unavailable. What it must not
+      // do is *travel* — travel is the app's whole language for "that did
+      // something" — and `IgnorePointer` is what stops the press reaching it.
+      //
+      // The comment here used to claim the surface was absent. It never was,
+      // and an integration test pressing an unavailable key on the device is
+      // what found the two out of step.
       return Opacity(
         opacity: 0.35,
         child: IgnorePointer(

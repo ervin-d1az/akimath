@@ -41,7 +41,14 @@ TDD throughout: each test is written and **seen failing** before the code that s
 - [x] 3.2 **Tier 1b** — falsify (PROC-5): change the negate key's codepoint from U+2212 to U+002D and
       confirm the layout test goes red; restore by checksum and confirm the count returns.
       **Check:** the failing assertion quoted, and the restored count matching.
-- [ ] 3.3 **Tier 2** — **half done, and the open half is blocked on tooling, not on work.**
+- [x] 3.3 **Tier 2** — **the open half closed 2026-08-20.**
+      `app/integration_test/press_travel_test.dart` holds a key on the iPhone 17 simulator, in the
+      shipping build, and measures the travel: the hard `(3,5)` shadow goes to none and the painted
+      surface moves by that exact offset, then both return on release. The synthetic
+      `PointerDownEvent` that "had no effect in the device build" was measuring the wrong box —
+      `PressableSurface` reserves the shadow's space on both axes and travels *within* it, so the
+      widget's own top-left never moves.
+      · Superseded detail from the original entry:
       · **The pad fits — verified on the iPhone 17, twice.**
         `openspec/changes/f2-core-loop/evidence/round-playable.png` and
         `openspec/changes/f2-onboarding-first-run/evidence/03-primer-reto.png`: the 4×4 item pad at
