@@ -118,6 +118,10 @@ to each from a seeded log — a state with no route into it is decoration.
 
 ### Requirement: Neither screen prints a figure the device cannot compute
 
+Every number on both screens SHALL come from the recorded days and the moment.
+Where the design draws one the device cannot produce, the app SHALL say the true
+half rather than approximate the whole.
+
 #### Scenario: No rating appears on the lost screen
 
 - **WHEN** `4.13` is drawn
