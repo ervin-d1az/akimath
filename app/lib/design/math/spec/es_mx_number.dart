@@ -114,6 +114,34 @@ abstract final class EsMxNumber {
     return '${value.inMinutes}${_thinSpace}min';
   }
 
+  /// A runway, in the two units a reader plans against.
+  ///
+  /// `4.12 Racha en riesgo` prints one of these. It differs from
+  /// [durationCoarse] in exactly the way its screen needs: *3 h* is not enough
+  /// to decide whether there is time, and *226 min* is not a figure anybody
+  /// reads.
+  ///
+  /// **A unit with a zero is dropped, not padded.** `0 h 46 min` is a
+  /// measurement pretending to be precise about a unit it does not have, and
+  /// `3 h 00 min` is a stopwatch — this is neither.
+  ///
+  /// **The floor is one minute, and a negative clamps to it.** The figure is a
+  /// runway, and `0 min` reads as *gone*: the day is not over until it is over,
+  /// which is the same reading that lets yesterday keep a streak alive.
+  static String hoursAndMinutes(Duration value) {
+    final int totalMinutes = value.inMinutes < 1 ? 1 : value.inMinutes;
+    final int hours = totalMinutes ~/ 60;
+    final int minutes = totalMinutes % 60;
+
+    if (hours == 0) {
+      return '$minutes${_thinSpace}min';
+    }
+    if (minutes == 0) {
+      return '$hours${_thinSpace}h';
+    }
+    return '$hours${_thinSpace}h$_thinSpace$minutes${_thinSpace}min';
+  }
+
   /// A board size: `6 × 6`, with U+00D7 rather than the letter x.
   static String dimensions(int width, int height) =>
       '$width$_thinSpace×$_thinSpace$height';
