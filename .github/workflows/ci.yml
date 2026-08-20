@@ -96,6 +96,13 @@ jobs:
             # coverage of the change.
             ts:
               - 'packages/server/**'
+              # **The linked packages count as this one's sources.**
+              # `packages/server` depends on both by `file:` link and compiles
+              # their TypeScript directly, so a change to either can break its
+              # typecheck or its grading. Filtering them out would let that
+              # happen on a pull request the `ts` job never ran for.
+              - 'packages/contract/**'
+              - 'packages/core/**'
               - 'package.json'
               - 'pnpm-workspace.yaml'
               - '.github/workflows/ci.yml'
@@ -309,6 +316,18 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: packages/server/package-lock.json
+      # **The linked packages are installed too, and they have to be.**
+      # `packages/server` depends on `@akimath/core` and `@akimath/contract` as
+      # `file:` links, and npm hoists their runtime dependencies into *this*
+      # package's `node_modules`. TypeScript does not resolve that way: it
+      # compiles `../contract/src/*.ts` and looks for `zod` beside those files,
+      # so a checkout where only this package was installed typechecks the
+      # server fine and fails on every file of the contract. That was the first
+      # red run after the link landed.
+      - run: npm ci
+        working-directory: packages/contract
+      - run: npm ci
+        working-directory: packages/core
       # npm, not pnpm: pnpm-workspace.yaml is declared but the migration has not
       # happened, and packages/server still carries its own package-lock.json.
       - run: npm ci
@@ -548,6 +567,13 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: packages/server/package-lock.json
+      # The linked packages, for the reason the `ts` job spells out: vitest
+      # resolves `@akimath/contract` through a symlink and looks for `zod`
+      # beside its sources, not beside this package's.
+      - run: npm ci
+        working-directory: packages/contract
+      - run: npm ci
+        working-directory: packages/core
       - run: npm ci
 
       # The suites skip their database half when TEST_DATABASE_URL is absent, so

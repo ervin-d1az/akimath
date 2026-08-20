@@ -165,7 +165,8 @@ export function buildOpenApiDocument(): unknown {
               ...(json(ref("VerdictBatch")) as object),
             },
             ...errors,
-            ...notImplemented,
+            // No `notImplemented`: this one is built, and the parity gate holds
+            // the contract's 501 list to exactly the operations that are not.
           },
         },
       },

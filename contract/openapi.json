@@ -618,16 +618,6 @@
               }
             },
             "description": "That method is not routed here."
-          },
-          "501": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "Submit a session's attempts and receive their verdicts."

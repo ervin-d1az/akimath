@@ -161,3 +161,20 @@ export function requiresSession(method: string, path: string): boolean {
   }
   return (operation.security ?? document.security ?? []).length > 0;
 }
+
+/**
+ * One named schema from the committed document.
+ *
+ * `requestBodyOf` answers "what does this operation accept", which is the right
+ * question for a gate about an operation. This is for the ones about a *shape*
+ * the server restates by hand — the elapsed-time ceiling, say, which lives in
+ * `packages/contract` and is copied here because this package validates
+ * without Zod.
+ */
+export function schemaNamed(name: string): Record<string, unknown> {
+  const schema = document.components.schemas[name];
+  if (!schema) {
+    throw new Error(`the contract declares no schema named ${name}`);
+  }
+  return schema as unknown as Record<string, unknown>;
+}

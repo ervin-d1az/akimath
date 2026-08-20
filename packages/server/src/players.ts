@@ -29,15 +29,19 @@ export interface PlayerRow {
  * the call here rather than relying on `JSON.stringify` keeps the contract's
  * requirement visible next to the field it governs.
  */
+export function noPlayerResponse(): Response {
+  return {
+    status: 404,
+    body: {
+      error: "no_player",
+      message: "This account has no player yet. Link one with POST /players/link.",
+    },
+  };
+}
+
 export function profileResponse(row: PlayerRow | null): Response {
   if (row === null) {
-    return {
-      status: 404,
-      body: {
-        error: "no_player",
-        message: "This account has no player yet. Link one with POST /players/link.",
-      },
-    };
+    return noPlayerResponse();
   }
 
   return {
