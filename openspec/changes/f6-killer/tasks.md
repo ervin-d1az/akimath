@@ -15,7 +15,9 @@
 ## 3. Play it
 
 - [x] 3.1 Red → green: the screen takes any caged puzzle, not KenKen specifically.
-- [ ] 3.2 Red → green: a Killer opens from the home and grades the same way.
+- [x] 3.2 Red → green: a Killer opens from the home and grades the same way.
+      `home_route_test.dart` walks the shipped pack and reports *5 shipped → 5
+      kinds reachable*; `Suma con jaulas` is one of them.
 - [x] 3.3 Register a Killer board under the design gates.
 
 ## 4. The pad offers what fits
@@ -26,5 +28,9 @@
 ## 5. Content and evidence
 
 - [x] 5.1 Author a Killer board into the pack, and emit it.
-- [ ] 5.2 Tier 1 across all stacks with counts; Tier 1b falsification matrix; Tier 2 on the
+- [x] 5.2 Tier 1 across all stacks with counts; Tier 1b falsification matrix; Tier 2 on the
       simulator.
+      **Tier 2 closed 2026-08-20 on the iPhone 17 simulator**, by the same case
+      `f6-word-search` 5.2 records: every format the pack carries is opened
+      from the home and left again, read off the live home rather than listed
+      in the test.

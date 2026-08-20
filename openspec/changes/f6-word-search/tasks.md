@@ -34,4 +34,11 @@ The card also held `pack.puzzles.first`, so four of the five shipped formats wer
 ## 5. Content and evidence
 
 - [x] 5.1 Author a grid into the pack and emit it.
-- [ ] 5.2 Tier 1 with counts, Tier 1b matrix, Tier 2 on the simulator.
+- [x] 5.2 Tier 1 with counts, Tier 1b matrix, Tier 2 on the simulator.
+      **Tier 2 closed 2026-08-20 on the iPhone 17 simulator.**
+      `integration_test/puzzle_tour_test.dart` gained a case that reads the
+      formats off the live home and opens every one of them — five, including
+      the sopa, which has its own screen because it has no keypad. It leaves
+      through `Salir` rather than `pageBack`: a board is pushed full-screen
+      with no navigation affordance, which is the design, so there is no back
+      button for the harness to press.
