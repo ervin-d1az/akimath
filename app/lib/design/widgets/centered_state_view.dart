@@ -25,6 +25,7 @@ class CenteredStateView extends StatelessWidget {
     required this.headlineLines,
     this.body,
     this.aki = false,
+    this.kicker,
     this.content,
     this.primary,
     this.secondary,
@@ -38,6 +39,16 @@ class CenteredStateView extends StatelessWidget {
 
   /// Whether Aki frames the state.
   final bool aki;
+
+  /// One element between Aki and the headline.
+  ///
+  /// **A slot rather than a caller's `Column`, because the ordering carries
+  /// meaning.** `4.12 Racha en riesgo` puts the run at stake *above* the
+  /// sentence about losing it: the figure is why the screen lands, and reading
+  /// it after the headline turns it into a footnote. A caller assembling its
+  /// own column above this widget would work and would put the decision
+  /// somewhere no other state screen can see it.
+  final Widget? kicker;
 
   /// Anything between the copy and the buttons — a stat row, a skeleton.
   final Widget? content;
@@ -67,6 +78,10 @@ class CenteredStateView extends StatelessWidget {
                 children: <Widget>[
                   if (aki) ...<Widget>[
                     Center(child: Aki(width: _akiWidth, semanticLabel: 'Aki')),
+                    const SizedBox(height: BrandShape.space4),
+                  ],
+                  if (kicker != null) ...<Widget>[
+                    Center(child: kicker!),
                     const SizedBox(height: BrandShape.space4),
                   ],
                   for (final String line in headlineLines)
