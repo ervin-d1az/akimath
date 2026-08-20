@@ -221,7 +221,9 @@ export function buildOpenApiDocument(): unknown {
               ...(json(ref("OfflinePack")) as object),
             },
             ...errors,
-            ...notImplemented,
+            // No `notImplemented`: this one is built. A re-fetch rebuilds the
+            // pack from the stored manifest and salt rather than reading a
+            // body back, which is what the manifest is for.
           },
         },
       },

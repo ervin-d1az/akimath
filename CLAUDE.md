@@ -116,7 +116,7 @@ format and its OpenAPI half.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only) plus three forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **346 tests, green, 99.01% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **353 tests, green, 99.05% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -128,10 +128,10 @@ format and its OpenAPI half.
   key set that is *injected*, so the tests run the real function against real Ed25519 keys.
   **`NEON_AUTH_BASE_URL` is not set anywhere yet** — it lives on the Neon console's Auth page and
   is not derivable from the connection string, so `npm run dev` exits 1 until somebody pastes it in.
-  **Six endpoints are implemented.** Three are the account's whole life — `GET /me` reads the
-  profile, `POST /players/link` creates it, `DELETE /me` erases it — two are the offline loop,
-  `POST /packs` issuing and `POST /attempts` grading, and `GET /me/history` reads back what the
-  loop wrote. Each verifies the
+  **Seven endpoints are implemented.** Three are the account's whole life — `GET /me` reads the
+  profile, `POST /players/link` creates it, `DELETE /me` erases it — three are the offline loop,
+  `POST /packs` issuing, `GET /packs/{packId}` fetching again and `POST /attempts` grading, and
+  `GET /me/history` reads back what the loop wrote. Each verifies the
   token and connects through `src/adapters/request-database.ts`, which opens a transaction and
   `SET LOCAL ROLE`s into a role that is never the owner. `GET /me` answers the frozen `Me` shape,
   or **404 and not 401** when the account has no player yet. `POST /players/link` takes the
@@ -140,7 +140,7 @@ format and its OpenAPI half.
   `route()` returns *an answer* or *whose handler should produce one*, so the surface stays where
   the parity gate reads it, and `IMPLEMENTED_OPERATIONS` is the contract's 501 list inverted,
   checked in both directions — an endpoint stops advertising itself as unbuilt in the same diff
-  that builds it. The other two still answer **501**.
+  that builds it. The other two — `GET /items/next` and `GET /me/standing` — still answer **501**.
   **Erasure is the one handler that does not run as `app_request`.** That role holds DELETE on no
   table, which is what makes the append-only-attempts invariant structural; `DELETE /me` goes
   through `inErasureRole` (`SET LOCAL ROLE retention_job`) and deletes one `players` row, and the
@@ -201,9 +201,15 @@ format and its OpenAPI half.
   `NOT EXISTS`, because both are referenced with `ON DELETE CASCADE` and deleting one early would
   take a child's answered history with it. `RETENTION_DAYS.sources` is keyed on when a source
   *stopped being usable*, so a pack outlives every attempt that could reference it by arithmetic,
-  and the guard makes it true by construction. One thing issuance still leaves:
-  `GET /packs/{packId}` is 501, because a rebuilt pack reflects *current* copy and whether a
-  re-fetch may differ from what was issued is its own decision. **It does not delete the Neon Auth
+  and the guard makes it true by construction. **`GET /packs/{packId}` rebuilds rather than
+  reads a body back** — `offline_packs` stores a manifest and a salt, not fifty rows of rendered
+  item, which is what the manifest is *for*. Every digest comes back identical, because the salt
+  is a column and the answers rederive; `test/issue-pack.test.ts` issues a pack and asserts the
+  re-fetch equals it exactly. The one thing that can differ is prose — the fallback diagnosis is
+  copy and copy gets edited — and prose is in no digest. A pack belonging to somebody else is the
+  same **404** as one that never existed, because telling them apart confirms a stranger's pack
+  exists. **A path parameter is the router's to extract**: `route()` returns them named on the
+  dispatch, so a handler never splits a path it did not match. **It does not delete the Neon Auth
   account** — identity lives in the provider's `neon_auth` schema and this service holds no
   credential that could remove it, so the email and the sign-in survive the call. That scope is
   written into the operation's `description` in `contract/openapi.json` rather than left for a
@@ -224,7 +230,7 @@ format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 96 of the 346 report as skipped rather than passing quietly.
+  run; leave it unset and 101 of the 353 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
@@ -233,7 +239,7 @@ format and its OpenAPI half.
   0 clones. **Zod 4.4.3 is the repository's first runtime dependency**, pinned exactly
   because the determinism gate is byte-for-byte.
 - **Does not exist.** Two of the nine contracted endpoints — `GET /items/next`, which needs an
-  issuance policy, and `GET /me/standing`, which needs a rating — plus `GET /packs/{packId}` — no dev environment, no deploy, and
+  issuance policy, and `GET /me/standing`, which needs a rating — no dev environment, no deploy, and
   no deployed *application*. **The database is provisioned**: a Neon project (`akimath`,
   `aws-us-east-1`, PostgreSQL 18.4) with both migrations applied, its connection strings in
   `packages/server/.env.local`, which is gitignored. `MIGRATE_DATABASE_URL` is the direct string and

@@ -9,6 +9,8 @@ import {
   coreRegistry,
   fallbackDiagnosis,
   issuable,
+  rederive,
+  resolve,
   toManifestEntry,
   type ManifestEntry,
   type TemplateRef,
@@ -100,21 +102,62 @@ export function issuedPack(options: IssueOptions): IssuedPack {
     throw new Error("no template is issuable, so there is nothing to put in a pack");
   }
 
-  const refs: TemplateRef[] = options.seeds.map((seed) => ({
-    templateId: template.id,
-    templateVersion: template.version,
-    seed,
-    ladderStep: PACK_LADDER_STEP,
-  }));
+  return packOf({
+    refs: options.seeds.map((seed) => ({
+      templateId: template.id,
+      templateVersion: template.version,
+      seed,
+      ladderStep: PACK_LADDER_STEP,
+    })),
+    saltHex: options.saltHex,
+    issuedAt: options.issuedAt,
+    expiresAt: packExpiry(options.issuedAt),
+    registry,
+  });
+}
+
+export interface RebuildOptions {
+  /** Read back from `offline_packs.template_refs`, in stored order. */
+  readonly refs: readonly TemplateRef[];
+  readonly saltHex: string;
+  readonly issuedAt: Date;
+  /** Stored rather than recomputed: the window belongs to the row. */
+  readonly expiresAt: Date;
+  readonly registry?: TemplateRegistry;
+}
+
+/**
+ * The pack a stored manifest stands for.
+ *
+ * **A re-fetch rebuilds rather than reads a body**, which is why
+ * `offline_packs` stores fifty references and not fifty rows — the whole point
+ * of the manifest (`ARCHITECTURE.md` §4). What comes back is the same pack:
+ * every digest is `HMAC(pack_salt, canonical answer)`, the salt is stored, the
+ * answers rederive from the references, and both timestamps are columns.
+ *
+ * **The one thing that can differ is prose.** The skill's fallback diagnosis is
+ * copy, and copy gets edited. It is not part of any digest and no attempt is
+ * graded against it, so a re-fetch that reads better than the original is a
+ * re-fetch that reads better — not a different pack.
+ */
+export function packOf(options: RebuildOptions): IssuedPack {
+  const registry = options.registry ?? coreRegistry();
+  const refs = options.refs;
+  if (refs.length === 0) {
+    // The frozen format allows an empty `items`, and an empty pack is still not
+    // one — there is nothing to play and nothing to grade. Thrown rather than
+    // answered: a stored manifest with no entries is a defect here.
+    throw new Error("a pack with no items is not one");
+  }
 
   const items: Item[] = refs.map((ref) => {
-    const generated = template.generate(ref);
+    const generated = rederive(registry, ref);
     const { shape, canonical } = storedAnswer(
       generated.answer.numerator,
       generated.answer.denominator,
     );
     return {
-      skill_id: template.skillId,
+      skill_id: resolve(registry, ref).skillId,
       ladder_step: generated.ladderStep,
       keypad: "item",
       stimulus: {
@@ -136,16 +179,19 @@ export function issuedPack(options: IssueOptions): IssuedPack {
     };
   });
 
-  const expiresAt = new Date(options.issuedAt.getTime() + PACK_LIFETIME_MS);
+  // Every skill the items actually belong to, sorted, rather than the first
+  // template's — a manifest is a list of references and nothing says they all
+  // exercise one skill.
+  const skills = [...new Set(items.map((item) => item.skill_id))].sort((a, b) => a - b);
   const pack: Pack = {
     pack_format_version: 1,
     pack_salt: options.saltHex,
     issued_at: instant(options.issuedAt),
-    expires_at: instant(expiresAt),
-    skill_nodes: [{ skill_id: template.skillId, state: "available" }],
+    expires_at: instant(options.expiresAt),
+    skill_nodes: skills.map((skill_id) => ({ skill_id, state: "available" as const })),
     // A skill with items and no fallback is a pack the frozen validator
     // refuses outright (`missing_skill_fallback`), so this is load-bearing.
-    skill_fallbacks: [{ skill_id: template.skillId, diagnosis: fallbackDiagnosis() }],
+    skill_fallbacks: skills.map((skill_id) => ({ skill_id, diagnosis: fallbackDiagnosis() })),
     items,
     puzzles: [],
   };
@@ -177,6 +223,23 @@ export function offlinePackResponse(packId: string, issued: IssuedPack): Respons
       // The pack body as the client will parse it — the same object this
       // module already put through `parsePack`.
       pack: issued.pack,
+    },
+  };
+}
+
+/**
+ * The answer a pack this player does not have earns.
+ *
+ * **404 and not 403.** A pack id belonging to somebody else and a pack id that
+ * never existed are the same fact to a caller who is entitled to neither, and
+ * telling them apart would confirm that a stranger's pack exists.
+ */
+export function noSuchPackResponse(): Response {
+  return {
+    status: 404,
+    body: {
+      error: "no_such_pack",
+      message: "There is no pack with that id for this player.",
     },
   };
 }

@@ -1,5 +1,5 @@
 import type pg from "pg";
-import type { ManifestEntry } from "@akimath/core";
+import { fromManifestEntry, type ManifestEntry, type TemplateRef } from "@akimath/core";
 
 /**
  * Writing an issued pack down.
@@ -57,4 +57,68 @@ export async function insertPack(
     throw new Error("the insert returned no row");
   }
   return row.id;
+}
+
+/** A stored pack, as far as the database can say what one is. */
+export interface StoredPack {
+  readonly refs: readonly TemplateRef[];
+  readonly saltHex: string;
+  readonly issuedAt: Date;
+  readonly expiresAt: Date;
+}
+
+/**
+ * The pack a player already has, or null.
+ *
+ * **Scoped to the player.** A pack id is a uuid a caller could have seen
+ * anywhere; without the `player_id` clause one account could read another's
+ * pack, and a pack is a list of items with their answer digests.
+ *
+ * **An expired pack is still returned.** `expires_at` says a device may not
+ * keep *playing* it, and that is the client's rule to enforce — the pack
+ * carries the field. Refusing to hand back a pack whose attempts are still
+ * unsynced would strand them.
+ *
+ * A manifest entry that will not read makes the whole pack null rather than a
+ * pack with a hole in it: `(packId, index)` addresses items by position, and a
+ * pack that quietly dropped one would shift every index after it.
+ */
+export async function packFor(
+  client: pg.ClientBase,
+  playerId: string,
+  packId: string,
+): Promise<StoredPack | null> {
+  const result = await client.query<{
+    template_refs: unknown[];
+    salt_hex: string;
+    issued_at: Date;
+    expires_at: Date;
+  }>(
+    `SELECT template_refs,
+            encode(pack_salt, 'hex') AS salt_hex,
+            issued_at,
+            expires_at
+       FROM offline_packs
+      WHERE id = $1::uuid AND player_id = $2::uuid`,
+    [packId, playerId],
+  );
+  const row = result.rows[0];
+  if (row === undefined) {
+    return null;
+  }
+
+  const refs: TemplateRef[] = [];
+  for (const entry of row.template_refs) {
+    const ref = fromManifestEntry(entry);
+    if (ref === null) {
+      return null;
+    }
+    refs.push(ref);
+  }
+  return {
+    refs,
+    saltHex: row.salt_hex,
+    issuedAt: row.issued_at,
+    expiresAt: row.expires_at,
+  };
 }

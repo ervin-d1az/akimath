@@ -17,8 +17,10 @@ import { erasureResponse } from "../erasure.js";
 import { historyResponse, HISTORY_LIMIT } from "../history.js";
 import {
   issuedPack,
+  noSuchPackResponse,
   offlinePackResponse,
   packExpiry,
+  packOf,
   PACK_ITEM_COUNT,
 } from "../packs.js";
 import { conflictResponse, linkOutcome, readLinkRequest } from "../link.js";
@@ -26,7 +28,7 @@ import { noPlayerResponse, profileResponse } from "../players.js";
 import { route, type HandlerAnswer } from "../routing.js";
 import type { Logger } from "./logger.js";
 import { recentSessions } from "./history-repository.js";
-import { insertPack } from "./pack-repository.js";
+import { insertPack, packFor } from "./pack-repository.js";
 import {
   insertAttempts,
   refForIssuedItem,
@@ -66,6 +68,8 @@ export interface HandlerRequest {
   readonly userId: string;
   readonly body: unknown;
   readonly header: (name: string) => string | undefined;
+  /** The path's own parameters, named by the route template that matched. */
+  readonly parameters: Readonly<Record<string, string>>;
 }
 
 export type Handlers = Readonly<
@@ -173,6 +177,24 @@ export function createHandlers(
           return noPlayerResponse();
         }
         return historyResponse(await recentSessions(client, playerId, HISTORY_LIMIT));
+      }),
+
+    // **A re-fetch rebuilds rather than reads a body.** `offline_packs` stores
+    // a manifest and a salt, not fifty rows of rendered item — that is
+    // `ARCHITECTURE.md` §4's whole reason for the manifest — so the pack is
+    // reconstructed from what is stored. Every digest comes back identical.
+    getOfflinePack: ({ userId, parameters }) =>
+      database.inRequestRole(async (client) => {
+        const packId = parameters["packId"] ?? "";
+        const playerId = await playerIdForAccount(client, userId);
+        if (playerId === null) {
+          return noPlayerResponse();
+        }
+        const stored = await packFor(client, playerId, packId);
+        if (stored === null) {
+          return noSuchPackResponse();
+        }
+        return offlinePackResponse(packId, packOf(stored));
       }),
 
     // **Issuing is the first step of the offline loop, and nothing had one.**
@@ -312,6 +334,7 @@ export function createApp({ version, verify, log, handlers }: AppOptions): Hono 
             userId: decision.userId,
             body: await readJsonBody(context),
             header: (name) => context.req.header(name),
+            parameters: decision.parameters,
           });
 
     // **One line per request, and `caller` is the kind rather than the who.**
