@@ -4,11 +4,14 @@ import {
   ATTEMPT_ELAPSED_MS_MAX,
   ATTEMPTS_PER_BATCH_MAX,
   gradeAnswer,
+  gradeSource,
+  matchesDigest,
   readAttemptBatch,
   unknownSourceResponse,
   verdictsResponse,
   type Attempt,
 } from "../src/attempts.js";
+import { answerDigest } from "@akimath/contract";
 import { registryOf } from "@akimath/core";
 
 import { schemaNamed } from "./support/contract.js";
@@ -465,5 +468,85 @@ describe("the answer a graded batch earns", () => {
 
   it("and an empty batch earns an empty list rather than nothing", () => {
     expect(verdictsResponse([])).toEqual({ status: 200, body: { verdicts: [] } });
+  });
+});
+
+describe("grading an item nobody can rederive", () => {
+  // `HMAC(salt, "-9")` — computed by the same function the pack builder uses,
+  // so the test agrees with production about what a digest *is* without
+  // restating one as a literal that would rot.
+  const SALT = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const digestOf = (answer: string): string => answerDigest(SALT, answer);
+
+  it("what was typed digests to what the pack carries", () => {
+    expect(matchesDigest(digestOf("-9"), SALT, "-9")).toBe(true);
+    expect(matchesDigest(digestOf("5/4"), SALT, "5/4")).toBe(true);
+  });
+
+  it("and anything else does not", () => {
+    expect(matchesDigest(digestOf("-9"), SALT, "9")).toBe(false);
+    expect(matchesDigest(digestOf("-9"), SALT, "-8")).toBe(false);
+    // The spelling matters, as it does everywhere: `canonicalize` does not
+    // reduce, so `4/8` and `1/2` are different answers.
+    expect(matchesDigest(digestOf("4/8"), SALT, "1/2")).toBe(false);
+  });
+
+  it("what a keypad folds is folded first", () => {
+    // U+2212 is the pad's own minus key. A learner pressing it types a
+    // character the digest was never taken over, and `canonicalize` is what
+    // makes the two the same answer.
+    expect(matchesDigest(digestOf("-9"), SALT, "−9")).toBe(true);
+  });
+
+  it("nonsense is a wrong answer, not an error", () => {
+    for (const nonsense of ["", "abc", "1/0", "٩"]) {
+      expect(matchesDigest(digestOf("-9"), SALT, nonsense), nonsense).toBe(false);
+    }
+  });
+
+  it("and a different salt is a different pack", () => {
+    // Per-pack salt is what stops one pack's digests saying anything about
+    // another's, and it is why the salt travels with the entry rather than
+    // being a constant here.
+    expect(matchesDigest(digestOf("-9"), "f".repeat(32), "-9")).toBe(false);
+  });
+});
+
+describe("one call grades either kind and names the skill", () => {
+  const SALT = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const ref = {
+    templateId: "arith.integer.subtract",
+    templateVersion: 2,
+    seed: 1000n,
+    ladderStep: 3,
+  };
+
+  it("a template is rederived, and the skill comes from it", () => {
+    expect(gradeSource({ kind: "template", ref }, "-9")).toEqual({ ok: true, skillId: 1 });
+    expect(gradeSource({ kind: "template", ref }, "9")).toEqual({ ok: false, skillId: 1 });
+  });
+
+  it("a digest is verified, and the skill comes from the manifest", () => {
+    // There is no template to ask — which is the whole reason the entry
+    // carries one.
+    const source = {
+      kind: "digest" as const,
+      digest: answerDigest(SALT, "-9"),
+      saltHex: SALT,
+      skillId: 4,
+    };
+
+    expect(gradeSource(source, "-9")).toEqual({ ok: true, skillId: 4 });
+    expect(gradeSource(source, "9")).toEqual({ ok: false, skillId: 4 });
+  });
+
+  it("and the skill is reported whether the answer was right or wrong", () => {
+    // `attempts.skill_id` is NOT NULL on every row, including the wrong ones —
+    // a version that only resolved it on success would 500 on a wrong answer.
+    const wrong = gradeSource(
+      { kind: "digest", digest: answerDigest(SALT, "-9"), saltHex: SALT, skillId: 7 },
+      "nope",
+    );
+    expect(wrong).toEqual({ ok: false, skillId: 7 });
   });
 });

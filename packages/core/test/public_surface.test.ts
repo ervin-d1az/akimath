@@ -52,7 +52,12 @@ const PUBLIC_SURFACE = [
   // back. Both ends are here because two packages have to agree about it and
   // neither owned it — the reader matched a comment rather than a producer.
   "toManifestEntry",
+  "toDigestEntry",
   "fromManifestEntry",
+  // An entry is one of two kinds and only one of them has a reference. A
+  // digest entry never will: authored content cannot be rederived, which is
+  // the whole reason it exists.
+  "templateRefOf",
   // The diagnosis copy, as a value. `packages/server` issues packs inside a
   // request and needs the same words the build script uses; a file read in a
   // request path is ambient IO in the one package that forbids it.

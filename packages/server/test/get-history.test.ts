@@ -86,7 +86,7 @@ describeWithDatabase("GET /me/history, against a real database", () => {
       [uuid(0xdd), OTHER_PLAYER],
     ]) {
       await db.client.query(
-        `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+        `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
          VALUES ($1, $2, '[]'::jsonb, '\\x00', now() + interval '30 days')`,
         [id, player],
       );

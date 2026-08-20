@@ -1,5 +1,5 @@
 import { answerDigest, canonicalize, parsePack, storedAnswer } from "@akimath/contract";
-import { coreRegistry, fromManifestEntry, rederive, registryOf } from "@akimath/core";
+import { coreRegistry, fromManifestEntry, rederive, registryOf, templateRefOf } from "@akimath/core";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -65,14 +65,14 @@ describe("an issued pack is one the client would accept", () => {
 describe("every item in it can be graded later, which is the whole point", () => {
   it("each manifest entry rederives to the item beside it", () => {
     // **The seam between issuing and `POST /attempts`.** An attempt names
-    // `(packId, index)`; the server reads `template_refs[index]`, rederives,
+    // `(packId, index)`; the server reads `item_refs[index]`, rederives,
     // and compares. If the two lists ever fall out of step, every pack attempt
     // grades against the wrong item and nothing says so.
     const { pack, manifest } = issue();
 
     expect(manifest).toHaveLength(pack.items.length);
     manifest.forEach((entry, index) => {
-      const ref = fromManifestEntry(entry);
+      const ref = templateRefOf(fromManifestEntry(entry)!);
       expect(ref, `entry ${index}`).not.toBeNull();
 
       const generated = rederive(coreRegistry(), ref!);
@@ -93,7 +93,7 @@ describe("every item in it can be graded later, which is the whole point", () =>
     const { pack, manifest } = issue(4);
 
     manifest.forEach((entry, index) => {
-      const generated = rederive(coreRegistry(), fromManifestEntry(entry)!);
+      const generated = rederive(coreRegistry(), templateRefOf(fromManifestEntry(entry)!)!);
       const typed = storedAnswer(
         generated.answer.numerator,
         generated.answer.denominator,
@@ -235,7 +235,7 @@ describe("what an issued pack deliberately does not have", () => {
     const serialised = JSON.stringify(pack);
 
     for (const entry of manifest) {
-      const generated = rederive(coreRegistry(), fromManifestEntry(entry)!);
+      const generated = rederive(coreRegistry(), templateRefOf(fromManifestEntry(entry)!)!);
       const answer = storedAnswer(
         generated.answer.numerator,
         generated.answer.denominator,

@@ -1,4 +1,5 @@
-import { toManifestEntry, type TemplateRef } from "@akimath/core";
+import { answerDigest } from "@akimath/contract";
+import { toDigestEntry, toManifestEntry, type TemplateRef } from "@akimath/core";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { createApp, createHandlers } from "../src/adapters/http-server.js";
@@ -110,7 +111,7 @@ describeWithDatabase("POST /attempts, against a real database", () => {
       [OTHER_ITEM, OTHER_PLAYER, REF.template_id, REF.template_version, REF.seed, REF.ladder_step],
     );
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
             VALUES ($1, $2, $3::jsonb, '\\x00', now() + interval '30 days')`,
       [PACK, PLAYER, JSON.stringify([REF, REF])],
     );
@@ -189,6 +190,65 @@ describeWithDatabase("POST /attempts, against a real database", () => {
     expect(await rows()).toHaveLength(2);
   });
 
+  it("an authored item grades by its digest, which is the only way it can", async () => {
+    // **The change this exists for.** An authored item has no template
+    // reference, so `(packId, index)` could not address it and nothing could
+    // grade it — and seventy of the eighty items the app ships are authored.
+    // The pack already carries `HMAC(pack_salt, canonical answer)`; the server
+    // keeps the salt and recomputes it over what was typed.
+    //
+    // It never learns the answer. It holds a digest and can only confirm or
+    // deny a guess, which is a stronger position than rederivation leaves it
+    // in.
+    const authored = "018f4e3c-0000-7000-8000-00000000e001";
+    const saltHex = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
+    await db.client.query(
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
+            VALUES ($1, $2, $3::jsonb, decode($4, 'hex'), now() + interval '30 days')`,
+      [
+        authored,
+        PLAYER,
+        JSON.stringify([toDigestEntry({ digest: answerDigest(saltHex, "7"), skillId: 4 })]),
+        saltHex,
+      ],
+    );
+
+    const right = await submit({
+      attempts: [
+        attempt({ itemId: undefined, packRef: { packId: authored, index: 0 }, answer: "7" }),
+      ],
+    });
+
+    expect(right.status).toBe(200);
+    expect(((await right.json()) as { verdicts: { ok: boolean }[] }).verdicts[0]?.ok).toBe(true);
+    // The skill comes from the manifest, because there is no template to ask.
+    expect((await rows())[0]).toMatchObject({ skill_id: 4, is_correct: true, pack_index: 0 });
+  });
+
+  it("and a wrong answer to one is recorded as wrong, not refused", async () => {
+    const authored = "018f4e3c-0000-7000-8000-00000000e002";
+    const saltHex = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
+    await db.client.query(
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
+            VALUES ($1, $2, $3::jsonb, decode($4, 'hex'), now() + interval '30 days')`,
+      [
+        authored,
+        PLAYER,
+        JSON.stringify([toDigestEntry({ digest: answerDigest(saltHex, "7"), skillId: 4 })]),
+        saltHex,
+      ],
+    );
+
+    const response = await submit({
+      attempts: [
+        attempt({ itemId: undefined, packRef: { packId: authored, index: 0 }, answer: "8" }),
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect((await rows())[0]).toMatchObject({ skill_id: 4, is_correct: false });
+  });
+
   it("an item this player does not have is a 404, and nothing is written", async () => {
     // **Atomic on purpose.** Recording the first attempt and refusing the
     // second would leave the client unable to tell what landed, and `attempts`
@@ -215,7 +275,7 @@ describeWithDatabase("POST /attempts, against a real database", () => {
   });
 
   it("a manifest entry written the losing way is refused, not misread", async () => {
-    // Migration 0002 refuses a numeric seed in `template_refs` because `jsonb`
+    // Migration 0002 refuses a numeric seed in `item_refs` because `jsonb`
     // is read with `JSON.parse` and a bigint above 2^53 comes back wrong. This
     // is the code side of the same rule, end to end: the constraint is on the
     // *pack's* refs, so a pack that somehow carried one — or a future writer
@@ -223,7 +283,7 @@ describeWithDatabase("POST /attempts, against a real database", () => {
     // item nobody was ever shown.
     const loose = "018f4e3c-0000-7000-8000-0000000000f7";
     await db.client.query(
-      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+      `INSERT INTO offline_packs (id, player_id, item_refs, pack_salt, expires_at)
             VALUES ($1, $2, $3::jsonb, '\\x00', now() + interval '30 days')`,
       [
         loose,

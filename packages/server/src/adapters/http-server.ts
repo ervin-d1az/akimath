@@ -3,15 +3,16 @@ import { randomBytes } from "node:crypto";
 import { serve, type ServerType } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 
-import { coreRegistry, resolve } from "@akimath/core";
+import { templateRefOf } from "@akimath/core";
 
 import {
-  gradeAnswer,
+  gradeSource,
   readAttemptBatch,
   unknownSourceResponse,
   verdictsResponse,
   type Attempt,
   type GradedAttempt,
+  type GradingSource,
 } from "../attempts.js";
 import { erasureResponse } from "../erasure.js";
 import { historyResponse, HISTORY_LIMIT } from "../history.js";
@@ -30,9 +31,9 @@ import type { Logger } from "./logger.js";
 import { recentSessions } from "./history-repository.js";
 import { insertPack, packFor } from "./pack-repository.js";
 import {
+  entryForPackItem,
   insertAttempts,
   refForIssuedItem,
-  refForPackItem,
   type AttemptRow,
 } from "./attempt-repository.js";
 import {
@@ -143,20 +144,21 @@ export function createHandlers(
         const graded: GradedAttempt[] = [];
         const rows: AttemptRow[] = [];
         for (const [index, attempt] of read.entries()) {
-          const ref = await referenceFor(client, playerId, attempt);
-          if (ref === null) {
+          const source = await gradingSourceFor(client, playerId, attempt);
+          if (source === null) {
             return unknownSourceResponse(index);
           }
-          const isCorrect = gradeAnswer(ref, attempt.answer);
-          graded.push({ source: attempt.source, ok: isCorrect });
+          // One call for both facts: the skill comes from the template on one
+          // path and from the manifest on the other, and the branch belongs
+          // where the grading is rather than here.
+          const { ok, skillId } = gradeSource(source, attempt.answer);
+          graded.push({ source: attempt.source, ok });
           rows.push({
             playerId,
             source: attempt.source,
             sessionId: attempt.sessionId,
-            // The template knows which skill it exercises; nothing in the
-            // recorded reference else does, and `attempts.skill_id` is NOT NULL.
-            skillId: resolve(coreRegistry(), ref).skillId,
-            isCorrect,
+            skillId,
+            isCorrect: ok,
             elapsedMs: attempt.elapsedMs,
             answeredAt: attempt.clientTs,
           });
@@ -268,15 +270,43 @@ export function createHandlers(
   };
 }
 
-/** Which of the two source tables an attempt points into. */
-function referenceFor(
+/**
+ * What an attempt's answer is checked against, from whichever table records it.
+ *
+ * An issued item is always a template — that is what `issued_items` holds. A
+ * pack item is whatever the manifest says it is: a template to rederive, or a
+ * digest to verify, which is the only way authored content can be graded.
+ */
+async function gradingSourceFor(
   client: Parameters<typeof refForIssuedItem>[0],
   playerId: string,
   attempt: Attempt,
-) {
-  return attempt.source.kind === "issued"
-    ? refForIssuedItem(client, playerId, attempt.source.itemId)
-    : refForPackItem(client, playerId, attempt.source.packId, attempt.source.index);
+): Promise<GradingSource | null> {
+  if (attempt.source.kind === "issued") {
+    const ref = await refForIssuedItem(client, playerId, attempt.source.itemId);
+    return ref === null ? null : { kind: "template", ref };
+  }
+
+  const found = await entryForPackItem(
+    client,
+    playerId,
+    attempt.source.packId,
+    attempt.source.index,
+  );
+  if (found === null) {
+    return null;
+  }
+  const ref = templateRefOf(found.entry);
+  if (ref !== null) {
+    return { kind: "template", ref };
+  }
+  const entry = found.entry as Extract<typeof found.entry, { kind: "digest" }>;
+  return {
+    kind: "digest",
+    digest: entry.digest,
+    saltHex: found.saltHex,
+    skillId: entry.skill_id,
+  };
 }
 
 /**

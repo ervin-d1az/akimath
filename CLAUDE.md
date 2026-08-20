@@ -128,9 +128,9 @@ format and its OpenAPI half.
 - **A scaffold, plus the frozen schema.** `packages/server` routes one endpoint, `GET /health`,
   through a pure `route()` function, and now also holds the database:
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
-  append-only) plus three forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
+  append-only) plus four forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **353 tests, green, 99.05% mutation
+  30-day figures) and the committed `schema.sql` snapshot. **363 tests, green, 99.16% mutation
   score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
   `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
   Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
@@ -163,6 +163,19 @@ format and its OpenAPI half.
   `template_stats` survives by design because it carries no player id. The hole is kept to one:
   `test/one-way-to-erase.test.ts` names the only two files under `src/` allowed to say
   `inErasureRole`, the same shape as `one-way-to-log.test.ts`.
+  **An authored item is graded by its digest, which is the only way it can be.** Rederivation
+  needs a template reference and an authored item has none — so `(pack_id, pack_index)` could not
+  address one and nothing could grade it, which meant *the pack the app actually ships could never
+  be synced*: seventy of its eighty items are authored. Migration 0005 renames `template_refs` to
+  **`item_refs`**, because it now holds two kinds — `{kind: "template", …}` to rederive and
+  `{kind: "digest", digest, skill_id}` to verify — one per item and in the same order, which is
+  what makes `(pack_id, index)` address anything. `packages/core`'s `manifest.ts` is the one
+  definition of both. Verifying is `HMAC(pack_salt, canonicalize(what was typed))` against what the
+  pack already carries, through the same two functions the pack builder used, so **the server never
+  learns an authored answer** — it holds a digest and can only confirm or deny a guess, which is a
+  stronger position than rederivation leaves it in. `GET /packs/{packId}` cannot rebuild such a pack
+  and answers 404: grading needs only the digest, a re-fetch needs the *content*, and storing that
+  is the next decision.
   **`POST /attempts` grades by rederiving, and that is the invariant made true by construction.**
   A submission carries no `ok` — `readAttemptBatch` refuses a body that mentions one, along with
   every other unknown property — so the server resolves the recorded
@@ -244,7 +257,7 @@ format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 101 of the 353 report as skipped rather than passing quietly.
+  run; leave it unset and 103 of the 363 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
