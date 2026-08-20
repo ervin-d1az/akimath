@@ -497,10 +497,19 @@ root is free the same way.
   answer and `correct` for a right one, and the verdict screen *may* say how long it took. A rule
   that only ever said "absent" would be satisfied by deleting her.
 
-**Encoded as a constant, not yet enforced:**
-- Success and error must be distinguishable by **shape**, not only hue — deuteranopia
-  collapses green and coral. `BrandColorRole` still exposes `.color`; ARCHITECTURE.md §6
-  wants a `Verdict` type on top that does not.
+- **A verdict is never drawn by hue alone.** Deuteranopia collapses `#5ED6A4` and `#FF8A5B`, so
+  `Verdict` carries an outline and a glyph and **no colour at all** — a call site has to reach for
+  a shape because that is all there is, which is the same construction as the sync endpoint
+  refusing an `ok` field. What the type cannot prevent is a *second* reach: nothing stops a screen
+  pairing `Verdict.correct` with `BrandColorRole.success.color`.
+  `test/architecture/verdict_is_not_a_colour_test.dart` scans all 131 files of `lib/` for a file
+  naming both, and excuses exactly one — `verdict_ring.dart`, which also draws the ring. It strips
+  prose first, because the names it reads for appear in explanations of the rule as often as in
+  code.
+
+*(There is nothing left under "encoded as a constant, not yet enforced". Both entries that
+lived here — the 48 px floor and the hue-only verdict — now have gates, and the heading comes
+back the day something else is written down without one.)*
 
 **Design intent, no code yet to enforce it:**
 - Aki has exactly one body part that can be lost and come back: **the curl of her tail** — drawn,
