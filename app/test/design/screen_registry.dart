@@ -5,6 +5,8 @@ import 'package:akimath_app/features/auth/ui/create_account_screen.dart';
 import 'package:akimath_app/features/auth/ui/tutor_consent_screen.dart';
 import 'package:akimath_app/features/auth/ui/verify_email_screen.dart';
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
+import 'package:akimath_app/features/states/policy/account_state.dart';
+import 'package:akimath_app/features/states/ui/account_state_view.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
@@ -473,6 +475,74 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       elapsed: const Duration(hours: 1, minutes: 4, seconds: 9),
       streakDays: 90,
       onDone: () {},
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · cuenta cargando',
+    build: () => AppShell(
+      child: PreferencesScreen(
+        daysPractised: 3,
+        streakDays: 2,
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.loading,
+        onRetryAccount: null,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · cuenta sin jugador',
+    build: () => AppShell(
+      child: PreferencesScreen(
+        daysPractised: 3,
+        streakDays: 2,
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.noPlayer,
+        onRetryAccount: null,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · cuenta sin conexión',
+    build: () => AppShell(
+      child: PreferencesScreen(
+        daysPractised: 3,
+        streakDays: 2,
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.offline,
+        onRetryAccount: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · cuenta error de servidor',
+    build: () => AppShell(
+      child: PreferencesScreen(
+        daysPractised: 3,
+        streakDays: 2,
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.serverError,
+        onRetryAccount: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · cuenta sesión caducada',
+    build: () => AppShell(
+      child: PreferencesScreen(
+        daysPractised: 3,
+        streakDays: 2,
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.rejected,
+        onRetryAccount: null,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'estado · vista suelta',
+    build: () => const AppShell(
+      child: AccountSection(
+        child: AccountStateView(state: AccountState.offline, email: 'a@b.co'),
+      ),
     ),
   ),
   RegisteredScreen(
