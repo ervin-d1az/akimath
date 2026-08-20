@@ -472,9 +472,14 @@ root is free the same way.
   and border widths are not scanned at all. Both report how many files they scanned and fail at
   zero.)
 
+- **Nothing you can press is under 48 px**, measured on the rendered screen
+  rather than asserted about a widget — a `SizedBox(48)` in a `Row` that ran out of room is 31 px
+  wide and the constant says nothing about that. `test/design/touch_target_test.dart` walks every
+  registered screen at both viewports and reports the count it swept (today 40 screens, 278
+  presses); a screen with nothing to press is legitimate and named in the summary rather than
+  failed.
+
 **Encoded as a constant, not yet enforced:**
-- Minimum touch target 48 px, keypad keys and board cells included
-  (`BrandShape.minTouchTarget`).
 - Success and error must be distinguishable by **shape**, not only hue — deuteranopia
   collapses green and coral. `BrandColorRole` still exposes `.color`; ARCHITECTURE.md §6
   wants a `Verdict` type on top that does not.
