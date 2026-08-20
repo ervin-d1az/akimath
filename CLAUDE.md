@@ -105,7 +105,7 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1952 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1947 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **The streak can say it is about to go, and that it went.** `streakLength` has answered *how
@@ -134,7 +134,7 @@ format and its OpenAPI half.
   what the fork's own comparison test means. The character sheet draws the whole set, because a
   parser test can say the geometry lands inside its viewBox and cannot say the flame looks like a
   flame.
-  **`Perfil` is the third home and `Ajustes` is the stack above it.** Declared rule 1 names the
+  **`Perfil` is the profile home and `Ajustes` is the stack above it.** Declared rule 1 names the
   bar's homes as *inicio, mapa, progreso y perfil*; the third root was labelled after a settings
   screen, which that rule does not name. The content splits along the seam a player feels — who I
   am is the root, what the app does is the stack — and the stack pushes onto the **tab's own
@@ -144,6 +144,14 @@ format and its OpenAPI half.
   out, and a test pins `Accesibilidad` absent so it turns red the day that row lands. **The nav
   fork is deleted** — all four marks are transcribed, every tab has its own, and the
   house-as-fallback that once made two tabs share a mark is gone as well as caught.
+  **`Avance` absorbed into it, and the bar is two tabs.** No document draws a progress screen;
+  every figure that root held is one `4.1` puts under the identity, and splitting them left two
+  half-empty screens where the design has one full one. Perfil now draws the identity, the
+  headline pair — a white `DÍAS` card at `flex 1.3` beside a **yellow** `RACHA` at `flex 1`,
+  because the filled card is the one the screen is about — and `HISTORIAL`, absent when there is
+  nothing true to say. **`AppTab.progress` stays in the enum**: rule 1 names it a home and nobody
+  has drawn one, which is a different fact from it not existing, and `rootsPresentToday` is the
+  list that moves. `visibleTabs` has still never been edited across none → two → three → two.
   **A key's fill says what pressing it does** — `KeyRole` in the pure layout, the colour in
   the adapter; all three pads were white, and the design draws digits white, the operator strip
   accent, backspace quiet and submit the action green. Exactly one key on a pad is green, and a
