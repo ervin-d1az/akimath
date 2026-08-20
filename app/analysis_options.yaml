@@ -26,3 +26,37 @@ linter:
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+# ── Metrics ──────────────────────────────────────────────────────────────────
+#
+# `dart_code_linter` has been a dev dependency since the app was scaffolded and
+# `dart run dart_code_linter:metrics analyze lib` reported nothing at all,
+# because without this block there is nothing to report. CLAUDE.md said so:
+# *"green by construction, so it is not evidence until someone configures it."*
+#
+# **The thresholds are set at what the code does today, not at a number from a
+# blog post.** A gate tuned above the worst file passes for ever and teaches
+# nobody anything; one tuned below it is red on arrival and gets deleted in a
+# week. These are the current ceilings, so the next function that goes past one
+# is a decision somebody makes on purpose — and the numbers ratchet down as the
+# code gets simpler, never up to accommodate it.
+dart_code_linter:
+  metrics:
+    # How many independent paths through a function. The ceiling is the widest
+    # thing in the app today; anything wider is a function that wants splitting
+    # before it wants a bigger number.
+    cyclomatic-complexity: 20
+    # Nesting is what makes a widget tree unreadable, and it is the one metric a
+    # `build` method genuinely earns some of.
+    maximum-nesting-level: 6
+    # A function longer than this is doing two things.
+    source-lines-of-code: 120
+    # More than this and the call site is a puzzle. Named parameters do not
+    # help: the reader still has to hold them all.
+    number-of-parameters: 8
+  metrics-exclude:
+    - test/**
+    - integration_test/**
+    # Every screen in one list, so the design gates can walk them. It is a
+    # registry, not logic, and its length is the point.
+    - test/design/screen_registry.dart

@@ -264,17 +264,24 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze --fatal-infos
-      # No dart_code_linter step, and the reason is measured, not assumed.
-      # `dart run dart_code_linter:metrics analyze lib` exits 0 on a file written
-      # to be awful, because analysis_options.yaml carries no `dart_code_linter:`
-      # block and the tool has no rules or metrics enabled — a step that can only
-      # ever be green. Forcing thresholds on the command line makes it real and
-      # immediately red: at the tool's own documented defaults it flags four
-      # pre-existing files (brand_drawing_painter.dart, brand_typography.dart,
-      # theme.dart, character_sheet_screen.dart) for parameter count and method
-      # length. Blocking on those is blocking on inherited findings. The step
-      # returns once someone configures the linter and clears or accepts that
-      # baseline; until then it is honestly absent rather than dishonestly green.
+      # **The metrics step, which used to be honestly absent.** It was left out
+      # because `analysis_options.yaml` carried no `dart_code_linter:` block, so
+      # the command reported nothing and could only ever be green — and forcing
+      # the tool's documented defaults on the command line went immediately red
+      # on four inherited files.
+      #
+      # The block exists now, with the thresholds set at **what the code does
+      # today** rather than at a number from a blog post: a gate above the worst
+      # file passes for ever, one below it is red on arrival and gets deleted.
+      # The one violation configuring it found — `AkiSpec._face` taking eleven
+      # loose doubles — was fixed rather than accommodated.
+      #
+      # **`--set-exit-on-violation-level` is what makes it a gate.** Measured:
+      # without it, and even with `--fatal-warnings`, the command exits 0 while
+      # printing warnings. That is the same shape as the trap this step spent
+      # months avoiding, one level deeper, and it is why the flag is here rather
+      # than the plain command.
+      - run: dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning
       - run: flutter test
       # The streak walks backwards a calendar day at a time, and a calendar day
       # is 23, 24 or 25 hours long. A run under a zone that observes daylight
