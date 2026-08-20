@@ -1,10 +1,16 @@
 import { serve, type ServerType } from "@hono/node-server";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 
+import { conflictResponse, linkOutcome, readLinkRequest } from "../link.js";
 import { profileResponse } from "../players.js";
 import { route, type Response as Answer } from "../routing.js";
 import type { Logger } from "./logger.js";
-import { findPlayerForAccount } from "./player-repository.js";
+import {
+  accountForPlayer,
+  findPlayerForAccount,
+  insertPlayer,
+  playerIdForAccount,
+} from "./player-repository.js";
 import type { RequestDatabase } from "./request-database.js";
 import type { SessionVerifier } from "./session-verifier.js";
 
@@ -18,14 +24,68 @@ import type { SessionVerifier } from "./session-verifier.js";
  * handler with no route, or a route promising a handler that is not here,
  * fails rather than 500s.
  */
-export type Handlers = Readonly<Record<string, (userId: string) => Promise<Answer>>>;
+/**
+ * What a handler is given.
+ *
+ * **The whole request, not just the caller.** `getMe` needs only the account,
+ * and `linkPlayer` needs a body and a header the contract marks required — a
+ * seam shaped for the first would have to be widened for the second anyway, and
+ * widening it later means touching every handler.
+ */
+export interface HandlerRequest {
+  /** The `sub` of a verified token. Never anything the body said. */
+  readonly userId: string;
+  readonly body: unknown;
+  readonly header: (name: string) => string | undefined;
+}
+
+export type Handlers = Readonly<
+  Record<string, (request: HandlerRequest) => Promise<Answer>>
+>;
 
 export function createHandlers(database: RequestDatabase): Handlers {
   return {
-    getMe: (userId) =>
+    getMe: ({ userId }) =>
       database.inRequestRole(async (client) =>
         profileResponse(await findPlayerForAccount(client, userId)),
       ),
+
+    linkPlayer: async ({ userId, body, header }) => {
+      const request = readLinkRequest(body, header("Idempotency-Key"));
+      if ("status" in request) {
+        return request;
+      }
+
+      // **One transaction for both reads and the write.** Two callers linking
+      // the same player at once would otherwise both see no row and both try to
+      // insert; the loser gets a constraint violation instead of the 409 the
+      // contract describes.
+      return database.inRequestRole(async (client) => {
+        const outcome = linkOutcome({
+          request,
+          accountId: userId,
+          playerForAccount: await playerIdForAccount(client, userId),
+          accountForPlayer: await accountForPlayer(client, request.playerId),
+        });
+
+        switch (outcome.kind) {
+          case "conflict":
+            return conflictResponse(outcome.why);
+          case "existing":
+            // Idempotent by nature: the row it would have written is the row
+            // that is already there.
+            return profileResponse(await findPlayerForAccount(client, userId));
+          case "create":
+            return profileResponse(
+              await insertPlayer(client, {
+                id: request.playerId,
+                ageBand: request.ageBand,
+                accountId: userId,
+              }),
+            );
+        }
+      });
+    },
   };
 }
 
@@ -80,7 +140,11 @@ export function createApp({ version, verify, log, handlers }: AppOptions): Hono 
     const result =
       decision.kind === "answer"
         ? decision.response
-        : await run(handlers, decision.operationId, decision.userId, log);
+        : await run(handlers, decision.operationId, log, {
+            userId: decision.userId,
+            body: await readJsonBody(context),
+            header: (name) => context.req.header(name),
+          });
 
     // **One line per request, and `caller` is the kind rather than the who.**
     // A user id in every access line is a per-request record of who was awake;
@@ -112,11 +176,25 @@ export function createApp({ version, verify, log, handlers }: AppOptions): Hono 
  * failed on, which is a schema description handed to whoever asked. It goes to
  * the log instead, where the redactor has already been over it.
  */
+/**
+ * The JSON body, or undefined where there is none.
+ *
+ * Never throws: a malformed body is the handler's to refuse with a 400 that
+ * says so, not the transport's to turn into a 500.
+ */
+async function readJsonBody(context: Context): Promise<unknown> {
+  try {
+    return await context.req.json();
+  } catch {
+    return undefined;
+  }
+}
+
 async function run(
   handlers: Handlers,
   operationId: string,
-  userId: string,
   log: Logger,
+  request: HandlerRequest,
 ): Promise<Answer> {
   const handler = handlers[operationId];
   if (handler === undefined) {
@@ -128,7 +206,7 @@ async function run(
   }
 
   try {
-    return await handler(userId);
+    return await handler(request);
   } catch (cause) {
     log.error("handler failed", { operation: operationId, cause });
     return { status: 500, body: { error: "internal", message: "That went wrong on our side." } };
@@ -136,7 +214,7 @@ async function run(
 }
 
 /** Every status `route()` and its handlers can return. Hono types its own set. */
-type ContentfulStatus = 200 | 401 | 404 | 405 | 500 | 501;
+type ContentfulStatus = 200 | 400 | 401 | 404 | 405 | 409 | 500 | 501;
 
 export function startHttpServer(options: AppOptions & { readonly port: number }): ServerType {
   return serve({ fetch: createApp(options).fetch, port: options.port });

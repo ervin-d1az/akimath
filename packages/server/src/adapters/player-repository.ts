@@ -29,3 +29,66 @@ export async function findPlayerForAccount(
   );
   return result.rows[0] ?? null;
 }
+
+/**
+ * The player already linked to an account, or null.
+ *
+ * Just the id: the caller is deciding whether a link may happen, not showing a
+ * profile, and `SELECT id` is the whole of what that decision needs.
+ */
+export async function playerIdForAccount(
+  client: pg.ClientBase,
+  accountId: string,
+): Promise<string | null> {
+  const result = await client.query<{ id: string }>(
+    "SELECT id FROM players WHERE auth_user_id = $1::uuid",
+    [accountId],
+  );
+  return result.rows[0]?.id ?? null;
+}
+
+/**
+ * The account a player already belongs to, or null.
+ *
+ * **The other half of the question**, and it is a different refusal: an account
+ * that already has a player is one problem, and a player that already belongs
+ * to somebody else is another. A device can hand its `player_id` on by
+ * restoring a backup, so this is not hypothetical.
+ */
+export async function accountForPlayer(
+  client: pg.ClientBase,
+  playerId: string,
+): Promise<string | null> {
+  const result = await client.query<{ auth_user_id: string }>(
+    "SELECT auth_user_id FROM players WHERE id = $1::uuid",
+    [playerId],
+  );
+  return result.rows[0]?.auth_user_id ?? null;
+}
+
+/**
+ * Writes the row and hands back what was written.
+ *
+ * `RETURNING` rather than a second `SELECT`: `created_at` is the database's
+ * (`DEFAULT now()`), and reading it back in another statement is a round trip
+ * that can also disagree.
+ *
+ * **The account comes from the caller's session**, never from the body — see
+ * `readLinkRequest`, which refuses a body that mentions it at all.
+ */
+export async function insertPlayer(
+  client: pg.ClientBase,
+  player: { readonly id: string; readonly ageBand: string; readonly accountId: string },
+): Promise<PlayerRow> {
+  const result = await client.query<PlayerRow>(
+    `INSERT INTO players (id, age_band, auth_user_id)
+          VALUES ($1::uuid, $2, $3::uuid)
+       RETURNING id, age_band, created_at`,
+    [player.id, player.ageBand, player.accountId],
+  );
+  const row = result.rows[0];
+  if (row === undefined) {
+    throw new Error("the insert returned no row");
+  }
+  return row;
+}

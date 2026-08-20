@@ -53,6 +53,22 @@ const errors = {
  * holds this list to exactly the operations the router still answers 501 for,
  * in both directions, so it cannot go stale in either.
  */
+/**
+ * The answer to a link that cannot happen because one already did.
+ *
+ * Only `linkPlayer` can produce it: `players.auth_user_id` is UNIQUE and
+ * `players.id` is the primary key, so "this account already has a player" and
+ * "that player belongs to another account" are the two ways a second link can
+ * be refused. Neither is a malformed request and neither is a missing
+ * resource, which is why 400 and 404 do not fit.
+ */
+const alreadyLinked = {
+  "409": {
+    description: "Already linked — to a different player, or to a different account.",
+    ...(json(ref("Error")) as object),
+  },
+};
+
 const notImplemented = {
   "501": {
     description: "Routed and authenticated, but the server has not built it yet.",
@@ -182,7 +198,9 @@ export function buildOpenApiDocument(): unknown {
           responses: {
             "200": { description: "Linked.", ...(json(ref("Me")) as object) },
             ...errors,
-            ...notImplemented,
+            ...alreadyLinked,
+            // No `notImplemented`: this one is built, and the parity gate holds
+            // the contract's 501 list to exactly the operations that are not.
           },
         },
       },
