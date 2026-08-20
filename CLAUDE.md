@@ -86,9 +86,38 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1729 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1886 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
+  **The streak can say it is about to go, and that it went.** `streakLength` has answered *how
+  long* since F2 and nothing could ask *is it about to go* — a question that needs a time of day
+  the first deliberately ignores. `features/home/policy/streak_state.dart` adds it as one closed
+  set and **asks `streakLength`** rather than re-walking the days, so the home and the screen
+  cannot drift. `4.12 Racha en riesgo` and `4.13 Racha perdida` are the only two of that
+  document's fifteen screens whose every figure a `DayLog` and a clock already produce, and both
+  are **pushed over the home** from `HomeRoute` — which has the log, the pack and the navigator,
+  none of which `FirstRunGate` has. The two are deliberately asymmetric: the warning comes back on
+  every launch of a day that is still at risk, and the page turn happens once, which is true by
+  construction because only one of them is recorded. `4.13`'s `1` is **`dayOfNewRun`, not the
+  streak** — the screen is reached before the player has solved, where `streakLength` correctly
+  returns 0, and one function answering both would be two callers disagreeing about what it counts.
+  Neither prints a rating.
+  **Every glyph is the design's own geometry.** `f0-brand-icons` was blocked from the day it was
+  written because the design digests could not be opened, so all sixteen rendered as `▲`, `⚙`,
+  `‹`, `⌫` — a deliberate, visible placeholder. They opened. `design/icons/spec/icon_paths.dart`
+  holds each mark's verbatim `d`, viewBox, stroke width and caps, and `svg_path.dart` (PURE) turns
+  a `d` into a `Path`. **The strings stay strings**: that is the only form in which "transcribed,
+  never redrawn" can be checked by reading, because the spec file and the design document then hold
+  the same characters. The parser supports `M L H V C S A Z` and **throws on anything else** — a
+  quiet skip draws two thirds of a glyph on a screen with a green suite, which the first version
+  did. `size` is the **height**, because `mapsTo` is 30×24 and squaring it distorts the arrow.
+  Still forked and still counted: `nav_glyph_spec.dart`'s three marks, whose replacement changes
+  what the fork's own comparison test means. The character sheet draws the whole set, because a
+  parser test can say the geometry lands inside its viewBox and cannot say the flame looks like a
+  flame. **A key's fill says what pressing it does** — `KeyRole` in the pure layout, the colour in
+  the adapter; all three pads were white, and the design draws digits white, the operator strip
+  accent, backspace quiet and submit the action green. Exactly one key on a pad is green, and a
+  test says so.
   **Ajustes has a way out.** `features/preferences/` carries the erasure flow: a text door under
   the account, drawn only where `erasureOffered` says a session could carry the request, and a
   full screen rather than a dialog because the question has to fit a sentence about what
