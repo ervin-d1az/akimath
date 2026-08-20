@@ -14,7 +14,7 @@ import {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe("the cutoffs are computed from an injected instant", () => {
-  it("attempts expire after 400 days and diagnosis events after 30", () => {
+  it("attempts expire after 400 days, diagnosis events after 30, sources after 400", () => {
     const now = new Date("2026-08-17T09:00:00.000Z");
     const cutoffs = retentionCutoffs(now);
 
@@ -24,6 +24,20 @@ describe("the cutoffs are computed from an injected instant", () => {
     expect(cutoffs.diagEvents.toISOString()).toBe(
       new Date(now.getTime() - 30 * DAY_MS).toISOString(),
     );
+    // Spelled out rather than compared to `cutoffs.attempts`: the two are the
+    // same number today and are not the same *decision*, and an assertion that
+    // said "equal to attempts" would pass for any value of either.
+    expect(cutoffs.sources.toISOString()).toBe(
+      new Date(now.getTime() - 400 * DAY_MS).toISOString(),
+    );
+  });
+
+  it("and a source is never swept before the attempts that reference it", () => {
+    // The invariant behind the figure, not the figure. `attempts.pack_id` and
+    // `attempts.issued_item_id` both cascade, so a source cutoff more recent
+    // than the attempts one would delete answered history.
+    const cutoffs = retentionCutoffs(new Date("2026-08-17T09:00:00.000Z"));
+    expect(cutoffs.sources.getTime()).toBeLessThanOrEqual(cutoffs.attempts.getTime());
   });
 
   it("the two figures are not the same figure", () => {
@@ -258,6 +272,73 @@ describeWithDatabase("the job, against a real database", () => {
     expect(first.attempts).toBe(1);
     expect(second.attempts).toBe(0);
     expect(second.diagEvents).toBe(0);
+  });
+
+  it("a spent pack is swept once nothing points at it", async () => {
+    // `POST /packs` made this live. Before it, `offline_packs` was empty and
+    // the gap was theoretical — the job deleted attempts and diagnosis events
+    // and left every pack behind for ever.
+    const spent = "018f4e3c-0000-7000-8000-0000000003a1";
+    await db.client.query(
+      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+       VALUES ($1, $2, '[]'::jsonb, $3, now() - interval '401 days')`,
+      [spent, PLAYER, Buffer.from("salt")],
+    );
+
+    const run = await runRetention(db.client, new Date());
+
+    expect(run.offlinePacks).toBe(1);
+    const left = await db.client.query<{ id: string }>("SELECT id FROM offline_packs");
+    // The one issued seven days from now is untouched.
+    expect(left.rows.map((r) => r.id)).toEqual([PACK]);
+  });
+
+  it("and never while an attempt still points at it", async () => {
+    // **The guard that matters.** `attempts.pack_id` cascades, so deleting a
+    // pack takes its answered attempts with it — the exact opposite of what a
+    // retention job is for. The dates already make this unreachable; the
+    // `NOT EXISTS` is what makes it unreachable by construction.
+    const spent = "018f4e3c-0000-7000-8000-0000000003a2";
+    await db.client.query(
+      `INSERT INTO offline_packs (id, player_id, template_refs, pack_salt, expires_at)
+       VALUES ($1, $2, '[]'::jsonb, $3, now() - interval '401 days')`,
+      [spent, PLAYER, Buffer.from("salt")],
+    );
+    // An attempt young enough to survive the sweep above it, on a pack old
+    // enough to be swept — which the arithmetic alone would not prevent.
+    await db.client.query(
+      `INSERT INTO attempts
+         (id, player_id, pack_id, pack_index, skill_id, is_correct, elapsed_ms,
+          answered_at, created_at, session_id)
+       VALUES (gen_random_uuid(), $1, $2, 0, 1, true, 4200, now(), now(), gen_random_uuid())`,
+      [PLAYER, spent],
+    );
+
+    const run = await runRetention(db.client, new Date());
+
+    expect(run.offlinePacks).toBe(0);
+    expect(run.attempts).toBe(0);
+    const kept = await db.client.query("SELECT 1 FROM offline_packs WHERE id = $1", [spent]);
+    expect(kept.rowCount).toBe(1);
+    // And the attempt is still there, which is the thing this protects.
+    expect((await db.client.query("SELECT 1 FROM attempts")).rowCount).toBe(1);
+  });
+
+  it("a spent issued item is swept the same way", async () => {
+    // Nothing writes `issued_items` yet — `GET /items/next` is still 501 — so
+    // this is the gap closed before it opens rather than after.
+    const item = "018f4e3c-0000-7000-8000-0000000003b1";
+    await db.client.query(
+      `INSERT INTO issued_items (id, player_id, template_id, template_version, seed,
+                                 ladder_step, issued_at)
+       VALUES ($1, $2, 't-1', 1, 7, 3, now() - interval '401 days')`,
+      [item, PLAYER],
+    );
+
+    const run = await runRetention(db.client, new Date());
+
+    expect(run.issuedItems).toBe(1);
+    expect((await db.client.query("SELECT 1 FROM issued_items")).rowCount).toBe(0);
   });
 
   it("the aggregates calibration reads are untouched by either run", async () => {

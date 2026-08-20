@@ -28,6 +28,8 @@ try {
   log.info("retention run complete", {
     attemptsDeleted: run.attempts,
     diagEventsDeleted: run.diagEvents,
+    offlinePacksDeleted: run.offlinePacks,
+    issuedItemsDeleted: run.issuedItems,
   });
 } finally {
   await client.end();
