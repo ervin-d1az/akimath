@@ -9,8 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 Future<void> _pump(
   WidgetTester tester, {
-  int daysPractised = 12,
-  int streakDays = 5,
   String? accountEmail,
   AccountState accountState = AccountState.none,
   VoidCallback? onEraseData,
@@ -24,8 +22,6 @@ Future<void> _pump(
     MaterialApp(
       home: Scaffold(
         body: PreferencesScreen(
-          daysPractised: daysPractised,
-          streakDays: streakDays,
           accountEmail: accountEmail,
           accountState: accountState,
           onEraseData: onEraseData,
@@ -44,18 +40,16 @@ List<String> _copy(WidgetTester tester) => tester
 
 void main() {
   group('it shows only what the device can compute', () {
-    testWidgets('days practised and the streak', (WidgetTester tester) async {
-      await _pump(tester);
-      expect(find.text('12'), findsOneWidget);
-      expect(find.text('5'), findsOneWidget);
-    });
-
-    testWidgets('a player who has never played still gets a screen',
+    testWidgets('and the two figures it used to show are not here any more',
         (WidgetTester tester) async {
-      // Zero, not a dash and not an empty space. There is no state in which
-      // this screen has nothing to say, which is why it needs no skeleton.
-      await _pump(tester, daysPractised: 0, streakDays: 0);
-      expect(find.text('0'), findsNWidgets(2));
+      // `TU PROGRESO` moved to `Avance` when that root landed. Ajustes is
+      // settings; what a player has done is not a setting, and printing it in
+      // two places is two places that can disagree.
+      await _pump(tester);
+
+      expect(find.text('TU PROGRESO'), findsNothing);
+      expect(find.text('DÍAS'), findsNothing);
+      expect(find.text('RACHA'), findsNothing);
     });
 
     testWidgets('no rating, accuracy, mean time or history',

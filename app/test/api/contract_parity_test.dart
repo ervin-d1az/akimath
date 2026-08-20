@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/api/me.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -91,6 +92,63 @@ void main() {
       final List<String> frozen = (band['enum']! as List<Object?>).cast<String>();
 
       expect(AgeBand.values.map((AgeBand b) => b.wireName).toList(), frozen);
+    });
+  });
+
+  group('the Dart model is the frozen HistoryEntry, both directions', () {
+    final Map<String, Object?> schema = _schema(contract, 'HistoryEntry');
+    final List<String> entryRequired =
+        (schema['required']! as List<Object?>).cast<String>();
+    final Map<String, Object?> properties =
+        schema['properties']! as Map<String, Object?>;
+
+    final HistoryEntry sampleEntry = HistoryEntry(
+      kind: HistoryKind.series,
+      title: 'Restas',
+      at: DateTime.utc(2026, 8, 19, 9, 15),
+      score: '4/5',
+      ratingDelta: null,
+    );
+
+    test('the gate read a real schema', () {
+      expect(entryRequired, isNotEmpty);
+      // ignore: avoid_print
+      print('  api parity · HistoryEntry → ${entryRequired.length} required field(s)');
+    });
+
+    test('it carries every field the schema requires, and no other', () {
+      expect(sampleEntry.toJson().keys.toSet(), containsAll(entryRequired));
+      expect(sampleEntry.toJson().keys.toSet(), properties.keys.toSet());
+    });
+
+    test('every kind the schema names, in the order it names them', () {
+      final Map<String, Object?> kind = properties['kind']! as Map<String, Object?>;
+      final List<String> frozen = (kind['enum']! as List<Object?>).cast<String>();
+
+      expect(HistoryKind.values.map((HistoryKind k) => k.wireName).toList(), frozen);
+    });
+
+    test('ratingDelta is nullable in the schema and nullable here', () {
+      // Required *and* nullable is not the same as optional, and the difference
+      // is what stops a client drawing "±0" where the truth is "not yet".
+      final Map<String, Object?> delta =
+          properties['ratingDelta']! as Map<String, Object?>;
+
+      expect(entryRequired, contains('ratingDelta'));
+      expect(delta['nullable'], isTrue);
+      expect(sampleEntry.toJson()['ratingDelta'], isNull);
+    });
+
+    test('and its instant is read by the same reader Me uses', () {
+      // One rule, one implementation. Two re-derivations of the contract's
+      // `date-time` is exactly the drift R2 names.
+      final Map<String, Object?> at = properties['at']! as Map<String, Object?>;
+      final Map<String, Object?> meProperties =
+          me['properties']! as Map<String, Object?>;
+      final Map<String, Object?> createdAt =
+          meProperties['createdAt']! as Map<String, Object?>;
+
+      expect(at['pattern'], createdAt['pattern']);
     });
   });
 

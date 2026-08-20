@@ -56,15 +56,15 @@ void main() {
       expect(find.text('bar'), findsOneWidget);
     });
 
-    testWidgets('the app as it ships today has two tabs',
+    testWidgets('the app as it ships today has three tabs',
         (WidgetTester tester) async {
       // The shell itself still draws nothing without a builder — the bar it
       // shows in the app is `RootScaffold`'s, handed the same list. What is
       // asserted here is that the policy now yields one, which it did not
-      // before preferences became a root.
+      // before preferences became a root, and it yields three since `Avance`.
       await _pump(tester, const AppShell(child: Text('home')));
       expect(find.byType(BottomNavigationBar), findsNothing);
-      expect(visibleTabs(rootsPresentToday), hasLength(2));
+      expect(visibleTabs(rootsPresentToday), hasLength(3));
     });
   });
 

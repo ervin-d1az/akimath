@@ -42,19 +42,27 @@ void main() {
   });
 
   group('what the app actually has', () {
-    test('the roots that exist today produce a two-tab bar', () {
-      // **This asserted the opposite until preferences landed**, and the change
-      // is the whole mechanism: `visibleTabs` was not touched. A destination
-      // was added to the set below and the rule started returning something.
-      expect(rootsPresentToday, <AppTab>{AppTab.home, AppTab.profile});
-      expect(visibleTabs(rootsPresentToday), <AppTab>[AppTab.home, AppTab.profile]);
+    test('the roots that exist today produce a three-tab bar', () {
+      // **This asserted none, then two, and now three**, and the change is the
+      // whole mechanism each time: `visibleTabs` was not touched. A destination
+      // was added to the set below and the rule returned one more.
+      expect(rootsPresentToday, <AppTab>{AppTab.home, AppTab.progress, AppTab.profile});
+      expect(visibleTabs(rootsPresentToday),
+          <AppTab>[AppTab.home, AppTab.progress, AppTab.profile]);
     });
 
-    test('the two tabs that have no root are not drawn', () {
-      // `skills` at F5, `progress` after it. Four tabs with two dead ones is
-      // the thing this policy exists to prevent.
+    test('and they come back in declaration order, not insertion order', () {
+      // `progress` is declared before `profile` and was added after it. A bar
+      // that shifted under the player depending on which root registered first
+      // is what the ordering in `visibleTabs` prevents.
+      expect(visibleTabs(<AppTab>{AppTab.profile, AppTab.progress, AppTab.home}),
+          <AppTab>[AppTab.home, AppTab.progress, AppTab.profile]);
+    });
+
+    test('the one tab that has no root is not drawn', () {
+      // `skills` at F5. Four tabs with one dead is the thing this policy exists
+      // to prevent.
       expect(visibleTabs(rootsPresentToday), isNot(contains(AppTab.skills)));
-      expect(visibleTabs(rootsPresentToday), isNot(contains(AppTab.progress)));
     });
   });
 }

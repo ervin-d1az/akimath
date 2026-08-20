@@ -13,14 +13,18 @@ enum AppTab { home, skills, progress, profile }
 
 /// The tab roots that exist in the app today.
 ///
-/// **Two, since preferences landed** — and that is the whole mechanism by which
-/// the bar appeared. Nothing in `visibleTabs` changed; a destination was added
-/// and the rule below started returning something. This constant is the single
-/// place the fact lives, exactly as it was kept for.
+/// **Three, since `Avance` landed** — and that is the whole mechanism by which
+/// the bar grows. Nothing in `visibleTabs` changed either time; a destination
+/// was added and the rule below started returning one more. This constant is
+/// the single place the fact lives, exactly as it was kept for.
 ///
-/// `skills` arrives at F5 and `progress` after it. Two live tabs is an honest
-/// bar; four with two dead is the thing this file argues against.
-const Set<AppTab> rootsPresentToday = <AppTab>{AppTab.home, AppTab.profile};
+/// `skills` arrives at F5. Three live tabs is an honest bar; four with one dead
+/// is the thing this file argues against.
+const Set<AppTab> rootsPresentToday = <AppTab>{
+  AppTab.home,
+  AppTab.progress,
+  AppTab.profile,
+};
 
 /// The tabs to render, given which ones have roots.
 ///

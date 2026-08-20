@@ -17,6 +17,9 @@ import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/features/preferences/policy/erasure.dart';
 import 'package:akimath_app/features/preferences/ui/erase_account_screen.dart';
 import 'package:akimath_app/features/preferences/ui/preferences_screen.dart';
+import 'package:akimath_app/api/history.dart';
+import 'package:akimath_app/features/progress/policy/progress_view.dart';
+import 'package:akimath_app/features/progress/ui/progress_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_solved_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
@@ -483,9 +486,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     label: 'ajustes · cuenta cargando',
     build: () => AppShell(
       child: PreferencesScreen(
-        daysPractised: 3,
-        streakDays: 2,
-        accountEmail: 'alguien@ejemplo.com',
+                accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.loading,
         onRetryAccount: null,
       ),
@@ -495,9 +496,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     label: 'ajustes · cuenta sin jugador',
     build: () => AppShell(
       child: PreferencesScreen(
-        daysPractised: 3,
-        streakDays: 2,
-        accountEmail: 'alguien@ejemplo.com',
+                accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.noPlayer,
         onRetryAccount: null,
       ),
@@ -507,9 +506,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     label: 'ajustes · cuenta sin conexión',
     build: () => AppShell(
       child: PreferencesScreen(
-        daysPractised: 3,
-        streakDays: 2,
-        accountEmail: 'alguien@ejemplo.com',
+                accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.offline,
         onRetryAccount: () {},
       ),
@@ -519,9 +516,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     label: 'ajustes · cuenta error de servidor',
     build: () => AppShell(
       child: PreferencesScreen(
-        daysPractised: 3,
-        streakDays: 2,
-        accountEmail: 'alguien@ejemplo.com',
+                accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.serverError,
         onRetryAccount: () {},
       ),
@@ -531,9 +526,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     label: 'ajustes · cuenta sesión caducada',
     build: () => AppShell(
       child: PreferencesScreen(
-        daysPractised: 3,
-        streakDays: 2,
-        accountEmail: 'alguien@ejemplo.com',
+                accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.rejected,
         onRetryAccount: null,
       ),
@@ -552,7 +545,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // The second root, and the reason the app has a bar at all. In the shell,
     // because that is the only way it renders.
     build: () => const AppShell(
-      child: PreferencesScreen(daysPractised: 12, streakDays: 5),
+      child: PreferencesScreen(),
     ),
   ),
   RegisteredScreen(
@@ -560,7 +553,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // A player on their first launch. Zero rather than a dash or a gap, so the
     // screen has no state in which it says nothing.
     build: () => const AppShell(
-      child: PreferencesScreen(daysPractised: 0, streakDays: 0),
+      child: PreferencesScreen(),
     ),
   ),
   RegisteredScreen(
@@ -633,9 +626,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     label: 'ajustes · con puerta de borrado',
     build: () => AppShell(
       child: PreferencesScreen(
-        daysPractised: 3,
-        streakDays: 2,
-        accountEmail: 'alguien@ejemplo.com',
+                accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.linked,
         onEraseData: () {},
       ),
@@ -675,4 +666,65 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       ),
     ),
   ),
+  RegisteredScreen(
+    label: 'avance · sin cuenta',
+    build: () => AppShell(
+      child: ProgressScreen(
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.noAccount,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'avance · cargando',
+    build: () => AppShell(
+      child: ProgressScreen(
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.loading,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'avance · con historial',
+    build: () => AppShell(
+      child: ProgressScreen(
+        daysPractised: 41,
+        streakDays: 7,
+        historyState: HistoryState.ready,
+        entries: <HistoryEntry>[
+          HistoryEntry(
+            kind: HistoryKind.series,
+            title: 'Restas',
+            at: DateTime.utc(2026, 8, 19, 15),
+            score: '4/5',
+            ratingDelta: null,
+          ),
+          HistoryEntry(
+            kind: HistoryKind.series,
+            title: 'Serie de retos',
+            at: DateTime.utc(2026, 8, 18, 15),
+            score: '5/5',
+            ratingDelta: null,
+          ),
+        ],
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'avance · sin conexión',
+    build: () => AppShell(
+      child: ProgressScreen(
+        daysPractised: 12,
+        streakDays: 5,
+        historyState: HistoryState.offline,
+        onRetryHistory: _nothing,
+      ),
+    ),
+  ),
 ];
+
+/// A callback for a registry entry, so a screen can be drawn with its control
+/// live without every entry declaring its own closure.
+void _nothing() {}

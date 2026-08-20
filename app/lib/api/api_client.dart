@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 
+import 'history.dart';
 import 'me.dart';
 import 'me_result.dart';
 
 // Re-exported so a caller that fetches and a caller that only reads the result
 // both need one import.
+export 'history.dart';
 export 'me_result.dart';
 
 /// The one place in the app that opens a socket.
@@ -104,6 +106,49 @@ class ApiClient {
       return _readLink(response.statusCode, body);
     } on Exception catch (cause) {
       return LinkUnreachable(cause.toString());
+    }
+  }
+
+  /// The player's sessions, newest first.
+  ///
+  /// **An empty list is a success.** A player who has linked and not yet synced
+  /// has no history, and a client that read that as a failure would apologise
+  /// for the ordinary case.
+  Future<HistoryResult> getHistory(String accessToken) async {
+    final Uri url = _baseUrl.resolve('me/history');
+    try {
+      final HttpClientRequest request = await _transport.getUrl(url);
+      if (accessToken.trim().isNotEmpty) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $accessToken');
+      }
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final HttpClientResponse response = await request.close().timeout(timeout);
+      final String body = await response.transform(utf8.decoder).join();
+      return _readHistory(response.statusCode, body);
+    } on Exception catch (cause) {
+      return HistoryUnreachable(cause.toString());
+    }
+  }
+
+  HistoryResult _readHistory(int status, String body) {
+    final Map<String, Object?> error = _errorOr(body);
+    final String message = error['message'] as String? ?? '';
+    switch (status) {
+      case 200:
+        try {
+          return HistoryFound(History.fromJson(_object(body)));
+        } on FormatException catch (cause) {
+          return HistoryFailed(status: status, reason: cause.message);
+        }
+      case 404:
+        return const HistoryNoPlayer();
+      case 401:
+        return HistoryRejected(
+          tag: error['error'] as String? ?? 'unauthenticated',
+          message: message,
+        );
+      default:
+        return HistoryFailed(status: status, reason: message.isEmpty ? body : message);
     }
   }
 

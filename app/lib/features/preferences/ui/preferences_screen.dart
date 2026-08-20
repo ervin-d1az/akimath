@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../design/brand/aki.dart';
-import '../../../design/math/spec/es_mx_number.dart';
 import '../../../design/widgets/speech_bubble.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/verdict.dart';
 import '../../../design/widgets/spec/verdict_copy.dart';
-import '../../../design/widgets/stat_tile.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/verdict_ring.dart';
 import '../policy/erasure.dart';
@@ -37,8 +35,6 @@ import '../../states/ui/account_state_view.dart';
 class PreferencesScreen extends StatelessWidget {
   const PreferencesScreen({
     super.key,
-    required this.daysPractised,
-    required this.streakDays,
     this.onCreateAccount,
     this.accountEmail,
     this.accountState = AccountState.none,
@@ -66,12 +62,6 @@ class PreferencesScreen extends StatelessWidget {
 
   /// Offered only where retrying could change the answer.
   final VoidCallback? onRetryAccount;
-
-  /// Distinct days recorded on this device.
-  final int daysPractised;
-
-  /// From `StreakPolicy` — the same local fact the home shows.
-  final int streakDays;
 
   @override
   Widget build(BuildContext context) {
@@ -109,16 +99,6 @@ class PreferencesScreen extends StatelessWidget {
               ),
             const SizedBox(height: BrandShape.space5),
           ],
-          Text('TU PROGRESO', style: BrandText.eyebrow()),
-          const SizedBox(height: BrandShape.space3),
-          Row(
-            children: <Widget>[
-              Expanded(child: _tile('DÍAS', daysPractised)),
-              const SizedBox(width: BrandShape.space2),
-              Expanded(child: _tile('RACHA', streakDays)),
-            ],
-          ),
-          const SizedBox(height: BrandShape.space5),
           Text('CÓMO SE LEEN LOS RETOS', style: BrandText.eyebrow()),
           const SizedBox(height: BrandShape.space3),
           _legend(),
@@ -144,18 +124,6 @@ class PreferencesScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _tile(String label, int value) => StatTile(
-        label: label,
-        value: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: StatValue(
-            EsMxNumber.integer(value),
-            size: StatTileVariant.compact.valueSize,
-          ),
-        ),
-        variant: StatTileVariant.compact,
-      );
 
   /// The two marks, side by side, with what each one means.
   ///
