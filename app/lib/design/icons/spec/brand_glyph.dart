@@ -36,4 +36,17 @@ enum BrandGlyph {
   flame,
   wifiOff,
   padlock,
+
+  /// The four bottom-bar marks.
+  ///
+  /// **Transcribed, which retires a named fork.** They were hand-drawn in
+  /// `nav_glyph_spec.dart` because the bar needed marks and the design digests
+  /// could not be opened; its own doc comment said so and a counter held the
+  /// exception to three. The digests opened, the real `0 0 26 26` paths are in
+  /// hand, and drawing a fourth by eye when the data exists would be the
+  /// mistake that file apologises for.
+  navHome,
+  navSkills,
+  navProgress,
+  navProfile,
 }

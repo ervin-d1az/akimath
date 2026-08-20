@@ -1,9 +1,9 @@
-import 'package:akimath_app/design/brand/brand_drawing_painter.dart';
 import 'package:akimath_app/design/tokens/tokens.dart';
 import 'package:akimath_app/features/shell/policy/visible_tabs.dart';
 import 'package:akimath_app/design/widgets/candy_surface.dart';
 import 'package:akimath_app/features/shell/ui/nav_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:akimath_app/design/icons/brand_icon.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<AppTab?> _pump(
@@ -38,7 +38,7 @@ void main() {
       await _pump(tester);
       expect(find.text('Inicio'), findsOneWidget);
       expect(find.text('Avance'), findsOneWidget);
-      expect(find.text('Ajustes'), findsOneWidget);
+      expect(find.text('Perfil'), findsOneWidget);
     });
 
     testWidgets('and no two of them carry the same mark', (WidgetTester tester) async {
@@ -47,23 +47,21 @@ void main() {
       // a bar whose whole argument is that the mark is what you learn. Nothing
       // noticed, because nothing compared them to each other.
       //
-      // Compared by the drawing rather than by pixels: the marks are painted,
-      // so no widget names them, but each `CustomPaint` holds the
-      // `BrandDrawing` it was given.
+      // Compared by the glyph each tab names. The marks used to be hand-drawn
+      // and this read the `BrandDrawing` out of a painter; they are transcribed
+      // now and every tab has its own, so the fallback that caused the defect
+      // is gone as well as caught.
       await _pump(tester);
 
-      final List<Object?> drawings = tester
-          .widgetList<CustomPaint>(find.descendant(
-            of: find.byType(NavBar),
-            matching: find.byWidgetPredicate(
-              (Widget w) => w is CustomPaint && w.painter is BrandDrawingPainter,
-            ),
-          ))
-          .map((CustomPaint p) => (p.painter! as BrandDrawingPainter).drawing)
+      final List<BrandGlyph> marks = tester
+          .widgetList<BrandIcon>(
+            find.descendant(of: find.byType(NavBar), matching: find.byType(BrandIcon)),
+          )
+          .map((BrandIcon icon) => icon.glyph)
           .toList();
 
-      expect(drawings, hasLength(visibleTabs(rootsPresentToday).length));
-      expect(drawings.toSet(), hasLength(drawings.length),
+      expect(marks, hasLength(visibleTabs(rootsPresentToday).length));
+      expect(marks.toSet(), hasLength(marks.length),
           reason: 'two tabs share a mark');
     });
 
@@ -93,7 +91,7 @@ void main() {
       final double chip = tester.getCenter(_chips(tester)).dx;
 
       expect(chip, greaterThan(tester.getCenter(find.text('Inicio')).dx));
-      expect(chip, closeTo(tester.getCenter(find.text('Ajustes')).dx, 1));
+      expect(chip, closeTo(tester.getCenter(find.text('Perfil')).dx, 1));
     });
 
     testWidgets('the chip is the design\'s green, and bordered',
@@ -141,7 +139,7 @@ void main() {
         (WidgetTester tester) async {
       await _pump(tester);
 
-      for (final String label in <String>['Inicio', 'Ajustes']) {
+      for (final String label in <String>['Inicio', 'Perfil']) {
         final Size size = tester.getSize(
           find.ancestor(
             of: find.text(label),
@@ -170,7 +168,7 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.text('Ajustes'));
+      await tester.tap(find.text('Perfil'));
       await tester.pumpAndSettle();
 
       expect(chosen, AppTab.profile);
@@ -193,7 +191,7 @@ void main() {
       );
       final Rect cell = tester.getRect(
         find.ancestor(
-          of: find.text('Ajustes'),
+          of: find.text('Perfil'),
           matching: find.byType(GestureDetector),
         ).first,
       );

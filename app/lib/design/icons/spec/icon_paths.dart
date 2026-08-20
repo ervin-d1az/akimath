@@ -158,6 +158,37 @@ const Map<BrandGlyph, IconSpec> iconPaths = <BrandGlyph, IconSpec>{
     viewBox: Size(24, 24),
     strokeWidth: 2.6,
   ),
+  BrandGlyph.navHome: IconSpec(
+    d: <String>['M4 12 L13 4 L22 12 V22 H4 Z'],
+    viewBox: Size(26, 26),
+    strokeWidth: 2.6,
+  ),
+  BrandGlyph.navSkills: IconSpec(
+    // Three nodes and the two edges between them. The circles are `<circle>`
+    // elements in the source, written as arc pairs for the same reason the
+    // gear's hub is.
+    d: <String>[
+      'M10 8.6 L16 10.6M16.6 14.6 L11.6 18',
+      'M3.6 7a3.4 3.4 0 0 1 6.8 0a3.4 3.4 0 0 1-6.8 0Z',
+      'M15.6 12a3.4 3.4 0 0 1 6.8 0a3.4 3.4 0 0 1-6.8 0Z',
+      'M5.6 20a3.4 3.4 0 0 1 6.8 0a3.4 3.4 0 0 1-6.8 0Z',
+    ],
+    viewBox: Size(26, 26),
+    strokeWidth: 2.6,
+  ),
+  BrandGlyph.navProgress: IconSpec(
+    d: <String>['M5 21V13M13 21V6M21 21V16'],
+    viewBox: Size(26, 26),
+    strokeWidth: 2.6,
+  ),
+  BrandGlyph.navProfile: IconSpec(
+    d: <String>[
+      'M5 22c1.6-4 4.4-5.6 8-5.6s6.4 1.6 8 5.6',
+      'M8.8 9a4.2 4.2 0 0 1 8.4 0a4.2 4.2 0 0 1-8.4 0Z',
+    ],
+    viewBox: Size(26, 26),
+    strokeWidth: 2.6,
+  ),
   BrandGlyph.padlock: IconSpec(
     // The shackle is a path and the body a `<rect x="4" y="9" w="12" h="8"
     // rx="2">`, written out because the parser takes paths.

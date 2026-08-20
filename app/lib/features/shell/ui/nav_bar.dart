@@ -1,8 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../../design/brand/brand_drawing_painter.dart';
-import '../../../design/brand/spec/brand_shapes.dart';
-import '../../../design/icons/spec/nav_glyph_spec.dart';
+import '../../../design/icons/brand_icon.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/nav_tab_visual.dart';
@@ -26,16 +24,20 @@ import '../policy/visible_tabs.dart';
 /// destination is at least `BrandShape.minTouchTarget` tall.
 ///
 /// **An icon over a label, and the icon is ours.** This bar carried labels
-/// alone for a reason worth restating: `BrandIcon` renders stand-in characters
-/// until the transcribed artwork lands, and the two nearest marks were a tick —
-/// which means *correct* everywhere else in this app — and a gear the system
-/// paints as a colour emoji. A wrong mark does read worse than a word.
+/// alone for a reason that has now expired: `BrandIcon` rendered stand-in
+/// characters until the transcribed artwork landed, and the two nearest marks
+/// were a tick — which means *correct* everywhere else in this app — and a gear
+/// the system paints as a colour emoji. A wrong mark does read worse than a
+/// word.
 ///
-/// So the two marks are drawn rather than borrowed, in
-/// `design/icons/spec/nav_glyph_spec.dart`, which says plainly that it is a
-/// fork of a design nobody has transcribed and is counted by a test. **The
-/// label stays under the icon**: a mark this app invented is not one anyone has
-/// learned yet, and an unlabelled bottom bar assumes they have.
+/// So the marks were hand-drawn, in a file that said plainly it was a fork of a
+/// design nobody could reach and kept a counter against itself. The digests
+/// opened, all four are transcribed, and **the fork is deleted** — the moment
+/// its own doc comment was written for.
+///
+/// **The label stays under the icon.** That was never about the fork: a mark is
+/// something a player learns, and an unlabelled bottom bar assumes they already
+/// have.
 class NavBar extends StatelessWidget {
   const NavBar({
     super.key,
@@ -53,7 +55,7 @@ class NavBar extends StatelessWidget {
         AppTab.home => 'Inicio',
         AppTab.skills => 'Mapa',
         AppTab.progress => 'Avance',
-        AppTab.profile => 'Ajustes',
+        AppTab.profile => 'Perfil',
       };
 
   /// The card's own height, from the design. The chip inside it is 52 and the
@@ -143,13 +145,7 @@ class _Tab extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          SizedBox(
-            width: _markSize,
-            height: _markSize,
-            child: CustomPaint(
-              painter: BrandDrawingPainter(_markFor(tab, visual.mark)),
-            ),
-          ),
+          BrandIcon(_markFor(tab), size: _markSize, color: visual.mark),
           const SizedBox(height: 2),
           _label(visual),
         ],
@@ -162,36 +158,20 @@ class _Tab extends StatelessWidget {
             .copyWith(fontWeight: visual.weight),
       );
 
-  /// The drawn mark, tinted to whatever the tab's state says.
+  /// The mark each tab carries.
   ///
-  /// `skills` and `progress` have no root yet, so they cannot be reached and
-  /// have no mark; they fall back to the house rather than to nothing, because
-  /// a bar that renders an empty box is worse than one that repeats itself —
-  /// and `rootsPresentToday` means neither is ever built.
-  static BrandDrawing _markFor(AppTab tab, Color ink) {
-    final BrandDrawing drawing = switch (tab) {
-      AppTab.profile => NavGlyphSpec.settings,
-      AppTab.progress => NavGlyphSpec.progress,
-      // `skills` has no root and no mark of its own yet; it never reaches here
-      // because `visibleTabs` does not hand it over. Sharing the house until
-      // F5 is a decision that costs nothing while nothing can see it — and
-      // `nav_bar_test.dart` fails the moment two *drawn* tabs share a mark.
-      AppTab.home || AppTab.skills => NavGlyphSpec.home,
-    };
-    return BrandDrawing(
-      viewBox: drawing.viewBox,
-      marks: drawing.marks.map((BrandMark mark) => _tinted(mark, ink)).toList(),
-    );
-  }
-
-  /// Both nav marks are stroke-only, which is what makes them tintable — see
-  /// `NavGlyphSpec`. Anything else passes through unchanged rather than being
-  /// silently recoloured wrong.
-  static BrandMark _tinted(BrandMark mark, Color ink) => switch (mark) {
-    InkStroke(:final Offset start, :final List<PathStep> steps, :final double width) =>
-      InkStroke(start: start, steps: steps, width: width, color: ink),
-    _ => mark,
-  };
+  /// **One per tab, including `skills`, which is new.** The bar used to fall
+  /// back to the house for any tab without a mark of its own — a decision that
+  /// cost nothing while `visibleTabs` never handed one over, and that was
+  /// exactly how `Avance` came to share the house when it landed. Every tab has
+  /// its own now, transcribed rather than drawn, so the fallback is gone and so
+  /// is the way back into that defect.
+  static BrandGlyph _markFor(AppTab tab) => switch (tab) {
+        AppTab.home => BrandGlyph.navHome,
+        AppTab.skills => BrandGlyph.navSkills,
+        AppTab.progress => BrandGlyph.navProgress,
+        AppTab.profile => BrandGlyph.navProfile,
+      };
 
   /// 20, so the mark and a 10 pt label together clear the 52 chip.
   static const double _markSize = 20;

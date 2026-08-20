@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../account/policy/session.dart';
 import '../../home/ui/home_route.dart';
-import '../../preferences/ui/preferences_route.dart';
+import '../../profile/ui/profile_route.dart';
 import '../../progress/ui/progress_route.dart';
 import '../policy/visible_tabs.dart';
 import 'nav_bar.dart';
@@ -59,7 +59,7 @@ class _RootScaffoldState extends State<RootScaffold> {
   Widget _rootFor(AppTab tab) => switch (tab) {
         AppTab.home => const HomeRoute(),
         AppTab.progress => ProgressRoute(session: _session),
-        AppTab.profile => PreferencesRoute(
+        AppTab.profile => ProfileRoute(
             session: _session,
             onSessionChanged: (LinkedSession? session) =>
                 setState(() => _session = session),
