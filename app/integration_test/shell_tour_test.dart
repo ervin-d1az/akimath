@@ -71,8 +71,10 @@ void main() {
     expect(find.byType(ProgressScreen), findsOneWidget);
     expect(find.text('DÍAS'), findsOneWidget);
     expect(find.text('RACHA'), findsOneWidget);
-    // No account on a fresh install, so the history is an invitation.
-    expect(find.textContaining('Crea una cuenta'), findsOneWidget);
+    // No account on a fresh install, so there is no history section at all —
+    // a `HISTORIAL` nothing can ever fill is a promise the product cannot keep
+    // while nothing syncs.
+    expect(find.text('HISTORIAL'), findsNothing);
 
     await tester.tap(find.text('Inicio'));
     await tester.pumpAndSettle();

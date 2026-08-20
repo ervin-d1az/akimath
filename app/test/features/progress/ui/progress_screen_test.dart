@@ -97,20 +97,25 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
-    testWidgets('an empty history is told, not apologised for',
+    testWidgets('an empty history draws no section at all',
         (WidgetTester tester) async {
+      // Not a heading over nothing. Sync does not exist yet, so a `HISTORIAL`
+      // for a player with none would stay empty however much they played —
+      // and the sentence under it would be a promise the product cannot keep.
       await _pump(tester, historyState: HistoryState.empty);
 
-      expect(find.byKey(const Key('history-note')), findsOneWidget);
+      expect(find.text('HISTORIAL'), findsNothing);
       expect(find.byKey(const Key('history-banner')), findsNothing);
-      expect(find.text(historyMessage(HistoryState.empty)!), findsOneWidget);
+      // The figures the device knows are still there, which is the point: the
+      // screen has something true to show either way.
+      expect(find.text('DÍAS'), findsOneWidget);
     });
 
-    testWidgets('and so is having no account at all', (WidgetTester tester) async {
+    testWidgets('and neither does having no account', (WidgetTester tester) async {
       await _pump(tester, historyState: HistoryState.noAccount);
 
-      expect(find.byKey(const Key('history-note')), findsOneWidget);
-      expect(find.textContaining('Crea una cuenta'), findsOneWidget);
+      expect(find.text('HISTORIAL'), findsNothing);
+      expect(find.text('RACHA'), findsOneWidget);
     });
 
     testWidgets('the states somebody has to act on get a banner',
@@ -121,6 +126,7 @@ void main() {
         HistoryState.rejected,
       ]) {
         await _pump(tester, historyState: state);
+        expect(find.text('HISTORIAL'), findsOneWidget, reason: state.name);
         expect(find.byKey(const Key('history-banner')), findsOneWidget, reason: state.name);
       }
     });

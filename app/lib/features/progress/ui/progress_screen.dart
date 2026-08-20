@@ -68,10 +68,15 @@ class ProgressScreen extends StatelessWidget {
               Expanded(child: _tile('RACHA', streakDays)),
             ],
           ),
-          const SizedBox(height: BrandShape.space5),
-          Text('HISTORIAL', style: BrandText.eyebrow()),
-          const SizedBox(height: BrandShape.space3),
-          _history(),
+          // **No heading over nothing.** Two states have no section at all —
+          // see `historyWorthDrawing`. A `HISTORIAL` that is always empty is a
+          // promise the product cannot keep yet.
+          if (historyWorthDrawing(historyState)) ...<Widget>[
+            const SizedBox(height: BrandShape.space5),
+            Text('HISTORIAL', style: BrandText.eyebrow()),
+            const SizedBox(height: BrandShape.space3),
+            _history(),
+          ],
           const SizedBox(height: BrandShape.space5),
           Center(
             child: Column(
@@ -119,13 +124,10 @@ class ProgressScreen extends StatelessWidget {
       );
     }
 
+    // Every remaining state is a failure to fetch, so every one gets a banner.
+    // The two that were plain text — no account, nothing yet — draw no section
+    // at all now.
     final String message = historyMessage(historyState)!;
-    // Only the two somebody has to act on get a banner. An invitation and an
-    // empty list are ordinary and read as plain text; a banner on every state
-    // is a banner nobody reads.
-    final bool banner = historyState == HistoryState.serverError ||
-        historyState == HistoryState.offline ||
-        historyState == HistoryState.rejected;
 
     // **The policy decides, not the banner.** A refused session earns a banner
     // and no retry: asking again with the same dead token gets the same
@@ -134,15 +136,13 @@ class ProgressScreen extends StatelessWidget {
     final VoidCallback? retry =
         canRetryHistory(historyState) ? onRetryHistory : null;
 
-    return banner
-        ? InlineBanner(
-            key: const Key('history-banner'),
-            kind: isOurProblem(historyState) ? BannerKind.error : BannerKind.notice,
-            message: message,
-            onAction: retry,
-            actionLabel: retry == null ? null : 'Reintentar',
-          )
-        : Text(message, key: const Key('history-note'), style: BrandText.caption());
+    return InlineBanner(
+      key: const Key('history-banner'),
+      kind: isOurProblem(historyState) ? BannerKind.error : BannerKind.notice,
+      message: message,
+      onAction: retry,
+      actionLabel: retry == null ? null : 'Reintentar',
+    );
   }
 
   /// One session: what it was, how it went, and when.

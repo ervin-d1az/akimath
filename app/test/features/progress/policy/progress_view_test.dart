@@ -75,11 +75,46 @@ void main() {
     });
   });
 
+  group('whether the section is drawn at all', () {
+    test('nothing that can only ever be empty', () {
+      // The first version told a player with no history *"los de hoy aparecen
+      // aquí"*, and they do not: nothing in the app sends an attempt yet. A
+      // heading over a section that would stay empty however much they played
+      // is the same mistake as a toggle that does nothing (DR-P2).
+      expect(historyWorthDrawing(HistoryState.noAccount), isFalse);
+      expect(historyWorthDrawing(HistoryState.empty), isFalse);
+    });
+
+    test('but everything there is something true to say about', () {
+      // A list, a wait for one, or a failure to fetch one.
+      for (final HistoryState state in <HistoryState>[
+        HistoryState.ready,
+        HistoryState.loading,
+        HistoryState.rejected,
+        HistoryState.serverError,
+        HistoryState.offline,
+      ]) {
+        expect(historyWorthDrawing(state), isTrue, reason: state.name);
+      }
+    });
+
+    test('and every state is decided one way or the other', () {
+      // The control: a state added later has to be classified, and this fails
+      // if the switch grows a default instead.
+      expect(
+        HistoryState.values.map(historyWorthDrawing).toSet(),
+        <bool>{true, false},
+      );
+    });
+  });
+
   group('the copy', () {
-    test('every state that is not a list says something', () {
+    test('a drawn state that is not a list says something', () {
       for (final HistoryState state in HistoryState.values) {
         final String? message = historyMessage(state);
-        if (state == HistoryState.ready || state == HistoryState.loading) {
+        if (state == HistoryState.ready ||
+            state == HistoryState.loading ||
+            !historyWorthDrawing(state)) {
           expect(message, isNull, reason: state.name);
         } else {
           expect(message, isNotNull, reason: state.name);
@@ -93,15 +128,18 @@ void main() {
           .map(historyMessage)
           .whereType<String>()
           .toList();
+      expect(said, isNotEmpty);
       expect(said.toSet(), hasLength(said.length));
     });
 
-    test('the one for no account is an invitation, not an apology', () {
-      // `4.8`'s shape. A player who never linked has done nothing wrong and the
-      // local figures beside this line are true.
-      final String message = historyMessage(HistoryState.noAccount)!;
-      expect(message, isNot(contains('error')));
-      expect(message, contains('Crea una cuenta'));
+    test('and none of them promises something the app cannot do', () {
+      // Sync does not exist yet. Any sentence implying a played round will turn
+      // up here is a promise the product cannot keep.
+      for (final String message
+          in HistoryState.values.map(historyMessage).whereType<String>()) {
+        expect(message, isNot(contains('aparecen')), reason: message);
+        expect(message, isNot(contains('se guardan')), reason: message);
+      }
     });
   });
 
