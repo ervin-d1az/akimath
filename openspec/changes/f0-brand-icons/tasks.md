@@ -19,8 +19,27 @@ TDD throughout: each test is written and **seen failing** before the code that s
 
 ## 2 · The pure geometry
 
-- [ ] 2.1 Add `design/icons/spec/` as a declared root in `app/test/architecture/pure_boundary_test.dart`.
-      **Check:** the gate reports the root **absent** (0 files), not passing, before task 2.3.
+> **Blocked, and not on work: the digests are not reachable.** Tasks 2.2 to 4.3 all transcribe path
+> data **verbatim** from the design digests (D2 forbids redrawing one by eye), and nothing in this
+> repository or this machine can open them. Re-checked 2026-08-20.
+>
+> What exists instead is a **named fork of three marks**: `design/icons/spec/nav_glyph_spec.dart`
+> holds the house, the sliders and the rising steps, drawn by hand because the bottom bar needed
+> marks and could not have them any other way. It says so in its own doc comment, and
+> `test/design/icons/nav_glyph_spec_test.dart` counts them **from the source file** — so the
+> exception has a number against it and cannot grow unnoticed. It grew once, on 2026-08-19, when
+> `Avance` became a root; the counter was reading its own hand-written list at the time and did not
+> notice, which is why it reads the source now.
+>
+> Every other glyph is still a stand-in character in `BrandIcon`. This change reopens the day the
+> digests arrive, and until then it is honestly blocked rather than quietly in progress.
+
+- [x] 2.1 Add `design/icons/spec/` as a declared root in `app/test/architecture/pure_boundary_test.dart`.
+      **Satisfied by construction, 2026-08-20.** The root is a **glob** — `design/**/spec/` — not a
+      list, so `design/icons/spec/` was covered the moment it existed and nobody had to declare it.
+      The gate reports 21 files under that root today and `brand_glyph.dart` and
+      `nav_glyph_spec.dart` are two of them, so it is covered rather than absent, which is better
+      than the check asked for.
 - [ ] 2.2 Write `app/test/design/icons/spec/icon_paths_test.dart` for both spec scenarios: backspace
       resolves to **one** `BrandIconSpec` whether requested at 24 or 23 px; the submit arrow's stroke
       width is 3.2 and the backspace's 2.6.
