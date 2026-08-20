@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { ATTEMPT_ELAPSED_MS_MAX } from "../src/openapi/api-schemas.js";
 import { buildOpenApiDocument, OPENAPI_VERSION } from "../src/openapi/document.js";
 import { CONTRACT_ROOT } from "./fixture-files.js";
 
@@ -170,6 +171,61 @@ describe("the answer never travels and the prompt travels rendered", () => {
     for (const claim of ["ok", "correct", "isCorrect", "verdict", "score"]) {
       expect(Object.keys(submission.properties)).not.toContain(claim);
     }
+  });
+
+  it("a submission names exactly one source, and the schema cannot say so", () => {
+    // `attempts_one_source` is `(issued_item_id) XOR (pack_id, pack_index)`, so
+    // the wire mirrors it: `itemId` for an issued item, `packRef` for a pack
+    // one, **both optional**. A `oneOf` would state the rule properly and
+    // `downconvert.ts` refuses one — 3.0.3 has no general union and
+    // `ARCHITECTURE.md` §2 keeps the surface flat for a hand-written Dart
+    // client. So the XOR is enforced twice where it can be: by the server's
+    // reader as a 400, and by the database CHECK behind it. This asserts the
+    // shape the two are enforcing.
+    const schemas = (committed["components"] as { schemas: Record<string, Record<string, unknown>> })
+      .schemas;
+    const submission = schemas["AttemptSubmission"] as {
+      properties: Record<string, Record<string, unknown>>;
+      required: string[];
+    };
+
+    expect(Object.keys(submission.properties).sort()).toEqual(
+      ["answer", "clientTs", "elapsedMs", "itemId", "packRef", "sessionId"],
+    );
+    expect([...submission.required].sort()).toEqual(
+      ["answer", "clientTs", "elapsedMs", "sessionId"],
+    );
+    // Inlined rather than `$ref`-ed, which is what this emitter does
+    // everywhere — `AttemptBatch` inlines the submission itself the same way.
+    // What matters is that the shape is `OfflinePackRef`'s, so this compares it
+    // against the named component instead of restating it.
+    expect(submission.properties["packRef"]).toEqual(schemas["OfflinePackRef"]);
+    // And the operation says out loud what the shape cannot.
+    const submit = ((committed["paths"] as Record<string, Record<string, Record<string, unknown>>>)
+      ["/attempts"] as Record<string, Record<string, unknown>>)["post"] as {
+      description: string;
+    };
+    expect(submit.description).toMatch(/exactly one/i);
+  });
+
+  it("time on task is bounded, because nothing else bounds it", () => {
+    // `attempts.elapsed_ms` is NOT NULL and client-supplied: `issued_at → clientTs`
+    // is wall-clock latency, not time on task, and a pack item has no `issued_at`
+    // at all. Unbounded, it is a row saying somebody spent forty days on one
+    // subtraction, and it lands in `template_stats` and then in calibration.
+    const schemas = (committed["components"] as { schemas: Record<string, Record<string, unknown>> })
+      .schemas;
+    const submission = schemas["AttemptSubmission"] as {
+      properties: Record<string, Record<string, unknown>>;
+    };
+    const elapsed = submission.properties["elapsedMs"]!;
+
+    expect(elapsed["type"]).toBe("integer");
+    expect(elapsed["minimum"]).toBe(0);
+    // Refused above the ceiling rather than clamped: a clamped value is a lie
+    // that passes every gate downstream of it.
+    expect(elapsed["maximum"]).toBe(ATTEMPT_ELAPSED_MS_MAX);
+    expect(ATTEMPT_ELAPSED_MS_MAX).toBe(3_600_000);
   });
 
   it("the sweep would catch one", () => {
