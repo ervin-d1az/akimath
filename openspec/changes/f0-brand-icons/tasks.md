@@ -19,9 +19,24 @@ TDD throughout: each test is written and **seen failing** before the code that s
 
 ## 2 · The pure geometry
 
-> **Blocked, and not on work: the digests are not reachable.** Tasks 2.2 to 4.3 all transcribe path
+> **Unblocked 2026-08-20, and done.** The digests became reachable through the `claude_design`
+> MCP, and the sixteen `BrandGlyph` marks are transcribed: `design/icons/spec/icon_paths.dart`
+> holds each one's verbatim `d`, viewBox, stroke width and caps, and `design/icons/spec/svg_path.dart`
+> turns a `d` into geometry. The strings are kept as strings rather than translated into `lineTo`
+> calls, which is the only form in which D2 can be checked by reading — the spec file and the design
+> document hold the same characters.
+>
+> **Still forked, still counted:** `nav_glyph_spec.dart`'s three marks. Their real path data is now
+> in hand too (`0 0 26 26`, four nav glyphs) but replacing them is a change with a different
+> verification — the fork's own counter and drawing-comparison test stop meaning what they meant —
+> so it is not bundled here. The KenKen mark and the 60×60 server mark are also transcribed in the
+> source documents and wait for the screens that need them.
+>
+> The note below is kept for the record of what the block was.
+>
+> ~~Tasks 2.2 to 4.3 all transcribe path
 > data **verbatim** from the design digests (D2 forbids redrawing one by eye), and nothing in this
-> repository or this machine can open them. Re-checked 2026-08-20.
+> repository or this machine can open them. Re-checked 2026-08-20.~~
 >
 > What exists instead is a **named fork of three marks**: `design/icons/spec/nav_glyph_spec.dart`
 > holds the house, the sliders and the rising steps, drawn by hand because the bottom bar needed
