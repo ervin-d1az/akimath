@@ -38,8 +38,52 @@ export const ItemResponseSchema = z.object({
   keypad: z.enum(KEYPAD_LAYOUTS),
 });
 
+/** Which item in which pack. Identity for a pack item is `(packId, index)`. */
+export const OfflinePackRefSchema = z.object({
+  packId: z.uuid(),
+  index: z.int().min(0),
+});
+
+/**
+ * The longest an attempt may claim to have taken, in milliseconds — one hour.
+ *
+ * **A ceiling, because nothing else is one.** `attempts.elapsed_ms` is NOT NULL
+ * and the figure is the client's: `issued_at → clientTs` measures wall-clock
+ * latency, not time on task, and a pack item has no `issued_at` at all. Left
+ * unbounded, one row saying somebody spent forty days on a subtraction reaches
+ * `template_stats` and then calibration.
+ *
+ * **Refused above it, never clamped.** A clamped value is a lie that passes
+ * every gate downstream of it.
+ *
+ * An hour is generous on purpose: a puzzle is allowed to be slow, and the app
+ * shows no timer, so a player who puts the phone down mid-item is ordinary
+ * rather than suspicious. The number is here and not in the server because this
+ * is the frozen shape; `packages/server` holds it to the emitted `maximum`.
+ */
+export const ATTEMPT_ELAPSED_MS_MAX = 3_600_000;
+
+/**
+ * One answered item, on its way to sync.
+ *
+ * **It names exactly one source, and the schema cannot say so.**
+ * `attempts_one_source` is `(issued_item_id) XOR (pack_id, pack_index)`, and
+ * the wire mirrors it: `itemId` for an item the server issued, `packRef` for
+ * one the player got in a pack. Both are optional here because a `oneOf` is a
+ * union, `downconvert.ts` refuses one, and `ARCHITECTURE.md` §2 keeps the
+ * surface flat for a hand-written Dart client. The rule is enforced where it
+ * can be — the server's reader answers 400, and the database CHECK is behind
+ * that — and stated in the operation's description so nobody has to guess.
+ *
+ * **Still no correctness field.** §4: the sync endpoint "does not accept an
+ * `ok` field — that is what makes the invariant true by construction rather
+ * than by discipline".
+ */
 export const AttemptSubmissionSchema = z.object({
-  itemId: z.uuid(),
+  /** An item the server issued. Absent when `packRef` is present. */
+  itemId: z.uuid().optional(),
+  /** An item from a pack. Absent when `itemId` is present. */
+  packRef: OfflinePackRefSchema.optional(),
   /**
    * The rating period. `ARCHITECTURE.md` §5 puts a client-generated session id
    * on every attempt; the frozen `attempts` table has no such column, so today
@@ -49,6 +93,8 @@ export const AttemptSubmissionSchema = z.object({
   sessionId: z.uuid(),
   answer: z.string(),
   clientTs: z.iso.datetime(),
+  /** Time on task. See [ATTEMPT_ELAPSED_MS_MAX] for why it is bounded. */
+  elapsedMs: z.int().min(0).max(ATTEMPT_ELAPSED_MS_MAX),
 });
 
 export const VerdictSchema = z.object({
@@ -70,11 +116,6 @@ export const AttemptBatchSchema = z.object({
 
 export const VerdictBatchSchema = z.object({
   verdicts: z.array(VerdictSchema),
-});
-
-export const OfflinePackRefSchema = z.object({
-  packId: z.uuid(),
-  index: z.int().min(0),
 });
 
 export const OfflinePackSchema = z.object({

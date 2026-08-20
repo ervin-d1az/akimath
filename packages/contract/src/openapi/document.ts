@@ -143,6 +143,18 @@ export function buildOpenApiDocument(): unknown {
         post: {
           operationId: "submitAttempts",
           summary: "Submit a session's attempts and receive their verdicts.",
+          // **The rule the schema cannot state.** `AttemptSubmission` carries
+          // `itemId` and `packRef` as two optionals because 3.0.3 has no
+          // general union and `downconvert.ts` refuses the `oneOf` that would
+          // express it. The constraint is real and enforced twice — the
+          // server's reader answers 400, the `attempts_one_source` CHECK is
+          // behind it — so it is written here rather than left to be
+          // discovered.
+          description:
+            "Each attempt names exactly one source: `itemId` for an item this " +
+            "server issued, or `packRef` for one the player got in an offline " +
+            "pack. Neither, or both, is a 400. The server grades the answer " +
+            "itself — there is no field on a submission that asserts a verdict.",
           requestBody: {
             required: true,
             ...(json(ref("AttemptBatch")) as object),
