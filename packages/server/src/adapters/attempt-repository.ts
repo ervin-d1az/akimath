@@ -74,6 +74,17 @@ export interface PackItemSource {
   readonly entry: ManifestEntry;
   /** 32 lowercase hex. Needed to verify a digest entry and harmless otherwise. */
   readonly saltHex: string;
+  /**
+   * Which shipped content the pack copies, or null when it names none.
+   *
+   * **Carried because a digest entry records no difficulty.** A manifest entry
+   * holds only the digest and the skill, so the item's `ladder_step` — which the
+   * frozen pack schema requires on every item — is reachable only through the
+   * content the row names. That step is the identity of the difficulty class the
+   * rating measures, and every issuable pack today is a copy, so this is the
+   * path that matters rather than the exception.
+   */
+  readonly contentId: string | null;
 }
 
 export async function entryForPackItem(
@@ -82,9 +93,14 @@ export async function entryForPackItem(
   packId: string,
   index: number,
 ): Promise<PackItemSource | null> {
-  const result = await client.query<{ ref: unknown; salt_hex: string }>(
+  const result = await client.query<{
+    ref: unknown;
+    salt_hex: string;
+    content_id: string | null;
+  }>(
     `SELECT item_refs -> $3::int         AS ref,
-            encode(pack_salt, 'hex')     AS salt_hex
+            encode(pack_salt, 'hex')     AS salt_hex,
+            content_id
        FROM offline_packs
       WHERE id = $1::uuid AND player_id = $2::uuid`,
     [packId, playerId, index],
@@ -94,7 +110,9 @@ export async function entryForPackItem(
     return null;
   }
   const entry = fromManifestEntry(row.ref);
-  return entry === null ? null : { entry, saltHex: row.salt_hex };
+  return entry === null
+    ? null
+    : { entry, saltHex: row.salt_hex, contentId: row.content_id };
 }
 
 /** One graded attempt, ready for the table. */
