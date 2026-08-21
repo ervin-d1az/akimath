@@ -20,6 +20,7 @@ import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/calibration_intro_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
@@ -448,6 +449,16 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // Not in the shell: it composes `RoundScreen`, which brings its own
     // `Scaffold` — the same shape `OnboardingFlow` builds.
     build: () => FirstItemScreen(onFinished: () {}, onBack: () {}),
+  ),
+
+  // ── The four first-run screens between `0.3` and the home ────────────────
+  RegisteredScreen(
+    label: 'calibración · intro',
+    // In the shell, like the welcome: it is a bare `Padding` with no Material
+    // ancestor of its own, and that is how `OnboardingFlow` builds it.
+    build: () => AppShell(
+      child: CalibrationIntroScreen(onStart: _nothing, onSkip: _nothing),
+    ),
   ),
   RegisteredScreen(
     label: 'round',
