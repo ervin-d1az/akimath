@@ -7,15 +7,21 @@ import 'package:meta/meta.dart';
 /// value none of the three chips can display — a stored preference the screen
 /// showing it would have to lie about.
 enum ReminderTime {
-  morning('07:00'),
-  evening('19:30'),
-  night('21:00');
+  morning('07', '00'),
+  evening('19', '30'),
+  night('21', '00');
 
-  const ReminderTime(this.label);
+  const ReminderTime(this.hour, this.minute);
+
+  /// The two halves, kept apart because `4.4` draws them in **two boxes**.
+  /// Splitting a joined string at the screen would be parsing what nobody had
+  /// to join.
+  final String hour;
+  final String minute;
 
   /// What the chip reads, and what the store keeps. Twenty-four-hour, which is
   /// how es-MX writes a time in a settings list.
-  final String label;
+  String get label => '$hour:$minute';
 }
 
 /// The member [label] names, or null when nothing does.

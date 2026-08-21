@@ -11,8 +11,14 @@ Future<void> pump(WidgetTester tester, Widget child) async {
     ..physicalSize = const Size(390, 844)
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  // **Inside a list, which is where these live.** A `Center` hands a control
+  // a bounded height and hides a whole class of layout fault: a stretched
+  // `Row` sized itself off the viewport there and crashed on `hasSize` the
+  // moment the same widget went into `4.4`'s scrolling column.
   await tester.pumpWidget(
-    MaterialApp(home: Scaffold(body: Center(child: child))),
+    MaterialApp(
+      home: Scaffold(body: ListView(children: <Widget>[child])),
+    ),
   );
 }
 

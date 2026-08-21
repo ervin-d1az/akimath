@@ -59,14 +59,23 @@ class SettingsChoiceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        for (int index = 0; index < options.length; index++) ...<Widget>[
-          if (index > 0) const SizedBox(width: BrandShape.space2),
-          Expanded(child: _chip(index)),
+    // **`IntrinsicHeight`, because the chips must match and the column above
+    // them is unbounded.** The design draws one row of equal boxes, which is
+    // `CrossAxisAlignment.stretch` — and a stretched `Row` inside a `ListView`
+    // has no height to stretch to and fails its own layout. Measured: the four
+    // A's of `4.5` and the three hours of `4.4` both crashed on `hasSize`
+    // until this wrapped them, while the same row inside a `Center` passed,
+    // which is why the test below pumps one inside a list.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (int index = 0; index < options.length; index++) ...<Widget>[
+            if (index > 0) const SizedBox(width: BrandShape.space2),
+            Expanded(child: _chip(index)),
+          ],
         ],
-      ],
+      ),
     );
   }
 
