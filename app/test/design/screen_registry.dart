@@ -13,6 +13,9 @@ import 'package:akimath_app/features/states/ui/account_state_view.dart';
 import 'package:akimath_app/features/states/ui/empty_state_screen.dart';
 import 'package:akimath_app/features/states/ui/offline_screen.dart';
 import 'package:akimath_app/features/states/ui/server_error_screen.dart';
+import 'package:akimath_app/features/states/policy/topic_suggestion.dart';
+import 'package:akimath_app/features/states/ui/skill_mastered_screen.dart';
+import 'package:akimath_app/features/states/ui/topic_exhausted_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
@@ -1118,6 +1121,38 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         note: 'error 503 · 18:42',
         onRetry: _nothing,
         onSolveOffline: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    // Renders only — no skill can be completed, so nothing routes here. Every
+    // figure is supplied from this test file rather than from `lib/`.
+    label: 'estado · 4.14 habilidad dominada',
+    build: () => AppShell(
+      child: SkillMasteredScreen(
+        skillName: 'Fracciones',
+        weekAgoPercent: 88,
+        unlockedTopics: const <String>['Porcentajes', 'Decimales'],
+        onOpenMap: _nothing,
+        onContinue: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    // Renders only — a topic cannot run out, because there are no topics.
+    label: 'estado · 4.15 tema agotado',
+    build: () => AppShell(
+      child: TopicExhaustedScreen(
+        skillName: 'Fracciones',
+        nextTopic: const NextTopic(
+          name: 'Decimales',
+          percent: 38,
+          readyCount: 5,
+        ),
+        puzzleSubtitle: 'KenKen · 15 min, sin prisa',
+        onOpenTopic: _nothing,
+        onOpenPuzzle: _nothing,
+        onSwitch: _nothing,
       ),
     ),
   ),
