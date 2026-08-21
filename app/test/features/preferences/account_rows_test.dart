@@ -7,6 +7,7 @@ import 'package:akimath_app/features/preferences/ui/change_password_screen.dart'
 import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
 import 'package:akimath_app/features/profile/ui/profile_route.dart';
 import 'package:akimath_app/features/profile/ui/profile_screen.dart';
+import 'package:akimath_app/features/shell/ui/tab_stack.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -65,20 +66,30 @@ class _ShellState extends State<_Shell> {
       );
 }
 
-Future<_ShellState> _openCuenta(WidgetTester tester) async {
+Future<_ShellState> _openCuenta(
+  WidgetTester tester, {
+  bool insideATabStack = false,
+}) async {
   tester.view
     ..physicalSize = const Size(390, 844)
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
-  await tester.pumpWidget(MaterialApp(
-    home: _Shell(
-      session: const LinkedSession(
-        email: 'ana@correo.mx',
-        accessToken: 'header.payload.signature',
-        ageBand: AgeBand.adult,
-      ),
+  const Widget shellUnderTest = _Shell(
+    session: LinkedSession(
+      email: 'ana@correo.mx',
+      accessToken: 'header.payload.signature',
+      ageBand: AgeBand.adult,
     ),
+  );
+  await tester.pumpWidget(MaterialApp(
+    home: insideATabStack
+        // **The navigator the app really uses.** Every push here lands on the
+        // tab's own `pages:` Navigator rather than the app's, and `_signOut`
+        // pops until `route.isFirst` — so this is the one place the two halves
+        // of this change meet.
+        ? const TabStack(child: shellUnderTest)
+        : shellUnderTest,
   ));
   await tester.pumpAndSettle();
 
@@ -131,6 +142,24 @@ void main() {
     // Signed out, so the doors are back and the address is gone.
     expect(find.text('ana@correo.mx'), findsNothing);
     expect(find.text('Ya tengo cuenta'), findsOneWidget);
+  });
+
+  testWidgets('and it pops the tab\'s own stack, not the app\'s',
+      (WidgetTester tester) async {
+    // `_signOut` pops until `route.isFirst`, and in the app that first route is
+    // the page-managed root `TabStack` declares rather than a pushed one. The
+    // other cases here pump the route straight under `MaterialApp`, where the
+    // pop resolves to the app's navigator — so without this the interaction
+    // between the two halves of this change is never exercised.
+    final _ShellState shell = await _openCuenta(tester, insideATabStack: true);
+
+    await tester.tap(find.text('Cerrar sesión'));
+    await tester.pumpAndSettle();
+
+    expect(shell.forgotten, 1);
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(find.byType(AccountScreen), findsNothing);
+    expect(find.byType(SettingsListScreen), findsNothing);
   });
 
   testWidgets('and nothing this device recorded is dropped with it',
