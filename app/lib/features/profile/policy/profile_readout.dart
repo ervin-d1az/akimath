@@ -7,11 +7,13 @@ import '../../../design/math/spec/es_mx_number.dart';
 /// **PURE** — figures in, strings out. No widget, no clock, no storage.
 ///
 /// **It exists so a figure can be swapped at one point.** Three of the numbers
-/// the design draws — a rating, an accuracy and a mean time — have no source
-/// this device can read today and arrive invented; the two the device does know
-/// come from `DayLog` and the series cursor. Which is which is decided by the
-/// caller filling [ProfileFigures], and the day a real accuracy lands, the
-/// change is that one line and not surgery on the screen.
+/// the design draws — a rating, an accuracy and a mean time — arrive invented
+/// today; the two the device does know come from `DayLog` and the series
+/// cursor. Only the **rating** is invented for want of a source: it is F4 and
+/// `GET /me/standing` answers 501. Accuracy and mean time have one —
+/// `features/stats/` records a verdict and an elapsed time per answer — and the
+/// caller filling [ProfileFigures] has not been pointed at it yet, which is
+/// exactly the one line this type exists to make the whole change.
 ///
 /// **A figure with no source is null, and a null figure is not drawn.** That is
 /// the whole degradation rule: the tile row loses a tile, and the headline
@@ -45,8 +47,11 @@ final class ProfileFigures {
   /// null on its own when there is one and nobody can say how it moved.
   final int? ratingThisWeek;
 
-  /// A whole percent, or null while the device never learns whether an answer
-  /// was right.
+  /// A whole percent, or null while nothing hands one over.
+  ///
+  /// **Null is no longer the same statement it was.** It used to mean the
+  /// device could not know; `features/stats/` knows now, and null means the
+  /// caller has not asked it.
   final int? accuracyPercent;
 
   /// Tenths of a second, so the screen formats it with a decimal comma rather

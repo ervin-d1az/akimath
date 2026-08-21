@@ -31,10 +31,13 @@ import '../policy/profile_readout.dart';
 /// there is nothing to ask, and that is an invitation rather than an error.
 ///
 /// **The screen draws what it is handed and decides nothing.** Which figures
-/// exist, what each one is called and how each is spelt is
-/// [ProfileFigures] and the three functions beside it; a rating and an accuracy
-/// have no source this device can read, so today they arrive invented from
-/// `DemoFigures` and a figure that arrives null is simply not drawn.
+/// exist, what each one is called and how each is spelt is [ProfileFigures] and
+/// the three functions beside it. Rating has no source anywhere — it is F4 and
+/// `GET /me/standing` answers 501. Accuracy and mean time have one on this
+/// device, since `features/stats/` began remembering a verdict and an elapsed
+/// time per answer, and the caller has not been pointed at it yet — so today
+/// all three still arrive invented from `DemoFigures`, and a figure that
+/// arrives null is simply not drawn.
 ///
 /// **Aki appears once, inside the avatar tile.** Declared rule 5 names her
 /// homes — *inicio, resultados, estados de racha y tutorial* — and the profile

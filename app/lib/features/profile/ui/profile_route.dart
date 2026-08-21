@@ -435,9 +435,11 @@ class _ProfileRouteState extends State<ProfileRoute> {
   /// `DemoFigures.challenges` is deliberately not read: `RETOS` has a source.
   ///
   /// **Three are invented, and this is the only line that says so.** Rating is
-  /// F4, and the device never learns whether an answer was right, so accuracy
-  /// and mean time have no on-device source at all. With the switch off each is
-  /// null, and a figure that arrives null is not drawn.
+  /// F4 and has no source anywhere. Accuracy and mean time have one on this
+  /// device — `features/stats/` records a verdict and an elapsed time per
+  /// answer — and this route does not read it yet, so both still arrive from
+  /// `DemoFigures`. With the switch off each is null, and a figure that arrives
+  /// null is not drawn.
   ProfileFigures _figures() => ProfileFigures(
         daysPractised: _log.days.length,
         streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
