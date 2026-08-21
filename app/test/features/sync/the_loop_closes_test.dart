@@ -257,6 +257,82 @@ void main() {
     expect(flushes, 1);
     expect(await journal.read(), isEmpty);
   });
+
+  testWidgets('the home plays the pack it was issued, and the answer leaves',
+      (WidgetTester tester) async {
+    // **The gate the whole loop was missing.** Every part below had a passing
+    // unit test while nothing called any of them: this walks from a home with a
+    // session to an answer sitting on the server's doorstep.
+    tester.view
+      ..physicalSize = const Size(402, 874)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final InMemoryAttemptJournalStore journal = InMemoryAttemptJournalStore();
+    final List<List<AttemptSubmission>> sent = <List<AttemptSubmission>>[];
+    final AttemptSync sync = AttemptSync(
+      store: journal,
+      submit: ({
+        required String accessToken,
+        required List<AttemptSubmission> attempts,
+      }) async {
+        sent.add(attempts);
+        return const SyncDone(<AttemptVerdict>[]);
+      },
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: HomeRoute(
+        // The bundled pack is what it would play with no session: one item,
+        // answer `42`, no address. It must not be what it plays here.
+        reader: PackReader(bundle: _Bundle(_authored)),
+        now: () => DateTime.utc(2026, 8, 20, 12),
+        dayLog: InMemoryDayLogStore(),
+        sync: sync,
+        session: const LinkedSession(
+          email: 'ana@correo.mx',
+          accessToken: 'token',
+          ageBand: AgeBand.adult,
+        ),
+        issuePack: (String accessToken) async => IssueDone(
+          IssuedPack(
+            packId: 'pk_emitido',
+            issuedAt: DateTime.utc(2026, 8, 20),
+            expiresAt: DateTime.utc(2026, 9, 20),
+            pack: jsonDecode(
+              _issuedContent.replaceFirst('SEVEN_TEEN', _digestOfThirteen()),
+            ) as Map<String, Object?>,
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // The home is showing the issued pack: its item is `5 + 8`, not the
+    // bundled `6 × 7`.
+    expect(find.text('5'), findsWidgets);
+    expect(find.text('×'), findsNothing, reason: 'still playing the bundled pack');
+
+    await tester.tap(find.text('Empezar la serie'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RoundScreen), findsOneWidget);
+
+    await tapKey(tester, '1');
+    await tapKey(tester, '3');
+    await tapKey(tester, 'submit');
+    await tester.pumpAndSettle();
+
+    expect(find.text('¡Bien hecho!'), findsOneWidget);
+
+    final List<JournalledAttempt> held = await journal.read();
+    expect(held, hasLength(1), reason: 'the answer never reached the journal');
+    expect(held.single.packId, 'pk_emitido');
+    expect(held.single.index, 0);
+
+    await sync.flush('token');
+    expect(sent.single.single.packRef?.packId, 'pk_emitido');
+    expect(await journal.read(), isEmpty);
+  });
 }
 
 const String _authored = '''

@@ -23,7 +23,10 @@ import '../../../content/model/puzzle.dart';
 import '../../puzzle/ui/puzzle_screen.dart';
 import '../../puzzle/ui/puzzle_solved_screen.dart';
 import '../../puzzle/ui/word_search_screen.dart';
+import '../../../api/api_client.dart';
+import '../../../api/endpoints.dart';
 import '../../account/policy/session.dart';
+import '../../../content/model/issued_pack.dart';
 import '../../shell/ui/skeleton_block.dart';
 import '../../sync/attempt_sync.dart';
 import '../../states/data/streak_notice_store.dart';
@@ -53,6 +56,7 @@ class HomeRoute extends StatefulWidget {
     this.streakNotices,
     this.session,
     this.sync,
+    this.issuePack,
   });
 
   /// The account this device is signed in to, if it is.
@@ -67,6 +71,11 @@ class HomeRoute extends StatefulWidget {
   ///
   /// Injected so a widget test never reaches a plugin or a socket.
   final AttemptSync? sync;
+
+  /// Asks the server for a pack. A closure, the same shape every other request
+  /// in this app takes and for the same reason: a `testWidgets` runs in a
+  /// fake-async zone and a real socket inside one hangs on `!timersPending`.
+  final Future<IssueResult> Function(String accessToken)? issuePack;
 
   final PackReader reader;
   final DateTime Function() now;
@@ -110,6 +119,15 @@ class _HomeRouteState extends State<HomeRoute> {
 
   late final AttemptSync _sync = widget.sync ?? AttemptSync();
 
+  /// The pack the server issued, once it has.
+  ///
+  /// **Null is the ordinary state**, and it is what an unlinked device plays
+  /// on for ever: unlinked play is entirely offline (ADR 0002), so there is
+  /// nothing to ask and nothing to send. When it is not null it *replaces* the
+  /// bundled pack — same six families, same boards, and an address on every
+  /// item, which is the whole difference.
+  Pack? _issued;
+
   /// How many items have been served, held here as well as read in
   /// `_startSeries`, because the home now *shows* what the next series holds
   /// and cannot await a store while building. Refreshed with the log, so
@@ -133,6 +151,7 @@ class _HomeRouteState extends State<HomeRoute> {
     // waiting since a bus ride days ago; sending it is not something a player
     // should watch, and a failure leaves the journal exactly as it was.
     unawaited(_flush());
+    unawaited(_askForPack());
     await _refreshLog();
     if (!mounted) {
       return;
@@ -161,6 +180,54 @@ class _HomeRouteState extends State<HomeRoute> {
     // This is the same reading `ProfileRoute` needed for its history.
     if (widget.session?.accessToken != old.session?.accessToken) {
       unawaited(_flush());
+      unawaited(_askForPack());
+    }
+  }
+
+  /// Asks for a pack, once, when there is a session to ask on.
+  ///
+  /// **Issued per launch and held in memory**, which is a choice worth naming.
+  /// The server says a second pack is harmless — issuing is not idempotent by
+  /// nature and retention sweeps what lapses — so the cheap thing is honest.
+  /// The better thing is to persist the id and rebuild through
+  /// `GET /packs/{packId}`, which the server was built to answer byte for byte;
+  /// the client has no operation for it yet, and that is the next change.
+  ///
+  /// **A failure is silent and the bundled pack keeps playing.** There is
+  /// nothing useful to tell a player about a request they did not make, and the
+  /// app they already had works.
+  Future<void> _askForPack() async {
+    final LinkedSession? session = widget.session;
+    if (session == null || _issued != null) {
+      return;
+    }
+    final IssueResult result =
+        await (widget.issuePack ?? _issueOverASocket)(session.accessToken);
+    if (!mounted || result is! IssueDone) {
+      return;
+    }
+    try {
+      setState(() {
+        _issued = readIssuedPack(
+          Map<String, dynamic>.from(result.issued.pack),
+          packId: result.issued.packId,
+          issuedAt: result.issued.issuedAt,
+          expiresAt: result.issued.expiresAt,
+        );
+      });
+    } on FormatException {
+      // A pack this app cannot read is a pack it does not play. The bundled one
+      // is still there, and refusing where it is read is the same rule
+      // `PackReader` keeps.
+    }
+  }
+
+  Future<IssueResult> _issueOverASocket(String accessToken) async {
+    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+    try {
+      return await api.issuePack(accessToken);
+    } finally {
+      api.close();
     }
   }
 
@@ -260,7 +327,12 @@ class _HomeRouteState extends State<HomeRoute> {
             child: _HomeMessage('No se pudo abrir el paquete de retos.'),
           );
         }
-        final Pack? pack = snapshot.data;
+        // **The issued pack wins where there is one.** Same six families, same
+        // boards; the difference is that every item has a `(packId, index)` the
+        // server can grade, which is what makes a round worth journalling. The
+        // bundled pack is what an unlinked device plays, for ever and by
+        // design.
+        final Pack? pack = _issued ?? snapshot.data;
         if (pack == null) {
           return const AppShell(child: _HomeSkeleton());
         }
