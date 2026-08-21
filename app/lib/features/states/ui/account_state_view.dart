@@ -10,6 +10,9 @@ import '../policy/account_state.dart';
 import '../policy/server_error_note.dart';
 import 'server_error_screen.dart';
 
+/// The chip on a banner: a label and what pressing it does, or neither.
+typedef _BannerAction = ({String label, VoidCallback press});
+
 /// What the account section shows, for every state it can be in.
 ///
 /// **One widget for seven states**, because the alternative is a `switch` on a
@@ -55,6 +58,32 @@ class AccountStateView extends StatelessWidget {
   /// directly so the pushed screen is the same screen on every run.
   final DateTime Function() now;
 
+  /// The chip the door asks for, when the caller supplied something to run.
+  ///
+  /// **A door with no callback draws nothing** — that is DR-P2, and it is why
+  /// each arm checks: a chip that opens onto a dead end teaches the player the
+  /// button is decoration.
+  _BannerAction? _actionFor(AccountDoor door, BuildContext context) {
+    final VoidCallback? retry = onRetry;
+
+    return switch (door) {
+      // `4.10` carries the retry itself, so the chip opens it rather than
+      // running the retry twice over.
+      AccountDoor.detail when retry != null =>
+        (label: 'Detalle', press: () => _openServerError(context)),
+      AccountDoor.retry when retry != null =>
+        (label: 'Reintentar', press: retry),
+      // **Not a chip.** A banner action cannot wrap, and at textScaler 1.3
+      // this label overflowed the row by 65 px and fell under the 48 px floor.
+      // `ProfileScreen` draws it as a full-width door instead, which is the
+      // idiom the refused session already uses.
+      AccountDoor.signOut ||
+      AccountDoor.none ||
+      AccountDoor.detail ||
+      AccountDoor.retry => null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     if (state == AccountState.loading) {
@@ -69,21 +98,34 @@ class AccountStateView extends StatelessWidget {
       AccountState.offline => 'Sin conexión. Tus retos siguen aquí.',
       // One account, one player (migration 0003). Which phone the account
       // belongs to is a choice nobody has designed, so this says what is true
-      // and offers nothing it cannot do.
+      // and offers nothing it cannot do. **It names a phone because there is
+      // one**: the account holds a player this device did not mint.
       AccountState.otherDevice => 'Esta cuenta ya se está usando en otro teléfono.',
+      // The mirror case, and the one a real device hit. It names no phone,
+      // because there need not be a second one — the same handset can hold one
+      // account's progress and be signed in to another.
+      AccountState.otherAccount =>
+        'Lo que llevas en este teléfono es de otra cuenta. Entra con esa para verlo.',
+      // Both facts are true of both conflicts, and neither guesses which.
+      AccountState.mismatch =>
+        'Esta cuenta y lo que llevas en este teléfono no van juntos.',
       AccountState.none || AccountState.loading => null,
     };
 
-    // Only the two states somebody has to act on get a banner. `linked` and
+    // Only the states somebody has to act on get a banner. `linked` and
     // `noPlayer` are ordinary and read as plain text; a banner on every state
     // is a banner nobody reads.
     final bool banner = state == AccountState.serverError ||
         state == AccountState.offline ||
-        state == AccountState.otherDevice;
+        state == AccountState.otherDevice ||
+        state == AccountState.otherAccount ||
+        state == AccountState.mismatch;
 
-    // **No retry, no door.** `4.10`'s primary action is the retry, so a state
-    // that cannot be retried would open onto a dead end (DR-P2).
-    final bool detail = state == AccountState.serverError && onRetry != null;
+    // **What to press comes from the policy, not from three booleans here.**
+    // `otherDevice` was drawn with no action for as long as it existed because
+    // nothing in this build method mentioned it; `accountDoorFor` is the one
+    // place a new state has to be answered for.
+    final _BannerAction? action = _actionFor(accountDoorFor(state), context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -103,12 +145,8 @@ class AccountStateView extends StatelessWidget {
               // what the hue encodes.
               kind: isOurFault(state) ? BannerKind.error : BannerKind.notice,
               message: message,
-              onAction: detail ? () => _openServerError(context) : onRetry,
-              actionLabel: switch ((detail, onRetry)) {
-                (true, _) => 'Detalle',
-                (false, null) => null,
-                (false, _) => 'Reintentar',
-              },
+              onAction: action?.press,
+              actionLabel: action?.label,
             )
           else
             Text(

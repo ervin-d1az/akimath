@@ -43,6 +43,10 @@ void main() {
         playerIds: InMemoryPlayerIdStore(),
         authBaseUrl: 'https://auth.example/neondb/auth',
         now: () => DateTime.utc(2026, 8, 19),
+        // **Injected so no test here opens a socket.** A 409 sends the route
+        // off to ask `GET /me` which conflict it was; left to the default that
+        // question would travel for real.
+        whoAmI: (String accessToken) async => const MeUnreachable('no route'),
         link: ({
           required String accessToken,
           required String playerId,
@@ -99,11 +103,14 @@ void main() {
     expect(find.textContaining('Tus retos se guardan'), findsOneWidget);
   });
 
-  testWidgets('an account already used on another phone says so and stops',
+  testWidgets('a refused link claims only what the 409 actually said',
       (WidgetTester tester) async {
-    // One account, one player (migration 0003). Which phone it belongs to is a
-    // choice nobody has designed, so the app says what is true and offers
-    // nothing it cannot do.
+    // **It used to say *"otro teléfono"* here, and on a real device that was
+    // false.** Two conflicts land on one 409 — the account already has a
+    // player, or this device's player already has an account — and the wire
+    // tells them apart only in an English `message`. With no probe answer this
+    // route names neither. Which way round it runs, and the door that follows,
+    // are `test/features/profile/ui/account_conflict_test.dart`.
     await pump(
       tester,
       session: _session,
@@ -111,7 +118,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('otro teléfono'), findsOneWidget);
+    expect(find.textContaining('no van juntos'), findsOneWidget);
+    expect(find.textContaining('otro teléfono'), findsNothing);
   });
 
   testWidgets('no answer at all is offline, and not the player´s fault',

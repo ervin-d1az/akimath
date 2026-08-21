@@ -67,7 +67,15 @@ bool erasureOffered(AccountState state) => switch (state) {
   AccountState.serverError ||
   // The account belongs to another device's player; there is nothing of this
   // one's to erase, and the request would be about somebody else's row.
-  AccountState.otherDevice => false,
+  AccountState.otherDevice ||
+  // **False in both new directions, and load-bearing in each.** With this
+  // device's player under another account there is no row here to erase, so
+  // `DELETE /me` answers 404 and the flow reads that as *"Listo, ya no queda
+  // nada"* — a second untruth on the screen that exists to stop the first. And
+  // an unrefined conflict is one of the two, so offering the door would be
+  // offering whichever is worse.
+  AccountState.otherAccount ||
+  AccountState.mismatch => false,
 };
 
 /// The label on the door, in Ajustes.
