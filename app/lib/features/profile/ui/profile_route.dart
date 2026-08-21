@@ -18,9 +18,11 @@ import '../policy/history_view.dart';
 import '../policy/profile_readout.dart';
 import '../../account/data/player_id_store.dart';
 import '../../account/policy/session.dart';
+import '../../shell/policy/visible_tabs.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../preferences/policy/erasure.dart';
 import '../../preferences/ui/account_screen.dart';
+import '../../preferences/ui/change_password_screen.dart';
 import '../../preferences/ui/erase_account_route.dart';
 import '../../preferences/ui/legend_screen.dart';
 import '../../preferences/ui/settings_list_screen.dart';
@@ -51,7 +53,33 @@ class ProfileRoute extends StatefulWidget {
     this.dayLog,
     this.seriesCursor = const SeriesCursorStore(),
     this.fetchHistory,
+    this.auth,
+    this.whoAmI,
+    this.visibility = RootVisibility.showing,
   });
+
+  /// Whether this root is the one on screen.
+  ///
+  /// **The moment it comes to the front is the only moment it can refresh.**
+  /// `RootScaffold` keeps every root alive in an `IndexedStack`, so `initState`
+  /// runs once per launch and there is no second one to hook — a figure read
+  /// only there is a figure from launch time. Measured on a device: the verdict
+  /// screen said `RACHA 1`, the home said `RACHA 1 DÍA`, and Perfil said `0`.
+  ///
+  /// Defaults to [RootVisibility.showing], because every caller that is not the
+  /// shell — a test, the screen registry — is looking at it.
+  final RootVisibility visibility;
+
+  /// Neon Auth, when a test stands in for it.
+  ///
+  /// Null in the app, where this route opens an [AuthClient] of its own and
+  /// closes it again — it closes only what it opened, so an injected provider
+  /// outlives the flow it was handed to.
+  final AuthApi? auth;
+
+  /// Asks the AkiMath server who a token belongs to. A closure, for the reason
+  /// every other request here is one.
+  final Future<MeResult> Function(String accessToken)? whoAmI;
 
   /// Where this device's own player id lives. Injected so a widget test never
   /// reaches a plugin.
@@ -122,15 +150,39 @@ class _ProfileRouteState extends State<ProfileRoute> {
   void initState() {
     super.initState();
     _linkIfNeeded(null);
+    _readWhatTheDeviceKnows();
+    unawaited(_askForHistory());
+  }
+
+  /// Every figure that comes from this device's own storage.
+  ///
+  /// **One list, called from two places**, so a reading added here is refreshed
+  /// by [_refreshOnComingToTheFront] without anybody remembering to add it
+  /// there too. That is the whole reason this is a method rather than two lines
+  /// in `initState`.
+  void _readWhatTheDeviceKnows() {
     unawaited(_readDayLog());
     unawaited(_readChallenges());
-    unawaited(_askForHistory());
+  }
+
+  /// Re-reads storage the moment this root becomes the one on screen.
+  ///
+  /// **A rebuild is not a visit.** The shell rebuilds every root on every tab
+  /// switch, so refreshing on any rebuild would read storage for a screen
+  /// nobody is looking at — and would hide the case this exists for. The
+  /// transition is what matters: behind, then showing.
+  void _refreshOnComingToTheFront(RootVisibility before) {
+    if (widget.visibility == RootVisibility.showing &&
+        before == RootVisibility.behind) {
+      _readWhatTheDeviceKnows();
+    }
   }
 
   @override
   void didUpdateWidget(ProfileRoute old) {
     super.didUpdateWidget(old);
     _linkIfNeeded(old.session);
+    _refreshOnComingToTheFront(old.visibility);
     // The session may arrive after this screen is built — `IndexedStack` keeps
     // the roots alive, so signing in elsewhere does not rebuild this one.
     if (widget.session?.accessToken != old.session?.accessToken) {
@@ -262,13 +314,29 @@ class _ProfileRouteState extends State<ProfileRoute> {
   Future<void> _askWhoIAm(String accessToken) async {
     setState(() => _accountState = AccountState.loading);
 
-    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
-    final MeResult result = await api.getMe(accessToken);
-    api.close();
+    final MeResult result = await _whoAmI(accessToken);
     if (!mounted) {
       return;
     }
     setState(() => _accountState = accountStateFor(result));
+  }
+
+  /// One lookup, used by the retry here and by the sign-in door's band.
+  ///
+  /// **Both had to be the same call.** The flow asks who a token belongs to in
+  /// order to read the band the server stores; this route asks the same
+  /// question to redraw the account section. Two spellings of `GET /me` is two
+  /// places to change the day it moves.
+  Future<MeResult> Function(String accessToken) get _whoAmI =>
+      widget.whoAmI ?? _meOverASocket;
+
+  Future<MeResult> _meOverASocket(String accessToken) async {
+    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+    try {
+      return await api.getMe(accessToken);
+    } finally {
+      api.close();
+    }
   }
 
   /// The one destructive act, and it is a full screen rather than a dialog.
@@ -306,19 +374,31 @@ class _ProfileRouteState extends State<ProfileRoute> {
     ));
   }
 
-  void _openAccountFlow() {
-    final AuthClient auth = AuthClient(baseUrl: Uri.parse(widget.authBaseUrl));
+  /// Opens the account flow on the door the player pressed.
+  ///
+  /// **Two doors, one flow.** Creating an account and coming back to one are
+  /// different errands and the sign-in one used to be four screens deep, behind
+  /// a birth date nobody coming back should be asked for.
+  void _openAccountFlow(AuthEntry entry) {
+    // Only what this route opened is this route's to close. An injected
+    // provider belongs to whoever handed it over.
+    final AuthClient? own = widget.auth == null
+        ? AuthClient(baseUrl: Uri.parse(widget.authBaseUrl))
+        : null;
+    final AuthApi auth = own ?? widget.auth!;
     Navigator.of(context).push(MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (BuildContext _) => AppShell(
         child: AuthFlow(
           auth: auth,
+          whoAmI: _whoAmI,
+          entry: entry,
           // The provider's own origin: the only one it trusts while
           // `trusted_origins` is empty. See `Endpoints.callbackUrl`.
           callbackUrl: widget.authBaseUrl,
           today: widget.now(),
           onLinked: (LinkedAccount account) {
-            auth.close();
+            own?.close();
             if (!mounted) {
               return;
             }
@@ -333,7 +413,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
             // that arrives any other way is linked too.
           },
           onGaveUp: () {
-            auth.close();
+            own?.close();
             Navigator.of(context).pop();
           },
         ),
@@ -380,9 +460,44 @@ class _ProfileRouteState extends State<ProfileRoute> {
           // Only where a session exists that the request could travel on.
           // `erasureOffered` is the judgement; the token is the fact.
           onErase: erasureOffered(_accountState) ? _openEraseFlow : null,
+          onChangePassword: () => _push(
+            (VoidCallback back) =>
+                AppShell(child: ChangePasswordScreen(onBack: back)),
+          ),
+          // Unconditional, because this screen only opens with a session:
+          // `_openAccountDetail` returns before pushing when there is no
+          // address to show.
+          onSignOut: _signOut,
         ),
       ),
     );
+  }
+
+  /// Forgets the session and leaves the account's own stack.
+  ///
+  /// **The same two statements the erasure success path runs**, because the
+  /// same thing is true afterwards: this device is not signed in. The shell
+  /// owns the session (`RootScaffold`), so `onSessionChanged(null)` is the only
+  /// thing that actually forgets it — clearing this route's state alone would
+  /// leave the home flushing its journal under a token the player asked us to
+  /// drop.
+  ///
+  /// **Nothing device-local goes with it, and that is the decision.** Unlinked
+  /// play is entirely offline (ADR 0002), so the days practised, the run, the
+  /// challenge count and the answers waiting to sync all belong to a player who
+  /// need never have had an account. A row labelled *Cerrar sesión* that
+  /// deleted them would be a destructive act wearing a non-destructive label —
+  /// the destructive door is `Eliminar mi cuenta`, two rows down, behind a
+  /// typed `BORRAR`.
+  ///
+  /// **It pops to the root rather than back one screen.** `4.3 Cuenta` is a
+  /// screen about an account this device no longer has, and the row above it in
+  /// `4.2` opens nothing without a session — landing on either would be leaving
+  /// the player somewhere that has stopped being true.
+  void _signOut() {
+    Navigator.of(context).popUntil((Route<Object?> route) => route.isFirst);
+    setState(() => _accountState = AccountState.none);
+    widget.onSessionChanged?.call(null);
   }
 
   /// Every figure `4.1` prints, and the one place an invented one enters.
@@ -394,9 +509,11 @@ class _ProfileRouteState extends State<ProfileRoute> {
   /// `DemoFigures.challenges` is deliberately not read: `RETOS` has a source.
   ///
   /// **Three are invented, and this is the only line that says so.** Rating is
-  /// F4, and the device never learns whether an answer was right, so accuracy
-  /// and mean time have no on-device source at all. With the switch off each is
-  /// null, and a figure that arrives null is not drawn.
+  /// F4 and has no source anywhere. Accuracy and mean time have one on this
+  /// device — `features/stats/` records a verdict and an elapsed time per
+  /// answer — and this route does not read it yet, so both still arrive from
+  /// `DemoFigures`. With the switch off each is null, and a figure that arrives
+  /// null is not drawn.
   ProfileFigures _figures() => ProfileFigures(
         daysPractised: _log.days.length,
         streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
@@ -408,6 +525,24 @@ class _ProfileRouteState extends State<ProfileRoute> {
         averageTenthsOfSecond:
             DemoFigures.enabled ? DemoFigures.averageTenthsOfSecond : null,
       );
+
+  /// Whether making an account is worth offering.
+  ///
+  /// A build with no endpoints can reach no provider, and a device that already
+  /// has a session has one already.
+  bool get _offerToCreate =>
+      widget.authBaseUrl.isNotEmpty && widget.session == null;
+
+  /// Whether signing in is worth offering.
+  ///
+  /// **The same cases, plus a refused session.** `AccountState.rejected` means
+  /// the account is real and this device's token is not; `4.1` says
+  /// *"Vuelve a entrar"* and used to offer nothing that could, because the door
+  /// required there to be no session at all. The session is in memory, so the
+  /// only recovery left was force-quitting the app.
+  bool get _offerToSignIn =>
+      widget.authBaseUrl.isNotEmpty &&
+      (widget.session == null || _accountState == AccountState.rejected);
 
   @override
   Widget build(BuildContext context) {
@@ -441,9 +576,14 @@ class _ProfileRouteState extends State<ProfileRoute> {
             ? () => unawaited(_askWhoIAm(widget.session!.accessToken))
             : null,
         // Absent rather than broken when the build was given no endpoints.
-        onCreateAccount: widget.authBaseUrl.isNotEmpty && widget.session == null
-            ? _openAccountFlow
+        onCreateAccount: _offerToCreate
+            ? () => _openAccountFlow(AuthEntry.createAccount)
             : null,
+        // **The returning player's door, and it is on the root.** It used to
+        // exist only as a text link at the bottom of the sign-up form, three
+        // screens and a birth date past this point.
+        onSignIn:
+            _offerToSignIn ? () => _openAccountFlow(AuthEntry.signIn) : null,
       ),
     );
   }

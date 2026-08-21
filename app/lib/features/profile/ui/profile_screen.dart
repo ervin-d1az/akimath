@@ -31,10 +31,13 @@ import '../policy/profile_readout.dart';
 /// there is nothing to ask, and that is an invitation rather than an error.
 ///
 /// **The screen draws what it is handed and decides nothing.** Which figures
-/// exist, what each one is called and how each is spelt is
-/// [ProfileFigures] and the three functions beside it; a rating and an accuracy
-/// have no source this device can read, so today they arrive invented from
-/// `DemoFigures` and a figure that arrives null is simply not drawn.
+/// exist, what each one is called and how each is spelt is [ProfileFigures] and
+/// the three functions beside it. Rating has no source anywhere — it is F4 and
+/// `GET /me/standing` answers 501. Accuracy and mean time have one on this
+/// device, since `features/stats/` began remembering a verdict and an elapsed
+/// time per answer, and the caller has not been pointed at it yet — so today
+/// all three still arrive invented from `DemoFigures`, and a figure that
+/// arrives null is simply not drawn.
 ///
 /// **Aki appears once, inside the avatar tile.** Declared rule 5 names her
 /// homes — *inicio, resultados, estados de racha y tutorial* — and the profile
@@ -50,6 +53,7 @@ class ProfileScreen extends StatelessWidget {
     this.accountEmail,
     this.entries = const <HistoryEntry>[],
     this.onCreateAccount,
+    this.onSignIn,
     this.onRetryAccount,
     this.onRetryHistory,
   });
@@ -79,6 +83,15 @@ class ProfileScreen extends StatelessWidget {
 
   /// Offered only where the build has endpoints to reach (DR-P2).
   final VoidCallback? onCreateAccount;
+
+  /// The returning player's door, beside the new player's.
+  ///
+  /// **Two errands, two controls.** The only way into `1.1 Iniciar sesión` used
+  /// to be a text link at the bottom of `1.2 Crear cuenta`, past the age gate —
+  /// so coming back to an account meant being asked when you were born. Drawn
+  /// as the secondary weight because exactly one control on a screen is *the*
+  /// action, and for a signed-out profile that is still making an account.
+  final VoidCallback? onSignIn;
 
   /// Offered only where retrying could change the answer.
   final VoidCallback? onRetryAccount;
@@ -117,13 +130,19 @@ class ProfileScreen extends StatelessWidget {
                 onRetry: onRetryAccount,
               ),
             ),
-          ] else if (onCreateAccount != null) ...<Widget>[
-            const SizedBox(height: BrandShape.space3),
-            BrandButton.primary(
-              label: 'Crear cuenta',
-              onPressed: onCreateAccount!,
-            ),
-          ],
+            // **A refused session is the one state with an address and a way
+            // out.** The section above it says *"Vuelve a entrar"* and, until
+            // this, offered nothing that could — the door required there to be
+            // no session, and a refused one is still a session.
+            if (onSignIn != null) ...<Widget>[
+              const SizedBox(height: BrandShape.space3),
+              BrandButton.secondary(
+                label: signInDoorLabel(accountState),
+                onPressed: onSignIn!,
+              ),
+            ],
+          ] else
+            ..._doors(),
           const SizedBox(height: BrandShape.space4),
           _headlinePair(),
           const SizedBox(height: BrandShape.space2),
@@ -140,6 +159,29 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// The two ways in, for a device with no session.
+  ///
+  /// Each is drawn only where its caller hands a callback, the same rule every
+  /// other optional control on this screen follows: one that cannot act reads
+  /// as broken rather than as unbuilt (DR-P2).
+  List<Widget> _doors() {
+    final VoidCallback? create = onCreateAccount;
+    final VoidCallback? signIn = onSignIn;
+    return <Widget>[
+      if (create != null) ...<Widget>[
+        const SizedBox(height: BrandShape.space3),
+        BrandButton.primary(label: 'Crear cuenta', onPressed: create),
+      ],
+      if (signIn != null) ...<Widget>[
+        SizedBox(height: create == null ? BrandShape.space3 : BrandShape.space2),
+        BrandButton.secondary(
+          label: signInDoorLabel(accountState),
+          onPressed: signIn,
+        ),
+      ],
+    ];
   }
 
   Widget _identity(String? email) => Row(

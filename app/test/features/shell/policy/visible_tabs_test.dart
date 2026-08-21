@@ -42,18 +42,19 @@ void main() {
   });
 
   group('what the app actually has', () {
-    test('the roots that exist today produce a two-tab bar', () {
-      // **This asserted none, then two, then three, and now two again** — and
-      // the change is the whole mechanism every time: `visibleTabs` has never
-      // been touched. A destination was added to or removed from the set below
-      // and the rule returned one more or one fewer.
+    test('the roots that exist today produce a three-tab bar', () {
+      // **This asserted none, two, three, two, and now three again** — and the
+      // change is the whole mechanism every time: `visibleTabs` has never been
+      // touched. A destination was added to or removed from the set below and
+      // the rule returned one more or one fewer.
       //
-      // It went down because `Avance` absorbed into `Perfil`: no document draws
-      // a progress screen, and every figure it held is one `4.1` puts under the
-      // identity.
-      expect(rootsPresentToday, <AppTab>{AppTab.home, AppTab.profile});
+      // It went down when `Avance` absorbed into `Perfil` — no document draws a
+      // progress screen — and back up when the map got a door: `05 MAPA` was
+      // merged and tested with no tab that opened it.
+      expect(rootsPresentToday,
+          <AppTab>{AppTab.home, AppTab.skills, AppTab.profile});
       expect(visibleTabs(rootsPresentToday),
-          <AppTab>[AppTab.home, AppTab.profile]);
+          <AppTab>[AppTab.home, AppTab.skills, AppTab.profile]);
     });
 
     test('and progress is still a tab the design names, with no root', () {
@@ -74,9 +75,10 @@ void main() {
     });
 
     test('the one tab that has no root is not drawn', () {
-      // `skills` at F5. Four tabs with one dead is the thing this policy exists
-      // to prevent.
-      expect(visibleTabs(rootsPresentToday), isNot(contains(AppTab.skills)));
+      // `progress`, and it is the last one. Four tabs with one dead is the
+      // thing this policy exists to prevent, and `skills` left this assertion
+      // the day `MapRoute` was wired to it.
+      expect(visibleTabs(rootsPresentToday), isNot(contains(AppTab.progress)));
     });
   });
 }

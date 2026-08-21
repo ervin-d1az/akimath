@@ -56,7 +56,7 @@ void main() {
       expect(find.text('bar'), findsOneWidget);
     });
 
-    testWidgets('the app as it ships today has two tabs',
+    testWidgets('the app as it ships today has three tabs',
         (WidgetTester tester) async {
       // The shell itself still draws nothing without a builder — the bar it
       // shows in the app is `RootScaffold`'s, handed the same list. What is
@@ -64,7 +64,7 @@ void main() {
       // before a second root existed.
       await _pump(tester, const AppShell(child: Text('home')));
       expect(find.byType(BottomNavigationBar), findsNothing);
-      expect(visibleTabs(rootsPresentToday), hasLength(2));
+      expect(visibleTabs(rootsPresentToday), hasLength(3));
     });
   });
 

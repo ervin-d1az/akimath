@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../api/auth_client.dart';
 import '../../../api/me.dart';
+import '../../../api/me_result.dart';
 import '../policy/age_gate.dart';
 import 'age_gate_screen.dart';
 import 'create_account_screen.dart';
@@ -26,12 +27,36 @@ class LinkedAccount {
   final String email;
 }
 
-/// The account flow, `req-age-gate` first.
+/// Which door the flow opens on.
 ///
-/// **The gate is structural, not a check.** The band is resolved on the first
-/// screen and anything below the threshold reaches `TutorConsentScreen`; there
-/// is no state in which `CreateAccountScreen` is built without a band, because
-/// the field holding it is what selects the screen.
+/// **Two, because two things bring a player here.** Making an account and
+/// coming back to one are different errands, and routing both through the
+/// sign-up form made the second one four screens long — reported from a device
+/// as *"it's hard to find"*.
+enum AuthEntry {
+  /// `1.3 ¿Cuándo naciste?` first, then `1.2 Crear cuenta`.
+  createAccount,
+
+  /// Straight to `1.1 Iniciar sesión`.
+  signIn,
+}
+
+/// The account flow, `req-age-gate` first where a gate is what is needed.
+///
+/// **The gate is structural, not a check.** No path reaches
+/// `CreateAccountScreen` without a band, because the field holding it is what
+/// selects the screen, and nothing below the threshold gets past
+/// `TutorConsentScreen`.
+///
+/// **Signing in resolves a band a second honest way.** `LinkedAccount.ageBand`
+/// is required because `players.age_band` is the routing decision that sends a
+/// player into child protections, and for a returning player the server already
+/// holds it: `GET /me` answers that column. So [AuthEntry.signIn] asks the
+/// server rather than the player, and falls back to the gate in the one case
+/// where the server has nothing to say — an account with no player, which
+/// `DELETE /me` leaves behind because it erases the player and not the Neon
+/// Auth account. **No band is ever defaulted**; CLAUDE.md is explicit that it is
+/// not a decision to make with a `?? adult`.
 ///
 /// The order is the provider's: sign up, ask for a code (the provider sends none
 /// on sign-up), verify, then `GET /token` for the JWT. Each step's failure is a
@@ -40,14 +65,30 @@ class AuthFlow extends StatefulWidget {
   const AuthFlow({
     super.key,
     required this.auth,
+    required this.whoAmI,
     required this.callbackUrl,
     required this.today,
     required this.onLinked,
     required this.onGaveUp,
+    this.entry = AuthEntry.createAccount,
     this.resetToken,
   });
 
   final AuthApi auth;
+
+  /// Asks the AkiMath server who a token belongs to.
+  ///
+  /// **A closure and not an `ApiClient`**, the same shape every other request
+  /// this corner of the app makes: a `testWidgets` runs in a fake-async zone and
+  /// a real socket inside one hangs on `!timersPending`.
+  ///
+  /// Required rather than nullable even though the create path never calls it.
+  /// A parameter that must be non-null in one mode and may be null in another
+  /// is a null check waiting to be reached.
+  final Future<MeResult> Function(String accessToken) whoAmI;
+
+  /// Which errand the player is on.
+  final AuthEntry entry;
 
   /// Absolute, or the provider answers `MISSING_ORIGIN` — a mobile app has no
   /// origin to send.
@@ -80,13 +121,30 @@ class _AuthFlowState extends State<AuthFlow> {
   /// **A stack rather than a predecessor per step**, because more than one
   /// screen leads to the same place and "where you came from" is the only
   /// answer a back control can give that is never surprising.
-  late final List<_Step> _trail = <_Step>[
-    widget.resetToken == null ? _Step.age : _Step.newPassword,
-  ];
+  late final List<_Step> _trail = <_Step>[_opensOn()];
+
+  /// The first screen, decided once. A reset token wins over the entry, because
+  /// arriving through an emailed link is not an errand the profile chose.
+  _Step _opensOn() {
+    if (widget.resetToken != null) {
+      return _Step.newPassword;
+    }
+    return switch (widget.entry) {
+      AuthEntry.createAccount => _Step.age,
+      AuthEntry.signIn => _Step.signIn,
+    };
+  }
 
   _Step get _step => _trail.last;
 
   AgeBand? _band;
+
+  /// A JWT in hand with no band to link it under.
+  ///
+  /// **Only the sign-in door can produce one.** It is held for exactly as long
+  /// as the gate is on screen, and it is what tells [_resolved] to finish
+  /// rather than open the sign-up form.
+  String? _pendingToken;
   String _email = '';
   String? _problem;
   bool _busy = false;
@@ -147,21 +205,39 @@ class _AuthFlowState extends State<AuthFlow> {
   }
 
   void _resolved(AgeBand band, AgeGateRoute route) {
+    if (route == AgeGateRoute.tutorConsent) {
+      setState(() {
+        _band = band;
+        _problem = null;
+        // **A session in hand is dropped here.** Somebody who signed in and
+        // then answered under 13 does not leave this flow with a token: ADR
+        // 0002 says a child's device never gets a session, and that has to be
+        // true of the door that already has one.
+        _pendingToken = null;
+        // **Consent replaces the trail rather than extending it**, so
+        // `req-age-gate`'s "no path from here reaches 1.2" is true by
+        // construction — there is nothing behind consent to go back to, and
+        // the one control it draws leaves the flow.
+        _trail
+          ..clear()
+          ..add(_Step.consent);
+      });
+      return;
+    }
+
+    final String? signedIn = _pendingToken;
     setState(() {
       _band = band;
       _problem = null;
-      if (route == AgeGateRoute.createAccount) {
+      if (signedIn == null) {
         _trail.add(_Step.create);
-        return;
       }
-      // **Consent replaces the trail rather than extending it**, so
-      // `req-age-gate`'s "no path from here reaches 1.2" is true by
-      // construction — there is nothing behind consent to go back to, and the
-      // one control it draws leaves the flow.
-      _trail
-        ..clear()
-        ..add(_Step.consent);
     });
+    if (signedIn != null) {
+      // The gate was the last thing missing: the account is already signed in
+      // and this is the band its link will carry.
+      _handOver(signedIn, band);
+    }
   }
 
   Future<void> _create(String email, String password) async {
@@ -322,11 +398,60 @@ class _AuthFlowState extends State<AuthFlow> {
       return;
     }
 
+    final AgeBand? resolved = _band;
+    if (resolved == null) {
+      await _bandTheServerAlreadyHas(token.value);
+      return;
+    }
     setState(() => _busy = false);
-    widget.onLinked(
-      LinkedAccount(accessToken: token.value, ageBand: _band!, email: _email),
-    );
+    _handOver(token.value, resolved);
   }
+
+  /// The sign-in door's band, asked of the one place that knows it.
+  ///
+  /// `GET /me` answers `players.age_band` itself, so a returning player is
+  /// routed the way the server already routes them — read, never guessed. The
+  /// gate is reached only when there is no player to read it off.
+  Future<void> _bandTheServerAlreadyHas(String accessToken) async {
+    final MeResult who = await widget.whoAmI(accessToken);
+    if (!mounted) {
+      return;
+    }
+    switch (who) {
+      case MeFound(:final Me me):
+        setState(() => _busy = false);
+        _handOver(accessToken, me.ageBand);
+      case MeNoPlayer():
+        // `DELETE /me` leaves the account standing, so this is where an erased
+        // player comes back to. A link needs a band and nothing on the server
+        // has one, which makes this the first moment the question is
+        // unavoidable — and the last moment it is honest to ask it.
+        setState(() {
+          _busy = false;
+          _pendingToken = accessToken;
+          _trail.add(_Step.age);
+        });
+      case MeRejected():
+        setState(() {
+          _busy = false;
+          _problem = 'Entraste, pero no pudimos abrir tu perfil.';
+        });
+      case MeFailed():
+        setState(() {
+          _busy = false;
+          _problem = 'Algo falló de nuestro lado. Inténtalo otra vez.';
+        });
+      case MeUnreachable():
+        setState(() {
+          _busy = false;
+          _problem = 'Sin conexión. Revisa tu internet.';
+        });
+    }
+  }
+
+  void _handOver(String accessToken, AgeBand band) => widget.onLinked(
+        LinkedAccount(accessToken: accessToken, ageBand: band, email: _email),
+      );
 
   /// A failure as something a person can read, or null if it was not one.
   ///

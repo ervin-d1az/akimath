@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../account/policy/session.dart';
 import '../../home/ui/home_route.dart';
+import '../../map/ui/map_route.dart';
 import '../../profile/ui/profile_route.dart';
 import '../policy/visible_tabs.dart';
 import 'nav_bar.dart';
@@ -98,19 +99,26 @@ class _RootScaffoldState extends State<RootScaffold> {
         // there is somewhere to send it — unlinked play is entirely offline
         // (ADR 0002).
         AppTab.home => HomeRoute(session: _session),
+        // **It is told when it is being looked at.** Every root stays mounted,
+        // so the profile's `initState` runs once per launch — and it reads
+        // figures the home writes while it is behind. Without this it showed
+        // `RACHA 0` on the same screenful of app that had just drawn `RACHA 1`.
         AppTab.profile => ProfileRoute(
+            visibility: _current == AppTab.profile
+                ? RootVisibility.showing
+                : RootVisibility.behind,
             session: _session,
             onSessionChanged: (LinkedSession? session) =>
                 setState(() => _session = session),
           ),
-        // Neither has a root, and `rootsPresentToday` names neither — so
-        // `visibleTabs` never hands either over. Exhaustive rather than
-        // defaulted, so a root arriving is a compile error here instead of a
-        // blank tab.
+        AppTab.skills => const MapRoute(),
+        // **The last tab with no root**, and `rootsPresentToday` says so — so
+        // `visibleTabs` never hands it over. Exhaustive rather than defaulted,
+        // so a root arriving is a compile error here instead of a blank tab.
         //
         // `progress` sits here for the same reason it stays in the enum: the
         // design names it a home and nobody has drawn one. What ours held is
         // on the profile now.
-        AppTab.progress || AppTab.skills => const SizedBox.shrink(),
+        AppTab.progress => const SizedBox.shrink(),
       };
 }
