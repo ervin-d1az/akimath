@@ -35,6 +35,7 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_series(1), _sum(1), _series(2)],
         itemsServed: 0,
+        practisedSteps: const <String, int>{},
       );
 
       expect(
@@ -45,14 +46,14 @@ void main() {
 
     test('a family the pack does not carry gets no node', () {
       final SkillMap map =
-          readSkillMap(items: <Item>[_sum(1)], itemsServed: 0);
+          readSkillMap(items: <Item>[_sum(1)], itemsServed: 0, practisedSteps: const <String, int>{});
 
       expect(map.nodes, hasLength(1));
       expect(map.nodes.single.label, 'Cuentas');
     });
 
     test('an empty pack draws an empty map rather than throwing', () {
-      final SkillMap map = readSkillMap(items: <Item>[], itemsServed: 4);
+      final SkillMap map = readSkillMap(items: <Item>[], itemsServed: 4, practisedSteps: const <String, int>{});
 
       expect(map.nodes, isEmpty);
       expect(map.focusIndex, isNull);
@@ -60,7 +61,7 @@ void main() {
 
     test('every node carries the sentence its detail screen opens with', () {
       final SkillMap map =
-          readSkillMap(items: <Item>[_sum(1)], itemsServed: 0);
+          readSkillMap(items: <Item>[_sum(1)], itemsServed: 0, practisedSteps: const <String, int>{});
 
       expect(map.nodes.single.blurb, isNotEmpty);
     });
@@ -71,6 +72,7 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_sum(1), _sum(3)],
         itemsServed: 0,
+        practisedSteps: const <String, int>{},
       );
 
       expect(map.nodes.single.level, MasteryLevel.available);
@@ -82,6 +84,7 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_sum(2), _sum(5)],
         itemsServed: 1,
+        practisedSteps: const <String, int>{},
       );
 
       expect(map.nodes.single.level, MasteryLevel.inProgress);
@@ -94,6 +97,7 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_sum(1), _sum(4), _sum(2)],
         itemsServed: 2,
+        practisedSteps: const <String, int>{},
       );
 
       expect(map.nodes.single.level, MasteryLevel.mastered);
@@ -106,6 +110,7 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_sum(4), _sum(1)],
         itemsServed: 2,
+        practisedSteps: const <String, int>{},
       );
 
       expect(map.nodes.single.reachedStep, 4);
@@ -115,6 +120,7 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_sum(1), _series(1), _figurate(1)],
         itemsServed: 0,
+        practisedSteps: const <String, int>{},
       );
 
       expect(
@@ -131,6 +137,7 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_sum(1), _sum(2)],
         itemsServed: 9,
+        practisedSteps: const <String, int>{},
       );
 
       expect(map.nodes.single.level, MasteryLevel.mastered);
@@ -138,7 +145,7 @@ void main() {
 
     test('a negative cursor is read as nothing served', () {
       final SkillMap map =
-          readSkillMap(items: <Item>[_sum(1)], itemsServed: -3);
+          readSkillMap(items: <Item>[_sum(1)], itemsServed: -3, practisedSteps: const <String, int>{});
 
       expect(map.nodes.single.level, MasteryLevel.available);
     });
@@ -149,6 +156,7 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_sum(1), _series(1), _figurate(1)],
         itemsServed: 1,
+        practisedSteps: const <String, int>{},
       );
 
       expect(map.nodes[map.focusIndex!].label, 'Series');
@@ -158,6 +166,7 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_sum(1), _series(1)],
         itemsServed: 2,
+        practisedSteps: const <String, int>{},
       );
 
       expect(map.nodes[map.focusIndex!].label, 'Cuentas');
@@ -169,10 +178,112 @@ void main() {
       final SkillMap map = readSkillMap(
         items: <Item>[_sum(1), _series(1), _figurate(1)],
         itemsServed: 2,
+        practisedSteps: const <String, int>{},
       );
 
       expect(map.startedCount, 2);
       expect(map.nodes, hasLength(3));
+    });
+  });
+
+  group('what a practice run left behind', () {
+    // The map's question is "how far up this topic's ladder has the player been
+    // taken", and two things take them up it: the daily series, which the
+    // cursor counts because it walks the pack in order, and a practice run,
+    // which walks one family and cannot be counted by a pack position. Both are
+    // lower bounds on the same fact, so the map takes the higher.
+
+    test('a practised step the cursor never reached moves the node', () {
+      final SkillMap map = readSkillMap(
+        items: <Item>[_series(1), _series(2), _series(4)],
+        itemsServed: 1,
+        practisedSteps: const <String, int>{'numberSeries': 2},
+      );
+
+      expect(map.nodes.single.reachedStep, 2);
+      expect(map.nodes.single.progress, closeTo(0.5, 1e-9));
+    });
+
+    test('a cursor ahead of what practice reached keeps what the cursor read',
+        () {
+      final SkillMap map = readSkillMap(
+        items: <Item>[_series(1), _series(3), _series(4)],
+        itemsServed: 2,
+        practisedSteps: const <String, int>{'numberSeries': 1},
+      );
+
+      expect(map.nodes.single.reachedStep, 3);
+    });
+
+    test('each family reads its own entry, and the two can disagree in '
+        'opposite directions', () {
+      // PROC-11: with both families pulling the same way, the merge, "cursor
+      // only" and "practised only" would all pass this. Cuentas is ahead on the
+      // cursor and Series is ahead on practice, so only the merge is green.
+      final SkillMap map = readSkillMap(
+        items: <Item>[_sum(1), _series(1), _sum(3), _series(4)],
+        itemsServed: 3,
+        practisedSteps: const <String, int>{
+          'arithmetic': 1,
+          'numberSeries': 4,
+        },
+      );
+
+      expect(
+        <String, int>{
+          for (final SkillNode node in map.nodes) node.label: node.reachedStep,
+        },
+        <String, int>{'Cuentas': 3, 'Series': 4},
+      );
+    });
+
+    test('an empty record leaves the map reading the cursor alone', () {
+      // The other half of the same gate: a store that always answered empty
+      // would be invisible without this, and a merge that always answered from
+      // the record would be invisible with only the cases above.
+      final SkillMap map = readSkillMap(
+        items: <Item>[_sum(1), _sum(3)],
+        itemsServed: 2,
+        practisedSteps: const <String, int>{},
+      );
+
+      expect(map.nodes.single.reachedStep, 3);
+    });
+
+    test('a family the pack does not carry draws no node of its own', () {
+      final SkillMap map = readSkillMap(
+        items: <Item>[_sum(1)],
+        itemsServed: 0,
+        practisedSteps: const <String, int>{'figurate': 4},
+      );
+
+      expect(map.nodes, hasLength(1));
+      expect(map.nodes.single.label, 'Cuentas');
+    });
+
+    test('a step past the ladder this pack offers is read as its top', () {
+      // A record outlives a pack: it is keyed by family and step, not by item,
+      // so a lighter pack must read as mastered rather than as 450%.
+      final SkillMap map = readSkillMap(
+        items: <Item>[_sum(1), _sum(2)],
+        itemsServed: 0,
+        practisedSteps: const <String, int>{'arithmetic': 9},
+      );
+
+      expect(map.nodes.single.reachedStep, 2);
+      expect(map.nodes.single.progress, 1);
+      expect(map.nodes.single.level, MasteryLevel.mastered);
+    });
+
+    test('practice alone starts a topic, so the count of started topics moves',
+        () {
+      final SkillMap map = readSkillMap(
+        items: <Item>[_sum(1), _series(1)],
+        itemsServed: 0,
+        practisedSteps: const <String, int>{'numberSeries': 1},
+      );
+
+      expect(map.startedCount, 1);
     });
   });
 }

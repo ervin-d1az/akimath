@@ -265,10 +265,17 @@ class _RootScaffoldState extends State<RootScaffold> {
         // The map's figures come from the series cursor, which a series played
         // on Inicio advances while this root sits behind — so without this it
         // draws launch-time percentages for ever (PROC-13).
+        //
+        // **Handed the session for the reason the home is**: it is the second
+        // root that produces an answer, and an answer is only worth sending
+        // when the pack it came from is one the server can address. Without
+        // it the map plays the bundled pack, whose items are authored, and a
+        // practice run reaches the server as nothing at all.
         AppTab.skills => MapRoute(
             visibility: _current == AppTab.skills
                 ? RootVisibility.showing
                 : RootVisibility.behind,
+            session: _session,
           ),
         // **The last tab with no root**, and `rootsPresentToday` says so — so
         // `visibleTabs` never hands it over. Exhaustive rather than defaulted,

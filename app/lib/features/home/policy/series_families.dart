@@ -26,6 +26,26 @@ String familyLabel(Stimulus stimulus) => switch (stimulus) {
       FigurateStimulus() => 'Figuras',
     };
 
+/// What a family is called **in storage**, and never on a screen.
+///
+/// **Separate from [familyLabel] because the two have different audiences and
+/// different lifetimes.** A label is copy: `Máquina` is there because
+/// `Operación oculta` did not fit a chip, and the day it changes again nothing
+/// should be lost. A key is a promise to a preference written months ago, so it
+/// is the `kind` the contract froze — `frozenStimulusKinds` in
+/// `content/model/stimulus_reader.dart` holds the same six spellings, which is
+/// what makes them readable next to a pack rather than invented here.
+///
+/// It is also English, which a stored key has to be (LANG-1).
+String familyKey(Stimulus stimulus) => switch (stimulus) {
+      ArithmeticStimulus() => 'arithmetic',
+      NumberSeriesStimulus() => 'numberSeries',
+      MatrixStimulus() => 'matrix',
+      AnalogyStimulus() => 'analogy',
+      HiddenOperationStimulus() => 'hiddenOperation',
+      FigurateStimulus() => 'figurate',
+    };
+
 /// The distinct families in [plan], in first-appearance order.
 List<String> seriesFamilies(List<Item> plan) {
   final List<String> names = <String>[];

@@ -6,12 +6,15 @@
 /// comes next in this topic*. One function answering both would be two callers
 /// disagreeing about what it counts.
 ///
-/// **Practice does not move the map.** It advances no cursor, and it must not:
-/// `SeriesCursorStore` is a count of items served *in pack order*, and the map
-/// reads it as "the pack up to here". Advancing it by five for a run inside one
-/// family would mark four other topics as progressed for work nobody did — a
-/// wrong figure on the screen whose whole job is to report progress. The map
-/// moves with the daily series, which is what the cursor actually counts.
+/// **Practice moves the map, and it does not move the cursor.** Those are two
+/// statements and both matter. `SeriesCursorStore` is a count of items served
+/// *in pack order*, and it decides which five the home serves next; advancing
+/// it by five for a run inside one family would mark five other topics as
+/// progressed for work nobody did **and** skip items the player has never seen.
+/// What a run leaves instead is the hardest ladder step it served in that one
+/// family — `policy/practised_steps.dart`, which `readSkillMap` reads alongside
+/// the cursor. Before it did, the button whose whole purpose is to advance a
+/// topic was structurally incapable of advancing it.
 library;
 
 import '../../../content/model/item.dart';
@@ -24,8 +27,16 @@ import '../../round/policy/series_plan.dart';
 /// **Deterministic and deliberately dull**, for `seriesPlan`'s stated reason: a
 /// shuffle would look adaptive without being adaptive, and choosing well is the
 /// calibration question F4 owns. Items past [itemsServed] come first and the
-/// list wraps to the beginning of the topic, so practising twice in a row does
-/// not serve the same five while there are others.
+/// list wraps to the beginning of the topic, so a topic the daily series has
+/// already walked into opens on what is left rather than on its first item.
+///
+/// **Two runs in a row do serve the same five**, and this is where that is
+/// written down rather than somewhere it reads as a surprise: [itemsServed] is
+/// the only thing that orders them and only the daily series moves it. The
+/// comment here claimed the opposite for as long as the function existed. What
+/// would change it is ordering by the step the player has *reached* — which is
+/// now recorded — and that is a selection decision to make on its own evidence,
+/// not a rider on the one that made the number move.
 List<Item> practiceSeries({
   required List<Item> items,
   required String label,
