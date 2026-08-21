@@ -33,13 +33,17 @@ class CalibrationIntroScreen extends StatelessWidget {
   /// no pill.
   final VoidCallback onSkip;
 
-  /// Smaller than `0.2`'s 200 and than the design's 222: this screen carries
-  /// two lines of display type, three lines of body, two chips and two buttons
-  /// under her, and she is the part that can give way. Measured: at 160 the
+  /// Slightly under `0.2`'s 200, which is the order the design draws them in
+  /// (232 there against 222 here).
+  ///
+  /// **She was 138 for two commits, and that was a workaround.** At 160 the
   /// overflow gate reported *"A RenderFlex overflowed by 5.8 pixels"* on the
-  /// notched phone at `textScaler` 1.3, which is the tightest of the four
-  /// viewports and the one no design document draws.
-  static const double _akiWidth = 138;
+  /// notched phone at `textScaler` 1.3, and shrinking the drawing was the
+  /// cheapest way to clear it. Buying a screen's fit with its artwork is a bet
+  /// that the next toolchain measures type the same way, and `0.6` lost exactly
+  /// that bet on CI. The body scrolls now, so the ceiling is gone and the
+  /// compromise can go with it.
+  static const double _akiWidth = 190;
 
   @override
   Widget build(BuildContext context) {
@@ -51,15 +55,39 @@ class CalibrationIntroScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Spacer(),
-          Center(child: Aki(width: _akiWidth, semanticLabel: 'Aki')),
-          const SizedBox(height: BrandShape.space5),
-          _title(),
+          // **The readable half scrolls; the two controls do not.** Same
+          // treatment and same reason as `0.6`, which cleared this gate by
+          // about four percent on macOS and failed it on CI's Ubuntu. Measured
+          // here before the change: this screen overflowed at `textScaler` 1.5
+          // against a gate at 1.3, and the Linux metrics that sank `0.6` cost
+          // roughly one twentieth of that margin. Scrolling removes the ceiling
+          // rather than moving it, and keeping the buttons outside the scroll
+          // view is what stops an overflow squeezing a 62px control under the
+          // 48px floor.
+          Expanded(
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints box) =>
+                  SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: box.maxHeight),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Center(child: Aki(width: _akiWidth, semanticLabel: 'Aki')),
+                      const SizedBox(height: BrandShape.space5),
+                      _title(),
+                      const SizedBox(height: BrandShape.space4),
+                      _promise(),
+                      const SizedBox(height: BrandShape.space4),
+                      _pills(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           const SizedBox(height: BrandShape.space4),
-          _promise(),
-          const SizedBox(height: BrandShape.space4),
-          _pills(),
-          const Spacer(),
           BrandButton.primary(label: 'Va, empecemos', onPressed: onStart),
           const SizedBox(height: BrandShape.space3),
           BrandButton.secondary(label: 'Saltar por ahora', onPressed: onSkip),

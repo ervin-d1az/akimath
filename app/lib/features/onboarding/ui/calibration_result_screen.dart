@@ -60,36 +60,73 @@ class CalibrationResultScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Spacer(),
-          Center(
-            child: Aki(
-              width: _akiWidth,
-              pose: AkiPose.correct,
-              semanticLabel: 'Aki',
+          // **The readable half scrolls; the button does not.** This screen
+          // stacks a drawing, a display line, three cards and a paragraph, and
+          // it cleared the 390×844 overflow gate at `textScaler` 1.3 by about
+          // four percent — measured: it overflowed at 1.35 on macOS and at 1.30
+          // on CI's Ubuntu, whose glyph advances are wider. A layout that fits
+          // by a pixel on one toolchain does not fit on another, and the runner
+          // is the authority. Scrolling removes the ceiling instead of moving
+          // it: nothing scrolls while it fits, and there is no arrangement of
+          // fonts or text sizes that can overflow it.
+          //
+          // Keeping the button *outside* the scroll view is the other half.
+          // An overflowing `Column` squeezes its children, which is how a 62px
+          // control measures under 48 on the rendered screen and takes the
+          // touch-target gate with it.
+          Expanded(
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints box) =>
+                  SingleChildScrollView(
+                child: ConstrainedBox(
+                  // Centred while it fits, scrolled once it does not — rather
+                  // than pinned to the top with a gap under it at 1.0.
+                  constraints: BoxConstraints(minHeight: box.maxHeight),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Center(
+                        child: Aki(
+                          width: _akiWidth,
+                          pose: AkiPose.correct,
+                          semanticLabel: 'Aki',
+                        ),
+                      ),
+                      const SizedBox(height: BrandShape.space4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'AQUÍ EMPIEZAS',
+                          style: BrandText.sectionTitle(size: 44),
+                        ),
+                      ),
+                      if (DemoFigures.enabled) ...<Widget>[
+                        const SizedBox(height: BrandShape.space4),
+                        // `scaleDown` because the card is a row of a label and
+                        // a four-digit numeral, and a wide figure in a fixed
+                        // row is what overflowed `4.1`'s tiles sideways.
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: _ratingCard(),
+                        ),
+                      ],
+                      const SizedBox(height: BrandShape.space4),
+                      _measured(),
+                      const SizedBox(height: BrandShape.space4),
+                      Text(
+                        'No es calificación. Es de dónde salimos, y se mueve '
+                        'todos los días.',
+                        textAlign: TextAlign.center,
+                        style: BrandText.body(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: BrandShape.space4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              'AQUÍ EMPIEZAS',
-              style: BrandText.sectionTitle(size: 44),
-            ),
-          ),
-          if (DemoFigures.enabled) ...<Widget>[
-            const SizedBox(height: BrandShape.space4),
-            Center(child: _ratingCard()),
-          ],
-          const SizedBox(height: BrandShape.space4),
-          _measured(),
-          const SizedBox(height: BrandShape.space4),
-          Text(
-            'No es calificación. Es de dónde salimos, y se mueve todos los '
-            'días.',
-            textAlign: TextAlign.center,
-            style: BrandText.body(),
-          ),
-          const Spacer(),
           BrandButton.primary(label: 'Entrar a mi mapa', onPressed: onEnter),
         ],
       ),
@@ -133,9 +170,17 @@ class CalibrationResultScreen extends StatelessWidget {
             Expanded(
               child: StatTile(
                 label: 'ACIERTOS',
-                value: StatValue(
-                  EsMxNumber.ratio(outcome.correct, outcome.answered),
-                  size: 24,
+                // **`scaleDown`, because a tile is half a screen wide.**
+                // `10 / 10` and an hour-long `64:09` are the widest figures
+                // these two can hold, and a numeral that does not fit wraps —
+                // which grows the row and overflows the screen rather than the
+                // tile. The same shape that overflowed `4.1`'s tile row.
+                value: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: StatValue(
+                    EsMxNumber.ratio(outcome.correct, outcome.answered),
+                    size: 24,
+                  ),
                 ),
               ),
             ),
@@ -143,9 +188,12 @@ class CalibrationResultScreen extends StatelessWidget {
             Expanded(
               child: StatTile(
                 label: 'TIEMPO',
-                value: StatValue(
-                  EsMxNumber.elapsed(outcome.elapsed),
-                  size: 24,
+                value: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: StatValue(
+                    EsMxNumber.elapsed(outcome.elapsed),
+                    size: 24,
+                  ),
                 ),
               ),
             ),
