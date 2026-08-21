@@ -523,10 +523,14 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   // both, which is the PROC-10 failure this repository keeps rediscovering.
   RegisteredScreen(
     label: 'puzzle · kenken · hoja de referencia',
-    // The card on its own rather than `PuzzleScreen` with its sheet open: the
-    // rules live behind a tap and a registry builder cannot tap. What is
-    // measured here is the widget that overflows — the frame around it is the
-    // board screen's, already registered above.
+    // **This entry measures the card, not the screen around it.** The rules
+    // live behind a tap and a registry builder cannot tap, so what is pumped
+    // is the card in the board screen's own padding — with the 48px header
+    // above it left out. The real surface gives the card that much less, and
+    // the board screen itself is registered above at both viewports. Its rules
+    // band scrolls, so the shortfall costs scroll extent rather than an
+    // overflow, but the gate below is not measuring the shipping height and
+    // should not be read as if it were.
     build: () => Scaffold(
       backgroundColor: BrandColors.cream,
       body: SafeArea(
@@ -538,6 +542,12 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
           child: ReferenceCard(
             // The shipped copy, not a stub: these are the longest lines the
             // pack carries, which is the case the card has to survive.
+            // **A deliberate long sample, not a fourth source of truth.**
+            // `packages/core/test/reference-sheet.test.ts` is what holds the
+            // generator and the pack together; this is a fixture that has to
+            // stay roughly this long, and nothing goes red if the wording
+            // moves — which is correct, because what is being measured here is
+            // height, not words.
             puzzle: KenKenPuzzle(
               board: registryKenKen(6).board,
               cages: registryKenKen(6).cages,

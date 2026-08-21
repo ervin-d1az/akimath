@@ -147,11 +147,17 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                     : Center(child: _board()),
               ),
               const SizedBox(height: BrandShape.space3),
-              Keypad(
-                layout: KeypadLayout.puzzle,
-                onKeyPressed: _onKey,
-                unavailable: _tooLarge,
-              ),
+              // **The pad goes with the board.** A key left live under an open
+              // sheet lands a digit on a grid nobody can see — and `_apply`
+              // would report `onPractised` and `onSolved` from behind the card.
+              // The design covers the pad area too: `3.3` runs from 150 to the
+              // bottom of the screen. Same reading as the sopa's word list.
+              if (!_rulesOpen)
+                Keypad(
+                  layout: KeypadLayout.puzzle,
+                  onKeyPressed: _onKey,
+                  unavailable: _tooLarge,
+                ),
             ],
           ),
         ),

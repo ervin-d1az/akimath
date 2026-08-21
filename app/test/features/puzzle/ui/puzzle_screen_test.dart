@@ -347,6 +347,24 @@ void main() {
       // The board is gone rather than squeezed: a grid that resized under a
       // player's hand while they read the rules is what the card replaces.
       expect(find.byType(PuzzleBoardView), findsNothing);
+      // **And the pad goes with it.** A key left live under the sheet lands a
+      // digit on a board nobody can see, and can complete one — `_apply`
+      // reports `onSolved` from behind the card. The design covers the pad
+      // area too (3.3 runs top 150 to bottom 14).
+      expect(find.byType(KeypadKeyView), findsNothing);
+    });
+
+    testWidgets('and a key pressed while it is open does nothing, because '
+        'there is no key', (WidgetTester tester) async {
+      int solved = 0;
+      solved = await _pump(tester);
+      await _tapCell(tester, 0, 0);
+      await tester.tap(_labelled('Cómo se juega'));
+      await tester.pumpAndSettle();
+
+      expect(find.byWidgetPredicate((Widget w) => w is KeypadKeyView),
+          findsNothing);
+      expect(solved, 0);
     });
   });
 
