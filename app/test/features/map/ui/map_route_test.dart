@@ -8,6 +8,7 @@ import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/features/home/data/prefs_day_log_store.dart';
 import 'package:akimath_app/features/home/data/series_cursor_store.dart';
 import 'package:akimath_app/features/home/policy/series_families.dart';
+import 'package:akimath_app/features/map/data/practised_step_store.dart';
 import 'package:akimath_app/features/map/ui/map_route.dart';
 import 'package:akimath_app/features/map/ui/node_detail_screen.dart';
 import 'package:akimath_app/features/map/ui/skill_map_screen.dart';
@@ -60,6 +61,68 @@ String _pack() {
   ]
 }
 ''';
+}
+
+/// A pack with a topic **longer than one practice run**, so practising it moves
+/// the ladder part of the way rather than all of it.
+///
+/// It is the shipped pack's shape in miniature: `Series` carries steps
+/// `1 1 2 2 2 4`, a practice run takes the first five of them, and the step-4
+/// item stays out of reach — which is exactly why the device reads 25 % and not
+/// 100 % after one run. A six-item topic is the smallest that can show it.
+String _ladderPack() {
+  String arithmetic(String id, int step) => '''
+    {"id": "$id", "ladder_step": $step, "answer": "7",
+     "prompt": [{"kind": "text", "value": "3"},
+                {"kind": "operator", "glyph": "+"},
+                {"kind": "text", "value": "4"},
+                {"kind": "operator", "glyph": "="}]}''';
+  String series(String id, int step) => '''
+    {"id": "$id", "ladder_step": $step, "answer": "8",
+     "stimulus": {"kind": "numberSeries",
+                  "payload": {"terms": [2, 4, 6, 8], "unknown_index": 3}}}''';
+
+  return '''
+{
+  "pack_version": 1,
+  "pack_id": "test",
+  "issued_at": "2026-08-01T00:00:00Z",
+  "expires_at": "2099-01-01T00:00:00Z",
+  "items": [
+    ${arithmetic('a1', 1)},
+    ${series('s1', 1)},
+    ${series('s2', 1)},
+    ${series('s3', 2)},
+    ${series('s4', 2)},
+    ${series('s5', 2)},
+    ${series('s6', 4)}
+  ]
+}
+''';
+}
+
+/// Answers the item on screen and moves past its verdict.
+///
+/// The digit is arbitrary: what a practice run records about a topic is the
+/// **step it served**, right or wrong, the same way the cursor advances for a
+/// series however it went.
+Future<void> _answerOne(WidgetTester tester) async {
+  await tester.tap(
+    find.byWidgetPredicate((Widget w) => w is KeypadKeyView && w.data.id == '8'),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(
+    find.byWidgetPredicate(
+      (Widget w) => w is KeypadKeyView && w.data.id == 'submit',
+    ),
+  );
+  await tester.pumpAndSettle();
+
+  final Finder onwards = find.text('Siguiente').evaluate().isNotEmpty
+      ? find.text('Siguiente')
+      : find.text('Intentar otro');
+  await tester.tap(onwards);
+  await tester.pumpAndSettle();
 }
 
 /// The hardware of the phone this app is developed against, measured on the
@@ -196,8 +259,118 @@ void main() {
     );
   });
 
-  testWidgets('practice leaves the cursor alone, so the map reports the run '
-      'and not the practising', (WidgetTester tester) async {
+  // The defect this group exists for, measured on a device on 2026-08-21: a
+  // player opened `2.7` for Series, practised five, came back, and the topic
+  // still read 25 %. Of everything a run can leave behind, a practice run left
+  // only the day. The trap is that the map's figure came from the **series**
+  // cursor, and the one play path that is about a topic is the one path that
+  // must not move that cursor — so the button whose whole purpose is to advance
+  // a topic was structurally incapable of advancing it.
+  group('practising a topic moves that topic', () {
+    testWidgets('the number on the topic itself moves, without leaving it',
+        (WidgetTester tester) async {
+      await _pump(tester, pack: _ladderPack());
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      expect(find.text('0%'), findsOneWidget);
+
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      for (int answered = 0; answered < 5; answered++) {
+        await _answerOne(tester);
+      }
+
+      // Back on `2.7`, which is where the run started and where a player looks
+      // first. It was pushed with a node captured in a `MaterialPageRoute`
+      // builder, which Flutter calls once — so it drew the launch-time figure
+      // for ever while the map underneath it had moved (PROC-13).
+      expect(find.byType(NodeDetailScreen), findsOneWidget);
+      // Five served of `1 1 2 2 2 4`: step 2 of the 4 the pack offers.
+      expect(find.text('50%'), findsOneWidget);
+      expect(find.text('0%'), findsNothing);
+    });
+
+    testWidgets('and so does the number on the map behind it',
+        (WidgetTester tester) async {
+      await _pump(tester, pack: _ladderPack());
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      for (int answered = 0; answered < 5; answered++) {
+        await _answerOne(tester);
+      }
+      await tester.tap(find.text('Volver al mapa'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SkillMapScreen), findsOneWidget);
+      // Series moved and Cuentas, which nobody practised, did not.
+      expect(find.text('50%'), findsOneWidget);
+      expect(find.text('0%'), findsOneWidget);
+    });
+
+    testWidgets('it survives the app being closed, because a topic is not one '
+        'sitting', (WidgetTester tester) async {
+      await _pump(tester, pack: _ladderPack());
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      for (int answered = 0; answered < 5; answered++) {
+        await _answerOne(tester);
+      }
+
+      // The same preferences a relaunch would read, with no store handed in —
+      // which is the only way the device's own default is under test.
+      expect(
+        await const PrefsPractisedStepStore().read(),
+        <String, int>{'numberSeries': 2},
+      );
+    });
+
+    testWidgets('a run left part-way still counts what it served',
+        (WidgetTester tester) async {
+      // A player who closes a topic run has still answered what they answered.
+      // The cursor takes the opposite view for a *series* — those five items
+      // are not "served" in any sense worth remembering, because the home will
+      // offer them again — and the difference is real: practice records the
+      // step it reached, not a position it will serve from.
+      await _pump(tester, pack: _ladderPack());
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      await _answerOne(tester);
+      await tester.tap(find.byType(IconButtonTile).first);
+      await tester.pumpAndSettle();
+
+      expect(
+        await const PrefsPractisedStepStore().read(),
+        <String, int>{'numberSeries': 1},
+      );
+    });
+
+    testWidgets('a topic nobody practised is left where the cursor put it',
+        (WidgetTester tester) async {
+      // PROC-11's other half: a map that read the practised record *instead* of
+      // the cursor would pass every case above and lose every series ever
+      // played — which is the live device's 25 %.
+      await const SeriesCursorStore().advance(2);
+      await _pump(tester, pack: _ladderPack());
+
+      await tester.tap(find.text('Cuentas'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('100%'), findsOneWidget);
+    });
+  });
+
+  testWidgets('practice leaves the cursor alone, because the cursor decides '
+      'which five the home serves next', (WidgetTester tester) async {
     await _pump(tester, pack: _pack());
 
     await tester.tap(find.text('Cuentas'));

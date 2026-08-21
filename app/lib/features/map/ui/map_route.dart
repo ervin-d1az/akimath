@@ -9,20 +9,23 @@ import '../../../design/tokens/tokens.dart';
 import '../../home/data/day_log_store.dart';
 import '../../home/data/prefs_day_log_store.dart';
 import '../../home/data/series_cursor_store.dart';
+import '../../home/policy/series_families.dart';
 import '../../round/ui/round_screen.dart';
 import '../../shell/policy/visible_tabs.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../shell/ui/skeleton_block.dart';
+import '../data/practised_step_store.dart';
 import '../policy/practice_series.dart';
 import '../policy/skill_map.dart';
 import 'node_detail_screen.dart';
 import 'skill_map_screen.dart';
 
-/// Loads the pack and the cursor, draws the map, and opens what is tapped.
+/// Loads the pack and what the player has done with it, draws the map, and
+/// opens what is tapped.
 ///
 /// **The IO and the navigation live here so neither screen has either.**
 /// `SkillMapScreen` takes a [SkillMap] and `NodeDetailScreen` takes one node;
-/// this is what reads an `AssetBundle` and a preference and turns the two into
+/// this is what reads an `AssetBundle` and two preferences and turns them into
 /// the first. The same split `HomeRoute` has, for the same reason — a widget
 /// test drives both screens with hand-written nodes and touches no plugin.
 class MapRoute extends StatefulWidget {
@@ -31,6 +34,7 @@ class MapRoute extends StatefulWidget {
     this.reader = const PackReader(),
     this.seriesCursor = const SeriesCursorStore(),
     this.dayLog,
+    this.practisedSteps,
     this.visibility = RootVisibility.showing,
   });
 
@@ -43,8 +47,11 @@ class MapRoute extends StatefulWidget {
 
   final PackReader reader;
 
-  /// How many items the player has been served. The map's only measure of
-  /// progress, and the reason it is a real screen rather than a drawing.
+  /// How many items the player has been served by the **daily series**.
+  ///
+  /// One of the map's two measures of progress, and the only one a run in pack
+  /// order needs: the series walks the pack from the front, so a single total
+  /// says everything about it.
   final SeriesCursorStore seriesCursor;
 
   /// Where a practice run records the day.
@@ -54,13 +61,29 @@ class MapRoute extends StatefulWidget {
   /// is the same store the home hands its own rounds.
   final DayLogStore? dayLog;
 
+  /// Where a practice run records how far up a topic it took the player.
+  ///
+  /// The map's other measure of progress, and the reason `Practicar 5 retos`
+  /// is now able to move the number above it. Injected for the reason [dayLog]
+  /// is: a `testWidgets` must never reach a plugin.
+  final PractisedStepStore? practisedSteps;
+
   @override
   State<MapRoute> createState() => _MapRouteState();
 }
 
 class _MapRouteState extends State<MapRoute> {
   /// What the map is drawn from, or null until the first reading lands.
-  _MapContents? _contents;
+  ///
+  /// **A notifier and not a plain field, because `2.7` is pushed.** The detail
+  /// screen sits on a route above this one rather than inside it, so no
+  /// `setState` here can rebuild it — and its `MaterialPageRoute` builder runs
+  /// once, capturing whichever node the push handed it. That is PROC-13's named
+  /// trap, and it is exactly where a player looks after practising: the map
+  /// underneath had moved while the topic they had just practised still read
+  /// its launch-time figure.
+  final ValueNotifier<_MapContents?> _contents =
+      ValueNotifier<_MapContents?>(null);
 
   /// Whether the last reading refused the pack.
   bool _packRefused = false;
@@ -75,10 +98,21 @@ class _MapRouteState extends State<MapRoute> {
   /// since it landed.
   late final DayLogStore _dayLog = widget.dayLog ?? const PrefsDayLogStore();
 
+  /// Defaulted here for the reason [_dayLog] is: the shell hands this route
+  /// nothing, and a store nobody supplies is a record nobody writes.
+  late final PractisedStepStore _practisedSteps =
+      widget.practisedSteps ?? const PrefsPractisedStepStore();
+
   @override
   void initState() {
     super.initState();
     unawaited(_read());
+  }
+
+  @override
+  void dispose() {
+    _contents.dispose();
+    super.dispose();
   }
 
   @override
@@ -87,7 +121,8 @@ class _MapRouteState extends State<MapRoute> {
     _refreshOnComingToTheFront(old.visibility);
   }
 
-  /// Re-reads the cursor the moment this root becomes the one on screen.
+  /// Re-reads what the player has done the moment this root becomes the one on
+  /// screen.
   ///
   /// **A rebuild is not a visit**, which is `ProfileRoute`'s wording because it
   /// is the same problem: `IndexedStack` keeps every root alive, so `initState`
@@ -104,7 +139,8 @@ class _MapRouteState extends State<MapRoute> {
     }
   }
 
-  /// The pack and the cursor, and the map the two of them make.
+  /// The pack and what the player has done with it, and the map the three of
+  /// them make.
   ///
   /// **What it drew survives a re-read that has not landed yet.** Assigning
   /// only on success is what keeps the graph on screen while the second
@@ -114,17 +150,20 @@ class _MapRouteState extends State<MapRoute> {
     try {
       final Pack pack = await widget.reader.load();
       final int served = await widget.seriesCursor.read();
+      final Map<String, int> practised = await _practisedSteps.read();
       if (!mounted) {
         return;
       }
-      setState(() {
-        _packRefused = false;
-        _contents = _MapContents(
-          pack: pack,
+      setState(() => _packRefused = false);
+      _contents.value = _MapContents(
+        pack: pack,
+        itemsServed: served,
+        map: readSkillMap(
+          items: pack.items,
           itemsServed: served,
-          map: readSkillMap(items: pack.items, itemsServed: served),
-        );
-      });
+          practisedSteps: practised,
+        ),
+      );
       // Anything at all, the way `FutureBuilder.hasError` took anything at all:
       // a pack is refused where it is read and this screen only reports that it
       // was, so narrowing the clause would turn one refusal into a crash.
@@ -150,13 +189,16 @@ class _MapRouteState extends State<MapRoute> {
     if (_packRefused) {
       return _unreadable();
     }
-    final _MapContents? contents = _contents;
-    return contents == null
-        ? _loading()
-        : SkillMapScreen(
-            map: contents.map,
-            onOpen: (int index) => _open(context, contents, index),
-          );
+    return ValueListenableBuilder<_MapContents?>(
+      valueListenable: _contents,
+      builder: (BuildContext context, _MapContents? contents, Widget? _) =>
+          contents == null
+              ? _loading()
+              : SkillMapScreen(
+                  map: contents.map,
+                  onOpen: (int index) => _open(context, contents, index),
+                ),
+    );
   }
 
   /// A block the size of the graph that is coming.
@@ -187,8 +229,18 @@ class _MapRouteState extends State<MapRoute> {
         ),
       );
 
-  void _open(BuildContext context, _MapContents contents, int index) {
-    final SkillNode node = contents.map.nodes[index];
+  /// Pushes `2.7` for the topic at [index], and keeps it current.
+  ///
+  /// **It listens rather than capturing.** A route's builder runs once, so a
+  /// node handed to it here is the node it draws for ever — and the whole point
+  /// of the practice button underneath is to change that node. The topic is
+  /// found again on every reading **by label**, so a pack that arrives with a
+  /// different set of families cannot turn a re-read into a range error.
+  void _open(BuildContext context, _MapContents opened, int index) {
+    final SkillNode openedNode = opened.map.nodes[index];
+    final SkillNode? openedPrevious =
+        index > 0 ? opened.map.nodes[index - 1] : null;
+
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         // **Its own `AppShell`, because a sibling route inherits none.** The
@@ -197,25 +249,55 @@ class _MapRouteState extends State<MapRoute> {
         // measured on an iPhone 17, where the back control sat at y=4, entirely
         // under the clock. `ProfileRoute` wraps each of its pushed screens for
         // the same reason.
-        builder: (BuildContext detailContext) => AppShell(
-          child: NodeDetailScreen(
-            node: node,
-            previous: index > 0 ? contents.map.nodes[index - 1] : null,
-            onBack: () => Navigator.of(detailContext).pop(),
-            onPractise: () => _practise(detailContext, contents, node),
-          ),
+        builder: (BuildContext detailContext) =>
+            ValueListenableBuilder<_MapContents?>(
+          valueListenable: _contents,
+          builder: (BuildContext context, _MapContents? latest, Widget? _) {
+            final _MapContents contents = latest ?? opened;
+            final int at = contents.map.nodes
+                .indexWhere((SkillNode node) => node.label == openedNode.label);
+            final SkillNode node =
+                at < 0 ? openedNode : contents.map.nodes[at];
+            return AppShell(
+              child: NodeDetailScreen(
+                node: node,
+                previous: at < 0
+                    ? openedPrevious
+                    : (at > 0 ? contents.map.nodes[at - 1] : null),
+                onBack: () => Navigator.of(detailContext).pop(),
+                onPractise: () =>
+                    unawaited(_practise(detailContext, contents, node)),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  /// Plays a short run inside one topic.
+  /// Plays a short run inside one topic, and records what it took the player
+  /// through.
   ///
   /// Over the bar rather than under it (`pushSession`), because declared rule 1
   /// says a session has exactly one way out and a bottom bar is a second one.
   /// **`onFinished` is wired**: without it `RoundScreen` cycles its items for
   /// ever, which is an exercise rather than a run of five.
-  void _practise(BuildContext context, _MapContents contents, SkillNode node) {
+  ///
+  /// **It is awaited, and that is load-bearing.** The push used to be a bare
+  /// call in a `void` method, so nothing here ran when the run ended: the map
+  /// could not re-read, and a store written perfectly would still have left the
+  /// screen showing the figure it opened with.
+  ///
+  /// **What it records is a ladder step and not a cursor.** `SeriesCursorStore`
+  /// counts items served in pack order and decides which five the home serves
+  /// next; advancing it for a run inside one family would mark five other
+  /// topics as progressed and silently skip items the player has never seen.
+  /// See `policy/practised_steps.dart` for the whole argument.
+  Future<void> _practise(
+    BuildContext context,
+    _MapContents contents,
+    SkillNode node,
+  ) async {
     final List<Item> items = practiceSeries(
       items: contents.pack.items,
       label: node.label,
@@ -225,7 +307,19 @@ class _MapRouteState extends State<MapRoute> {
       return;
     }
 
-    pushSession<void>(
+    // **The key comes from the items, not from the node.** A node carries a
+    // label, which is copy a designer may rewrite; a stored record must not
+    // change the day the copy does. Every item `practiceSeries` returns is of
+    // the one family, so any of them names it.
+    final String family = familyKey(items.first.stimulus);
+
+    // **Accumulated here and written once, when the run ends.** Writing on each
+    // answer would be five writes agreeing with one another, and the last of
+    // them would be racing the re-read below — a store that lands a frame late
+    // is a screen that shows the old number.
+    int hardestStepServed = 0;
+
+    await pushSession<void>(
       context,
       (BuildContext roundContext) => RoundScreen(
         items: items,
@@ -233,12 +327,31 @@ class _MapRouteState extends State<MapRoute> {
         attemptDays: const <DateTime>[],
         dayLog: _dayLog,
         onClose: () => Navigator.of(roundContext).pop(),
-        // Wired, or the round cycles its five items for ever. What it reports
-        // is not read: a practice run is not a series, so it opens no summary
-        // and moves no cursor — it just ends.
+        // **The item and never the verdict.** How far up a topic a run took the
+        // player is a fact about what was *served*, the same reading the cursor
+        // takes for a series — so it is `onAnswered`, which carries the item,
+        // rather than `onGraded`, which carries a decision this has no use for.
+        onAnswered: (Item item, String answer, Duration elapsed) {
+          if (item.ladderStep > hardestStepServed) {
+            hardestStepServed = item.ladderStep;
+          }
+        },
+        // Wired, or the round cycles its five items for ever.
         onFinished: (RoundOutcome _) => Navigator.of(roundContext).pop(),
       ),
     );
+
+    // **A run left part-way still counts what it served.** Closing `03 Reto`
+    // after two items is two items the player met, and the record is a claim
+    // about difficulty met rather than a position to serve from.
+    if (hardestStepServed > 0) {
+      await _practisedSteps.record(family: family, step: hardestStepServed);
+    }
+    // The run recorded the day as well. Re-read rather than adjust what this
+    // screen holds: the stores are the source of truth, and a screen that
+    // increments locally is how it ends up showing a figure they would not
+    // yield.
+    await _read();
   }
 
   /// Roughly the graph's own height, so the screen does not jump when the pack
@@ -246,8 +359,8 @@ class _MapRouteState extends State<MapRoute> {
   static const double _loadingHeight = 360;
 }
 
-/// The two things the map is read from, kept together so one `FutureBuilder`
-/// resolves both and the screen cannot be drawn from half of them.
+/// The three things the map is read from, kept together so one reading resolves
+/// them all and the screen cannot be drawn from part of them.
 @immutable
 class _MapContents {
   const _MapContents({
