@@ -859,6 +859,7 @@
     },
     "/me/standing": {
       "get": {
+        "description": "The player's rating for each skill that has one. A skill nothing has rated yet has no entry rather than a zero, so a player who has never been rated is answered an empty list and not a 404. This operation carries rating only: accuracy and time on task are not part of this shape.",
         "operationId": "getStanding",
         "responses": {
           "200": {
@@ -910,16 +911,6 @@
               }
             },
             "description": "That method is not routed here."
-          },
-          "501": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Routed and authenticated, but the server has not built it yet."
           }
         },
         "summary": "The player's rating per skill."

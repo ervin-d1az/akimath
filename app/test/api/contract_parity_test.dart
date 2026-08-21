@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/api/me.dart';
+import 'package:akimath_app/api/standing.dart';
 import 'package:akimath_app/api/sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -150,6 +151,110 @@ void main() {
           meProperties['createdAt']! as Map<String, Object?>;
 
       expect(at['pattern'], createdAt['pattern']);
+    });
+  });
+
+  group('the Dart model is the frozen Standing, both directions', () {
+    final Map<String, Object?> standing = _schema(contract, 'Standing');
+    final List<String> standingRequired =
+        (standing['required']! as List<Object?>).cast<String>();
+    final Map<String, Object?> standingProperties =
+        standing['properties']! as Map<String, Object?>;
+    final Map<String, Object?> skillSchema =
+        (standingProperties['skills']! as Map<String, Object?>)['items']!
+            as Map<String, Object?>;
+    final List<String> skillRequired =
+        (skillSchema['required']! as List<Object?>).cast<String>();
+    final Map<String, Object?> skillProperties =
+        skillSchema['properties']! as Map<String, Object?>;
+
+    final Standing sampleStanding = Standing(
+      playerId: '018f4e3c-0000-7000-8000-0000000000b1',
+      skills: <SkillStanding>[
+        SkillStanding(
+          skillId: 1,
+          rating: 1200.5,
+          deviation: 350,
+          updatedAt: DateTime.utc(2026, 8, 19, 9, 15),
+        ),
+      ],
+    );
+
+    test('the gate read a real schema', () {
+      expect(standingRequired, isNotEmpty);
+      expect(skillRequired, isNotEmpty);
+      // ignore: avoid_print
+      print('  api parity · Standing → ${standingRequired.length} required field(s), '
+          'each skill ${skillRequired.length}');
+    });
+
+    test('it carries every field the schema requires, and no other', () {
+      expect(sampleStanding.toJson().keys.toSet(), containsAll(standingRequired));
+      expect(sampleStanding.toJson().keys.toSet(), standingProperties.keys.toSet());
+    });
+
+    test('and so does each skill in it', () {
+      final Map<String, Object?> skill =
+          (sampleStanding.toJson()['skills']! as List<Object?>).first!
+              as Map<String, Object?>;
+
+      expect(skill.keys.toSet(), containsAll(skillRequired));
+      expect(skill.keys.toSet(), skillProperties.keys.toSet());
+    });
+
+    test('rating is required and NOT nullable, which is why there is no null to send', () {
+      // The asymmetry with `HistoryEntry.ratingDelta` is the whole reason an
+      // unrated player is an empty list rather than a list of nulls. If this
+      // ever gains `nullable: true` the model has a decision to revisit, and
+      // this test is what will say so.
+      final Map<String, Object?> rating =
+          skillProperties['rating']! as Map<String, Object?>;
+
+      expect(skillRequired, contains('rating'));
+      expect(rating['nullable'], isNot(isTrue));
+      expect(rating['type'], 'number');
+    });
+
+    test('an unrated player is representable, and is an empty list', () {
+      const Standing unrated = Standing(
+        playerId: '018f4e3c-0000-7000-8000-0000000000b1',
+        skills: <SkillStanding>[],
+      );
+
+      expect(unrated.isUnrated, isTrue);
+      expect(unrated.toJson()['skills'], isEmpty);
+      // Still every field the schema requires: an empty standing is a whole
+      // `Standing`, not a partial one.
+      expect(unrated.toJson().keys.toSet(), containsAll(standingRequired));
+    });
+
+    test('its instant is read by the same reader Me uses', () {
+      final Map<String, Object?> updatedAt =
+          skillProperties['updatedAt']! as Map<String, Object?>;
+      final Map<String, Object?> meProperties =
+          me['properties']! as Map<String, Object?>;
+      final Map<String, Object?> createdAt =
+          meProperties['createdAt']! as Map<String, Object?>;
+
+      expect(updatedAt['pattern'], createdAt['pattern']);
+    });
+
+    test('the operation is one the contract describes, and no longer unbuilt', () {
+      // **The 501 came off in the diff that built it.** The server's
+      // `contract-parity.test.ts` holds the contract's 501 list to exactly the
+      // operations that are not implemented; this is the client's half of the
+      // same fact, so a client is not left mapping a status the server can no
+      // longer return.
+      final Map<String, Object?> paths = contract['paths']! as Map<String, Object?>;
+      final Map<String, Object?> get =
+          (paths['/me/standing']! as Map<String, Object?>)['get']!
+              as Map<String, Object?>;
+      final Set<String> declared =
+          (get['responses']! as Map<String, Object?>).keys.toSet();
+
+      expect(get['operationId'], 'getStanding');
+      expect(declared, containsAll(<String>['200', '401', '404']));
+      expect(declared, isNot(contains('501')));
     });
   });
 

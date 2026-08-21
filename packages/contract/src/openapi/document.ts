@@ -291,13 +291,28 @@ export function buildOpenApiDocument(): unknown {
         get: {
           operationId: "getStanding",
           summary: "The player's rating per skill.",
+          // **What an empty `skills` means, said here rather than inferred.**
+          // `rating` is required and not nullable, so unlike `ratingDelta` on a
+          // history entry there is no null a caller could read as "not yet" —
+          // the absence of a rating is the absence of an entry. Rating is F4
+          // and nothing writes one today, so the list is empty for everybody,
+          // and a client that drew a 0 from it would be inventing a figure the
+          // server never sent.
+          description:
+            "The player's rating for each skill that has one. A skill nothing " +
+            "has rated yet has no entry rather than a zero, so a player who has " +
+            "never been rated is answered an empty list and not a 404. This " +
+            "operation carries rating only: accuracy and time on task are not " +
+            "part of this shape.",
           responses: {
             "200": {
               description: "The standing.",
               ...(json(ref("Standing")) as object),
             },
             ...errors,
-            ...notImplemented,
+            // No `notImplemented`: this one is built. The spread comes off in
+            // the same diff that adds the handler, and `contract-parity.test.ts`
+            // holds the 501 list to exactly the operations that are not built.
           },
         },
       },

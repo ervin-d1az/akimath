@@ -115,6 +115,7 @@ export const IMPLEMENTED_OPERATIONS: readonly string[] = [
   "getHistory",
   "getMe",
   "getOfflinePack",
+  "getStanding",
   "issuePack",
   "linkPlayer",
   "submitAttempts",

@@ -4,7 +4,7 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Twenty-seven rule IDs — counting `FUN-1a` as the carve-out it
+This book starts small on purpose. Twenty-eight rule IDs — counting `FUN-1a` as the carve-out it
 is rather than as a rule — every one of them describing code that is already on disk today, not
 a pattern we hope to have. It grows by **PROC-6** and no other way.
 
@@ -109,6 +109,19 @@ The one structural pattern the repo already commits to, on both sides of the sta
   with nothing solved; and where `FirstItemScreen` said *"it measures nothing"* above a screen whose
   verdict displayed `RACHA 1`. A reviewer reading a comment believes it, which is exactly why a false
   one is worse than none: it retires the question.
+
+- **CMT-3** MUST: **a comment that claims a test or a gate exists is a claim to `grep` for, and it
+  is checked the moment it is read.** This is CMT-2's nastiest special case, because it does not
+  merely mislead — it retires the very question that would have found the gap, and it leaves an
+  invariant advertised as guarded while nothing guards it. Found in `req-me-standing`:
+  `packages/server/src/adapters/http-server.ts` said its missing-handler branch was *"unreachable
+  while the test holding `IMPLEMENTED_OPERATIONS` to these keys passes"*, and **no such test had
+  ever been written** — so `route()` could dispatch to a name with no handler behind it, a 500 that
+  only production would find. Two obligations follow. When you **write** such a comment, name the
+  file (`test/every-built-operation-has-a-handler.test.ts`), never the claim in the abstract, so the
+  assertion is one `ls` from being falsified. When you **read** one while working nearby, grep for
+  it before relying on it; if it is not there, the missing gate is part of the change that needed
+  it, because the next author will believe the comment too.
 
 ## LANG — Language
 
@@ -384,6 +397,14 @@ credit.
   - **A test whose name claims more than its body checks.** `'a notice banner renders with its
     glyph'` checked a widget type, a string and a rect ordering, so a grep for glyph coverage
     returned a false positive.
+  - **Fixture data that satisfies the mutant as well as the code.** The assertion is sound and the
+    *inputs* make it insensitive, which no amount of reading the assertion reveals. In
+    `req-me-standing`, `get-standing.test.ts` pinned `ORDER BY skill_id` with rows seeded
+    4→900, 1→1200.5, 2→1050 — whose rating-descending order is the same `[1, 2, 4]`, so
+    `ORDER BY rating DESC` passed it untouched. The fix was the data, not the assertion: give the
+    highest rating to the highest skill id and the two orders disagree. **Whenever a test pins a
+    choice between two columns, two keys or two orderings, the fixture must make the alternatives
+    produce different output** — otherwise the test documents an intention it cannot enforce.
 
   The remedy is the same in every case: **state the mutation the test would catch, then make it.**
   When a test is the record of a defect that shipped, PROC-5's tier-1b falsification is not optional

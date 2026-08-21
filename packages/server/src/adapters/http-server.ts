@@ -25,8 +25,10 @@ import {
 import { conflictResponse, linkOutcome, readLinkRequest } from "../link.js";
 import { noPlayerResponse, profileResponse } from "../players.js";
 import { route, type HandlerAnswer } from "../routing.js";
+import { standingResponse } from "../standing.js";
 import type { Logger } from "./logger.js";
 import { recentSessions } from "./history-repository.js";
+import { skillRatings } from "./standing-repository.js";
 import { insertPack, packFor } from "./pack-repository.js";
 import { shippedPacks, type ShippedPack } from "./shipped-packs.js";
 import {
@@ -196,6 +198,22 @@ export function createHandlers(
           return noPlayerResponse();
         }
         return historyResponse(await recentSessions(client, playerId, HISTORY_LIMIT));
+      }),
+
+    // **The standing is the rating, and there is no rating yet.** The frozen
+    // `Standing` carries `{skillId, rating, deviation, updatedAt}` and has no
+    // field for accuracy or time on task, derivable from `attempts` though both
+    // are — so this answers what the shape holds and nothing else. Nothing
+    // writes `user_skills`, which makes the list empty for every player today;
+    // that is read from the table rather than hard-coded, so the day a rating
+    // job writes a row this endpoint already reports it.
+    getStanding: ({ userId }) =>
+      database.inRequestRole(async (client) => {
+        const playerId = await playerIdForAccount(client, userId);
+        if (playerId === null) {
+          return noPlayerResponse();
+        }
+        return standingResponse(playerId, await skillRatings(client, playerId));
       }),
 
     // **A re-fetch rebuilds rather than reads a body.** `offline_packs` stores
@@ -476,9 +494,10 @@ async function run(
 ): Promise<HandlerAnswer> {
   const handler = handlers[operationId];
   if (handler === undefined) {
-    // Unreachable while the test holding `IMPLEMENTED_OPERATIONS` to these keys
-    // passes. Answered rather than thrown so that if it ever *is* reached, it
-    // is one bad endpoint rather than a crashed process.
+    // Unreachable while `test/every-built-operation-has-a-handler.test.ts`
+    // passes — the gate this comment claimed for months before anybody wrote
+    // it. Answered rather than thrown so that if it ever *is* reached, it is
+    // one bad endpoint rather than a crashed process.
     log.error("routed to a handler that does not exist", { operation: operationId });
     return { status: 500, body: { error: "internal", message: "That went wrong on our side." } };
   }
