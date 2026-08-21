@@ -7,6 +7,7 @@ import '../../../content/model/item.dart';
 import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../design/widgets/spec/verdict.dart';
 import '../../round/policy/series_plan.dart';
 import '../../round/policy/streak_policy.dart';
 import '../data/day_log_store.dart';
@@ -31,6 +32,8 @@ import '../../shell/ui/skeleton_block.dart';
 import '../../sync/attempt_sync.dart';
 import '../../sync/data/issued_pack_store.dart';
 import '../../sync/policy/pack_refresh.dart';
+import '../../stats/data/answer_record_store.dart';
+import '../../stats/policy/local_stats.dart';
 import '../../states/data/streak_notice_store.dart';
 import '../../states/policy/streak_notice.dart';
 import '../../states/ui/streak_at_risk_screen.dart';
@@ -61,6 +64,7 @@ class HomeRoute extends StatefulWidget {
     this.issuePack,
     this.fetchPack,
     this.issuedPacks,
+    this.answerRecord,
   });
 
   /// The account this device is signed in to, if it is.
@@ -89,6 +93,18 @@ class HomeRoute extends StatefulWidget {
 
   /// Where the id of that pack is kept between launches.
   final IssuedPackStore? issuedPacks;
+
+  /// Where the device's own record of answered items is kept.
+  ///
+  /// **The practice round writes to it and `0.3 Primer reto` does not**, which
+  /// is the rule `AnswerRecordStore` states and this route is the only place
+  /// that can keep: the teaching item is built by `FirstRunGate` with no round
+  /// callbacks at all, so there is nothing to record into rather than a rule
+  /// somebody has to remember.
+  ///
+  /// Injected for the reason [dayLog] is — a `testWidgets` must never reach a
+  /// plugin.
+  final AnswerRecordStore? answerRecord;
 
   final PackReader reader;
   final DateTime Function() now;
@@ -131,6 +147,9 @@ class _HomeRouteState extends State<HomeRoute> {
   bool _noticeSettled = false;
 
   late final AttemptSync _sync = widget.sync ?? AttemptSync();
+
+  late final AnswerRecordStore _answerRecord =
+      widget.answerRecord ?? const PrefsAnswerRecordStore();
 
   /// The pack the server issued, once it has.
   ///
@@ -627,6 +646,15 @@ class _HomeRouteState extends State<HomeRoute> {
             elapsed: elapsed,
           ),
         ),
+        // **`onGraded` and never `onAnswered`.** That one carries what the
+        // server needs and deliberately no verdict; reading a verdict off it
+        // would mean calling `gradeItem` a second time, which is a second
+        // decision about one answer — the defect `diagnose` was fixed for.
+        onGraded: (Verdict verdict, Duration elapsed) => unawaited(
+          _answerRecord.record(
+            AnsweredItem(verdict: verdict, elapsed: elapsed),
+          ),
+        ),
         onDone: () => Navigator.of(sessionContext).maybePop(),
       ),
     );
@@ -709,6 +737,7 @@ class _SeriesSession extends StatefulWidget {
     required this.dayLog,
     required this.onFinishedSeries,
     required this.onAnswered,
+    required this.onGraded,
     required this.onDone,
   });
 
@@ -725,6 +754,11 @@ class _SeriesSession extends StatefulWidget {
   /// Every answer, the moment it is submitted. Threaded straight through to
   /// `RoundScreen`, because this holder decides nothing about it.
   final void Function(Item item, String answer, Duration elapsed) onAnswered;
+
+  /// The verdict this device decided, threaded straight through for the same
+  /// reason [onAnswered] is: this holder decides nothing about it.
+  final void Function(Verdict verdict, Duration elapsed) onGraded;
+
   final VoidCallback onDone;
 
   @override
@@ -759,6 +793,7 @@ class _SeriesSessionState extends State<_SeriesSession> {
       attemptDays: widget.attemptDays,
       dayLog: widget.dayLog,
       onAnswered: widget.onAnswered,
+      onGraded: widget.onGraded,
       onFinished: (RoundOutcome result) {
         widget.onFinishedSeries(result.total);
         setState(() => _outcome = result);
