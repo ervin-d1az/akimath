@@ -10,6 +10,7 @@ Future<AppTab?> _pump(
   WidgetTester tester, {
   AppTab current = AppTab.home,
   List<AppTab>? tabs,
+  double textScale = 1,
 }) async {
   AppTab? chosen;
   tester.view
@@ -19,6 +20,11 @@ Future<AppTab?> _pump(
 
   await tester.pumpWidget(
     MaterialApp(
+      builder: (BuildContext context, Widget? child) => MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       home: Scaffold(
         bottomNavigationBar: NavBar(
           tabs: tabs ?? visibleTabs(rootsPresentToday),
@@ -37,6 +43,9 @@ void main() {
     testWidgets('every root that exists today', (WidgetTester tester) async {
       await _pump(tester);
       expect(find.text('Inicio'), findsOneWidget);
+      // `Mapa` is the newest and the reason the bar is three wide: `05 MAPA`
+      // was merged fully tested with no tab that opened it.
+      expect(find.text('Mapa'), findsOneWidget);
       expect(find.text('Perfil'), findsOneWidget);
       // `Avance` absorbed into the profile: no document draws a progress
       // screen, and every figure it held is one `4.1` puts under the identity.
@@ -68,10 +77,12 @@ void main() {
     });
 
     testWidgets('it names no tab that has no root', (WidgetTester tester) async {
-      // `Avance` left this list when it got a root, which is the list doing its
-      // job: it names what is *not* there, so it shrinks as the app grows.
+      // This list is down to one. `Avance` was on it, then off it, and is back
+      // on it now that its figures live on the profile; `Mapa` left it the day
+      // `MapRoute` was wired to the tab, which is the list doing its job — it
+      // names what is *not* there, so it shrinks as the app grows.
       await _pump(tester);
-      expect(find.text('Mapa'), findsNothing);
+      expect(find.text('Avance'), findsNothing);
     });
   });
 
@@ -137,22 +148,41 @@ void main() {
   });
 
   group('every destination is reachable by thumb', () {
-    testWidgets('each tab is at least the minimum touch target',
-        (WidgetTester tester) async {
-      await _pump(tester);
+    /// Measured on the rendered bar, at every viewport the app is gated for.
+    ///
+    /// **A third tab makes each cell narrower**, and the registry gates cannot
+    /// see it: `screen_registry.dart` has no `NavBar` entry, so this is the only
+    /// place the bar is measured. The label carries `maxLines: 1`, so a cell
+    /// that ran out of room clips instead of overflowing and
+    /// `screen_overflow_test` would stay green through it.
+    ///
+    /// Driven off the policy rather than a list typed here, so the day a fourth
+    /// root lands the sweep grows with it instead of measuring two of four.
+    void expectEveryTabIsThumbSized(double textScale) {
+      testWidgets('at textScaler $textScale', (WidgetTester tester) async {
+        await _pump(tester, textScale: textScale);
 
-      for (final String label in <String>['Inicio', 'Perfil']) {
-        final Size size = tester.getSize(
-          find.ancestor(
-            of: find.text(label),
-            matching: find.byType(GestureDetector),
-          ).first,
-        );
-        expect(size.height, greaterThanOrEqualTo(BrandShape.minTouchTarget),
-            reason: '$label is only ${size.height} tall');
-        expect(size.width, greaterThanOrEqualTo(BrandShape.minTouchTarget));
-      }
-    });
+        final List<AppTab> tabs = visibleTabs(rootsPresentToday);
+        expect(tabs, hasLength(greaterThan(1)), reason: 'nothing was measured');
+
+        for (final AppTab tab in tabs) {
+          final String label = NavBar.labelOf(tab);
+          final Size size = tester.getSize(
+            find.ancestor(
+              of: find.text(label),
+              matching: find.byType(GestureDetector),
+            ).first,
+          );
+          expect(size.height, greaterThanOrEqualTo(BrandShape.minTouchTarget),
+              reason: '$label is only ${size.height} tall');
+          expect(size.width, greaterThanOrEqualTo(BrandShape.minTouchTarget),
+              reason: '$label is only ${size.width} wide');
+        }
+      });
+    }
+
+    expectEveryTabIsThumbSized(1);
+    expectEveryTabIsThumbSized(1.3);
   });
 
   group('tapping', () {

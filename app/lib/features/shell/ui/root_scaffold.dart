@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../account/policy/session.dart';
 import '../../home/ui/home_route.dart';
+import '../../map/ui/map_route.dart';
 import '../../profile/ui/profile_route.dart';
 import '../policy/visible_tabs.dart';
 import 'nav_bar.dart';
@@ -103,14 +104,14 @@ class _RootScaffoldState extends State<RootScaffold> {
             onSessionChanged: (LinkedSession? session) =>
                 setState(() => _session = session),
           ),
-        // Neither has a root, and `rootsPresentToday` names neither — so
-        // `visibleTabs` never hands either over. Exhaustive rather than
-        // defaulted, so a root arriving is a compile error here instead of a
-        // blank tab.
+        AppTab.skills => const MapRoute(),
+        // **The last tab with no root**, and `rootsPresentToday` says so — so
+        // `visibleTabs` never hands it over. Exhaustive rather than defaulted,
+        // so a root arriving is a compile error here instead of a blank tab.
         //
         // `progress` sits here for the same reason it stays in the enum: the
         // design names it a home and nobody has drawn one. What ours held is
         // on the profile now.
-        AppTab.progress || AppTab.skills => const SizedBox.shrink(),
+        AppTab.progress => const SizedBox.shrink(),
       };
 }
