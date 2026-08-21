@@ -24,6 +24,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   _brokenStorageTests();
+  _unregisteredPluginTests();
 
   setUp(() {
     SharedPreferencesAsyncPlatform.instance =
@@ -191,6 +192,45 @@ void main() {
       );
       await store.write(louder);
       expect(await store.read(), louder);
+    });
+  });
+}
+
+void _unregisteredPluginTests() {
+  group('a plugin that never registered costs the setting, never the screen',
+      () {
+    setUp(() {
+      SharedPreferencesAsyncPlatform.instance = null;
+    });
+
+    test('every read still answers with its defaults', () async {
+      // **`SharedPreferencesAsync()` throws from its own constructor here**,
+      // not from the call — so a handle resolved as an argument puts the throw
+      // outside the catch and a settings screen dies on open instead of
+      // showing the defaults it promised. That is not hypothetical: this app
+      // has already shipped a build whose plugin did not link, because
+      // CocoaPods was missing.
+      expect(
+        await const PrefsNotificationSettingsStore().read(),
+        NotificationSettings.defaults,
+      );
+      expect(
+        await const PrefsAccessibilitySettingsStore().read(),
+        AccessibilitySettings.defaults,
+      );
+      expect(
+        await const PrefsSoundSettingsStore().read(),
+        SoundSettings.defaults,
+      );
+    });
+
+    test('a write that has nowhere to go does not throw at the caller',
+        () async {
+      await expectLater(
+        const PrefsNotificationSettingsStore()
+            .write(NotificationSettings.defaults),
+        completes,
+      );
     });
   });
 }

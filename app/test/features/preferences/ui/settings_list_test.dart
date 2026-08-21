@@ -1,6 +1,10 @@
 import 'package:akimath_app/design/widgets/detail_header.dart';
 import 'package:akimath_app/design/widgets/settings_row.dart';
+import 'package:akimath_app/features/preferences/ui/accessibility_screen.dart';
+import 'package:akimath_app/features/preferences/ui/data_privacy_screen.dart';
+import 'package:akimath_app/features/preferences/ui/notifications_screen.dart';
 import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
+import 'package:akimath_app/features/preferences/ui/sound_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -41,13 +45,36 @@ void main() {
         (WidgetTester tester) async {
       await pump(tester, listScreen());
 
-      final int rows = tester.widgetList<SettingsRow>(find.byType(SettingsRow)).length;
+      final int rows =
+          tester.widgetList<SettingsRow>(find.byType(SettingsRow)).length;
       // PROC-10: a list that silently drew nothing must not pass.
-      expect(rows, greaterThan(0), reason: 'settings rows → $rows');
+      expect(rows, greaterThan(0), reason: 'settings rows -> $rows');
       expect(rows, SettingsListScreen.rowCount);
     });
 
-    testWidgets('every row it draws opens something', (WidgetTester tester) async {
+    testWidgets('the design\'s five rows come in the order it lists them',
+        (WidgetTester tester) async {
+      await pump(tester, listScreen());
+
+      final List<String> drawn = tester
+          .widgetList<SettingsRow>(find.byType(SettingsRow))
+          .map((SettingsRow row) => row.label)
+          .toList();
+
+      // `Cómo se leen los retos` is not in the design at all, so it sits after
+      // everything that is.
+      expect(drawn, <String>[
+        'Cuenta',
+        'Notificaciones',
+        'Accesibilidad',
+        'Sonido y vibración',
+        'Datos y privacidad',
+        'Cómo se leen los retos',
+      ]);
+    });
+
+    testWidgets('the two rows the caller owns report to the caller',
+        (WidgetTester tester) async {
       int account = 0;
       int legend = 0;
       await pump(
@@ -64,32 +91,42 @@ void main() {
       expect(legend, 1);
     });
 
-    testWidgets('an undesigned or unbuildable destination gets no row',
+    testWidgets('the four settings rows open their screens',
         (WidgetTester tester) async {
-      // No notification plugin, no audio engine, no help screen — and DR-P2 is
-      // that a row leading nowhere is worse than an absent one. Not greyed
-      // out either: a player cannot tell "not yet" from "not for you".
-      await pump(tester, listScreen());
+      // **Reachability is the thing worth asserting.** These four need nothing
+      // the caller holds — no session, no address — so the row opens them
+      // itself, and a callback counter would prove only that a closure ran.
+      final Map<String, Type> destinations = <String, Type>{
+        'Notificaciones': NotificationsScreen,
+        'Accesibilidad': AccessibilityScreen,
+        'Sonido y vibración': SoundScreen,
+        'Datos y privacidad': DataPrivacyScreen,
+      };
 
-      for (final String absent in <String>[
-        'Notificaciones',
-        'Sonido y vibración',
-        'Ayuda',
-        'Datos y privacidad',
-      ]) {
-        expect(find.text(absent), findsNothing, reason: absent);
+      await pump(tester, listScreen());
+      for (final MapEntry<String, Type> row in destinations.entries) {
+        await tester.tap(find.text(row.key));
+        await tester.pumpAndSettle();
+        expect(find.byType(row.value), findsOneWidget, reason: row.key);
+
+        // Back to the list before the next one. A second `pumpWidget` would
+        // reuse the same navigator and leave the pushed screen on top, which
+        // is a green test that walked one row and stopped.
+        await tester.tap(find.bySemanticsLabel('Volver'));
+        await tester.pumpAndSettle();
+        expect(find.byType(SettingsListScreen), findsOneWidget,
+            reason: row.key);
       }
     });
 
-    testWidgets('Accesibilidad is absent today and not on principle',
+    testWidgets('Ayuda has no design, so it gets no row',
         (WidgetTester tester) async {
-      // The one control in 4.4–4.6 whose DR-P2 reasoning does not survive:
-      // four text-size steps map onto a scale the app is already gated at 1.0
-      // and 1.3. It arrives as a row, not as an ungreying — and this test is
-      // what turns red the day it does, so nobody has to remember.
+      // The last of the design's six with nowhere to go. Absent rather than
+      // greyed out: a player cannot tell "not yet" from "not for you" (DR-P2).
+      // This turns red the day somebody draws it.
       await pump(tester, listScreen());
 
-      expect(find.text('Accesibilidad'), findsNothing);
+      expect(find.text('Ayuda'), findsNothing);
     });
   });
 }
