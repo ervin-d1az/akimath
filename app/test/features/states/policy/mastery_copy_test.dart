@@ -22,6 +22,16 @@ void main() {
     });
   });
 
+  group('percentLabel', () {
+    // The design closes the gap. `EsMxNumber.percent` would open it with a
+    // narrow no-break space; this pins which of the two the screens draw, so
+    // settling the question turns this test red on purpose.
+    test('closes up the sign, the way both documents draw it', () {
+      expect(percentLabel(38), '38%');
+      expect(percentLabel(100), '100%');
+    });
+  });
+
   group('readyChallenges', () {
     test('plural', () => expect(readyChallenges(5), '5 retos listos'));
     test('singular', () => expect(readyChallenges(1), '1 reto listo'));

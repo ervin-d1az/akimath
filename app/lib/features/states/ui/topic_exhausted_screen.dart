@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../design/icons/brand_icon.dart';
-import '../../../design/math/spec/es_mx_number.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
@@ -130,7 +129,7 @@ class TopicExhaustedScreen extends StatelessWidget {
     borderWidth: BrandShape.borderWidthSmallSurface,
     shadowOffset: Offset.zero,
     alignment: Alignment.center,
-    child: Text(EsMxNumber.percent(percent), style: BrandText.numeral(15)),
+    child: Text(percentLabel(percent), style: BrandText.numeral(15)),
   );
 
   /// The board, as a board.

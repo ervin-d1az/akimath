@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import '../../../design/brand/aki.dart';
 import '../../../design/icons/brand_icon.dart';
-import '../../../design/math/spec/es_mx_number.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
@@ -124,7 +123,7 @@ class SkillMasteredScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: BrandShape.space1),
                 Text(
-                  EsMxNumber.percent(_complete),
+                  percentLabel(_complete),
                   style: BrandText.numeral(22),
                 ),
               ],

@@ -32,6 +32,21 @@ String unlockedTopicsHeading(int count) {
   return 'SE ABRIERON $amount TEMAS';
 }
 
+/// A percentage as these two screens draw it.
+///
+/// **Not `EsMxNumber.percent`, and that is a conflict worth naming.** That
+/// function sets a narrow no-break space before the sign — `38\u202F%` — which
+/// is the RAE orthographic rule, and its doc comment says so. Both design
+/// documents draw `38%` and `100%` closed up, and the design is the source of
+/// truth for a screen. `EsMxNumber.percent` has **no other caller in `lib/`**,
+/// so nothing on screen has ever rendered that spelling and there is no
+/// convention here to break — which makes this a question to ask rather than
+/// a rule to follow silently.
+///
+/// Kept in one pure function rather than as a literal in each screen, so
+/// settling the question is a single edit.
+String percentLabel(int percent) => '$percent%';
+
 /// How much is waiting under a topic the player has not started.
 String readyChallenges(int count) =>
     count == 1 ? '1 reto listo' : '$count retos listos';

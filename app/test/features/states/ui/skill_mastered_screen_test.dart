@@ -1,5 +1,4 @@
 import 'package:akimath_app/design/brand/aki.dart';
-import 'package:akimath_app/design/math/spec/es_mx_number.dart';
 import 'package:akimath_app/features/states/ui/skill_mastered_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,10 +35,10 @@ void main() {
       expect(find.text('FRACCIONES,'), findsOneWidget);
       expect(find.text('DOMINADA'), findsOneWidget);
       expect(find.text('Fracciones'), findsOneWidget);
-      // Spelled by the app's one percent speller, which sets the es-MX space
-      // before the sign. The mutation this kills is a hardcoded '100%'.
-      expect(find.text(EsMxNumber.percent(100)), findsOneWidget);
-      expect(find.text('100%'), findsNothing);
+      // The design draws it closed up. `EsMxNumber.percent` would set a
+      // narrow no-break space before the sign and has no other caller in
+      // `lib/` — see `percentLabel`, which is where that conflict is recorded.
+      expect(find.text('100%'), findsOneWidget);
       expect(
         find.text('La línea marca dónde estabas hace una semana'),
         findsOneWidget,

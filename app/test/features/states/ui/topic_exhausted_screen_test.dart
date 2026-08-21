@@ -1,5 +1,4 @@
 import 'package:akimath_app/design/brand/aki.dart';
-import 'package:akimath_app/design/math/spec/es_mx_number.dart';
 import 'package:akimath_app/features/states/policy/topic_suggestion.dart';
 import 'package:akimath_app/features/states/ui/topic_exhausted_screen.dart';
 import 'package:flutter/widgets.dart';
@@ -56,8 +55,7 @@ void main() {
       await pump(tester, exhausted());
 
       expect(find.text('Decimales'), findsOneWidget);
-      expect(find.text(EsMxNumber.percent(38)), findsOneWidget);
-      expect(find.text('38'), findsNothing);
+      expect(find.text('38%'), findsOneWidget);
       expect(find.text('5 retos listos'), findsOneWidget);
       expect(find.text('Puzzle del día'), findsOneWidget);
       expect(find.text('KenKen · 15 min, sin prisa'), findsOneWidget);
