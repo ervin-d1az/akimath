@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 Future<void> pump(
   WidgetTester tester, {
   VoidCallback? onErase,
+  VoidCallback? onChangePassword,
+  VoidCallback? onSignOut,
 }) async {
   tester.view
     ..physicalSize = const Size(390, 844)
@@ -19,6 +21,8 @@ Future<void> pump(
           onBack: () {},
           email: 'alguien@ejemplo.com',
           onErase: onErase,
+          onChangePassword: onChangePassword,
+          onSignOut: onSignOut,
         ),
       ),
     ),
@@ -35,8 +39,13 @@ void main() {
     expect(find.text('alguien@ejemplo.com'), findsOneWidget);
     // A card rather than a row with a trailing value: a chevron would say
     // *there is more through here*, and an address is four times the width of
-    // the `19:30` the design's value-bearing row was drawn for.
-    expect(find.byType(SettingsRow), findsNothing);
+    // the `19:30` the design's value-bearing row was drawn for. The other rows
+    // *are* `SettingsRow`s, so this is scoped to the address rather than to the
+    // type.
+    expect(
+      find.widgetWithText(SettingsRow, 'alguien@ejemplo.com'),
+      findsNothing,
+    );
   });
 
   testWidgets('a long address still fits at the text setting we are gated for',
@@ -96,15 +105,80 @@ void main() {
       expect(opened, 1);
     });
 
-    testWidgets('the design\'s other two rows are absent, not inert',
+  });
+
+  group('the other two rows the design draws', () {
+    testWidgets('are there when the caller can act on them',
         (WidgetTester tester) async {
-      // `Cambiar contraseña` needs a Neon Auth flow nobody has built, and
-      // `Cerrar sesión` needs somewhere for a signed-out device to go that is
-      // not the erasure's answer (DR-P2).
-      await pump(tester, onErase: () {});
+      await pump(tester, onChangePassword: () {}, onSignOut: () {});
+
+      expect(find.text('Cambiar contraseña'), findsOneWidget);
+      expect(find.text('Cerrar sesión'), findsOneWidget);
+    });
+
+    testWidgets('and absent rather than inert when it cannot',
+        (WidgetTester tester) async {
+      // Same reading as the erasure door: a control that cannot act reads as
+      // broken rather than as unbuilt, and a player cannot tell *not yet* from
+      // *not for you* (DR-P2).
+      await pump(tester);
 
       expect(find.text('Cambiar contraseña'), findsNothing);
       expect(find.text('Cerrar sesión'), findsNothing);
+    });
+
+    testWidgets('each asks its own caller, once', (WidgetTester tester) async {
+      int changed = 0;
+      int signedOut = 0;
+      await pump(
+        tester,
+        onChangePassword: () => changed++,
+        onSignOut: () => signedOut++,
+      );
+
+      await tester.tap(find.text('Cambiar contraseña'));
+      await tester.pumpAndSettle();
+      expect(<int>[changed, signedOut], <int>[1, 0]);
+
+      await tester.tap(find.text('Cerrar sesión'));
+      await tester.pumpAndSettle();
+      expect(<int>[changed, signedOut], <int>[1, 1]);
+    });
+
+    testWidgets('and only the one that opens something promises it',
+        (WidgetTester tester) async {
+      // `SettingsRow`'s own rule: the chevron says *there is more through
+      // here*, so a row that acts in place draws none. Signing out stays on
+      // this screen; changing a password is a screen away.
+      await pump(tester, onChangePassword: () {}, onSignOut: () {});
+
+      final SettingsRow opens =
+          tester.widget(find.widgetWithText(SettingsRow, 'Cambiar contraseña'));
+      final SettingsRow acts =
+          tester.widget(find.widgetWithText(SettingsRow, 'Cerrar sesión'));
+
+      expect(opens.showChevron, isTrue);
+      expect(acts.showChevron, isFalse);
+    });
+
+    testWidgets('and the four rows are in the order the design lists them',
+        (WidgetTester tester) async {
+      await pump(
+        tester,
+        onErase: () {},
+        onChangePassword: () {},
+        onSignOut: () {},
+      );
+
+      final double correo = tester.getTopLeft(find.text('CORREO')).dy;
+      final double password =
+          tester.getTopLeft(find.text('Cambiar contraseña')).dy;
+      final double signOut = tester.getTopLeft(find.text('Cerrar sesión')).dy;
+      final double erase = tester.getTopLeft(find.text(erasureDoorLabel)).dy;
+
+      expect(correo, lessThan(password));
+      expect(password, lessThan(signOut));
+      expect(signOut, lessThan(erase));
     });
   });
 }
