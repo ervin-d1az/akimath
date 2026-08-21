@@ -142,6 +142,15 @@ final class MapLayout {
   /// The design's 6 px above the first row.
   static const double topInset = 6;
 
+  /// How thick a connector is drawn.
+  ///
+  /// `stroke-width="3.5"` in the design's own `<svg>`, and a deliberate
+  /// departure from `BrandShape`, which stops at 3 for an outline and 2.5 for a
+  /// cage (BRD-2c). A connector is neither: it is the heaviest line the app
+  /// draws that is not a border, and rounding it to 3 would make the map read
+  /// as lighter than the boxes it joins.
+  static const double connectorWidth = 3.5;
+
   /// Room below the last row for the hard shadow to fall into.
   ///
   /// Read off `BrandShape` rather than typed, so the day a shadow moves this
