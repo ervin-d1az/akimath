@@ -1,3 +1,4 @@
+import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/features/round/policy/answer_draft.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
@@ -434,6 +435,235 @@ void main() {
         reason: 'a keypress that visibly did nothing',
       );
       expect(_answer(tester).length, before.length - 1);
+    });
+  });
+
+  group('a finished series reports what happened, item by item', () {
+    testWidgets('the outcomes come back in the order they were answered',
+        (WidgetTester tester) async {
+      // **A count cannot draw the ring.** `2.5` shows one mark per item in
+      // series order, and `correct: 1, total: 2` cannot say which one was
+      // missed — the round is the only thing that knows, because it graded
+      // them.
+      RoundOutcome? outcome;
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(
+            items: _twoItems,
+            onFinished: (RoundOutcome result) => outcome = result,
+          ),
+        ),
+      );
+
+      // Right on the first item, wrong on the second.
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      for (final String id in <String>['9', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Intentar otro'));
+      await tester.pumpAndSettle();
+
+      expect(outcome!.outcomes, <Verdict>[Verdict.correct, Verdict.wrong]);
+      expect(outcome!.correct, 1);
+      expect(outcome!.total, 2);
+    });
+
+    testWidgets('a clean series reports every item correct',
+        (WidgetTester tester) async {
+      // The control: an `outcomes` that always reported a slip would satisfy
+      // the ordering test above on its wrong half alone.
+      RoundOutcome? outcome;
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(
+            items: _twoItems,
+            onFinished: (RoundOutcome result) => outcome = result,
+          ),
+        ),
+      );
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      for (final String id in <String>['6', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+
+      expect(outcome!.outcomes, <Verdict>[Verdict.correct, Verdict.correct]);
+      expect(outcome!.stumble, isNull, reason: 'nothing went wrong to explain');
+    });
+
+    testWidgets('the first slip is the one carried out, not the last',
+        (WidgetTester tester) async {
+      // `2.5` explains one mistake. The earliest is the one that most likely
+      // caused the rest, and picking the latest would rewrite the block every
+      // time a tired player slipped again at the end.
+      RoundOutcome? outcome;
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(
+            items: _twoItems,
+            fallbackDiagnosis: const Diagnosis(
+              steps: <String>['Revisa la cuenta paso por paso.'],
+              explain: 'Vuelve a leer los numeros con calma.',
+            ),
+            onFinished: (RoundOutcome result) => outcome = result,
+          ),
+        ),
+      );
+
+      // Wrong on both, so "first" and "last" are distinguishable only if the
+      // round is actually keeping the first.
+      for (final String id in <String>['7', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.tap(find.text('Intentar otro'));
+      await tester.pumpAndSettle();
+      for (final String id in <String>['8', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Intentar otro'));
+      await tester.pumpAndSettle();
+
+      expect(outcome!.outcomes, <Verdict>[Verdict.wrong, Verdict.wrong]);
+      expect(outcome!.stumble, isNotNull);
+      expect(outcome!.stumbleIndex, 0);
+    });
+
+    testWidgets('a pack with no diagnosis copy carries no explanation',
+        (WidgetTester tester) async {
+      // Absent rather than invented: the copy is the pack's, and a round that
+      // was given none has nothing true to say about the slip.
+      RoundOutcome? outcome;
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(
+            items: _twoItems,
+            onFinished: (RoundOutcome result) => outcome = result,
+          ),
+        ),
+      );
+
+      for (final String id in <String>['7', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.tap(find.text('Intentar otro'));
+      await tester.pumpAndSettle();
+      for (final String id in <String>['8', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Intentar otro'));
+      await tester.pumpAndSettle();
+
+      expect(outcome!.stumble, isNull);
+      expect(outcome!.stumbleIndex, isNull);
+    });
+  });
+
+  group('the round reports the verdict it decided, for the local record', () {
+    testWidgets('onGraded fires once per answer with the verdict and the time',
+        (WidgetTester tester) async {
+      // **The seam `features/stats/` needs, and it exists so nobody grades
+      // twice.** `onAnswered` carries what the *server* needs and deliberately
+      // no verdict, because the frozen schema has nowhere to put one and the
+      // server regrades. A recorder calling `gradeItem` again at the call site
+      // would be a second decision about one answer — the exact defect
+      // `diagnose` was fixed for.
+      final List<(Verdict, Duration)> graded = <(Verdict, Duration)>[];
+      // Two instants: `initState` takes the first as the item's start, and
+      // `_submit` takes the second as the moment it was answered.
+      final List<DateTime> instants = <DateTime>[
+        DateTime(2026, 8, 20, 9),
+        DateTime(2026, 8, 20, 9, 0, 7),
+      ];
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(
+            items: _oneItem,
+            now: () => instants.isEmpty
+                ? DateTime(2026, 8, 20, 9, 0, 7)
+                : instants.removeAt(0),
+            onGraded: (Verdict verdict, Duration elapsed) =>
+                graded.add((verdict, elapsed)),
+          ),
+        ),
+      );
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+
+      expect(graded, hasLength(1));
+      expect(graded.single.$1, Verdict.correct);
+      expect(graded.single.$2, const Duration(seconds: 7));
+    });
+
+    testWidgets('a wrong answer is reported too', (WidgetTester tester) async {
+      // The control: a recorder fed only the wins would report 100% for ever.
+      final List<Verdict> graded = <Verdict>[];
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(
+            items: _oneItem,
+            onGraded: (Verdict verdict, Duration elapsed) => graded.add(verdict),
+          ),
+        ),
+      );
+
+      for (final String id in <String>['9', 'submit']) {
+        await _press(tester, id);
+      }
+
+      expect(graded, <Verdict>[Verdict.wrong]);
+    });
+
+    testWidgets('a round with no recorder wired reports nothing',
+        (WidgetTester tester) async {
+      // **How the teaching item stays out of the figures.** `0.3` is built
+      // without a recorder, the same construction that keeps it out of the day
+      // log — there is nothing to record into rather than a rule to remember.
+      await _pump(tester);
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+
+      expect(find.byType(RoundScreen), findsOneWidget);
     });
   });
 }

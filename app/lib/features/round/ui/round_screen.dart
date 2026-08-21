@@ -43,6 +43,7 @@ class RoundScreen extends StatefulWidget {
     this.onClose,
     this.onFinished,
     this.onAnswered,
+    this.onGraded,
   });
 
   final List<Item> items;
@@ -113,6 +114,22 @@ class RoundScreen extends StatefulWidget {
   /// caller does with it; `HomeRoute` journals it.
   final void Function(Item item, String answer, Duration elapsed)? onAnswered;
 
+  /// Reports the verdict **this device decided**, and how long the item took.
+  ///
+  /// **Separate from [onAnswered], and that is the whole reason it exists.**
+  /// That one carries what a *server* needs and deliberately no verdict: the
+  /// frozen schema has nowhere to put one and the server regrades from the item
+  /// it issued. This one carries what the device's own record needs. A recorder
+  /// hung off `onAnswered` would have to call `gradeItem` again, which is a
+  /// second decision about one answer — the exact defect `diagnose` was fixed
+  /// for.
+  ///
+  /// **Optional, and that is how the teaching item stays out of the figures.**
+  /// `0.3 Primer reto` is built without one, the same construction that keeps
+  /// it out of the day log: there is nothing to record into rather than a rule
+  /// somebody has to remember.
+  final void Function(Verdict verdict, Duration elapsed)? onGraded;
+
   @override
   State<RoundScreen> createState() => _RoundScreenState();
 }
@@ -127,6 +144,9 @@ class RoundOutcome {
     required this.correct,
     required this.total,
     required this.elapsed,
+    this.outcomes = const <Verdict>[],
+    this.stumble,
+    this.stumbleIndex,
   });
 
   final int correct;
@@ -134,6 +154,30 @@ class RoundOutcome {
 
   /// The whole series, not the last item.
   final Duration elapsed;
+
+  /// Every verdict, in the order the items were answered.
+  ///
+  /// **A count cannot draw the ring.** `2.5` shows one mark per item in series
+  /// order, and `correct: 1, total: 2` cannot say which one was missed. The
+  /// round is the only thing that can, because it graded them.
+  ///
+  /// Shorter than [total] on a series the player left part-way; the ring draws
+  /// what was answered rather than padding to the length of the pack.
+  final List<Verdict> outcomes;
+
+  /// What went wrong the **first** time something did, or null.
+  ///
+  /// `2.5` explains one mistake. The earliest is the one that most likely
+  /// caused the rest, and picking the latest would rewrite the block every time
+  /// a tired player slipped again at the end.
+  ///
+  /// Null when the series was clean, and also when the pack declares no
+  /// misconception copy — the words are the pack's, and a round given none has
+  /// nothing true to say.
+  final Diagnosis? stumble;
+
+  /// Which item [stumble] came from, zero-based. Null whenever [stumble] is.
+  final int? stumbleIndex;
 }
 
 class _RoundScreenState extends State<RoundScreen> {
@@ -156,10 +200,22 @@ class _RoundScreenState extends State<RoundScreen> {
     // negative duration, which is every first verdict a player ever sees.
     _startedAt = widget.now();
     _roundStartedAt = _startedAt;
+    // **Indexed by item, not appended per submission.** A one-item round lets a
+    // wrong answer be retried, and appending would report three outcomes for a
+    // round whose `total` is one.
+    _outcomes = List<Verdict?>.filled(widget.items.length, null);
+    _stumbles = List<Diagnosis?>.filled(widget.items.length, null);
   }
 
   /// How many items were answered correctly, counted as they were graded.
   int _correct = 0;
+
+  /// What each item's answer was judged to be, by position. Null while an item
+  /// is still unanswered, which is what a series left part-way looks like.
+  late List<Verdict?> _outcomes;
+
+  /// The diagnosis for each item's wrong answer, by the same positions.
+  late List<Diagnosis?> _stumbles;
 
   /// When the round itself began — not the current item. `_startedAt` is the
   /// item's; a series wants the whole span.
@@ -216,22 +272,26 @@ class _RoundScreenState extends State<RoundScreen> {
     final Verdict verdict = gradeItem(_item, _draft.text);
     final Duration elapsed = finishedAt.difference(_startedAt);
     widget.onAnswered?.call(_item, _draft.text, elapsed);
+    widget.onGraded?.call(verdict, elapsed);
     if (verdict == Verdict.correct) {
       _correct += 1;
     }
     final Diagnosis? fallback = widget.fallbackDiagnosis;
+    // Null when the pack carries no copy at all. `diagnose` reuses `grade`, so
+    // it cannot disagree with the verdict above it.
+    final Diagnosis? diagnosis = fallback == null
+        ? null
+        : diagnoseItem(
+            item: _item,
+            typed: _draft.text,
+            verdict: verdict,
+            fallback: fallback,
+          );
+    _outcomes[_index] = verdict;
+    _stumbles[_index] = diagnosis;
     _summary = VerdictSummary(
       verdict: verdict,
-      // Null when the pack carries no copy at all. `diagnose` reuses `grade`,
-      // so it cannot disagree with the verdict above it.
-      diagnosis: fallback == null
-          ? null
-          : diagnoseItem(
-              item: _item,
-              typed: _draft.text,
-              verdict: verdict,
-              fallback: fallback,
-            ),
+      diagnosis: diagnosis,
       elapsed: elapsed,
       streakDays: streakLength(
         attemptDays: <DateTime>[
@@ -240,6 +300,32 @@ class _RoundScreenState extends State<RoundScreen> {
         ],
         today: finishedAt,
       ),
+    );
+  }
+
+  /// How the series went, assembled at the moment it ends.
+  ///
+  /// The outcomes stop at the first unanswered item rather than padding to the
+  /// length of the pack: a ring with a blank mark on it would be a claim about
+  /// an item nobody saw.
+  RoundOutcome _howItWent() {
+    final List<Verdict> answered = <Verdict>[];
+    for (final Verdict? verdict in _outcomes) {
+      if (verdict == null) {
+        break;
+      }
+      answered.add(verdict);
+    }
+    final int slipped = answered.indexOf(Verdict.wrong);
+    final Diagnosis? stumble = slipped == -1 ? null : _stumbles[slipped];
+
+    return RoundOutcome(
+      correct: _correct,
+      total: widget.items.length,
+      elapsed: widget.now().difference(_roundStartedAt),
+      outcomes: List<Verdict>.unmodifiable(answered),
+      stumble: stumble,
+      stumbleIndex: stumble == null ? null : slipped,
     );
   }
 
@@ -268,13 +354,7 @@ class _RoundScreenState extends State<RoundScreen> {
     final bool retryTheOnlyItem =
         widget.items.length == 1 && _summary?.verdict != Verdict.correct;
     if (finished != null && lastItem && !retryTheOnlyItem) {
-      finished(
-        RoundOutcome(
-          correct: _correct,
-          total: widget.items.length,
-          elapsed: widget.now().difference(_roundStartedAt),
-        ),
-      );
+      finished(_howItWent());
       return;
     }
 
