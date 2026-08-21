@@ -87,6 +87,28 @@ const String erasureConfirmDetail =
     'ligado a tu cuenta. Tu correo sigue registrado con quien nos lleva las '
     'cuentas. Lo que jugaste aquí se queda en este teléfono.';
 
+/// The word a player types to open the gate on the destructive press.
+///
+/// Held here rather than in the screen because it is a decision — *which* word,
+/// and therefore what the instruction above the field has to say — and the
+/// screen is the adapter that draws it.
+const String erasureConfirmWord = 'BORRAR';
+
+/// The instruction over the field. It names the word rather than restating it,
+/// so the gate and the instruction cannot come apart.
+const String erasureConfirmPrompt = 'ESCRIBE $erasureConfirmWord PARA CONFIRMAR';
+
+/// Whether what the player typed opens the gate.
+///
+/// **Equality after trimming and folding case, never `contains`.** The word
+/// buried in a sentence is not a request — *no quiero borrar nada* holds it and
+/// asks for the opposite — so a substring test would open the gate on text
+/// that means anything at all. What is deliberately *not* the point is the
+/// shift key and a pasted space: a player who typed the word meant the word,
+/// and a keyboard that capitalised it has not changed that.
+bool erasureGateOpen(String typed) =>
+    typed.trim().toUpperCase() == erasureConfirmWord;
+
 /// Yes, and it is the word for the act rather than for agreement.
 const String erasureConfirmYes = 'Sí, borrar';
 

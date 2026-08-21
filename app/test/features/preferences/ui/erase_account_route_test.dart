@@ -25,6 +25,16 @@ void main() {
     await tester.pump();
   }
 
+  /// What a player does to reach the destructive press: type the word, then
+  /// press. The route owns the field, so this is also the check that it is
+  /// wired to the gate at all.
+  Future<void> confirm(WidgetTester tester) async {
+    await tester.enterText(find.byType(TextField), erasureConfirmWord);
+    await tester.pump();
+    await tester.tap(find.text(erasureConfirmYes));
+    await tester.pump();
+  }
+
   testWidgets('it asks before it sends anything', (WidgetTester tester) async {
     int calls = 0;
     await pump(tester, () async {
@@ -34,6 +44,24 @@ void main() {
 
     expect(find.text(erasureConfirmHeadline), findsOneWidget);
     expect(calls, 0);
+  });
+
+  testWidgets('and it sends nothing until the word has been typed',
+      (WidgetTester tester) async {
+    // The gate is on the route, not only in the policy: this is the check that
+    // the field it draws is the one the confirm reads.
+    int calls = 0;
+    await pump(tester, () async {
+      calls++;
+      return const EraseDone();
+    });
+
+    await tester.tap(find.text(erasureConfirmYes));
+    await tester.pump();
+    expect(calls, 0);
+
+    await confirm(tester);
+    expect(calls, 1);
   });
 
   testWidgets('backing out sends nothing and closes without erasing',
@@ -55,8 +83,7 @@ void main() {
     final Completer<EraseResult> answer = Completer<EraseResult>();
     await pump(tester, () => answer.future);
 
-    await tester.tap(find.text(erasureConfirmYes));
-    await tester.pump();
+    await confirm(tester);
     expect(find.text(erasureHeadline(ErasureStep.erasing)), findsOneWidget);
     // Nothing has closed yet: the player has not read the outcome.
     expect(closed, isEmpty);
@@ -69,8 +96,7 @@ void main() {
   testWidgets('and closing after a success says so', (WidgetTester tester) async {
     await pump(tester, () async => const EraseDone());
 
-    await tester.tap(find.text(erasureConfirmYes));
-    await tester.pump();
+    await confirm(tester);
     await tester.tap(find.text('Volver'));
     await tester.pump();
 
@@ -84,8 +110,7 @@ void main() {
       () async => const EraseRejected(tag: 'invalid_session', message: 'caducó'),
     );
 
-    await tester.tap(find.text(erasureConfirmYes));
-    await tester.pump();
+    await confirm(tester);
     await tester.tap(find.text('Volver'));
     await tester.pump();
 
@@ -100,8 +125,7 @@ void main() {
       return calls == 1 ? const EraseUnreachable('no route') : const EraseDone();
     });
 
-    await tester.tap(find.text(erasureConfirmYes));
-    await tester.pump();
+    await confirm(tester);
     expect(find.text(erasureHeadline(ErasureStep.offline)), findsOneWidget);
 
     await tester.tap(find.text('Reintentar'));
@@ -119,8 +143,7 @@ void main() {
     final Completer<EraseResult> answer = Completer<EraseResult>();
     await pump(tester, () => answer.future);
 
-    await tester.tap(find.text(erasureConfirmYes));
-    await tester.pump();
+    await confirm(tester);
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox())));
 
     answer.complete(const EraseDone());

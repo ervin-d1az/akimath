@@ -3,27 +3,36 @@ import 'package:flutter/widgets.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/detail_header.dart';
+import '../../../design/widgets/settings_row.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../policy/erasure.dart';
 
-/// `4.3 Cuenta` — the address, and the one way out.
+/// `4.3 Cuenta` — the address, the two acts on it, and the one way out.
 ///
-/// **Two of the design's four rows.** `Cambiar contraseña` needs a Neon Auth
-/// flow nobody has built and `Cerrar sesión` needs somewhere for a signed-out
-/// device to go that is not the erasure's answer; both are absent rather than
-/// inert (DR-P2).
+/// **All four of the design's rows, and each one only where it can act.** The
+/// row is drawn when its caller hands a callback and is absent when it does
+/// not, which is the shape `onErase` already had: a control that cannot act
+/// reads as broken rather than as unbuilt, and a player cannot tell *not yet*
+/// from *not for you* (DR-P2).
 ///
-/// **The erasure is not a bottom sheet.** The design draws one, with a typed
-/// `BORRAR` gate. The question has to carry a sentence about what *survives* —
-/// the address stays registered with the identity provider, which is not ours
-/// to delete — and that does not fit a sheet. It is a full screen, and the
-/// typed gate is worth taking on its own.
+/// **This screen navigates nowhere itself.** Every push in this corner of the
+/// app belongs to `ProfileRoute`, which holds the session and the token; a
+/// second navigation owner here would be two places deciding what `Cuenta`
+/// leads to.
+///
+/// **The erasure is not a bottom sheet.** The design draws one. The question
+/// has to carry a sentence about what *survives* — the address stays registered
+/// with the identity provider, which is not ours to delete — and that does not
+/// fit a sheet. It is a full screen, and it carries the design's typed `BORRAR`
+/// gate.
 class AccountScreen extends StatelessWidget {
   const AccountScreen({
     super.key,
     required this.onBack,
     required this.email,
     this.onErase,
+    this.onChangePassword,
+    this.onSignOut,
   });
 
   final VoidCallback onBack;
@@ -33,9 +42,19 @@ class AccountScreen extends StatelessWidget {
   /// on — see `erasureOffered`. Absent rather than dead.
   final VoidCallback? onErase;
 
+  /// Opens the screen that says a password change is not built yet. A chevron
+  /// goes with it, because something does open.
+  final VoidCallback? onChangePassword;
+
+  /// Forgets the session this device is holding. **No chevron**: it acts in
+  /// place, and the mark would promise a screen that never arrives.
+  final VoidCallback? onSignOut;
+
   @override
   Widget build(BuildContext context) {
     final VoidCallback? erase = onErase;
+    final VoidCallback? changePassword = onChangePassword;
+    final VoidCallback? signOut = onSignOut;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -73,6 +92,21 @@ class AccountScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (changePassword != null) ...<Widget>[
+                const SizedBox(height: BrandShape.space3),
+                SettingsRow(
+                  label: 'Cambiar contraseña',
+                  onOpen: changePassword,
+                ),
+              ],
+              if (signOut != null) ...<Widget>[
+                const SizedBox(height: BrandShape.space3),
+                SettingsRow(
+                  label: 'Cerrar sesión',
+                  onOpen: signOut,
+                  showChevron: false,
+                ),
+              ],
               if (erase != null) ...<Widget>[
                 const SizedBox(height: BrandShape.space5),
                 Align(

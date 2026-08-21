@@ -66,6 +66,58 @@ void main() {
     });
   });
 
+  group('the typed gate', () {
+    test('the word itself opens it', () {
+      expect(erasureGateOpen(erasureConfirmWord), isTrue);
+    });
+
+    test('and nothing typed does not', () {
+      // The gate exists so the destructive press cannot be the same gesture as
+      // every other press in the app.
+      expect(erasureGateOpen(''), isFalse);
+    });
+
+    test('a near miss does not', () {
+      for (final String typed in <String>['BORRA', 'BORRARR', 'ELIMINAR']) {
+        expect(erasureGateOpen(typed), isFalse, reason: typed);
+      }
+    });
+
+    test('the shift key is not the point, and neither is a stray space', () {
+      // **The mutation this kills is a case-sensitive `==`.** A player who
+      // typed the word meant the word; a keyboard that capitalised it, or did
+      // not, has not changed what they meant. Same for whitespace a paste
+      // drags in.
+      for (final String typed in <String>[
+        'borrar',
+        'Borrar',
+        '  BORRAR  ',
+        '\nborrar\t',
+      ]) {
+        expect(erasureGateOpen(typed), isTrue, reason: typed);
+      }
+    });
+
+    test('but the word inside a sentence does not', () {
+      // **The mutation this kills is `contains`.** Somebody typing a sentence
+      // about the screen has not asked the screen to act, and a gate that
+      // opens on any text holding the word is a gate in name only.
+      for (final String typed in <String>[
+        'no quiero borrar nada',
+        'BORRAR TODO',
+        '¿borrar?',
+      ]) {
+        expect(erasureGateOpen(typed), isFalse, reason: typed);
+      }
+    });
+
+    test('and the prompt names the word the gate actually takes', () {
+      // Two places stating one fact is one place that can be wrong, and the
+      // wrong one would be the instruction the player is following.
+      expect(erasureConfirmPrompt, contains(erasureConfirmWord));
+    });
+  });
+
   group('the copy', () {
     test('every step has a headline and a line under it', () {
       for (final ErasureStep step in ErasureStep.values) {

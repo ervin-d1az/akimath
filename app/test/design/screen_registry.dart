@@ -17,6 +17,7 @@ import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/features/preferences/policy/erasure.dart';
 import 'package:akimath_app/features/preferences/ui/erase_account_screen.dart';
 import 'package:akimath_app/features/preferences/ui/account_screen.dart';
+import 'package:akimath_app/features/preferences/ui/change_password_screen.dart';
 import 'package:akimath_app/features/preferences/ui/legend_screen.dart';
 import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
 import 'package:akimath_app/features/profile/ui/profile_screen.dart';
@@ -724,6 +725,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => AppShell(
       child: EraseAccountScreen(
         step: null,
+        confirmWord: TextEditingController(),
         onConfirm: () {},
         onCancel: () {},
         onDone: () {},
@@ -735,6 +737,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => AppShell(
       child: EraseAccountScreen(
         step: ErasureStep.offline,
+        confirmWord: TextEditingController(),
         onConfirm: () {},
         onCancel: () {},
         onDone: () {},
@@ -747,6 +750,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => AppShell(
       child: EraseAccountScreen(
         step: ErasureStep.gone,
+        confirmWord: TextEditingController(),
         onConfirm: () {},
         onCancel: () {},
         onDone: () {},
@@ -858,6 +862,40 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         onOpenSettings: _nothing,
         figures: registryWidestFigures,
         historyState: HistoryState.noAccount,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · cuenta · con las cuatro filas',
+    // The state a linked account is actually in: every row the design draws,
+    // and the widest this screen ever gets.
+    build: () => AppShell(
+      child: AccountScreen(
+        onBack: _nothing,
+        email: 'alguien@ejemplo.com',
+        onErase: _nothing,
+        onChangePassword: _nothing,
+        onSignOut: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · contraseña · todavía no',
+    build: () => AppShell(child: ChangePasswordScreen(onBack: _nothing)),
+  ),
+  RegisteredScreen(
+    label: 'borrar datos · la pregunta · con la palabra escrita',
+    // **Registered separately because the confirm only exists here.** With an
+    // empty field every entry above draws the locked surface instead, so a
+    // gate walking registered screens would never measure the one control that
+    // loses data — the hole `verdict · error · con diagnóstico` was added for.
+    build: () => AppShell(
+      child: EraseAccountScreen(
+        step: null,
+        confirmWord: TextEditingController(text: erasureConfirmWord),
+        onConfirm: _nothing,
+        onCancel: _nothing,
+        onDone: _nothing,
       ),
     ),
   ),
