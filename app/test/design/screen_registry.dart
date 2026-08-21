@@ -12,6 +12,7 @@ import 'package:akimath_app/features/states/policy/account_state.dart';
 import 'package:akimath_app/features/states/ui/account_state_view.dart';
 import 'package:akimath_app/features/states/ui/empty_state_screen.dart';
 import 'package:akimath_app/features/states/ui/offline_screen.dart';
+import 'package:akimath_app/features/states/ui/server_error_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
@@ -1104,6 +1105,18 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       child: OfflineScreen(
         challenges: 40,
         puzzles: 2,
+        onSolveOffline: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    // The tallest of the five: a note and both buttons, which is the case the
+    // overflow gate has to survive at textScaler 1.3.
+    label: 'estado · 4.10 error de servidor',
+    build: () => AppShell(
+      child: ServerErrorScreen(
+        note: 'error 503 · 18:42',
+        onRetry: _nothing,
         onSolveOffline: _nothing,
       ),
     ),

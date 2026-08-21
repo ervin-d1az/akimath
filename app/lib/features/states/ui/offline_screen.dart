@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../design/icons/brand_icon.dart';
-import '../../../design/icons/spec/brand_glyph.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
