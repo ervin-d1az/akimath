@@ -6,13 +6,16 @@ import '../../../api/api_client.dart';
 import '../../../api/me.dart';
 import '../../../api/auth_client.dart';
 import '../../../api/endpoints.dart';
+import '../../../demo/demo_figures.dart';
 import '../../auth/ui/auth_flow.dart';
 import '../../states/policy/account_state.dart';
 import '../../home/data/day_log_store.dart';
 import '../../home/data/prefs_day_log_store.dart';
+import '../../home/data/series_cursor_store.dart';
 import '../../home/policy/day_log.dart';
 import '../../round/policy/streak_policy.dart';
 import '../policy/history_view.dart';
+import '../policy/profile_readout.dart';
 import '../../account/data/player_id_store.dart';
 import '../../account/policy/session.dart';
 import '../../shell/ui/app_shell.dart';
@@ -46,6 +49,7 @@ class ProfileRoute extends StatefulWidget {
     this.playerIds,
     this.link,
     this.dayLog,
+    this.seriesCursor = const SeriesCursorStore(),
     this.fetchHistory,
   });
 
@@ -91,6 +95,13 @@ class ProfileRoute extends StatefulWidget {
   /// reaches a plugin.
   final DayLogStore? dayLog;
 
+  /// How many items this device has been served, across every session.
+  ///
+  /// **The home's store, read here.** It is a persisted running total advanced
+  /// when a series finishes, which is exactly what `RETOS` counts; a second
+  /// tally kept by the profile would be a second answer to one question.
+  final SeriesCursorStore seriesCursor;
+
   /// Asks the server what this account has played. **A closure**, the same
   /// shape every other request on this route takes and for the same reason: a
   /// `testWidgets` runs in a fake-async zone and a real socket inside one hangs
@@ -104,6 +115,7 @@ class ProfileRoute extends StatefulWidget {
 class _ProfileRouteState extends State<ProfileRoute> {
   late final DayLogStore _dayLog = widget.dayLog ?? const PrefsDayLogStore();
   DayLog _log = DayLog.empty;
+  int _challenges = 0;
   HistoryResult? _history;
 
   @override
@@ -111,6 +123,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
     super.initState();
     _linkIfNeeded(null);
     unawaited(_readDayLog());
+    unawaited(_readChallenges());
     unawaited(_askForHistory());
   }
 
@@ -133,6 +146,13 @@ class _ProfileRouteState extends State<ProfileRoute> {
     final DayLog log = await _dayLog.read();
     if (mounted) {
       setState(() => _log = log);
+    }
+  }
+
+  Future<void> _readChallenges() async {
+    final int served = await widget.seriesCursor.read();
+    if (mounted) {
+      setState(() => _challenges = served);
     }
   }
 
@@ -365,6 +385,30 @@ class _ProfileRouteState extends State<ProfileRoute> {
     );
   }
 
+  /// Every figure `4.1` prints, and the one place an invented one enters.
+  ///
+  /// **Two of the five are the device's own.** The days and the run come from
+  /// `DayLog`, the count of challenges from the series cursor the home
+  /// advances. Zero before either store answers and zero for a player who has
+  /// never played — the same number, which is why nothing here waits.
+  /// `DemoFigures.challenges` is deliberately not read: `RETOS` has a source.
+  ///
+  /// **Three are invented, and this is the only line that says so.** Rating is
+  /// F4, and the device never learns whether an answer was right, so accuracy
+  /// and mean time have no on-device source at all. With the switch off each is
+  /// null, and a figure that arrives null is not drawn.
+  ProfileFigures _figures() => ProfileFigures(
+        daysPractised: _log.days.length,
+        streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
+        challenges: _challenges,
+        rating: DemoFigures.enabled ? DemoFigures.rating : null,
+        ratingThisWeek: DemoFigures.enabled ? DemoFigures.ratingThisWeek : null,
+        accuracyPercent:
+            DemoFigures.enabled ? DemoFigures.accuracyPercent : null,
+        averageTenthsOfSecond:
+            DemoFigures.enabled ? DemoFigures.averageTenthsOfSecond : null,
+      );
+
   @override
   Widget build(BuildContext context) {
     // **`noAccount` before anything else.** With no session there is no request
@@ -379,10 +423,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
         accountEmail: widget.session?.email,
         accountState: _accountState,
         onOpenSettings: _openSettings,
-        // Zero before the store answers and zero for a player who has never
-        // played — the same number, which is why nothing here waits.
-        daysPractised: _log.days.length,
-        streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
+        figures: _figures(),
         historyState: history,
         entries: result is HistoryFound
             ? result.history.entries

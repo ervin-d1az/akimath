@@ -3,19 +3,20 @@ import 'package:flutter/widgets.dart';
 import '../../../api/history.dart';
 import '../../../design/brand/aki.dart';
 import '../../../design/icons/brand_icon.dart';
-import '../../../design/math/spec/es_mx_number.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/icon_button_tile.dart';
+import '../../../design/widgets/stat_tile.dart';
 import '../../shell/policy/banner_visual.dart';
 import '../../shell/ui/inline_banner.dart';
 import '../../shell/ui/skeleton_block.dart';
 import '../../states/policy/account_state.dart';
 import '../../states/ui/account_state_view.dart';
 import '../policy/history_view.dart';
+import '../policy/profile_readout.dart';
 
-/// `4.1 Perfil` — the identity, the figures the device knows and the history
+/// `4.1 Perfil` — the identity, the headline pair, the tile row and the history
 /// the server reports, in the order the design draws them.
 ///
 /// **It absorbed `Avance`, which no document ever drew.** That root existed
@@ -29,10 +30,11 @@ import '../policy/history_view.dart';
 /// request has plus the one that is not a request: there is no account, so
 /// there is nothing to ask, and that is an invitation rather than an error.
 ///
-/// **No rating, no accuracy, no mean time.** Each is F4 or needs an aggregate
-/// no endpoint answers; `GET /me/standing` is still 501 and `GET /me/history`
-/// reports sessions rather than totals. The same reading that keeps a rating
-/// off the verdict screens.
+/// **The screen draws what it is handed and decides nothing.** Which figures
+/// exist, what each one is called and how each is spelt is
+/// [ProfileFigures] and the three functions beside it; a rating and an accuracy
+/// have no source this device can read, so today they arrive invented from
+/// `DemoFigures` and a figure that arrives null is simply not drawn.
 ///
 /// **Aki appears once, inside the avatar tile.** Declared rule 5 names her
 /// homes — *inicio, resultados, estados de racha y tutorial* — and the profile
@@ -43,8 +45,7 @@ class ProfileScreen extends StatelessWidget {
     super.key,
     required this.accountState,
     required this.onOpenSettings,
-    required this.daysPractised,
-    required this.streakDays,
+    required this.figures,
     required this.historyState,
     this.accountEmail,
     this.entries = const <HistoryEntry>[],
@@ -67,11 +68,9 @@ class ProfileScreen extends StatelessWidget {
   /// row and nothing else on it goes anywhere.
   final VoidCallback onOpenSettings;
 
-  /// Distinct days recorded on this device.
-  final int daysPractised;
-
-  /// From `StreakPolicy` — the same local fact the home shows.
-  final int streakDays;
+  /// Every number the screen prints, and the one seam an invented figure is
+  /// swapped for a real one at.
+  final ProfileFigures figures;
 
   final HistoryState historyState;
 
@@ -91,6 +90,9 @@ class ProfileScreen extends StatelessWidget {
   /// The avatar tile: `4.1` clips a 66 px full-body Aki inside a 78 px tile.
   static const double _tile = 78;
   static const double _aki = 66;
+
+  /// The headline figure, at the size the design sets it.
+  static const double _headlineNumeral = 42;
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +125,9 @@ class ProfileScreen extends StatelessWidget {
             ),
           ],
           const SizedBox(height: BrandShape.space4),
-          _headlineStats(),
+          _headlinePair(),
+          const SizedBox(height: BrandShape.space2),
+          _tiles(),
           // **No heading over nothing.** Two states have no section at all —
           // see `historyWorthDrawing`. A `HISTORIAL` that is always empty is a
           // promise the product cannot keep yet.
@@ -175,12 +179,10 @@ class ProfileScreen extends StatelessWidget {
 
   /// The headline pair, with the hierarchy `4.1` draws between its two.
   ///
-  /// The design puts a white `RATING` card at `flex 1.3` beside a **yellow**
-  /// `RACHA` card at `flex 1`. Rating is absent, so the wider slot takes the
-  /// honest figure we have and the run keeps the fill — because the filled card
-  /// is the one the screen is about, and two identical tiles say the two rank
-  /// equally.
-  Widget _headlineStats() => IntrinsicHeight(
+  /// The design puts the white card at `flex 1.3` beside the **yellow** one at
+  /// `flex 1`, because the filled card is the one the screen is about and two
+  /// identical tiles say the two rank equally.
+  Widget _headlinePair() => IntrinsicHeight(
     // **The two cards match heights.** `stretch` alone asks for infinite
     // height inside a scroll view; `IntrinsicHeight` is what gives the row
     // a height to stretch to. With two children the cost is a second
@@ -188,36 +190,15 @@ class ProfileScreen extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Expanded(
-          flex: 13,
-          child: _statCard(
-            label: 'DÍAS',
-            value: daysPractised,
-            unit: 'practicando',
-            background: BrandColors.surface,
-          ),
-        ),
+        Expanded(flex: 13, child: _card(headlineLead(figures), _CardFill.plain)),
         const SizedBox(width: BrandShape.space2),
-        Expanded(
-          flex: 10,
-          child: _statCard(
-            label: 'RACHA',
-            value: streakDays,
-            unit: streakDays == 1 ? 'día seguido' : 'días seguidos',
-            background: BrandColors.yellow,
-          ),
-        ),
+        Expanded(flex: 10, child: _card(headlineRun(figures), _CardFill.filled)),
       ],
     ),
   );
 
-  Widget _statCard({
-    required String label,
-    required int value,
-    required String unit,
-    required Color background,
-  }) => CandySurface(
-    background: background,
+  Widget _card(HeadlineCard card, _CardFill fill) => CandySurface(
+    background: fill.background,
     borderRadius: BrandShape.radiusCardSmall,
     shadowOffset: BrandShape.shadowButton,
     padding: const EdgeInsets.symmetric(
@@ -229,13 +210,9 @@ class ProfileScreen extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Text(
-          label,
+          card.label,
           style: BrandText.eyebrow(
-            // On the filled card the muted eyebrow loses its contrast, so
-            // it takes the ink the design gives it there.
-            color: background == BrandColors.surface
-                ? BrandColors.muted
-                : BrandColors.ink,
+            color: fill.quiet,
             size: 11,
             letterSpacing: 0.08,
           ),
@@ -244,22 +221,87 @@ class ProfileScreen extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
-          child: Text(EsMxNumber.integer(value), style: BrandText.numeral(38)),
+          child: Text(card.value, style: BrandText.numeral(_headlineNumeral)),
         ),
-        const SizedBox(height: 2),
-        Text(
-          unit,
-          style: BrandText.caption(
-            color: background == BrandColors.surface
-                ? BrandColors.muted
-                : BrandColors.ink,
-            size: 12,
-            height: 1.2,
-          ),
-        ),
+        if (card.note != null) ...<Widget>[
+          const SizedBox(height: 2),
+          _note(card, fill),
+        ],
       ],
     ),
   );
+
+  /// The line under the figure: a sign run, then the words.
+  ///
+  /// Two runs and not one span, because the design sets the sign heavier and —
+  /// when the week gained — in another hue, and because `EsMxNumber` hands a
+  /// sign back separately so no screen concatenates a hyphen where the brand
+  /// requires U+2212.
+  Widget _note(HeadlineCard card, _CardFill fill) => Row(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.baseline,
+    textBaseline: TextBaseline.alphabetic,
+    children: <Widget>[
+      if (card.sign.isNotEmpty) ...<Widget>[
+        Text(
+          card.sign,
+          style: BrandText.action(
+            color: switch (card.tone) {
+              NoteTone.gain => BrandColorRole.success.color,
+              NoteTone.plain => fill.quiet,
+            },
+            size: 12,
+          ),
+        ),
+        const SizedBox(width: 3),
+      ],
+      Flexible(
+        child: Text(
+          card.note!,
+          style: BrandText.caption(color: fill.quiet, size: 12, height: 1.2),
+        ),
+      ),
+    ],
+  );
+
+  /// The row of small tiles under the headline pair.
+  ///
+  /// **Each takes an equal share and each figure scales down inside it**, the
+  /// shape `3.4`'s tiles already use: three natural-width tiles overflow 390 px,
+  /// and `Expanded` plus a `FittedBox` keeps a long figure inside its own tile
+  /// rather than pushing the next one off the edge at `textScaler` 1.3.
+  ///
+  /// The row is as long as `profileTiles` says. One tile is as legitimate as
+  /// three — it is the shipping build — and the list is never empty, so this is
+  /// never a gap between two cards.
+  Widget _tiles() {
+    final List<ProfileTile> tiles = profileTiles(figures);
+
+    return Row(
+      children: <Widget>[
+        for (int index = 0; index < tiles.length; index++) ...<Widget>[
+          if (index > 0) const SizedBox(width: BrandShape.space2),
+          Expanded(
+            child: StatTile(
+              // The design sets this label at 10 px against the token's 12.
+              // `StatTile` is the widget three other screens use for exactly
+              // this row and a second spelling of it would be the duplication
+              // worth more than two pixels of tracking.
+              label: tiles[index].label,
+              value: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: StatValue(
+                  tiles[index].value,
+                  size: StatTileVariant.compact.valueSize,
+                ),
+              ),
+              variant: StatTileVariant.compact,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 
   Widget _history() {
     if (historyState == HistoryState.loading) {
@@ -311,9 +353,11 @@ class ProfileScreen extends StatelessWidget {
 
   /// One session: what it was, how it went, and when.
   ///
-  /// **No rating column.** `ratingDelta` is null for every entry a server
-  /// without rating can produce, and a dash where a number will go is a promise
-  /// this screen cannot keep yet.
+  /// **No rating column, whatever the headline says.** `ratingDelta` is null
+  /// for every entry a server without rating can produce. A headline figure the
+  /// product cannot compute is a placeholder on a screen; a rating printed
+  /// against a session that happened would be a record of something that did
+  /// not.
   Widget _row(HistoryEntry entry) => CandySurface(
     borderRadius: BrandShape.radiusPill,
     shadowOffset: BrandShape.shadowPill,
@@ -338,4 +382,21 @@ class ProfileScreen extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Which of the headline pair a card is.
+///
+/// Two arms rather than a colour compared at the point of use: the design fills
+/// one of the two and leaves the other white, and the secondary ink follows the
+/// fill — on the yellow card the muted violet loses its contrast.
+enum _CardFill {
+  plain(background: BrandColors.surface, quiet: BrandColors.muted),
+  filled(background: BrandColors.yellow, quiet: BrandColors.ink);
+
+  const _CardFill({required this.background, required this.quiet});
+
+  final Color background;
+
+  /// The eyebrow and the note's ink on this fill.
+  final Color quiet;
 }

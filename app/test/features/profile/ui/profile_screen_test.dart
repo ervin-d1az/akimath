@@ -1,20 +1,40 @@
 import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/design/brand/aki.dart';
 import 'package:akimath_app/design/icons/brand_icon.dart';
+import 'package:akimath_app/design/math/spec/es_mx_number.dart';
 import 'package:akimath_app/design/tokens/tokens.dart';
 import 'package:akimath_app/design/widgets/candy_surface.dart';
 import 'package:akimath_app/features/profile/policy/history_view.dart';
+import 'package:akimath_app/features/profile/policy/profile_readout.dart';
 import 'package:akimath_app/features/profile/ui/profile_screen.dart';
 import 'package:akimath_app/features/states/policy/account_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// What the design draws: every figure, invented ones included.
+const ProfileFigures drawn = ProfileFigures(
+  daysPractised: 13,
+  streakDays: 13,
+  challenges: 312,
+  rating: 1248,
+  ratingThisWeek: 36,
+  accuracyPercent: 78,
+  averageTenthsOfSecond: 68,
+);
+
+/// What the product can prove today. The same screen with the invented figures
+/// switched off, which is the build that ships.
+const ProfileFigures provable = ProfileFigures(
+  daysPractised: 13,
+  streakDays: 5,
+  challenges: 312,
+);
+
 Future<void> pump(
   WidgetTester tester, {
   String? accountEmail,
   AccountState accountState = AccountState.none,
-  int daysPractised = 0,
-  int streakDays = 0,
+  ProfileFigures figures = provable,
   HistoryState historyState = HistoryState.noAccount,
   List<HistoryEntry> entries = const <HistoryEntry>[],
   VoidCallback? onCreateAccount,
@@ -30,8 +50,7 @@ Future<void> pump(
         body: ProfileScreen(
           accountEmail: accountEmail,
           accountState: accountState,
-          daysPractised: daysPractised,
-          streakDays: streakDays,
+          figures: figures,
           historyState: historyState,
           entries: entries,
           onOpenSettings: () {},
@@ -59,8 +78,6 @@ void main() {
         tester,
         accountEmail: 'ana@correo.mx',
         accountState: AccountState.linked,
-        daysPractised: 13,
-        streakDays: 5,
       );
 
       expect(find.byType(Aki), findsOneWidget);
@@ -91,28 +108,38 @@ void main() {
     });
   });
 
-  group('the figures the device knows', () {
-    testWidgets('are drawn with no account at all', (WidgetTester tester) async {
-      // A phone that has never synced still knows what it did. They never
-      // needed the network, so they do not wait for it.
-      await pump(tester, daysPractised: 13, streakDays: 5);
+  group('the headline pair', () {
+    testWidgets('draws the rating and the run the design draws',
+        (WidgetTester tester) async {
+      await pump(tester, figures: drawn);
 
-      expect(find.text('DÍAS'), findsOneWidget);
+      expect(find.text('RATING'), findsOneWidget);
+      expect(find.text(EsMxNumber.integer(1248)), findsOneWidget);
+      expect(find.text('36 esta semana'), findsOneWidget);
       expect(find.text('RACHA'), findsOneWidget);
-      expect(find.text('13'), findsOneWidget);
-      expect(find.text('5'), findsOneWidget);
+      expect(find.text('días seguidos'), findsOneWidget);
     });
 
-    testWidgets('the run is the filled card and the days are not',
+    testWidgets('the week gained, so its sign is the success hue',
         (WidgetTester tester) async {
-      // `4.1` draws a white card beside a yellow one, and the filled one is the
-      // figure the screen is about. Two identical tiles say the two figures
-      // rank equally, which is not what the design says.
-      await pump(tester, daysPractised: 13, streakDays: 5);
+      // The one place a hue appears on this screen, and it is asked for by
+      // role. A loss would take the quiet ink instead — the policy decides
+      // that, and `profile_readout_test.dart` holds it.
+      await pump(tester, figures: drawn);
+
+      final Text sign = tester.widget<Text>(find.text('+'));
+      expect(sign.style!.color, BrandColorRole.success.color);
+    });
+
+    testWidgets('the run is the filled card and the lead is not',
+        (WidgetTester tester) async {
+      // `4.1` draws a white card beside a yellow one. Two identical tiles say
+      // the two figures rank equally, which is not what the design says.
+      await pump(tester, figures: drawn);
 
       final Iterable<Color> fills = tester
           .widgetList<CandySurface>(find.byType(CandySurface))
-          .map((CandySurface s) => s.background);
+          .map((CandySurface surface) => surface.background);
 
       expect(fills, contains(BrandColors.yellow));
     });
@@ -124,37 +151,68 @@ void main() {
       // holds a two-digit count. Fill is half the hierarchy; width is the
       // other, and nothing asserted it until a falsification could not find a
       // test to kill.
-      await pump(tester, daysPractised: 13, streakDays: 5);
+      await pump(tester, figures: drawn);
 
-      double cardWidth(String unit) => tester
+      double cardWidth(String label) => tester
           .getSize(find
-              .ancestor(of: find.text(unit), matching: find.byType(CandySurface))
+              .ancestor(of: find.text(label), matching: find.byType(CandySurface))
               .first)
           .width;
 
-      expect(cardWidth('practicando'), greaterThan(cardWidth('días seguidos')));
+      expect(cardWidth('RATING'), greaterThan(cardWidth('RACHA')));
     });
 
-    testWidgets('each figure names its unit', (WidgetTester tester) async {
-      // A bare number in a box is a number somebody has to guess at.
-      await pump(tester, daysPractised: 13, streakDays: 5);
+    testWidgets('with no rating to show, the days lead instead of a hole',
+        (WidgetTester tester) async {
+      // The branch a build with the invented figures switched off draws, and
+      // the reason the wide slot is not left empty: days practised is a figure
+      // the device can prove.
+      await pump(tester, figures: provable);
 
+      expect(find.text('DÍAS'), findsOneWidget);
       expect(find.text('practicando'), findsOneWidget);
-      expect(find.text('días seguidos'), findsOneWidget);
+      expect(find.text(EsMxNumber.integer(13)), findsOneWidget);
+      expect(find.textContaining('RATING'), findsNothing);
     });
 
     testWidgets('one day is singular', (WidgetTester tester) async {
-      await pump(tester, daysPractised: 1, streakDays: 1);
+      await pump(
+        tester,
+        figures: const ProfileFigures(
+          daysPractised: 1,
+          streakDays: 1,
+          challenges: 0,
+        ),
+      );
 
       expect(find.text('día seguido'), findsOneWidget);
     });
+  });
 
-    testWidgets('zero is a number, not a gap', (WidgetTester tester) async {
-      // The same figure a player has on their first launch, and there is no
-      // state in which this screen has nothing to say.
-      await pump(tester);
+  group('the tile row', () {
+    testWidgets('holds the three the design draws', (WidgetTester tester) async {
+      await pump(tester, figures: drawn);
 
-      expect(find.text('0'), findsNWidgets(2));
+      expect(find.text('RETOS'), findsOneWidget);
+      expect(find.text('ACIERTOS'), findsOneWidget);
+      expect(find.text('PROMEDIO'), findsOneWidget);
+      expect(find.text(EsMxNumber.integer(312)), findsOneWidget);
+      expect(find.text(EsMxNumber.percent(78)), findsOneWidget);
+      expect(find.text(EsMxNumber.seconds(6.8, places: 1)), findsOneWidget);
+    });
+
+    testWidgets('keeps the count and drops the rest when nothing else has a source',
+        (WidgetTester tester) async {
+      // The shipping build. Nothing on this screen is then a figure the device
+      // cannot produce, and the row is still a row because the count of
+      // challenges is the cursor's, which every phone has.
+      await pump(tester, figures: provable);
+
+      expect(find.text('RETOS'), findsOneWidget);
+      expect(find.text(EsMxNumber.integer(312)), findsOneWidget);
+      for (final String absent in <String>['ACIERTOS', 'PROMEDIO', '%']) {
+        expect(find.textContaining(absent), findsNothing, reason: absent);
+      }
     });
   });
 
@@ -191,28 +249,31 @@ void main() {
         tester,
         accountEmail: 'ana@correo.mx',
         accountState: AccountState.linked,
-        daysPractised: 13,
-        streakDays: 5,
         historyState: HistoryState.offline,
         onRetryHistory: () {},
       );
 
-      expect(find.text('13'), findsOneWidget);
-      expect(find.text('5'), findsOneWidget);
+      expect(find.text(EsMxNumber.integer(13)), findsOneWidget);
+      expect(find.text(EsMxNumber.integer(5)), findsOneWidget);
       expect(find.byKey(const Key('history-banner')), findsOneWidget);
     });
 
-    testWidgets('no rating column, because there is no rating',
+    testWidgets('a session row reports no rating, however the headline reads',
         (WidgetTester tester) async {
+      // `ratingDelta` is null for every entry a server without rating can
+      // produce. The headline may be showing an invented figure; a row is a
+      // record of something that happened, and inventing one of those is a
+      // different act.
       await pump(
         tester,
         accountEmail: 'ana@correo.mx',
         accountState: AccountState.linked,
+        figures: drawn,
         historyState: HistoryState.ready,
         entries: <HistoryEntry>[entry('Serie mixta', '5 de 5')],
       );
 
-      for (final String absent in <String>['RATING', 'Rating', 'rating', '±']) {
+      for (final String absent in <String>['±', 'sin rating']) {
         expect(find.textContaining(absent), findsNothing, reason: absent);
       }
     });
@@ -224,18 +285,10 @@ void main() {
       // y tutorial*. The profile is not one, and `4.1` draws her only inside
       // the avatar tile. A warm line is a poor reason to break a rule the same
       // document states.
-      await pump(tester, accountEmail: 'ana@correo.mx', daysPractised: 13);
+      await pump(tester, accountEmail: 'ana@correo.mx');
 
       expect(find.byType(Aki), findsOneWidget);
       expect(find.textContaining('Cada día que juegas'), findsNothing);
-    });
-
-    testWidgets('and no aggregate the server cannot answer', (WidgetTester tester) async {
-      await pump(tester, accountEmail: 'ana@correo.mx', daysPractised: 13);
-
-      for (final String absent in <String>['ACIERTOS', 'PROMEDIO', 'RETOS', '%']) {
-        expect(find.textContaining(absent), findsNothing, reason: absent);
-      }
     });
   });
 }

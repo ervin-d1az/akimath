@@ -22,6 +22,7 @@ import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
 import 'package:akimath_app/features/profile/ui/profile_screen.dart';
 import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/features/profile/policy/history_view.dart';
+import 'package:akimath_app/features/profile/policy/profile_readout.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_solved_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
@@ -528,8 +529,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.loading,
         onRetryAccount: null,
         onOpenSettings: () {},
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),
     ),
@@ -542,8 +542,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.noPlayer,
         onRetryAccount: null,
         onOpenSettings: () {},
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),
     ),
@@ -556,8 +555,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.offline,
         onRetryAccount: () {},
         onOpenSettings: () {},
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),
     ),
@@ -570,8 +568,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.serverError,
         onRetryAccount: () {},
         onOpenSettings: () {},
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),
     ),
@@ -584,8 +581,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.rejected,
         onRetryAccount: null,
         onOpenSettings: () {},
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),
     ),
@@ -607,8 +603,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.none,
         onOpenSettings: () {},
         onCreateAccount: () {},
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),
     ),
@@ -621,8 +616,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       child: ProfileScreen(
         accountState: AccountState.none,
         onOpenSettings: () {},
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),
     ),
@@ -766,8 +760,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountState: AccountState.none,
         onOpenSettings: _nothing,
         onCreateAccount: _nothing,
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),
     ),
@@ -779,8 +772,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.linked,
         onOpenSettings: _nothing,
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.loading,
       ),
     ),
@@ -792,8 +784,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.linked,
         onOpenSettings: _nothing,
-        daysPractised: 41,
-        streakDays: 7,
+        figures: registryProfileFigures,
         historyState: HistoryState.ready,
         entries: <HistoryEntry>[
           HistoryEntry(
@@ -821,8 +812,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.linked,
         onOpenSettings: _nothing,
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
         historyState: HistoryState.offline,
         onRetryHistory: _nothing,
       ),
@@ -835,13 +825,75 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.otherDevice,
         onOpenSettings: () {},
-        daysPractised: 12,
-        streakDays: 5,
+        figures: registryProfileFigures,
+        historyState: HistoryState.noAccount,
+      ),
+    ),
+  ),
+  // ── 4.1 Perfil · the two shapes the figures give it ───────────────────────
+  RegisteredScreen(
+    label: 'perfil · solo lo comprobable',
+    // The build that ships: no rating, no accuracy, no mean time. The headline
+    // pair falls back to the days practised and the tile row is one tile wide,
+    // so the gates walk the degraded layout as well as the full one.
+    build: () => AppShell(
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.linked,
+        onOpenSettings: _nothing,
+        figures: registryProvableFigures,
+        historyState: HistoryState.noAccount,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'perfil · cifras al máximo',
+    // The widest every figure can be. Three tiles at their longest values with
+    // the longest labels is the row that overflows first, and it is the row
+    // 390 px at `textScaler` 1.3 has the least room for.
+    build: () => AppShell(
+      child: ProfileScreen(
+        accountEmail: 'unnombremuylargo@correo-largo.com.mx',
+        accountState: AccountState.linked,
+        onOpenSettings: _nothing,
+        figures: registryWidestFigures,
         historyState: HistoryState.noAccount,
       ),
     ),
   ),
 ];
+
+/// What `4.1` draws when every figure has a value, invented ones included.
+///
+/// The design's own numbers, so the registry pumps the screen the demo shows.
+const ProfileFigures registryProfileFigures = ProfileFigures(
+  daysPractised: 12,
+  streakDays: 5,
+  challenges: 312,
+  rating: 1248,
+  ratingThisWeek: 36,
+  accuracyPercent: 78,
+  averageTenthsOfSecond: 68,
+);
+
+/// Only the figures the device can prove: a day log and a series cursor.
+const ProfileFigures registryProvableFigures = ProfileFigures(
+  daysPractised: 41,
+  streakDays: 7,
+  challenges: 312,
+);
+
+/// The widest each figure gets: a four-digit rating, a three-digit week, a
+/// five-figure count, a full percent and a mean time in the tens of seconds.
+const ProfileFigures registryWidestFigures = ProfileFigures(
+  daysPractised: 9999,
+  streakDays: 9999,
+  challenges: 99999,
+  rating: 9999,
+  ratingThisWeek: 999,
+  accuracyPercent: 100,
+  averageTenthsOfSecond: 999,
+);
 
 /// A callback for a registry entry, so a screen can be drawn with its control
 /// live without every entry declaring its own closure.
