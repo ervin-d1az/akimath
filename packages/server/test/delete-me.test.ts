@@ -13,12 +13,17 @@ const PLAYER = "018f4e3c-0000-7000-8000-0000000000d1";
 const OTHER_PLAYER = "018f4e3c-0000-7000-8000-0000000000d2";
 
 /**
- * Every table a player leaves a row in, and the one that survives on purpose.
+ * Every table a player leaves a row in, and the ones that survive on purpose.
  *
- * `template_stats` is named rather than omitted: it holds no player id, it is
+ * The survivors are named rather than omitted: they hold no player id, they are
  * how calibration survives the retention job deleting raw attempts
- * (`adapters/retention-job.ts`), and a later reader finding it absent from this
+ * (`adapters/retention-job.ts`), and a later reader finding one absent from this
  * list would have to guess whether that was a decision or an oversight.
+ *
+ * `difficulty_ratings` is the one the rating actually uses. It is an aggregate
+ * over every player who met a difficulty class, so erasing one player must not
+ * empty it — and it carries no `player_id`, which is what makes that true by
+ * construction rather than by this test passing.
  */
 const PLAYER_TABLES = [
   "attempts",
@@ -27,7 +32,27 @@ const PLAYER_TABLES = [
   "offline_packs",
   "user_skills",
 ] as const;
-const SURVIVES_ERASURE = "template_stats";
+
+const SURVIVES_ERASURE: readonly {
+  readonly table: string;
+  readonly seed: string;
+  readonly probe: string;
+  readonly expected: string;
+}[] = [
+  {
+    table: "template_stats",
+    seed: "INSERT INTO template_stats (template_id, template_version, attempts) VALUES ('add-2', 1, 41)",
+    probe: "SELECT attempts::text AS value FROM template_stats",
+    expected: "41",
+  },
+  {
+    table: "difficulty_ratings",
+    seed: `INSERT INTO difficulty_ratings (skill_id, ladder_step, rating, deviation)
+           VALUES (1, 3, 1234, 87)`,
+    probe: "SELECT rating::text AS value FROM difficulty_ratings",
+    expected: "1234",
+  },
+];
 
 describeWithDatabase("DELETE /me, against a real database", () => {
   let db: TestDatabase;
@@ -106,9 +131,9 @@ describeWithDatabase("DELETE /me, against a real database", () => {
   beforeEach(async () => {
     db = await freshDatabase();
     requests = createRequestDatabase(db.url);
-    await db.client.query(
-      "INSERT INTO template_stats (template_id, template_version, attempts) VALUES ('add-2', 1, 41)",
-    );
+    for (const aggregate of SURVIVES_ERASURE) {
+      await db.client.query(aggregate.seed);
+    }
   });
 
   afterEach(async () => {
@@ -144,15 +169,24 @@ describeWithDatabase("DELETE /me, against a real database", () => {
     expect(player.rowCount).toBe(0);
   });
 
-  it("the aggregate that carries no player survives", async () => {
+  it("every aggregate that carries no player survives", async () => {
+    // PROC-10: driven by a list, so the count is reported and a list that
+    // silently reached zero cannot pass as "nothing was wrong".
+    expect(SURVIVES_ERASURE).not.toHaveLength(0);
+    console.log(
+      `  erasure · ${SURVIVES_ERASURE.length} aggregates survive: ` +
+        SURVIVES_ERASURE.map((a) => a.table).join(", "),
+    );
     await seed(PLAYER, ACCOUNT);
 
     await erase();
 
-    const stats = await db.client.query<{ attempts: string }>(
-      `SELECT attempts FROM ${SURVIVES_ERASURE}`,
-    );
-    expect(stats.rows[0]?.attempts).toBe("41");
+    for (const aggregate of SURVIVES_ERASURE) {
+      const kept = await db.client.query<{ value: string }>(aggregate.probe);
+      expect(kept.rows[0]?.value, `${aggregate.table} did not survive erasure`).toBe(
+        aggregate.expected,
+      );
+    }
   });
 
   it("and nobody else's rows move", async () => {

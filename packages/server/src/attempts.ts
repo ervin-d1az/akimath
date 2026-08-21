@@ -133,7 +133,7 @@ function readSource(given: Record<string, unknown>, at: string): AttemptSource |
     if (typeof itemId !== "string" || !UUID.test(itemId)) {
       return bad(`${at}.itemId must be a uuid.`);
     }
-    return { kind: "issued", itemId };
+    return { kind: "issued", itemId: canonicalUuid(itemId) };
   }
 
   const packRef = given["packRef"];
@@ -153,7 +153,27 @@ function readSource(given: Record<string, unknown>, at: string): AttemptSource |
   if (typeof index !== "number" || !Number.isInteger(index) || index < 0) {
     return bad(`${at}.packRef.index must be a whole number, zero or more.`);
   }
-  return { kind: "pack", packId, index };
+  return { kind: "pack", packId: canonicalUuid(packId), index };
+}
+
+/**
+ * A uuid in the one spelling the rest of the server will see.
+ *
+ * **A uuid is a value, not a spelling, and something has to say so once.** The
+ * frozen pattern accepts either case, and Postgres canonicalises to lower case
+ * on the way in — so an id handed back by `RETURNING` is not textually the id
+ * that was sent. Two things depend on the two matching: the duplicate check
+ * below, where the same item named twice in different case is one item and the
+ * database's unique index would say so; and the rating, which pairs submitted
+ * attempts with the rows that actually landed. Getting the second wrong records
+ * the answer and rates nothing, and there is no way back — the row exists, so a
+ * resend lands nothing either.
+ *
+ * Folded here rather than at each comparison, so that everything downstream —
+ * the key, the insert, the verdict it echoes — is already speaking one dialect.
+ */
+function canonicalUuid(value: string): string {
+  return value.toLowerCase();
 }
 
 function readAttempt(value: unknown, at: string): Attempt | Response {
@@ -262,7 +282,12 @@ export function readAttemptBatch(body: unknown): readonly Attempt[] | Response {
   return read;
 }
 
-/** How two attempts are recognised as being about the same item. */
+/**
+ * How two attempts are recognised as being about the same item.
+ *
+ * No case folding here: `readSource` has already canonicalised the ids, so
+ * every source this sees is spelled one way.
+ */
 export function sourceKey(source: AttemptSource): string {
   return source.kind === "issued"
     ? `issued:${source.itemId}`

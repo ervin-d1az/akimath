@@ -8,12 +8,14 @@ import { templateRefOf } from "@akimath/core";
 import {
   gradeSource,
   readAttemptBatch,
+  sourceKey,
   unknownSourceResponse,
   verdictsResponse,
   type Attempt,
   type GradedAttempt,
   type GradingSource,
 } from "../attempts.js";
+import { difficultyKey, rateAttempts, type RatedAttempt } from "../rating.js";
 import { erasureResponse } from "../erasure.js";
 import { historyResponse, HISTORY_LIMIT } from "../history.js";
 import {
@@ -44,6 +46,13 @@ import {
   insertPlayer,
   playerIdForAccount,
 } from "./player-repository.js";
+import {
+  lockPlayerRating,
+  measuredDifficulties,
+  storedSkills,
+  writeDifficulties,
+  writeSkills,
+} from "./rating-repository.js";
 import type { RequestDatabase } from "./request-database.js";
 import type { SessionVerifier } from "./session-verifier.js";
 
@@ -157,21 +166,36 @@ export function createHandlers(
           return noPlayerResponse();
         }
 
+        // **The rating reads and writes here, so the whole batch is
+        // serialised against this player.** `ARCHITECTURE.md` §5: the Glicko
+        // computation sits between the INSERT and the `user_skills` upsert, and
+        // two devices syncing at once would otherwise both read the same prior
+        // and one update would be lost. Taken before the first read, or the
+        // lock protects nothing.
+        await lockPlayerRating(client, playerId);
+
         // **Every source resolved before anything is written.** A batch is one
         // transaction and one answer; recording the first forty and refusing
         // the forty-first would leave the client unable to tell what landed.
         const graded: GradedAttempt[] = [];
         const rows: AttemptRow[] = [];
+        const steps = new Map<string, number | null>();
         for (const [index, attempt] of read.entries()) {
-          const source = await gradingSourceFor(client, playerId, attempt);
-          if (source === null) {
+          const found = await gradingSourceFor(
+            client,
+            playerId,
+            attempt,
+            environment.shippedPacks(),
+          );
+          if (found === null) {
             return unknownSourceResponse(index);
           }
           // One call for both facts: the skill comes from the template on one
           // path and from the manifest on the other, and the branch belongs
           // where the grading is rather than here.
-          const { ok, skillId } = gradeSource(source, attempt.answer);
+          const { ok, skillId } = gradeSource(found.source, attempt.answer);
           graded.push({ source: attempt.source, ok });
+          steps.set(sourceKey(attempt.source), found.ladderStep);
           rows.push({
             playerId,
             source: attempt.source,
@@ -183,7 +207,11 @@ export function createHandlers(
           });
         }
 
-        await insertAttempts(client, rows);
+        const landed = new Set(
+          (await insertAttempts(client, rows)).map((source) => sourceKey(source)),
+        );
+        await applyRating(client, playerId, environment.now(), landedRows(rows, steps, landed));
+
         return verdictsResponse(graded);
       });
     },
@@ -200,13 +228,12 @@ export function createHandlers(
         return historyResponse(await recentSessions(client, playerId, HISTORY_LIMIT));
       }),
 
-    // **The standing is the rating, and there is no rating yet.** The frozen
+    // **The standing is the rating, and the rating is real now.** The frozen
     // `Standing` carries `{skillId, rating, deviation, updatedAt}` and has no
     // field for accuracy or time on task, derivable from `attempts` though both
-    // are — so this answers what the shape holds and nothing else. Nothing
-    // writes `user_skills`, which makes the list empty for every player today;
-    // that is read from the table rather than hard-coded, so the day a rating
-    // job writes a row this endpoint already reports it.
+    // are — so this answers what the shape holds and nothing else. It reads
+    // `user_skills`, which `submitAttempts` writes; the list is empty only for a
+    // player nothing has measured yet.
     getStanding: ({ userId }) =>
       database.inRequestRole(async (client) => {
         const playerId = await playerIdForAccount(client, userId);
@@ -343,20 +370,105 @@ export function createHandlers(
 }
 
 /**
- * What an attempt's answer is checked against, from whichever table records it.
+ * The answers that actually reached the table, as the rating sees them.
+ *
+ * **Only what landed.** `insertAttempts` says `ON CONFLICT DO NOTHING`, so a
+ * resent batch writes nothing — and a rating fed the *submitted* rows would
+ * move twice for one answer, on a table the request path can neither update nor
+ * delete. There would be nothing to repair it with.
+ */
+function landedRows(
+  rows: readonly AttemptRow[],
+  steps: ReadonlyMap<string, number | null>,
+  landed: ReadonlySet<string>,
+): readonly RatedAttempt[] {
+  return rows
+    .filter((row) => landed.has(sourceKey(row.source)))
+    .map((row) => ({
+      sessionId: row.sessionId,
+      skillId: row.skillId,
+      ladderStep: steps.get(sourceKey(row.source)) ?? null,
+      isCorrect: row.isCorrect,
+      answeredAt: new Date(row.answeredAt),
+    }));
+}
+
+/**
+ * Rates what landed, and writes both sides of it.
+ *
+ * The player and the difficulty classes are measured against each other, so
+ * they are read and written together — reading the classes after the player had
+ * already been updated would rate one half of an observation against the other
+ * half's result.
+ */
+async function applyRating(
+  // The client type spelled the way `gradingSourceFor` spells it, so this file
+  // still imports no `pg`: the socket belongs to the repositories.
+  client: Parameters<typeof storedSkills>[0],
+  playerId: string,
+  now: Date,
+  attempts: readonly RatedAttempt[],
+): Promise<void> {
+  if (attempts.length === 0) {
+    return;
+  }
+  const skillIds = [...new Set(attempts.map((one) => one.skillId))];
+  const wanted = [
+    ...new Map(
+      attempts
+        .filter((one) => one.ladderStep !== null)
+        .map((one) => [
+          difficultyKey(one.skillId, one.ladderStep!),
+          { skillId: one.skillId, ladderStep: one.ladderStep! },
+        ]),
+    ).values(),
+  ];
+
+  const update = rateAttempts({
+    attempts,
+    skills: await storedSkills(client, playerId, skillIds),
+    difficulties: await measuredDifficulties(client, wanted),
+    now,
+  });
+
+  await writeSkills(client, playerId, update.skills);
+  await writeDifficulties(client, update.difficulties);
+}
+
+/**
+ * What an attempt's answer is checked against, and how hard the item was.
  *
  * An issued item is always a template — that is what `issued_items` holds. A
  * pack item is whatever the manifest says it is: a template to rederive, or a
  * digest to verify, which is the only way authored content can be graded.
+ *
+ * **The ladder step travels with the source because only this function can
+ * find it.** It names the difficulty class the rating measures against, and it
+ * lives in three different places: on a template reference directly, and — for
+ * a digest entry, which records no difficulty at all — in the shipped content
+ * the pack row names. Resolving it anywhere else would mean a second reader for
+ * each of those.
+ *
+ * It is `null` when nothing recorded says: a pack that names no content has an
+ * item whose difficulty this server genuinely does not know, and the rating is
+ * told so rather than handed a default.
  */
+interface AttemptSourceAndStep {
+  readonly source: GradingSource;
+  readonly ladderStep: number | null;
+}
+
 async function gradingSourceFor(
   client: Parameters<typeof refForIssuedItem>[0],
   playerId: string,
   attempt: Attempt,
-): Promise<GradingSource | null> {
+  content: ReadonlyMap<string, ShippedPack>,
+): Promise<AttemptSourceAndStep | null> {
   if (attempt.source.kind === "issued") {
     const ref = await refForIssuedItem(client, playerId, attempt.source.itemId);
-    return ref === null ? null : { kind: "template", ref };
+    return ref === null
+      ? null
+      : { source: { kind: "template", ref }, ladderStep: ref.ladderStep };
   }
 
   const found = await entryForPackItem(
@@ -370,15 +482,41 @@ async function gradingSourceFor(
   }
   const ref = templateRefOf(found.entry);
   if (ref !== null) {
-    return { kind: "template", ref };
+    return { source: { kind: "template", ref }, ladderStep: ref.ladderStep };
   }
   const entry = found.entry as Extract<typeof found.entry, { kind: "digest" }>;
   return {
-    kind: "digest",
-    digest: entry.digest,
-    saltHex: found.saltHex,
-    skillId: entry.skill_id,
+    source: {
+      kind: "digest",
+      digest: entry.digest,
+      saltHex: found.saltHex,
+      skillId: entry.skill_id,
+    },
+    ladderStep: stepInContent(content, found.contentId, attempt.source.index),
   };
+}
+
+/**
+ * The difficulty the shipped content records at that position.
+ *
+ * The manifest is built from `content.items` in order and one entry per item,
+ * which is the same alignment `getOfflinePack` rebuilds a pack on — so the
+ * attempt's index addresses the content directly.
+ *
+ * Null rather than a guess at every step: a pack naming no content, a build
+ * that no longer ships that content, and an index past the end are all "this
+ * server cannot say how hard that was", and the rating leaves such an answer
+ * out and counts it.
+ */
+function stepInContent(
+  content: ReadonlyMap<string, ShippedPack>,
+  contentId: string | null,
+  index: number,
+): number | null {
+  if (contentId === null) {
+    return null;
+  }
+  return content.get(contentId)?.pack.items[index]?.ladder_step ?? null;
 }
 
 /**

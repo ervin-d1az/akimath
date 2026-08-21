@@ -60,9 +60,14 @@ export function sessionScore(correct: number, total: number): string {
 /**
  * The frozen `History`, newest first.
  *
- * **`ratingDelta` is null and the schema allows it.** Rating is F4; a number
- * here would be invented. Null is the schema's way of saying "not this time",
- * and it is the honest value until `user_skills` has rows.
+ * **`ratingDelta` is still null, and the reason has changed.** There is a
+ * rating now — `POST /attempts` writes `user_skills` — but a *delta* is a
+ * difference between two instants and nothing records the first one.
+ * `user_skills` holds only the current figure, no table snapshots a rating per
+ * session, and it cannot be recomputed after the fact because the difficulty
+ * classes the session was rated against have moved since. Filling this needs a
+ * per-session record that does not exist yet; until it does, null is the
+ * schema's way of saying "not this time" and a number would be invented.
  *
  * **`kind` is always `series`.** The other value is `puzzle`, and a puzzle
  * leaves no row in any table — nothing records that one was solved, so nothing

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { INITIAL_DEVIATION, INITIAL_RATING, rateSession } from "../../src/rating/glicko.js";
+import {
+  INITIAL_DEVIATION,
+  INITIAL_RATING,
+  initialSkill,
+  rateSession,
+} from "../../src/rating/glicko.js";
 import type { Outcome, Skill } from "../../src/rating/glicko.js";
 
 /**
@@ -41,6 +46,23 @@ describe("Glickman's own worked example", () => {
   it("the unrated defaults are the ones he names", () => {
     expect(INITIAL_RATING).toBe(1500);
     expect(INITIAL_DEVIATION).toBe(350);
+  });
+
+  it("the prior a caller gets is assembled from those two and nothing else", () => {
+    // The server asks for this rather than for the constants, because the
+    // package's front door exports only functions.
+    expect(initialSkill()).toEqual({
+      rating: INITIAL_RATING,
+      deviation: INITIAL_DEVIATION,
+    });
+  });
+
+  it("and it cannot be mutated into a different default", () => {
+    const prior = initialSkill();
+    expect(() => {
+      (prior as { rating: number }).rating = 9999;
+    }).toThrow(TypeError);
+    expect(initialSkill().rating).toBe(INITIAL_RATING);
   });
 });
 

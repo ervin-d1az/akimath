@@ -30,10 +30,13 @@ export interface Skill {
 /**
  * One graded item, against an opponent whose strength the caller supplies.
  *
- * **Core decides nothing about where an opponent rating comes from.** Nothing
- * in the frozen schema supplies one — `template_stats` has no rating column and
- * `ladder_step` is a difficulty label, not a rating — so the provenance is
- * `f3-attempt-sync`'s decision and this module is correct under any of them.
+ * **Core decides nothing about where an opponent rating comes from**, and this
+ * module is correct under any provenance. `packages/server/src/rating.ts` is
+ * where the decision was taken: the opponent is the difficulty class
+ * `(skill_id, ladder_step)`, whose rating is *measured* by feeding the mirrored
+ * outcome back through this same function. `ladder_step` names the class and
+ * never sets its worth — it is a label, not a rating, which is why it is not
+ * mapped onto this scale.
  */
 export interface Outcome {
   readonly opponentRating: number;
@@ -45,6 +48,21 @@ export interface Outcome {
 /** Glickman's defaults for a player nobody has seen yet. */
 export const INITIAL_RATING = 1500;
 export const INITIAL_DEVIATION = 350;
+
+/**
+ * The prior for something this system has never rated.
+ *
+ * **A function, because the package's front door exports only functions** —
+ * `test/public_surface.test.ts` asserts it, so that nothing crossing the
+ * boundary can grow a `toString`. The two constants above stay module-level for
+ * `decay`, which needs the ceiling rather than the pair.
+ *
+ * **Frozen, like every other value this module returns.** A caller that mutated
+ * the prior would be mutating the default for the next one.
+ */
+export function initialSkill(): Skill {
+  return Object.freeze({ rating: INITIAL_RATING, deviation: INITIAL_DEVIATION });
+}
 
 /** `g(RD)` — how much an opponent's uncertainty damps the update. */
 function g(deviation: number): number {

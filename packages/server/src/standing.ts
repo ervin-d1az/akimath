@@ -15,11 +15,13 @@ import type { Response } from "./routing.js";
  * the contract is authoritative. Carrying them is a contract decision, and it
  * is not this module's to make.
  *
- * **There is no rating today and this says so by omission.** Rating is F4:
- * nothing writes `user_skills`, so the list is empty for every player. That is
- * deliberately not the same as inventing a formula tonight — a number here
- * would be indistinguishable, to every caller, from one a rating system had
- * produced.
+ * **The list is empty until the player has been measured, and that is now a
+ * fact about them rather than about the server.** `POST /attempts` writes
+ * `user_skills` — see `rating.ts` — so a row appears as soon as a session is
+ * rated against a difficulty class the players have already measured. A player
+ * whose every answer met an unmeasured class still gets `[]`, because there was
+ * no evidence to rate them against; that is the same reading this module always
+ * took, kept honest now that a number is available.
  */
 
 /** One `user_skills` row, as the repository hands it over. */
