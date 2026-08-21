@@ -8,7 +8,9 @@ import '../../../design/widgets/icon_button_tile.dart';
 import '../../../design/widgets/keypad.dart';
 import '../../../design/widgets/spec/keypad_layout.dart';
 import '../policy/puzzle_entry.dart';
+import '../policy/reference_card.dart';
 import 'puzzle_board_view.dart';
+import 'reference_card.dart';
 
 /// A KenKen, played.
 ///
@@ -20,7 +22,9 @@ import 'puzzle_board_view.dart';
 /// **The reference sheet travels with the puzzle** and is shown on demand
 /// rather than on arrival: the rules of a KenKen are three lines, and three
 /// lines in front of a board is a wall between a player and the thing they came
-/// for.
+/// for. Opened, it is `3.3 Hoja de referencia` — a titled card *over* the
+/// board rather than a paragraph pushed in above it, which is what the design
+/// draws and what keeps the grid from resizing under a player's hand.
 class PuzzleScreen extends StatefulWidget {
   const PuzzleScreen({
     super.key,
@@ -119,31 +123,13 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
             children: <Widget>[
               _header(),
               const SizedBox(height: BrandShape.space3),
-              if (_rulesOpen) _rules() else const SizedBox.shrink(),
               Expanded(
-                child: Center(
-                  child: PuzzleBoardView(
-                    entry: _entry,
-                    cages: switch (widget.puzzle) {
-                      final CagedPuzzle caged => caged.cages,
-                      _ => const <Cage>[],
-                    },
-                    rowTargets: switch (widget.puzzle) {
-                      MagicSquarePuzzle(:final List<int> rowTargets) => rowTargets,
-                      _ => const <int>[],
-                    },
-                    columnTargets: switch (widget.puzzle) {
-                      MagicSquarePuzzle(:final List<int> columnTargets) =>
-                        columnTargets,
-                      _ => const <int>[],
-                    },
-                    runs: switch (widget.puzzle) {
-                      KakuroPuzzle(:final List<Run> runs) => runs,
-                      _ => const <Run>[],
-                    },
-                    onTapCell: (Cell cell) => _apply(_entry.select(cell)),
-                  ),
-                ),
+                child: _rulesOpen
+                    ? ReferenceCard(
+                        puzzle: widget.puzzle,
+                        onClose: () => setState(() => _rulesOpen = false),
+                      )
+                    : Center(child: _board()),
               ),
               const SizedBox(height: BrandShape.space3),
               Keypad(
@@ -158,14 +144,28 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
     );
   }
 
-  /// The kind, named for the player. Switched over the sealed type so a third
-  /// caged format is a compile error here rather than a board labelled KENKEN.
-  String get _title => switch (widget.puzzle) {
-        KenKenPuzzle() => 'KENKEN',
-        KillerPuzzle() => 'SUMAS',
-        MagicSquarePuzzle() => 'CUADRO MÁGICO',
-        KakuroPuzzle() => 'KAKURO',
-      };
+  Widget _board() {
+    return PuzzleBoardView(
+      entry: _entry,
+      cages: switch (widget.puzzle) {
+        final CagedPuzzle caged => caged.cages,
+        _ => const <Cage>[],
+      },
+      rowTargets: switch (widget.puzzle) {
+        MagicSquarePuzzle(:final List<int> rowTargets) => rowTargets,
+        _ => const <int>[],
+      },
+      columnTargets: switch (widget.puzzle) {
+        MagicSquarePuzzle(:final List<int> columnTargets) => columnTargets,
+        _ => const <int>[],
+      },
+      runs: switch (widget.puzzle) {
+        KakuroPuzzle(:final List<Run> runs) => runs,
+        _ => const <Run>[],
+      },
+      onTapCell: (Cell cell) => _apply(_entry.select(cell)),
+    );
+  }
 
   Widget _header() {
     return Row(
@@ -181,7 +181,19 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
             child: const BrandIcon(BrandGlyph.close, size: 22),
           ),
         ),
-        Text(_title, style: BrandText.eyebrow()),
+        // **Ellipsised inside an `Expanded`**, because the header carries three
+        // 48px controls once pause lands and `CUADRO MÁGICO` at `textScaler`
+        // 1.3 is wider than what is left.
+        Expanded(
+          child: Center(
+            child: Text(
+              puzzleFormatName(widget.puzzle),
+              style: BrandText.eyebrow(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
         Semantics(
           label: 'Cómo se juega',
           button: true,
@@ -192,25 +204,6 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  /// The rules the pack carried, in es-MX. Never invented here — a board whose
-  /// rules were hard-coded could not have a second kind.
-  Widget _rules() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: BrandShape.space3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          for (final String line in widget.puzzle.referenceSheet)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text('· $line', style: BrandText.caption()),
-            ),
-        ],
-      ),
     );
   }
 }
