@@ -132,13 +132,21 @@ export interface AttemptRow {
  * `DO NOTHING` — but `readAttemptBatch` refuses that case first, because
  * keeping one of two rows and answering as if both landed is worse than saying
  * so.
+ *
+ * **It answers with the rows that landed, and that is what the rating reads.**
+ * A resent batch inserts nothing, so a caller rating what it *submitted* would
+ * move a player's rating twice for one answer — and `attempts` accepts no
+ * UPDATE and no DELETE from the request path, so nothing could undo it. A count
+ * is not enough either: a batch is routinely part new and part replay, and the
+ * rating has to know *which* rows are new. `RETURNING` is the only thing that
+ * can say, because `ON CONFLICT DO NOTHING` omits the conflicting rows from it.
  */
 export async function insertAttempts(
   client: pg.ClientBase,
   rows: readonly AttemptRow[],
-): Promise<number> {
+): Promise<readonly AttemptSource[]> {
   if (rows.length === 0) {
-    return 0;
+    return [];
   }
   const PER_ROW = 8;
   const values: unknown[] = [];
@@ -165,13 +173,42 @@ export async function insertAttempts(
   });
   values.push(...rows.map((row) => row.answeredAt));
 
-  const result = await client.query(
+  const result = await client.query<{
+    issued_item_id: string | null;
+    pack_id: string | null;
+    pack_index: number | null;
+  }>(
     `INSERT INTO attempts
        (id, player_id, issued_item_id, pack_id, pack_index, skill_id, is_correct,
         elapsed_ms, session_id, answered_at)
      VALUES ${tuples.join(", ")}
-     ON CONFLICT DO NOTHING`,
+     ON CONFLICT DO NOTHING
+     RETURNING issued_item_id, pack_id, pack_index`,
     values,
   );
-  return result.rowCount ?? 0;
+  return result.rows.map(landedSource);
+}
+
+/**
+ * Which item a returned row is about.
+ *
+ * The columns mirror `attempts_one_source`, so exactly one of the two arms is
+ * populated — reading `issued_item_id` first is not a preference between them,
+ * it is the check the constraint already guarantees the answer to.
+ */
+function landedSource(row: {
+  readonly issued_item_id: string | null;
+  readonly pack_id: string | null;
+  readonly pack_index: number | null;
+}): AttemptSource {
+  if (row.issued_item_id !== null) {
+    return { kind: "issued", itemId: row.issued_item_id };
+  }
+  if (row.pack_id === null || row.pack_index === null) {
+    // Unreachable while `attempts_one_source` is on the table, and thrown
+    // rather than guessed: a row naming no item cannot be rated, and silently
+    // dropping it would make the rating quietly incomplete.
+    throw new Error("an attempt row names no source, which the constraint forbids");
+  }
+  return { kind: "pack", packId: row.pack_id, index: row.pack_index };
 }

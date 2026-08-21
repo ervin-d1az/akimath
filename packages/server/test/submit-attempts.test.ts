@@ -2,9 +2,11 @@ import { answerDigest } from "@akimath/contract";
 import { toDigestEntry, toManifestEntry, type TemplateRef } from "@akimath/core";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { insertAttempts } from "../src/adapters/attempt-repository.js";
 import { createApp, createHandlers } from "../src/adapters/http-server.js";
 import { createLogger } from "../src/adapters/logger.js";
 import { createRequestDatabase, type RequestDatabase } from "../src/adapters/request-database.js";
+import { sourceKey } from "../src/attempts.js";
 import type { Caller } from "../src/routing.js";
 import { validatesAsError } from "./support/contract.js";
 import { describeWithDatabase, freshDatabase, type TestDatabase } from "./support/database.js";
@@ -336,6 +338,40 @@ describeWithDatabase("POST /attempts, against a real database", () => {
     expect(second.status).toBe(200);
     expect(await second.json()).toEqual(await first.json());
     expect(await rows()).toHaveLength(1);
+  });
+
+  it("the insert reports which rows it actually appended, not how many were sent", async () => {
+    // **The fact the rating is built on.** `ON CONFLICT DO NOTHING` means a
+    // resent batch inserts nothing, and a caller that rated what it *submitted*
+    // rather than what *landed* would move the rating twice for one answer.
+    // `rowCount` alone cannot say it either: the rating has to know *which*
+    // rows, because a batch is routinely part new and part replay.
+    const row = {
+      playerId: PLAYER,
+      sessionId: SESSION,
+      skillId: 1,
+      isCorrect: true,
+      elapsedMs: 10,
+      answeredAt: AT,
+    };
+    const issued = { ...row, source: { kind: "issued", itemId: ITEM } } as const;
+    const packed = {
+      ...row,
+      source: { kind: "pack", packId: PACK, index: 0 },
+    } as const;
+
+    await requests.inRequestRole(async (client) => {
+      const first = await insertAttempts(client, [issued]);
+      expect(first.map(sourceKey)).toEqual([sourceKey(issued.source)]);
+
+      // The same item again, alongside one the table has never seen. Only the
+      // second is new, and only the second may be rated.
+      const second = await insertAttempts(client, [issued, packed]);
+      expect(second.map(sourceKey)).toEqual([sourceKey(packed.source)]);
+
+      // And a batch that is wholly a replay lands nothing at all.
+      expect(await insertAttempts(client, [issued, packed])).toEqual([]);
+    });
   });
 
   it("and the database refuses a duplicate even when nothing asked it nicely", async () => {
