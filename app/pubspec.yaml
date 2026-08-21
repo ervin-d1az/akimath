@@ -47,6 +47,10 @@ dependencies:
   # request of any kind, collects nothing, and reports nothing. It stores one
   # string under one key on the device.
   shared_preferences: ^2.3.0
+  # The offline membership verifier: a pack the server issued states a digest,
+  # never the answer, so the device computes HMAC-SHA256 over what was typed and
+  # compares. The DEP-1 audit is in `test/architecture/dependency_allowlist_test.dart`.
+  crypto: ^3.0.7
 
 dev_dependencies:
   # Dev only, and deliberately so: it carries `InMemorySharedPreferencesAsync`,

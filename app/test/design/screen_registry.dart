@@ -138,7 +138,7 @@ const List<Item> registryRoundItems = <Item>[
       PromptToken.fraction(numerator: '2', denominator: '4'),
       PromptToken.operator('='),
     ]),
-    expected: '5/4',
+    answer: PlainAnswer('5/4'),
     ladderStep: 3,
   ),
 ];
@@ -153,7 +153,7 @@ const List<Item> registrySeriesItems = <Item>[
       terms: <int>[2, 6, 18, 54, 162, 486],
       unknownIndex: 4,
     ),
-    expected: '162',
+    answer: PlainAnswer('162'),
     ladderStep: 3,
   ),
 ];
@@ -168,7 +168,7 @@ const List<Item> registryMatrixItems = <Item>[
       size: 3,
       unknownIndex: 8,
     ),
-    expected: '900',
+    answer: PlainAnswer('900'),
     ladderStep: 5,
   ),
 ];
@@ -182,7 +182,7 @@ const List<Item> registryAnalogyItems = <Item>[
       terms: <int>[100, 300, 250, 750],
       unknownIndex: 3,
     ),
-    expected: '750',
+    answer: PlainAnswer('750'),
     ladderStep: 4,
   ),
 ];
@@ -200,7 +200,7 @@ const List<Item> registryMachineItems = <Item>[
       ],
       queryInput: 40,
     ),
-    expected: '400',
+    answer: PlainAnswer('400'),
     ladderStep: 4,
   ),
 ];
@@ -214,7 +214,7 @@ const List<Item> registryFigurateItems = <Item>[
       dotCounts: <int>[6, 10, 15, 21],
       unknownIndex: 3,
     ),
-    expected: '21',
+    answer: PlainAnswer('21'),
     ladderStep: 5,
   ),
 ];

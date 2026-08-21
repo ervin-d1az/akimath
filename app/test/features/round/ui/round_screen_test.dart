@@ -18,7 +18,7 @@ const List<Item> _oneItem = <Item>[
       PromptToken.text('3'),
       PromptToken.operator('='),
     ]),
-    expected: '42',
+    answer: PlainAnswer('42'),
     ladderStep: 2,
   ),
 ];
@@ -55,7 +55,7 @@ const List<Item> _twoItems = <Item>[
       PromptToken.text('3'),
       PromptToken.operator('='),
     ]),
-    expected: '42',
+    answer: PlainAnswer('42'),
     ladderStep: 2,
   ),
   Item(
@@ -66,7 +66,7 @@ const List<Item> _twoItems = <Item>[
       PromptToken.text('1'),
       PromptToken.operator('='),
     ]),
-    expected: '6',
+    answer: PlainAnswer('6'),
     ladderStep: 1,
   ),
 ];

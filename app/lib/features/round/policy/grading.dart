@@ -2,7 +2,12 @@ import '../../../content/model/canon.dart';
 import '../../../content/model/item.dart';
 import '../../../design/widgets/spec/verdict.dart';
 
-/// Whether [answer] solves [item].
+/// Whether [answer] solves [item], **for an item whose answer is in the clear**.
+///
+/// `content/answer_digest.dart`'s `gradeItem` is the entry point: it takes both
+/// kinds and routes here for the plaintext one. Calling this with a digest item
+/// throws through `Item.expected`, loudly and by design — a pure module cannot
+/// compute an HMAC, and returning "wrong" would be a silent lost round.
 ///
 /// Pure: two values in, a verdict out. No clock, no network, no storage.
 ///

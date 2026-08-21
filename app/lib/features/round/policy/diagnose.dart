@@ -2,17 +2,24 @@ import '../../../content/model/canon.dart';
 import '../../../content/model/diagnosis.dart';
 import '../../../content/model/item.dart';
 import '../../../design/widgets/spec/verdict.dart';
-import 'grading.dart';
 
 /// What to tell a player about the answer they gave.
 ///
 /// **PURE.** Item, answer and the pack's fallback in; copy or null out. No
 /// clock, no store, no screen.
 ///
-/// **A correct answer gets nothing**, and the check reuses `grade` rather than
-/// re-deciding: two implementations of "is this right" is exactly the drift
-/// that would let the verdict screen say *Acierto* while explaining away a
-/// mistake underneath it.
+/// **A correct answer gets nothing**, and the verdict is **handed in** rather
+/// than re-decided. It used to call `grade` itself, on the sound ground that
+/// two implementations of "is this right" is the drift that would let the
+/// verdict screen say *Acierto* while explaining away a mistake underneath it.
+/// Taking it as an argument is the same argument carried further: there is now
+/// one decision, made once by the caller, and no second call that could
+/// disagree.
+///
+/// It is also what lets this work for an issued pack. `grade` reads a plaintext
+/// answer, and a digest item has none — the call threw a `StateError` the first
+/// time one was played, which is exactly the loudness `Item.expected` was given
+/// for.
 ///
 /// **Every wrong answer gets something.** A distractor the item anticipated
 /// wins; anything else falls back. That matters more than it sounds, because
@@ -30,9 +37,10 @@ import 'grading.dart';
 Diagnosis? diagnose({
   required Item item,
   required String answer,
+  required Verdict verdict,
   required Diagnosis fallback,
 }) {
-  if (grade(item, answer) == Verdict.correct) {
+  if (verdict == Verdict.correct) {
     return null;
   }
 

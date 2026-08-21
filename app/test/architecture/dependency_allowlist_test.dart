@@ -37,6 +37,40 @@ const Set<String> allowedRuntimeDependencies = <String>{
   // `_linux`, `_platform_interface`, `_web`, `_windows` — all from the same
   // monorepo, and only the host platform's implementation compiles in.
   'shared_preferences',
+
+  // Added 2026-08-20, decided by Ervin. The offline membership verifier:
+  // `ARCHITECTURE.md` §4 says the pack states a **digest**, never the answer,
+  // so a child's device can tell right from wrong offline without carrying the
+  // answer in readable bytes. Reading a pack the server issued means computing
+  // `HMAC-SHA256(pack_salt, canonical answer)`, and there is no way round it —
+  // the server must never learn an authored answer, and without a local
+  // verifier a player gets no verdict until they sync.
+  //
+  // `content/model/pack.dart` had recorded the blocker in its own doc comment
+  // since F1: *"reading it needs an HMAC implementation, which needs a
+  // dependency this project has not decided on."* This is that decision.
+  //
+  // **DEP-1 audit, performed before the addition and recorded here because the
+  // rule requires it in the same change:**
+  // · `crypto 3.0.7`, published by **dart.dev** — the Dart team's own package,
+  //   at github.com/dart-lang/crypto. Verified from the resolved package's
+  //   `repository:` field.
+  // · Pure Dart. It is hash and MAC algorithms operating on byte lists: no
+  //   plugin, no platform channel, no native code.
+  // · **It makes no network request.** Verified by grepping the shipped Dart
+  //   for `HttpClient`, `package:http`, `Socket`, `WebSocket` and `dart:io`:
+  //   zero files.
+  // · It collects nothing and reports nothing. No identifier, no analytics
+  //   hook, no remote configuration.
+  // · One dependency of its own, `typed_data`, also from the Dart team.
+  //
+  // **Two packages net-new to the shipping set.** It was already resolved in
+  // the tree but only for development, through `dart_code_linter` and
+  // `analyzer`, so this is the first time it compiles into the app. For
+  // comparison, ADR 0001 turned `swagger_dart_code_generator` down at fourteen
+  // — for a job this project could hand-write. This is a primitive CLAUDE.md's
+  // own rule says not to hand-write.
+  'crypto',
 };
 
 /// Reads the `dependencies:` block of `app/pubspec.yaml`.

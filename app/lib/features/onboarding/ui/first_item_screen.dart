@@ -63,7 +63,7 @@ class FirstItemScreen extends StatelessWidget {
       PromptToken.text('8'),
       PromptToken.operator('='),
     ]),
-    expected: '13',
+    answer: PlainAnswer('13'),
     ladderStep: 1,
   );
 

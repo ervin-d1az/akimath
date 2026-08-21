@@ -93,7 +93,11 @@ class _RootScaffoldState extends State<RootScaffold> {
   }
 
   Widget _rootFor(AppTab tab) => switch (tab) {
-        AppTab.home => const HomeRoute(),
+        // **The home is handed the session too.** It is the only root that
+        // produces an answer, and an answer is only worth remembering when
+        // there is somewhere to send it — unlinked play is entirely offline
+        // (ADR 0002).
+        AppTab.home => HomeRoute(session: _session),
         AppTab.profile => ProfileRoute(
             session: _session,
             onSessionChanged: (LinkedSession? session) =>

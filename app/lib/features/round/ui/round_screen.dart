@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../content/answer_digest.dart';
 import '../../../content/model/diagnosis.dart';
 import '../../../content/model/item.dart';
 import '../../../design/painting/spec/dash_spec.dart';
@@ -16,7 +17,6 @@ import '../../../design/widgets/spec/verdict.dart';
 import '../../home/data/day_log_store.dart';
 import '../policy/answer_draft.dart';
 import '../policy/diagnose.dart';
-import '../policy/grading.dart';
 import '../policy/streak_policy.dart';
 import 'stimulus/stimulus_view.dart';
 import 'verdict/verdict_screen.dart';
@@ -43,6 +43,7 @@ class RoundScreen extends StatefulWidget {
     this.dayLog,
     this.onClose,
     this.onFinished,
+    this.onAnswered,
   });
 
   final List<Item> items;
@@ -100,6 +101,18 @@ class RoundScreen extends StatefulWidget {
   /// knows: it graded every answer and it holds the clock. A caller that does
   /// not care ignores the argument, which is what the teaching item does.
   final void Function(RoundOutcome outcome)? onFinished;
+
+  /// Reports every answer, right or wrong, the moment it is submitted.
+  ///
+  /// **Per item, not per series.** A player who abandons a series halfway has
+  /// still answered what they answered, and the server should hear about it —
+  /// waiting for `onFinished` would lose exactly the sittings a bus ride
+  /// produces.
+  ///
+  /// It carries the item so the caller can read its id, which for an issued
+  /// pack *is* its `(packId, index)` address. Nothing here knows what the
+  /// caller does with it; `HomeRoute` journals it.
+  final void Function(Item item, String answer, Duration elapsed)? onAnswered;
 
   @override
   State<RoundScreen> createState() => _RoundScreenState();
@@ -197,7 +210,13 @@ class _RoundScreenState extends State<RoundScreen> {
     final DayLogStore? store = widget.dayLog;
     // Recorded before the verdict is built, and regardless of what it says.
     unawaited(store?.record(finishedAt) ?? Future<void>.value());
-    final Verdict verdict = grade(_item, _draft.text);
+    // **`gradeItem`, not `grade`.** An issued pack states a digest instead of an
+    // answer, and the pure policy cannot compute an HMAC — see
+    // `content/answer_digest.dart`. The authored pack's items take the same
+    // path they always did.
+    final Verdict verdict = gradeItem(_item, _draft.text);
+    final Duration elapsed = finishedAt.difference(_startedAt);
+    widget.onAnswered?.call(_item, _draft.text, elapsed);
     if (verdict == Verdict.correct) {
       _correct += 1;
     }
@@ -208,8 +227,13 @@ class _RoundScreenState extends State<RoundScreen> {
       // so it cannot disagree with the verdict above it.
       diagnosis: fallback == null
           ? null
-          : diagnose(item: _item, answer: _draft.text, fallback: fallback),
-      elapsed: finishedAt.difference(_startedAt),
+          : diagnose(
+              item: _item,
+              answer: _draft.text,
+              verdict: verdict,
+              fallback: fallback,
+            ),
+      elapsed: elapsed,
       streakDays: streakLength(
         attemptDays: <DateTime>[
           ...widget.attemptDays,

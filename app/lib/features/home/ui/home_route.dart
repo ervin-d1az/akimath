@@ -23,7 +23,12 @@ import '../../../content/model/puzzle.dart';
 import '../../puzzle/ui/puzzle_screen.dart';
 import '../../puzzle/ui/puzzle_solved_screen.dart';
 import '../../puzzle/ui/word_search_screen.dart';
+import '../../../api/api_client.dart';
+import '../../../api/endpoints.dart';
+import '../../account/policy/session.dart';
+import '../../../content/model/issued_pack.dart';
 import '../../shell/ui/skeleton_block.dart';
+import '../../sync/attempt_sync.dart';
 import '../../states/data/streak_notice_store.dart';
 import '../../states/policy/streak_notice.dart';
 import '../../states/ui/streak_at_risk_screen.dart';
@@ -49,7 +54,28 @@ class HomeRoute extends StatefulWidget {
     this.dayLog,
     this.seriesCursor = const SeriesCursorStore(),
     this.streakNotices,
+    this.session,
+    this.sync,
+    this.issuePack,
   });
+
+  /// The account this device is signed in to, if it is.
+  ///
+  /// **The home needs it for one reason**: an answered item is only worth
+  /// remembering when there is somewhere to send it. Unlinked play is entirely
+  /// offline (ADR 0002) and journalling it would file a batch nothing could
+  /// ever accept.
+  final LinkedSession? session;
+
+  /// What remembers an answered item until the server has it.
+  ///
+  /// Injected so a widget test never reaches a plugin or a socket.
+  final AttemptSync? sync;
+
+  /// Asks the server for a pack. A closure, the same shape every other request
+  /// in this app takes and for the same reason: a `testWidgets` runs in a
+  /// fake-async zone and a real socket inside one hangs on `!timersPending`.
+  final Future<IssueResult> Function(String accessToken)? issuePack;
 
   final PackReader reader;
   final DateTime Function() now;
@@ -91,6 +117,17 @@ class _HomeRouteState extends State<HomeRoute> {
   /// is `4.12`'s case exactly, since nothing about it is stored on purpose.
   bool _noticeSettled = false;
 
+  late final AttemptSync _sync = widget.sync ?? AttemptSync();
+
+  /// The pack the server issued, once it has.
+  ///
+  /// **Null is the ordinary state**, and it is what an unlinked device plays
+  /// on for ever: unlinked play is entirely offline (ADR 0002), so there is
+  /// nothing to ask and nothing to send. When it is not null it *replaces* the
+  /// bundled pack — same six families, same boards, and an address on every
+  /// item, which is the whole difference.
+  Pack? _issued;
+
   /// How many items have been served, held here as well as read in
   /// `_startSeries`, because the home now *shows* what the next series holds
   /// and cannot await a store while building. Refreshed with the log, so
@@ -110,6 +147,11 @@ class _HomeRouteState extends State<HomeRoute> {
   /// is read would decide it from an empty one, which is `StreakNotice.none`
   /// for every player.
   Future<void> _open() async {
+    // **Before anything else, and never waited on.** A batch may have been
+    // waiting since a bus ride days ago; sending it is not something a player
+    // should watch, and a failure leaves the journal exactly as it was.
+    unawaited(_flush());
+    unawaited(_askForPack());
     await _refreshLog();
     if (!mounted) {
       return;
@@ -127,6 +169,79 @@ class _HomeRouteState extends State<HomeRoute> {
       _log = log;
       _itemsServed = served;
     });
+  }
+
+  @override
+  void didUpdateWidget(HomeRoute old) {
+    super.didUpdateWidget(old);
+    // **The session arrives after this screen is built.** A player links on the
+    // profile tab, and `IndexedStack` keeps the home alive — so `initState` has
+    // long since run and a journal filled offline would sit there for ever.
+    // This is the same reading `ProfileRoute` needed for its history.
+    if (widget.session?.accessToken != old.session?.accessToken) {
+      unawaited(_flush());
+      unawaited(_askForPack());
+    }
+  }
+
+  /// Asks for a pack, once, when there is a session to ask on.
+  ///
+  /// **Issued per launch and held in memory**, which is a choice worth naming.
+  /// The server says a second pack is harmless — issuing is not idempotent by
+  /// nature and retention sweeps what lapses — so the cheap thing is honest.
+  /// The better thing is to persist the id and rebuild through
+  /// `GET /packs/{packId}`, which the server was built to answer byte for byte;
+  /// the client has no operation for it yet, and that is the next change.
+  ///
+  /// **A failure is silent and the bundled pack keeps playing.** There is
+  /// nothing useful to tell a player about a request they did not make, and the
+  /// app they already had works.
+  Future<void> _askForPack() async {
+    final LinkedSession? session = widget.session;
+    if (session == null || _issued != null) {
+      return;
+    }
+    final IssueResult result =
+        await (widget.issuePack ?? _issueOverASocket)(session.accessToken);
+    if (!mounted || result is! IssueDone) {
+      return;
+    }
+    try {
+      setState(() {
+        _issued = readIssuedPack(
+          Map<String, dynamic>.from(result.issued.pack),
+          packId: result.issued.packId,
+          issuedAt: result.issued.issuedAt,
+          expiresAt: result.issued.expiresAt,
+        );
+      });
+    } on FormatException {
+      // A pack this app cannot read is a pack it does not play. The bundled one
+      // is still there, and refusing where it is read is the same rule
+      // `PackReader` keeps.
+    }
+  }
+
+  Future<IssueResult> _issueOverASocket(String accessToken) async {
+    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+    try {
+      return await api.issuePack(accessToken);
+    } finally {
+      api.close();
+    }
+  }
+
+  /// Sends what the journal is holding, if there is a session to send it on.
+  ///
+  /// Failure is the journal's business rather than this screen's: `journalAfter`
+  /// already decides what survives which answer, and there is nothing useful to
+  /// say to a player about a batch they never asked to send.
+  Future<void> _flush() async {
+    final LinkedSession? session = widget.session;
+    if (session == null) {
+      return;
+    }
+    await _sync.flush(session.accessToken);
   }
 
   /// Shows the streak screen this launch owes, if it owes one.
@@ -212,7 +327,12 @@ class _HomeRouteState extends State<HomeRoute> {
             child: _HomeMessage('No se pudo abrir el paquete de retos.'),
           );
         }
-        final Pack? pack = snapshot.data;
+        // **The issued pack wins where there is one.** Same six families, same
+        // boards; the difference is that every item has a `(packId, index)` the
+        // server can grade, which is what makes a round worth journalling. The
+        // bundled pack is what an unlinked device plays, for ever and by
+        // design.
+        final Pack? pack = _issued ?? snapshot.data;
         if (pack == null) {
           return const AppShell(child: _HomeSkeleton());
         }
@@ -373,6 +493,11 @@ class _HomeRouteState extends State<HomeRoute> {
       return;
     }
 
+    // **One id per sitting**, minted before the push so every answer in this
+    // series carries the same one. `GET /me/history` groups by it, and a
+    // history of one-item sessions is a history nobody can read.
+    final String sessionId = _sync.newSessionId();
+
     await pushSession<void>(
       context,
       (BuildContext sessionContext) => _SeriesSession(
@@ -385,6 +510,15 @@ class _HomeRouteState extends State<HomeRoute> {
         // a player who closes a series halfway has not been served those
         // items in any sense worth remembering.
         onFinishedSeries: (int played) => widget.seriesCursor.advance(played),
+        onAnswered: (Item item, String answer, Duration elapsed) => unawaited(
+          _sync.record(
+            itemId: item.id,
+            sessionId: sessionId,
+            answer: answer,
+            at: widget.now(),
+            elapsed: elapsed,
+          ),
+        ),
         onDone: () => Navigator.of(sessionContext).maybePop(),
       ),
     );
@@ -455,6 +589,7 @@ class _SeriesSession extends StatefulWidget {
     required this.attemptDays,
     required this.dayLog,
     required this.onFinishedSeries,
+    required this.onAnswered,
     required this.onDone,
   });
 
@@ -467,6 +602,10 @@ class _SeriesSession extends StatefulWidget {
   final List<DateTime> attemptDays;
   final DayLogStore dayLog;
   final void Function(int itemsPlayed) onFinishedSeries;
+
+  /// Every answer, the moment it is submitted. Threaded straight through to
+  /// `RoundScreen`, because this holder decides nothing about it.
+  final void Function(Item item, String answer, Duration elapsed) onAnswered;
   final VoidCallback onDone;
 
   @override
@@ -500,6 +639,7 @@ class _SeriesSessionState extends State<_SeriesSession> {
       now: widget.now,
       attemptDays: widget.attemptDays,
       dayLog: widget.dayLog,
+      onAnswered: widget.onAnswered,
       onFinished: (RoundOutcome result) {
         widget.onFinishedSeries(result.total);
         setState(() => _outcome = result);
