@@ -45,7 +45,11 @@ final class AuthOk<T> extends AuthResult<T> {
 /// provider's own machine-readable tag where it sent one.
 @immutable
 final class AuthRefused<T> extends AuthResult<T> {
-  const AuthRefused({required this.status, required this.code, required this.message});
+  const AuthRefused({
+    required this.status,
+    required this.code,
+    required this.message,
+  });
   final int status;
   final String code;
   final String message;
@@ -66,7 +70,7 @@ final class AuthUnreachable<T> extends AuthResult<T> {
   final String reason;
 }
 
-/// The four calls the account flow makes, as a seam.
+/// The calls the account flow makes, as a seam.
 ///
 /// **It exists so a widget test can stand in for the provider.** `testWidgets`
 /// runs in a fake-async zone, so a real socket inside one completes on a clock
@@ -85,6 +89,21 @@ abstract interface class AuthApi {
   Future<AuthResult<AuthSession>> verifyEmail({
     required String email,
     required String code,
+  });
+
+  Future<AuthResult<AuthSession>> signIn({
+    required String email,
+    required String password,
+  });
+
+  Future<AuthResult<Accepted>> sendPasswordReset({
+    required String email,
+    required String redirectTo,
+  });
+
+  Future<AuthResult<Accepted>> resetPassword({
+    required String token,
+    required String newPassword,
   });
 
   Future<AuthResult<String>> accessToken(AuthSession session);
@@ -147,12 +166,15 @@ class AuthClient implements AuthApi {
   /// code screen.
   @override
   Future<AuthResult<Accepted>> sendVerificationCode(String email) async {
-    final _Answer answer = await _post('email-otp/send-verification-otp', <String, Object?>{
-      'email': email,
-      // One of "email-verification" | "sign-in" | "forget-password" |
-      // "change-email", read off the provider's own validation error.
-      'type': 'email-verification',
-    });
+    final _Answer answer = await _post(
+      'email-otp/send-verification-otp',
+      <String, Object?>{
+        'email': email,
+        // One of "email-verification" | "sign-in" | "forget-password" |
+        // "change-email", read off the provider's own validation error.
+        'type': 'email-verification',
+      },
+    );
     return answer.map((_) => const Accepted());
   }
 
@@ -162,20 +184,82 @@ class AuthClient implements AuthApi {
     required String email,
     required String code,
   }) async {
-    final _Answer answer =
-        await _post('email-otp/verify-email', <String, Object?>{'email': email, 'otp': code});
+    final _Answer answer = await _post(
+      'email-otp/verify-email',
+      <String, Object?>{'email': email, 'otp': code},
+    );
     return answer.mapSession();
   }
 
-  /// Not on [AuthApi]: the account flow signs in by verifying, and a screen
-  /// that returns to an existing account is a change that does not exist yet.
+  /// Signs in an account that already exists — `1.1`.
+  ///
+  /// **The session is the whole answer.** A player who signs in has verified
+  /// their address already, so there is no code to ask for; the only step left
+  /// is [accessToken], exactly as after [verifyEmail].
+  ///
+  /// **Nothing is checked here about the password beyond its being sent.** The
+  /// provider is the authority on whether a credential is right, and a client
+  /// that applied `CredentialRules.longEnough` on the way in would refuse an
+  /// account whose password predates that floor without ever asking.
+  @override
   Future<AuthResult<AuthSession>> signIn({
     required String email,
     required String password,
   }) async {
-    final _Answer answer =
-        await _post('sign-in/email', <String, Object?>{'email': email, 'password': password});
+    final _Answer answer = await _post('sign-in/email', <String, Object?>{
+      'email': email,
+      'password': password,
+    });
     return answer.mapSession();
+  }
+
+  /// Asks the provider to email a password-reset link — `1.4`.
+  ///
+  /// **This is Better Auth's core `forget-password`, not an email-OTP call.**
+  /// The OTP plugin is what ADR 0002's amendment keeps switched off to hold
+  /// GHSA-qq9h-g4jm-xgf3 shut, so recovery goes down the path that needs no
+  /// plugin at all. Nothing here constructs, signs or verifies a token: the
+  /// provider mints it and mails it, which is the only arrangement CLAUDE.md's
+  /// *"never hand-write authentication crypto"* permits.
+  ///
+  /// **A success is not proof an email was sent.** The provider answers the
+  /// same for an address that has no account — deliberate, so a caller cannot
+  /// enumerate who is registered — so the screen above this says *"si esa
+  /// cuenta existe"* and never *"te lo mandamos"*.
+  ///
+  /// [redirectTo] carries the same trusted-origin rule as `callbackURL` on
+  /// sign-up: absolute, and inside a trusted origin, or the provider answers
+  /// **403 `INVALID_CALLBACK_URL`**. See `Endpoints.callbackUrl`.
+  @override
+  Future<AuthResult<Accepted>> sendPasswordReset({
+    required String email,
+    required String redirectTo,
+  }) async {
+    final _Answer answer = await _post('forget-password', <String, Object?>{
+      'email': email,
+      'redirectTo': redirectTo,
+    });
+    return answer.map((_) => const Accepted());
+  }
+
+  /// Sets a new password from the token in that email — `1.5`.
+  ///
+  /// **Nothing in the app can reach this yet, and that is a fact about the
+  /// device rather than about the provider.** The token arrives only inside the
+  /// emailed link, so receiving it needs a URL scheme registered in
+  /// `AndroidManifest.xml` and `Info.plist` plus that scheme added to the
+  /// provider's `trusted_origins` — none of which exists. The operation is
+  /// written so the screen above it is driving something real the day it does.
+  @override
+  Future<AuthResult<Accepted>> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    final _Answer answer = await _post('reset-password', <String, Object?>{
+      'token': token,
+      'newPassword': newPassword,
+    });
+    return answer.map((_) => const Accepted());
   }
 
   /// The JWT the AkiMath server verifies, for a session that has one.
@@ -209,8 +293,9 @@ class AuthClient implements AuthApi {
     // `.../neondb/token`.
     final Uri url = _slashed(_baseUrl).resolve(path);
     try {
-      final HttpClientRequest request =
-          body == null ? await _transport.getUrl(url) : await _transport.postUrl(url);
+      final HttpClientRequest request = body == null
+          ? await _transport.getUrl(url)
+          : await _transport.postUrl(url);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
       if (session != null) {
         request.headers.set(HttpHeaders.cookieHeader, session.cookie);
@@ -219,12 +304,15 @@ class AuthClient implements AuthApi {
         request.headers.contentType = ContentType.json;
         request.write(json.encode(body));
       }
-      final HttpClientResponse response = await request.close().timeout(timeout);
+      final HttpClientResponse response = await request.close().timeout(
+        timeout,
+      );
       final String text = await response.transform(utf8.decoder).join();
       return _Answer(
         status: response.statusCode,
         text: text,
-        setCookie: response.headers[HttpHeaders.setCookieHeader] ?? const <String>[],
+        setCookie:
+            response.headers[HttpHeaders.setCookieHeader] ?? const <String>[],
       );
     } on Exception catch (cause) {
       return _Answer.unreachable(cause.toString());
@@ -238,8 +326,11 @@ class AuthClient implements AuthApi {
 /// One HTTP answer, before it is given a meaning.
 @immutable
 class _Answer {
-  const _Answer({required this.status, required this.text, required this.setCookie})
-    : unreachableReason = null;
+  const _Answer({
+    required this.status,
+    required this.text,
+    required this.setCookie,
+  }) : unreachableReason = null;
 
   const _Answer.unreachable(String reason)
     : status = 0,
@@ -255,7 +346,9 @@ class _Answer {
   Map<String, Object?> get _body {
     try {
       final Object? decoded = json.decode(text);
-      return decoded is Map<String, Object?> ? decoded : const <String, Object?>{};
+      return decoded is Map<String, Object?>
+          ? decoded
+          : const <String, Object?>{};
     } on FormatException {
       return const <String, Object?>{};
     }
@@ -308,6 +401,9 @@ class _Answer {
         message: body['message'] as String? ?? '',
       );
     }
-    return AuthFailed<T>(status: status, reason: _body['message'] as String? ?? text);
+    return AuthFailed<T>(
+      status: status,
+      reason: _body['message'] as String? ?? text,
+    );
   }
 }

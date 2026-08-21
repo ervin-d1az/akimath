@@ -2,6 +2,9 @@ import 'package:akimath_app/api/me.dart';
 import 'package:akimath_app/features/auth/policy/age_gate.dart';
 import 'package:akimath_app/features/auth/ui/age_gate_screen.dart';
 import 'package:akimath_app/features/auth/ui/create_account_screen.dart';
+import 'package:akimath_app/features/auth/ui/new_password_screen.dart';
+import 'package:akimath_app/features/auth/ui/recover_password_screen.dart';
+import 'package:akimath_app/features/auth/ui/sign_in_screen.dart';
 import 'package:akimath_app/features/auth/ui/tutor_consent_screen.dart';
 import 'package:akimath_app/features/auth/ui/verify_email_screen.dart';
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
@@ -231,38 +234,35 @@ const List<Item> registryFigurateItems = <Item>[
 /// is the board's rim and its label sits in the corner, which is the cheapest
 /// arrangement that still exercises every part of the renderer.
 KenKenPuzzle registryKenKen(int size) => KenKenPuzzle(
-      board: PuzzleBoard.caged(
-        size: size,
-        blocked: const <Cell>{},
-        given: const <Cell>{},
-        solution: <List<int>>[
-          for (int row = 0; row < size; row++)
-            <int>[for (int col = 0; col < size; col++) (row + col) % size + 1],
-        ],
-      ),
-      cages: <Cage>[
-        Cage(
-          cells: <Cell>[
-            for (int row = 0; row < size; row++)
-              for (int col = 0; col < size; col++) Cell(row: row, col: col),
-          ],
-          operation: '+',
-          target: size * size,
-        ),
+  board: PuzzleBoard.caged(
+    size: size,
+    blocked: const <Cell>{},
+    given: const <Cell>{},
+    solution: <List<int>>[
+      for (int row = 0; row < size; row++)
+        <int>[for (int col = 0; col < size; col++) (row + col) % size + 1],
+    ],
+  ),
+  cages: <Cage>[
+    Cage(
+      cells: <Cell>[
+        for (int row = 0; row < size; row++)
+          for (int col = 0; col < size; col++) Cell(row: row, col: col),
       ],
-      tutorialSteps: const <String>['Cada fila y cada columna, una sola vez.'],
-      referenceSheet: const <String>['Ningún número se repite en su fila.'],
-    );
+      operation: '+',
+      target: size * size,
+    ),
+  ],
+  tutorialSteps: const <String>['Cada fila y cada columna, una sola vez.'],
+  referenceSheet: const <String>['Ningún número se repite en su fila.'],
+);
 
 final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'character sheet',
     build: () => const CharacterSheetScreen(),
   ),
-  RegisteredScreen(
-    label: 'splash · cream',
-    build: () => const SplashScreen(),
-  ),
+  RegisteredScreen(label: 'splash · cream', build: () => const SplashScreen()),
   RegisteredScreen(
     label: 'splash · green',
     build: () => const SplashScreen(variant: SplashVariant.brandGreen),
@@ -308,6 +308,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       child: AgeGateScreen(
         today: DateTime.utc(2026, 8, 19),
         onResolved: (AgeBand band, AgeGateRoute route) {},
+        onBack: () {},
       ),
     ),
   ),
@@ -318,7 +319,12 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'create account',
     build: () => AppShell(
-      child: CreateAccountScreen(onSubmit: (String email, String password) {}, busy: false),
+      child: CreateAccountScreen(
+        onSubmit: (String email, String password) {},
+        busy: false,
+        onBack: () {},
+        onSignInInstead: () {},
+      ),
     ),
   ),
   RegisteredScreen(
@@ -327,7 +333,83 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       child: CreateAccountScreen(
         onSubmit: (String email, String password) {},
         busy: false,
+        onBack: () {},
+        onSignInInstead: () {},
         problem: 'Ese correo ya tiene una cuenta.',
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'sign in',
+    build: () => AppShell(
+      child: SignInScreen(
+        onSubmit: (String email, String password) {},
+        busy: false,
+        onBack: () {},
+        onForgotPassword: (String email) {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'sign in · rechazada',
+    // `1.7`: the refusal is a coral band with a glyph, never a hue alone.
+    build: () => AppShell(
+      child: SignInScreen(
+        onSubmit: (String email, String password) {},
+        busy: false,
+        onBack: () {},
+        onForgotPassword: (String email) {},
+        initialEmail: 'alguien@ejemplo.com',
+        problem:
+            'Ese correo y esa contraseña no coinciden. Puedes intentar de '
+            'nuevo o cambiarla.',
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'recuperar contraseña',
+    build: () => AppShell(
+      child: RecoverPasswordScreen(
+        onSubmit: (String email) {},
+        busy: false,
+        sent: false,
+        onBack: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'recuperar contraseña · enviada',
+    build: () => AppShell(
+      child: RecoverPasswordScreen(
+        onSubmit: (String email) {},
+        busy: false,
+        sent: true,
+        onBack: () {},
+        initialEmail: 'alguien@ejemplo.com',
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'contraseña nueva',
+    build: () => AppShell(
+      child: NewPasswordScreen(
+        onSubmit: (String password) {},
+        busy: false,
+        saved: false,
+        onBack: () {},
+        onSignIn: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'contraseña nueva · guardada',
+    build: () => AppShell(
+      child: NewPasswordScreen(
+        onSubmit: (String password) {},
+        busy: false,
+        saved: true,
+        onBack: () {},
+        onSignIn: () {},
       ),
     ),
   ),
@@ -340,6 +422,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         onSubmit: (String _) {},
         onResend: () {},
         busy: false,
+        onBack: () {},
       ),
     ),
   ),
@@ -448,7 +531,9 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         rowTargets: const <int>[15, 15, 15],
         columnTargets: const <int>[15, 15, 15],
         tutorialSteps: const <String>['Cada línea llega a su número.'],
-        referenceSheet: const <String>['Se usan los números del 1 al 9, uno por celda.'],
+        referenceSheet: const <String>[
+          'Se usan los números del 1 al 9, uno por celda.',
+        ],
       ),
     ),
   ),
@@ -470,12 +555,46 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
           highestValue: 9,
         ),
         runs: const <Run>[
-          Run(cells: <Cell>[Cell(row: 0, col: 1), Cell(row: 0, col: 2)], sum: 4),
-          Run(cells: <Cell>[Cell(row: 1, col: 0), Cell(row: 1, col: 1), Cell(row: 1, col: 2)], sum: 15),
-          Run(cells: <Cell>[Cell(row: 2, col: 0), Cell(row: 2, col: 1), Cell(row: 2, col: 2)], sum: 19),
-          Run(cells: <Cell>[Cell(row: 1, col: 0), Cell(row: 2, col: 0)], sum: 10),
-          Run(cells: <Cell>[Cell(row: 0, col: 1), Cell(row: 1, col: 1), Cell(row: 2, col: 1)], sum: 11),
-          Run(cells: <Cell>[Cell(row: 0, col: 2), Cell(row: 1, col: 2), Cell(row: 2, col: 2)], sum: 17),
+          Run(
+            cells: <Cell>[Cell(row: 0, col: 1), Cell(row: 0, col: 2)],
+            sum: 4,
+          ),
+          Run(
+            cells: <Cell>[
+              Cell(row: 1, col: 0),
+              Cell(row: 1, col: 1),
+              Cell(row: 1, col: 2),
+            ],
+            sum: 15,
+          ),
+          Run(
+            cells: <Cell>[
+              Cell(row: 2, col: 0),
+              Cell(row: 2, col: 1),
+              Cell(row: 2, col: 2),
+            ],
+            sum: 19,
+          ),
+          Run(
+            cells: <Cell>[Cell(row: 1, col: 0), Cell(row: 2, col: 0)],
+            sum: 10,
+          ),
+          Run(
+            cells: <Cell>[
+              Cell(row: 0, col: 1),
+              Cell(row: 1, col: 1),
+              Cell(row: 2, col: 1),
+            ],
+            sum: 11,
+          ),
+          Run(
+            cells: <Cell>[
+              Cell(row: 0, col: 2),
+              Cell(row: 1, col: 2),
+              Cell(row: 2, col: 2),
+            ],
+            sum: 17,
+          ),
         ],
         tutorialSteps: const <String>['Cada tramo suma su pista.'],
         referenceSheet: const <String>['Solo se usan los dígitos del 1 al 9.'],
@@ -749,7 +868,8 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
             'Mira el signo que hay entre los dos números.',
             'Rehaz la cuenta paso por paso, sin prisa.',
           ],
-          explain: 'Repasa el reto con calma: vuelve a leer los números, rehaz '
+          explain:
+              'Repasa el reto con calma: vuelve a leer los números, rehaz '
               'la cuenta paso por paso y compara lo que te salió con lo que '
               'pedía el reto.',
         ),

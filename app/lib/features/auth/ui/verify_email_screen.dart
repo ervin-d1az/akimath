@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
+import '../../../design/widgets/detail_header.dart';
 import '../../../design/widgets/keypad.dart';
 import '../../../design/widgets/spec/keypad_layout.dart';
 import '../policy/credential_rules.dart';
@@ -28,6 +29,7 @@ class VerifyEmailScreen extends StatefulWidget {
     required this.onSubmit,
     required this.onResend,
     required this.busy,
+    required this.onBack,
     this.problem,
   });
 
@@ -36,6 +38,13 @@ class VerifyEmailScreen extends StatefulWidget {
   final void Function(String code) onSubmit;
   final VoidCallback onResend;
   final bool busy;
+
+  /// Back to `1.2`. The account already exists by the time this screen is
+  /// drawn, so re-submitting the same address is refused by the provider —
+  /// which is the correct answer, and the address is the thing a player comes
+  /// back here to change.
+  final VoidCallback onBack;
+
   final String? problem;
 
   @override
@@ -93,71 +102,82 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     );
     final bool canResend = left == Duration.zero && !widget.busy;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: BrandShape.space4,
-        vertical: BrandShape.space5,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          // See `age_gate_screen.dart`: the copy scrolls at large text scales so
-          // the pad and the resend button stay where a thumb expects them.
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Text('Revisa tu correo', style: BrandText.sectionTitle()),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        DetailHeader(title: 'REVISA TU CORREO', onBack: widget.onBack),
+        // See `age_gate_screen.dart`: the copy scrolls at large text scales so
+        // the pad and the resend button stay where a thumb expects them.
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              BrandShape.space4,
+              BrandShape.space3,
+              BrandShape.space4,
+              0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  'Te enviamos un código de $_codeLength dígitos a ${widget.email}.',
+                  style: BrandText.body(),
+                ),
+                const SizedBox(height: BrandShape.space4),
+                CandySurface(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: BrandShape.space4,
+                    vertical: BrandShape.space3,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _typed.padRight(_codeLength, '·').split('').join(' '),
+                    key: const Key('verify-code'),
+                    style: BrandText.numeral(28),
+                  ),
+                ),
+                if (widget.problem != null) ...<Widget>[
                   const SizedBox(height: BrandShape.space2),
                   Text(
-                    'Te enviamos un código de $_codeLength dígitos a ${widget.email}.',
-                    style: BrandText.body(),
-                  ),
-                  const SizedBox(height: BrandShape.space4),
-                  CandySurface(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: BrandShape.space4,
-                      vertical: BrandShape.space3,
+                    widget.problem!,
+                    key: const Key('verify-problem'),
+                    style: BrandText.caption().copyWith(
+                      color: BrandColors.coral,
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      _typed.padRight(_codeLength, '·').split('').join(' '),
-                      key: const Key('verify-code'),
-                      style: BrandText.numeral(28),
-                    ),
-                  ),
-                  if (widget.problem != null) ...<Widget>[
-                    const SizedBox(height: BrandShape.space2),
-                    Text(
-                      widget.problem!,
-                      key: const Key('verify-problem'),
-                      style: BrandText.caption().copyWith(
-                        color: BrandColors.coral,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: BrandShape.space3),
-                  Text(
-                    canResend
-                        ? 'No llegó nada.'
-                        : 'Puedes pedir otro en ${CredentialRules.formatCooldown(left)}.',
-                    key: const Key('verify-cooldown'),
-                    style: BrandText.caption(),
                   ),
                 ],
-              ),
+                const SizedBox(height: BrandShape.space3),
+                Text(
+                  canResend
+                      ? 'No llegó nada.'
+                      : 'Puedes pedir otro en ${CredentialRules.formatCooldown(left)}.',
+                  key: const Key('verify-cooldown'),
+                  style: BrandText.caption(),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: BrandShape.space3),
-          Keypad(layout: KeypadLayout.otp, onKeyPressed: _onKey),
-          const SizedBox(height: BrandShape.space3),
-          BrandButton.secondary(
-            label: 'Enviar otro código',
-            onPressed: canResend ? widget.onResend : () {},
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            BrandShape.space4,
+            BrandShape.space3,
+            BrandShape.space4,
+            BrandShape.space5,
           ),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Keypad(layout: KeypadLayout.otp, onKeyPressed: _onKey),
+              const SizedBox(height: BrandShape.space3),
+              BrandButton.secondary(
+                label: 'Enviar otro código',
+                onPressed: canResend ? widget.onResend : () {},
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

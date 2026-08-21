@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart' show TextField, InputDecoration, InputBorder;
 import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
-import '../../../design/widgets/candy_surface.dart';
+import '../../../design/widgets/detail_header.dart';
 import '../policy/credential_rules.dart';
+import 'labelled_field.dart';
 
 /// `1.2 Crear cuenta`.
 ///
@@ -23,11 +23,24 @@ class CreateAccountScreen extends StatefulWidget {
     super.key,
     required this.onSubmit,
     required this.busy,
+    required this.onBack,
+    required this.onSignInInstead,
     this.problem,
   });
 
   final void Function(String email, String password) onSubmit;
   final bool busy;
+
+  /// Back to the gate. Re-answering the date is harmless: a band under the
+  /// threshold lands on consent, which is the routing this screen sits behind.
+  final VoidCallback onBack;
+
+  /// `1.1`. The design's footer — *"¿No tienes cuenta? Créala"* — read from the
+  /// other side, because this flow's one entrance is the profile's
+  /// `Crear cuenta` row: a player who already has an account arrives here, and
+  /// without this door the only way on is to create a second one.
+  final VoidCallback onSignInInstead;
+
   final String? problem;
 
   @override
@@ -55,7 +68,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
       if (!CredentialRules.looksLikeEmail(email)) {
         _local = 'Revisa el correo.';
       } else if (!CredentialRules.longEnough(password)) {
-        _local = 'La contraseña necesita al menos '
+        _local =
+            'La contraseña necesita al menos '
             '${CredentialRules.minimumPasswordLength} caracteres.';
       } else {
         _local = null;
@@ -66,84 +80,68 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     }
   }
 
-  Widget _field({
-    required String label,
-    required TextEditingController controller,
-    required Key key,
-    bool obscure = false,
-  }) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: <Widget>[
-      Text(label, style: BrandText.eyebrow()),
-      const SizedBox(height: BrandShape.space1),
-      CandySurface(
-        padding: const EdgeInsets.symmetric(
-          horizontal: BrandShape.space3,
-          vertical: BrandShape.space2,
-        ),
-        child: TextField(
-          key: key,
-          controller: controller,
-          obscureText: obscure,
-          enabled: !widget.busy,
-          style: BrandText.body(),
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            isDense: true,
-            contentPadding: EdgeInsets.zero,
-          ),
-        ),
-      ),
-    ],
-  );
-
   @override
   Widget build(BuildContext context) {
     final String? message = _local ?? widget.problem;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: BrandShape.space4,
-        vertical: BrandShape.space5,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text('Crear cuenta', style: BrandText.sectionTitle()),
-            const SizedBox(height: BrandShape.space2),
-            Text(
-              'Con una cuenta tus retos te siguen a otro teléfono.',
-              style: BrandText.body(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        DetailHeader(title: 'CREAR CUENTA', onBack: widget.onBack),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              BrandShape.space4,
+              BrandShape.space3,
+              BrandShape.space4,
+              BrandShape.space5,
             ),
-            const SizedBox(height: BrandShape.space4),
-            _field(
-              label: 'CORREO',
-              controller: _email,
-              key: const Key('create-account-email'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  'Con una cuenta tus retos te siguen a otro teléfono.',
+                  style: BrandText.body(),
+                ),
+                const SizedBox(height: BrandShape.space4),
+                LabelledField(
+                  label: 'CORREO',
+                  controller: _email,
+                  fieldKey: const Key('create-account-email'),
+                  enabled: !widget.busy,
+                ),
+                const SizedBox(height: BrandShape.space3),
+                LabelledField(
+                  label: 'CONTRASEÑA',
+                  controller: _password,
+                  fieldKey: const Key('create-account-password'),
+                  obscure: true,
+                  enabled: !widget.busy,
+                ),
+                if (message != null) ...<Widget>[
+                  const SizedBox(height: BrandShape.space3),
+                  Text(
+                    message,
+                    key: const Key('create-account-problem'),
+                    style: BrandText.caption().copyWith(
+                      color: BrandColors.coral,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: BrandShape.space5),
+                BrandButton.primary(
+                  label: widget.busy ? 'Creando…' : 'Crear cuenta',
+                  onPressed: widget.busy ? () {} : _submit,
+                ),
+                const SizedBox(height: BrandShape.space2),
+                BrandButton.text(
+                  label: 'Ya tengo cuenta',
+                  onPressed: widget.onSignInInstead,
+                ),
+              ],
             ),
-            const SizedBox(height: BrandShape.space3),
-            _field(
-              label: 'CONTRASEÑA',
-              controller: _password,
-              key: const Key('create-account-password'),
-              obscure: true,
-            ),
-            if (message != null) ...<Widget>[
-              const SizedBox(height: BrandShape.space3),
-              Text(
-                message,
-                key: const Key('create-account-problem'),
-                style: BrandText.caption().copyWith(color: BrandColors.coral),
-              ),
-            ],
-            const SizedBox(height: BrandShape.space5),
-            BrandButton.primary(
-              label: widget.busy ? 'Creando…' : 'Crear cuenta',
-              onPressed: widget.busy ? () {} : _submit,
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
