@@ -31,6 +31,11 @@ const List<String> _solvingSurfaces = <String>[
   'round',
   // `0.3 Primer reto` — a fixed teaching item, and still an item.
   'first item',
+  // `0.5 Calibración reactivo`. The design draws a 52px Aki in its header,
+  // beside the skip control; this rule is why she is not there. A probe is
+  // still solving, and the strip that says how many are left is the one
+  // number a solving surface may show.
+  'calibración · reactivo',
   // Every board, including the sopa de letras. `puzzle · solved` is not one:
   // the solving is over, which is exactly when she is allowed.
   'puzzle · kenken',

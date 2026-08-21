@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
+import '../../../content/pack_reader.dart';
+import '../../home/data/series_cursor_store.dart';
 import '../../home/ui/home_route.dart';
 import '../../splash/splash_screen.dart';
 import '../data/onboarding_store.dart';
@@ -23,6 +27,9 @@ class FirstRunGate extends StatefulWidget {
     super.key,
     this.store = const OnboardingStore(),
     this.home = const HomeRoute(),
+    this.reader = const PackReader(),
+    this.seriesCursor = const SeriesCursorStore(),
+    this.onCreateAccount,
     this.splashFloor = defaultSplashFloor,
   });
 
@@ -46,6 +53,21 @@ class FirstRunGate extends StatefulWidget {
   /// Injected so a test can walk the first run without reaching for the bundled
   /// pack, and so this file does not have to know how the home is assembled.
   final Widget home;
+
+  /// Where the first run's probe reads its items. Injected for the same reason
+  /// [home] is.
+  final PackReader reader;
+
+  /// The cursor the probe advances so the home does not re-serve what it asked.
+  final SeriesCursorStore seriesCursor;
+
+  /// Opens the account flow from `0.7`, when a build has one.
+  ///
+  /// **Null draws no button there** (DR-P2). It is wired through this gate
+  /// rather than handed to the flow directly because completing the run is the
+  /// gate's job and nobody else's: a player who leaves for the account flow has
+  /// seen the whole first run, so the flag is recorded before they go.
+  final VoidCallback? onCreateAccount;
 
   @override
   State<FirstRunGate> createState() => _FirstRunGateState();
@@ -96,8 +118,24 @@ class _FirstRunGateState extends State<FirstRunGate> {
       // placeholder standing in for a treatment that existed the whole time.
       return const SplashScreen(variant: SplashVariant.brandGreen);
     }
+    final VoidCallback? create = widget.onCreateAccount;
+
     return complete
         ? widget.home
-        : OnboardingFlow(onComplete: _finishFirstRun);
+        : OnboardingFlow(
+            onComplete: _finishFirstRun,
+            reader: widget.reader,
+            seriesCursor: widget.seriesCursor,
+            onCreateAccount: create == null
+                ? null
+                : () {
+                    // Recorded first, for the same reason `_finishFirstRun`
+                    // records before showing the home: the run is over either
+                    // way, and showing it again after an account is made would
+                    // be the app forgetting.
+                    unawaited(widget.store.markComplete());
+                    create();
+                  },
+          );
   }
 }
