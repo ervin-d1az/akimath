@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import '../../../content/model/item.dart';
 import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
+import '../../home/data/series_cursor_store.dart';
 import '../../shell/ui/app_shell.dart';
 import '../policy/calibration.dart';
 import 'calibration_intro_screen.dart';
@@ -65,6 +68,7 @@ class OnboardingFlow extends StatefulWidget {
     required this.onComplete,
     this.onCreateAccount,
     this.reader = const PackReader(),
+    this.seriesCursor = const SeriesCursorStore(),
   });
 
   /// Called once the run is over. The caller records the flag and shows the
@@ -83,6 +87,17 @@ class OnboardingFlow extends StatefulWidget {
   /// Injected, so a test walks the run without reaching for
   /// `assets/packs/starter.json`.
   final PackReader reader;
+
+  /// The cursor the home reads to decide which items it has not served yet.
+  ///
+  /// **The probe writes to it, because the probe serves items.** It takes the
+  /// pack's first ten; the home previews `pack.items.first` as `RETO DEL DÍA`
+  /// and opens its first series at `seriesPlan(pack.items, from: 0)`. Without
+  /// this the player would meet all ten again on the very next screen, which is
+  /// the `7 + 6` defect `FirstItemScreen` records — the teaching item was the
+  /// pack's first, so it was solved in the tutorial and met twice more one tap
+  /// later.
+  final SeriesCursorStore seriesCursor;
 
   @override
   State<OnboardingFlow> createState() => _OnboardingFlowState();
@@ -133,12 +148,20 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             : OnboardingStep.calibrationIntro,
       );
 
-  void _afterProbe(CalibrationOutcome outcome) => setState(() {
-        _outcome = outcome;
-        _step = outcome.hasSomethingToReport
-            ? OnboardingStep.result
-            : OnboardingStep.saveProgress;
-      });
+  void _afterProbe(CalibrationOutcome outcome) {
+    // **What was answered, not what was planned.** The cursor counts items
+    // *served*, so a probe left after four advances by four and the other six
+    // are still the player's to meet. Not awaited: the home re-reads the cursor
+    // on its own launch, and a write that failed costs a repeat rather than a
+    // stuck screen.
+    unawaited(widget.seriesCursor.advance(outcome.answered));
+    setState(() {
+      _outcome = outcome;
+      _step = outcome.hasSomethingToReport
+          ? OnboardingStep.result
+          : OnboardingStep.saveProgress;
+    });
+  }
 
   @override
   Widget build(BuildContext context) => switch (_step) {

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/features/home/data/series_cursor_store.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/onboarding/data/onboarding_store.dart';
@@ -323,6 +324,41 @@ void main() {
       );
       expect(find.text('DÍA'), findsNothing);
       expect(find.text('DÍAS'), findsNothing);
+    });
+
+    testWidgets('the home does not re-serve what the probe already asked',
+        (WidgetTester tester) async {
+      // **The `7 + 6` defect, ten times over.** The probe takes the pack's
+      // first ten items; the home previews `pack.items.first` as RETO DEL DÍA
+      // and opens its first series at `seriesPlan(pack.items, from: 0)`. Left
+      // alone, a player who finished calibration would meet every one of those
+      // ten again on the next screen. The probe therefore advances the same
+      // cursor a finished series advances.
+      await _pump(tester);
+      await _walkTeachingItem(tester);
+
+      await tester.tap(find.text('Va, empecemos'));
+      await tester.pumpAndSettle();
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+
+      expect(await const SeriesCursorStore().read(), 1);
+    });
+
+    testWidgets('and a probe nobody answered advances it by nothing',
+        (WidgetTester tester) async {
+      // The control. The cursor counts items *served*, and skipping serves
+      // none — advancing on the skip would silently cost the player the first
+      // ten items of their pack.
+      await _pump(tester);
+      await _walkTeachingItem(tester);
+
+      await tester.tap(find.text('Saltar por ahora'));
+      await tester.pumpAndSettle();
+
+      expect(await const SeriesCursorStore().read(), 0);
     });
 
     testWidgets('a build with no account flow draws no green button on 0.7',

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../../../content/pack_reader.dart';
+import '../../home/data/series_cursor_store.dart';
 import '../../home/ui/home_route.dart';
 import '../../splash/splash_screen.dart';
 import '../data/onboarding_store.dart';
@@ -27,6 +28,7 @@ class FirstRunGate extends StatefulWidget {
     this.store = const OnboardingStore(),
     this.home = const HomeRoute(),
     this.reader = const PackReader(),
+    this.seriesCursor = const SeriesCursorStore(),
     this.onCreateAccount,
     this.splashFloor = defaultSplashFloor,
   });
@@ -55,6 +57,9 @@ class FirstRunGate extends StatefulWidget {
   /// Where the first run's probe reads its items. Injected for the same reason
   /// [home] is.
   final PackReader reader;
+
+  /// The cursor the probe advances so the home does not re-serve what it asked.
+  final SeriesCursorStore seriesCursor;
 
   /// Opens the account flow from `0.7`, when a build has one.
   ///
@@ -120,6 +125,7 @@ class _FirstRunGateState extends State<FirstRunGate> {
         : OnboardingFlow(
             onComplete: _finishFirstRun,
             reader: widget.reader,
+            seriesCursor: widget.seriesCursor,
             onCreateAccount: create == null
                 ? null
                 : () {

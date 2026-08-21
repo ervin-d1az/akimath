@@ -1,4 +1,7 @@
 import 'package:akimath_app/content/model/item.dart';
+import 'package:akimath_app/content/model/pack.dart';
+import 'package:akimath_app/content/pack_reader.dart';
+import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/features/onboarding/policy/calibration.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,7 +21,63 @@ List<Item> _pack(int count) => <Item>[
         ),
     ];
 
+/// What an arithmetic prompt reads as, which is what a player recognises.
+///
+/// **The answer is not identity here.** `7 + 6` and `5 + 8` are both `13` and
+/// are two different challenges; comparing the answers would call them the same
+/// item and the test would be about arithmetic rather than about repetition.
+String _prompt(Stimulus stimulus) => switch (stimulus) {
+      ArithmeticStimulus(:final List<PromptToken> prompt) => prompt
+          .map((PromptToken token) => switch (token) {
+                TextToken(:final String value) => value,
+                OperatorToken(:final String glyph) => glyph,
+                FractionToken(
+                  :final String numerator,
+                  :final String denominator,
+                ) =>
+                  '$numerator/$denominator',
+              })
+          .join(' '),
+      _ => '',
+    };
+
 void main() {
+  group('the probe never asks the item the tutorial already asked', () {
+    test('the shipped pack does not hold the teaching item', () async {
+      // **The `7 + 6` defect, guarded at the other end.**
+      // `FirstItemScreen.teachingItem` is `5 + 8` precisely because the pack's
+      // first item *was* the tutorial's, so a new player solved it and met it
+      // twice more one screen later. The probe takes the pack's first ten,
+      // which is exactly where that would resurface the day somebody edits the
+      // constant back — and no other test would see it, because every other
+      // one hands this screen its item.
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final Pack pack = await const PackReader().load();
+      final List<Item> plan = calibrationPlan(pack.items);
+
+      expect(plan, isNotEmpty, reason: 'the shipped pack yielded no probe');
+      expect(
+        plan.map((Item item) => _prompt(item.stimulus)),
+        isNot(contains(_prompt(FirstItemScreen.teachingItem.stimulus))),
+      );
+    });
+
+    test('and the reader it uses can see a repeat when there is one', () async {
+      // PROC-11's control: without it, the assertion above passes for a
+      // `_prompt` that returns the empty string for everything.
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final Pack pack = await const PackReader().load();
+      final List<Item> plan = calibrationPlan(pack.items);
+
+      expect(_prompt(FirstItemScreen.teachingItem.stimulus), '5 + 8 =');
+      expect(
+        plan.map((Item item) => _prompt(item.stimulus)),
+        contains('7 + 6 ='),
+        reason: 'the pack no longer opens with the item this rule is about',
+      );
+    });
+  });
+
   group('the probe asks ten at most', () {
     test('a long pack yields exactly ten, in pack order', () {
       final List<Item> plan = calibrationPlan(_pack(70));
