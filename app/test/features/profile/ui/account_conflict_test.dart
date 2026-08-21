@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:akimath_app/api/api_client.dart';
 import 'package:akimath_app/api/me.dart';
 import 'package:akimath_app/features/account/data/player_id_store.dart';
@@ -41,16 +43,55 @@ Me _profile(String playerId) => Me(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  late List<String> probed;
+  late List<String> linked;
+  late List<LinkedSession?> sessions;
+
   // The route reads four device stores on every visit. An in-memory backend
   // keeps them from reaching a plugin that is not there — the route survives
   // either way, and the warnings it prints would otherwise bury a real one.
   setUp(() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
+    probed = <String>[];
+    linked = <String>[];
+    sessions = <LinkedSession?>[];
   });
 
-  late List<String> probed;
-  late List<LinkedSession?> sessions;
+  /// Builds the route, with both requests as closures the test drives.
+  ///
+  /// Every request travels as a closure for the reason the rest of this route's
+  /// do: a real socket inside a fake-async zone hangs on `!timersPending`.
+  Widget routeFor(
+    LinkedSession? session, {
+    required Future<LinkResult> Function() link,
+    required Future<MeResult> Function() probe,
+  }) => MaterialApp(
+    home: ProfileRoute(
+      session: session,
+      playerIds: InMemoryPlayerIdStore(_devicePlayer),
+      authBaseUrl: 'https://auth.example/neondb/auth',
+      now: () => DateTime.utc(2026, 8, 20),
+      onSessionChanged: sessions.add,
+      // **Injected so this route opens no socket.** A conflicting account has
+      // no player, so `HistoryState.empty` is also the truthful answer — and it
+      // offers no retry of its own, which keeps the one these tests look for
+      // unambiguous.
+      fetchHistory: (String accessToken) async => const HistoryNoPlayer(),
+      link: ({
+        required String accessToken,
+        required String playerId,
+        required AgeBand ageBand,
+      }) {
+        linked.add(accessToken);
+        return link();
+      },
+      whoAmI: (String accessToken) {
+        probed.add(accessToken);
+        return probe();
+      },
+    ),
+  );
 
   /// Pumps the route with no session, then with one, and settles.
   ///
@@ -64,31 +105,10 @@ void main() {
     required LinkResult Function() link,
     required MeResult Function() probe,
   }) async {
-    probed = <String>[];
-    sessions = <LinkedSession?>[];
-
-    Widget route(LinkedSession? session) => MaterialApp(
-      home: ProfileRoute(
-        session: session,
-        playerIds: InMemoryPlayerIdStore(_devicePlayer),
-        authBaseUrl: 'https://auth.example/neondb/auth',
-        now: () => DateTime.utc(2026, 8, 20),
-        onSessionChanged: sessions.add,
-        // **Injected so this route opens no socket.** A conflicting account
-        // has no player, so `HistoryState.empty` is also the truthful answer —
-        // and it offers no retry of its own, which keeps the one this test
-        // looks for unambiguous.
-        fetchHistory: (String accessToken) async => const HistoryNoPlayer(),
-        link: ({
-          required String accessToken,
-          required String playerId,
-          required AgeBand ageBand,
-        }) async => link(),
-        whoAmI: (String accessToken) async {
-          probed.add(accessToken);
-          return probe();
-        },
-      ),
+    Widget route(LinkedSession? session) => routeFor(
+      session,
+      link: () async => link(),
+      probe: () async => probe(),
     );
 
     await tester.pumpWidget(route(null));
@@ -176,6 +196,77 @@ void main() {
 
     expect(probed, isEmpty);
     expect(find.textContaining('Tus retos se guardan'), findsOneWidget);
+  });
+
+  testWidgets('asking again after a mismatch links again, it does not ask who I am',
+      (WidgetTester tester) async {
+    // **The two are different questions and the wrong one answers wrongly.** A
+    // mismatch whose account holds no player comes back from `GET /me` as
+    // `noPlayer` — *"Cuenta lista. Falta vincular un jugador"* — which is a
+    // cheerful way of saying the link that just failed has not been tried.
+    await signIn(
+      tester,
+      link: () => const LinkConflict('one of the two'),
+      probe: () => const MeUnreachable('no route to host'),
+    );
+    expect(linked, hasLength(1));
+    final int probesBefore = probed.length;
+
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+
+    expect(linked, hasLength(2), reason: 'the retry re-runs the link');
+    expect(
+      probed.length,
+      probesBefore + 1,
+      reason: 'the one extra probe is the new conflict refining, not a lookup',
+    );
+    expect(find.textContaining('Falta vincular'), findsNothing);
+  });
+
+  testWidgets('a probe answering after the account changed is dropped',
+      (WidgetTester tester) async {
+    // **`mounted` stopped being enough the moment there were two awaits.** The
+    // shell owns the session and this root stays alive behind an `IndexedStack`,
+    // so a second account can arrive while the first one's probe is still out.
+    // Writing the old verdict over the new session would put a conflict banner
+    // on an account that never had one (PROC-13).
+    final Completer<MeResult> firstProbe = Completer<MeResult>();
+    // The stalled account conflicts and its probe never answers; the account
+    // that replaces it links cleanly, so anything conflict-shaped left on
+    // screen afterwards came from the abandoned request.
+    Widget route(LinkedSession? session, {required bool stall}) => routeFor(
+      session,
+      link: () async => stall
+          ? const LinkConflict('that player belongs to another account')
+          : LinkDone(_profile(_devicePlayer)),
+      probe: () => stall ? firstProbe.future : throw StateError('not asked'),
+    );
+
+    await tester.pumpWidget(route(null, stall: true));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(route(_accountB, stall: true));
+    await tester.pump();
+
+    // A different account signs in while that probe is still in flight.
+    const LinkedSession accountC = LinkedSession(
+      email: 'tercera@ejemplo.com',
+      accessToken: 'account.c.token',
+      ageBand: AgeBand.adult,
+    );
+    await tester.pumpWidget(route(accountC, stall: false));
+    await tester.pumpAndSettle();
+
+    firstProbe.complete(const MeNoPlayer());
+    await tester.pumpAndSettle();
+
+    expect(find.text('tercera@ejemplo.com'), findsOneWidget);
+    expect(find.textContaining('Tus retos se guardan'), findsOneWidget);
+    expect(
+      find.textContaining('es de otra cuenta'),
+      findsNothing,
+      reason: 'account B´s verdict must not land on account C',
+    );
   });
 
   testWidgets('a conflict never opens the erasure door', (WidgetTester tester) async {
