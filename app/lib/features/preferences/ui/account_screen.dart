@@ -5,6 +5,7 @@ import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/detail_header.dart';
 import '../../../design/widgets/settings_row.dart';
 import '../../../design/widgets/candy_surface.dart';
+import '../../states/policy/account_state.dart';
 import '../policy/erasure.dart';
 
 /// `4.3 Cuenta` — the address, the two acts on it, and the one way out.
@@ -102,7 +103,7 @@ class AccountScreen extends StatelessWidget {
               if (signOut != null) ...<Widget>[
                 const SizedBox(height: BrandShape.space3),
                 SettingsRow(
-                  label: 'Cerrar sesión',
+                  label: signOutDoorLabel,
                   onOpen: signOut,
                   showChevron: false,
                 ),

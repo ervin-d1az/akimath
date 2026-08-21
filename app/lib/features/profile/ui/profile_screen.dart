@@ -59,6 +59,7 @@ class ProfileScreen extends StatelessWidget {
     this.onSignIn,
     this.onRetryAccount,
     this.onRetryHistory,
+    this.onSignOut,
   });
 
   /// The linked account's address, once there is one.
@@ -99,6 +100,13 @@ class ProfileScreen extends StatelessWidget {
   /// Offered only where retrying could change the answer.
   final VoidCallback? onRetryAccount;
 
+  /// Leaves the account, where doing so is the way out.
+  ///
+  /// **Present only when [accountDoorFor] says so** — the caller asks the
+  /// policy, this screen only draws what it was handed. Signing out is always
+  /// *possible* with a session; it is the answer to exactly one state.
+  final VoidCallback? onSignOut;
+
   /// Offered only where [canRetryHistory] says asking again could answer
   /// differently — the screen does not decide that, it asks.
   final VoidCallback? onRetryHistory;
@@ -133,6 +141,20 @@ class ProfileScreen extends StatelessWidget {
                 onRetry: onRetryAccount,
               ),
             ),
+            // **The conflict this device can resolve, and it gets the same
+            // shape the refused session gets.** A chip inside the banner was
+            // tried and does not fit: at textScaler 1.3 the row overflowed by
+            // 65 px and the chip fell under the 48 px floor, because a banner
+            // action cannot wrap. A full-width door is also the more findable
+            // of the two, and it is already this screen's idiom for *"a state
+            // with a way out"*.
+            if (onSignOut != null) ...<Widget>[
+              const SizedBox(height: BrandShape.space3),
+              BrandButton.secondary(
+                label: signOutDoorLabel,
+                onPressed: onSignOut!,
+              ),
+            ],
             // **A refused session is the one state with an address and a way
             // out.** The section above it says *"Vuelve a entrar"* and, until
             // this, offered nothing that could — the door required there to be

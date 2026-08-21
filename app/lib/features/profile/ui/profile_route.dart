@@ -313,11 +313,41 @@ class _ProfileRouteState extends State<ProfileRoute> {
       playerId: playerId,
       ageBand: session.ageBand,
     );
-    if (!mounted) {
+    if (!_stillOn(session)) {
       return;
     }
-    setState(() => _accountState = linkStateFor(linked));
+    if (linked is! LinkConflict) {
+      setState(() => _accountState = linkStateFor(linked));
+      return;
+    }
+    await _refineConflict(session, playerId);
   }
+
+  /// Asks which of the two conflicts the 409 was.
+  ///
+  /// **A second round trip, and only on the path that needs one.** The 409's
+  /// body distinguishes them in an English `message` and nothing else, so
+  /// reading it would let a copy edit on the server change what a player is
+  /// told. `GET /me` answers the same question in the contract's own terms —
+  /// see `conflictStateFor` for why the inference is exact.
+  Future<void> _refineConflict(LinkedSession session, String playerId) async {
+    final MeResult probe = await _whoAmI(session.accessToken);
+    if (!_stillOn(session)) {
+      return;
+    }
+    setState(() => _accountState =
+        conflictStateFor(probe: probe, devicePlayerId: playerId));
+  }
+
+  /// Whether the answer that just arrived is still about the session on screen.
+  ///
+  /// **`mounted` is not enough once there are two awaits.** A session can
+  /// arrive while the probe is in flight — the shell holds it and this root
+  /// stays alive behind an `IndexedStack` — and writing the old session's
+  /// verdict over the new one's would put a conflict banner on an account that
+  /// never had a conflict (PROC-13).
+  bool _stillOn(LinkedSession session) =>
+      mounted && widget.session?.accessToken == session.accessToken;
 
   Future<LinkResult> _linkOverASocket({
     required String accessToken,
@@ -577,6 +607,28 @@ class _ProfileRouteState extends State<ProfileRoute> {
       widget.authBaseUrl.isNotEmpty &&
       (widget.session == null || _accountState == AccountState.rejected);
 
+  /// What asking again should ask, where asking again is offered at all.
+  ///
+  /// **A refused link is retried by linking, not by `GET /me`.** The two are
+  /// different questions and the wrong one answers wrongly: a mismatch whose
+  /// account holds no player would come back `noPlayer` — *"Cuenta lista. Falta
+  /// vincular un jugador"* — which is a cheerful way of saying the link that
+  /// just failed has not been tried.
+  VoidCallback? get _accountRetry {
+    final LinkedSession? session = widget.session;
+    if (session == null) {
+      return null;
+    }
+    return switch (accountDoorFor(_accountState)) {
+      AccountDoor.retry when _accountState == AccountState.mismatch =>
+        () => unawaited(_link(session)),
+      AccountDoor.retry ||
+      // `4.10` needs the retry to hand on to the screen it opens.
+      AccountDoor.detail => () => unawaited(_askWhoIAm(session.accessToken)),
+      AccountDoor.none || AccountDoor.signOut => null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     // **`noAccount` before anything else.** With no session there is no request
@@ -604,9 +656,14 @@ class _ProfileRouteState extends State<ProfileRoute> {
             : null,
         // Only offered where retrying could change the answer. A retry on a
         // refused session would fetch the same refusal.
-        onRetryAccount: _accountState == AccountState.offline ||
-                _accountState == AccountState.serverError
-            ? () => unawaited(_askWhoIAm(widget.session!.accessToken))
+        onRetryAccount: _accountRetry,
+        // **Offered where the policy says it is the way out, not wherever it
+        // is possible.** Signing out works with any session; it *answers*
+        // exactly one state — the progress on this phone belonging to another
+        // account — and a door on every screen is a door nobody reads. Ajustes
+        // keeps the unconditional row.
+        onSignOut: accountDoorFor(_accountState) == AccountDoor.signOut
+            ? _signOut
             : null,
         // Absent rather than broken when the build was given no endpoints.
         onCreateAccount: _offerToCreate
