@@ -41,7 +41,8 @@ class _Provider implements AuthApi {
     required String code,
   }) async {
     calls.add('verifyEmail');
-    return verifyRefusal ?? const AuthOk<AuthSession>(AuthSession('session_token=abc'));
+    return verifyRefusal ??
+        const AuthOk<AuthSession>(AuthSession('session_token=abc'));
   }
 
   @override
@@ -54,9 +55,11 @@ class _Provider implements AuthApi {
 extension on WidgetTester {
   /// Presses a pad key by its id, the way the round and puzzle suites do.
   Future<void> pressKey(String id) async {
-    await tap(find.byWidgetPredicate(
-      (Widget w) => w is KeypadKeyView && w.data.id == id,
-    ));
+    await tap(
+      find.byWidgetPredicate(
+        (Widget w) => w is KeypadKeyView && w.data.id == id,
+      ),
+    );
     await pump();
   }
 
@@ -75,17 +78,19 @@ void main() {
   Future<void> pumpFlow(WidgetTester tester, {String? born}) async {
     linked = null;
     gaveUp = false;
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: AuthFlow(
-          auth: provider,
-          callbackUrl: 'akimath://verified',
-          today: DateTime.utc(2026, 8, 19),
-          onLinked: (LinkedAccount account) => linked = account,
-          onGaveUp: () => gaveUp = true,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AuthFlow(
+            auth: provider,
+            callbackUrl: 'akimath://verified',
+            today: DateTime.utc(2026, 8, 19),
+            onLinked: (LinkedAccount account) => linked = account,
+            onGaveUp: () => gaveUp = true,
+          ),
         ),
       ),
-    ));
+    );
     if (born != null) {
       await tester.typeDigits(born);
       await tester.tap(find.text('Continuar'));
@@ -93,21 +98,25 @@ void main() {
     }
   }
 
-  testWidgets('the age gate stands in front, and a child never reaches the form',
-      (WidgetTester tester) async {
-    provider = _Provider();
-    await pumpFlow(tester, born: '19082016'); // 10 years old
+  testWidgets(
+    'the age gate stands in front, and a child never reaches the form',
+    (WidgetTester tester) async {
+      provider = _Provider();
+      await pumpFlow(tester, born: '19082016'); // 10 years old
 
-    expect(find.text('Sigue jugando'), findsOneWidget);
-    expect(find.text('Crear cuenta'), findsNothing);
+      expect(find.text('Sigue jugando'), findsOneWidget);
+      expect(find.text('Crear cuenta'), findsNothing);
 
-    // `req-age-gate`: no path from here reaches the form.
-    await tester.tap(find.text('Volver a los retos'));
-    await tester.pumpAndSettle();
-    expect(gaveUp, isTrue);
-  });
+      // `req-age-gate`: no path from here reaches the form.
+      await tester.tap(find.text('Volver a los retos'));
+      await tester.pumpAndSettle();
+      expect(gaveUp, isTrue);
+    },
+  );
 
-  testWidgets('a band at the threshold reaches the form', (WidgetTester tester) async {
+  testWidgets('a band at the threshold reaches the form', (
+    WidgetTester tester,
+  ) async {
     provider = _Provider();
     await pumpFlow(tester, born: '19082013'); // 13 exactly, today
 
@@ -115,8 +124,9 @@ void main() {
     expect(find.text('Sigue jugando'), findsNothing);
   });
 
-  testWidgets('an impossible date is refused without leaving the gate',
-      (WidgetTester tester) async {
+  testWidgets('an impossible date is refused without leaving the gate', (
+    WidgetTester tester,
+  ) async {
     provider = _Provider();
     await pumpFlow(tester);
 
@@ -128,14 +138,20 @@ void main() {
     expect(find.text('Crear cuenta'), findsNothing);
   });
 
-  testWidgets('the whole way through: account, code, token', (WidgetTester tester) async {
+  testWidgets('the whole way through: account, code, token', (
+    WidgetTester tester,
+  ) async {
     provider = _Provider();
     await pumpFlow(tester, born: '14031990');
 
     await tester.enterText(
-        find.byKey(const Key('create-account-email')), 'alguien@ejemplo.com');
+      find.byKey(const Key('create-account-email')),
+      'alguien@ejemplo.com',
+    );
     await tester.enterText(
-        find.byKey(const Key('create-account-password')), 'una-contra-larga');
+      find.byKey(const Key('create-account-password')),
+      'una-contra-larga',
+    );
     await tester.tap(find.text('Crear cuenta').last);
     await tester.pumpAndSettle();
 
@@ -143,7 +159,7 @@ void main() {
     // another invalidated the first, and the player who typed the code that
     // arrived first was told it was wrong.
     expect(provider.calls, <String>['signUp']);
-    expect(find.text('Revisa tu correo'), findsOneWidget);
+    expect(find.text('REVISA TU CORREO'), findsOneWidget);
     expect(find.textContaining('alguien@ejemplo.com'), findsOneWidget);
 
     await tester.typeDigits('123456');
@@ -157,31 +173,39 @@ void main() {
     expect(linked!.ageBand, AgeBand.adult);
   });
 
-  testWidgets('a refusal is shown where it happened, in the provider\'s words',
-      (WidgetTester tester) async {
-    provider = _Provider(
-      signUpRefusal: const AuthRefused<Accepted>(
-        status: 400,
-        code: 'USER_ALREADY_EXISTS',
-        message: 'Ese correo ya existe.',
-      ),
-    );
-    await pumpFlow(tester, born: '14031990');
+  testWidgets(
+    'a refusal is shown where it happened, in the provider\'s words',
+    (WidgetTester tester) async {
+      provider = _Provider(
+        signUpRefusal: const AuthRefused<Accepted>(
+          status: 400,
+          code: 'USER_ALREADY_EXISTS',
+          message: 'Ese correo ya existe.',
+        ),
+      );
+      await pumpFlow(tester, born: '14031990');
 
-    await tester.enterText(
-        find.byKey(const Key('create-account-email')), 'alguien@ejemplo.com');
-    await tester.enterText(
-        find.byKey(const Key('create-account-password')), 'una-contra-larga');
-    await tester.tap(find.text('Crear cuenta').last);
-    await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('create-account-email')),
+        'alguien@ejemplo.com',
+      );
+      await tester.enterText(
+        find.byKey(const Key('create-account-password')),
+        'una-contra-larga',
+      );
+      await tester.tap(find.text('Crear cuenta').last);
+      await tester.pumpAndSettle();
 
-    // Still on the form, with the reason under it — not on the code screen.
-    expect(find.byKey(const Key('create-account-problem')), findsOneWidget);
-    expect(find.text('Ese correo ya existe.'), findsOneWidget);
-    expect(find.text('Revisa tu correo'), findsNothing);
-  });
+      // Still on the form, with the reason under it — not on the code screen.
+      expect(find.byKey(const Key('create-account-problem')), findsOneWidget);
+      expect(find.text('Ese correo ya existe.'), findsOneWidget);
+      expect(find.text('REVISA TU CORREO'), findsNothing);
+    },
+  );
 
-  testWidgets('a bad code keeps the code screen and says so', (WidgetTester tester) async {
+  testWidgets('a bad code keeps the code screen and says so', (
+    WidgetTester tester,
+  ) async {
     provider = _Provider(
       verifyRefusal: const AuthRefused<AuthSession>(
         status: 400,
@@ -192,9 +216,13 @@ void main() {
     await pumpFlow(tester, born: '14031990');
 
     await tester.enterText(
-        find.byKey(const Key('create-account-email')), 'alguien@ejemplo.com');
+      find.byKey(const Key('create-account-email')),
+      'alguien@ejemplo.com',
+    );
     await tester.enterText(
-        find.byKey(const Key('create-account-password')), 'una-contra-larga');
+      find.byKey(const Key('create-account-password')),
+      'una-contra-larga',
+    );
     await tester.tap(find.text('Crear cuenta').last);
     await tester.pumpAndSettle();
 
@@ -206,18 +234,107 @@ void main() {
     expect(linked, isNull);
   });
 
-  testWidgets('the form refuses a short password before any request',
-      (WidgetTester tester) async {
+  testWidgets('the form refuses a short password before any request', (
+    WidgetTester tester,
+  ) async {
     provider = _Provider();
     await pumpFlow(tester, born: '14031990');
 
     await tester.enterText(
-        find.byKey(const Key('create-account-email')), 'alguien@ejemplo.com');
-    await tester.enterText(find.byKey(const Key('create-account-password')), 'corta');
+      find.byKey(const Key('create-account-email')),
+      'alguien@ejemplo.com',
+    );
+    await tester.enterText(
+      find.byKey(const Key('create-account-password')),
+      'corta',
+    );
     await tester.tap(find.text('Crear cuenta').last);
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('create-account-problem')), findsOneWidget);
     expect(provider.calls, isEmpty);
+  });
+
+  testWidgets('an empty field is asked for a date, never accused of one', (
+    WidgetTester tester,
+  ) async {
+    provider = _Provider();
+    await pumpFlow(tester);
+
+    await tester.tap(find.text('Continuar'));
+    await tester.pump();
+
+    // **The message a player is left holding has to be true of what they see.**
+    // The flow lives in a tab an `IndexedStack` keeps alive, so this refusal
+    // survives a trip to another tab and back — measured, not assumed. Over an
+    // empty `DD/MM/AAAA` that made `Revisa la fecha.` an accusation about a
+    // date nobody had typed. A prompt is true however long it stays up.
+    expect(find.text('Escribe tu fecha de nacimiento.'), findsOneWidget);
+    expect(find.text('Revisa la fecha.'), findsNothing);
+  });
+
+  testWidgets(
+    'a date that was typed and is wrong is still told to be checked',
+    (WidgetTester tester) async {
+      provider = _Provider();
+      await pumpFlow(tester);
+
+      await tester.typeDigits('3002');
+      await tester.tap(find.text('Continuar'));
+      await tester.pump();
+
+      expect(find.text('Revisa la fecha.'), findsOneWidget);
+      expect(find.text('Escribe tu fecha de nacimiento.'), findsNothing);
+    },
+  );
+
+  testWidgets('the age gate has a way out, and it leaves the flow', (
+    WidgetTester tester,
+  ) async {
+    provider = _Provider();
+    await pumpFlow(tester);
+
+    await tester.tap(find.bySemanticsLabel('Volver'));
+    await tester.pumpAndSettle();
+
+    expect(gaveUp, isTrue);
+  });
+
+  testWidgets('back from the form returns to the gate', (
+    WidgetTester tester,
+  ) async {
+    provider = _Provider();
+    await pumpFlow(tester, born: '14031990');
+    expect(find.byKey(const Key('create-account-email')), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Volver'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('age-gate-date')), findsOneWidget);
+    expect(gaveUp, isFalse);
+  });
+
+  testWidgets('back from the code screen returns to the form', (
+    WidgetTester tester,
+  ) async {
+    provider = _Provider();
+    await pumpFlow(tester, born: '14031990');
+    await tester.enterText(
+      find.byKey(const Key('create-account-email')),
+      'alguien@ejemplo.com',
+    );
+    await tester.enterText(
+      find.byKey(const Key('create-account-password')),
+      'una-contra-larga',
+    );
+    await tester.tap(find.text('Crear cuenta').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('verify-code')), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Volver'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('create-account-email')), findsOneWidget);
+    expect(gaveUp, isFalse);
   });
 }

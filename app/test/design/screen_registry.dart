@@ -302,6 +302,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       child: AgeGateScreen(
         today: DateTime.utc(2026, 8, 19),
         onResolved: (AgeBand band, AgeGateRoute route) {},
+        onBack: () {},
       ),
     ),
   ),
@@ -312,7 +313,11 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'create account',
     build: () => AppShell(
-      child: CreateAccountScreen(onSubmit: (String email, String password) {}, busy: false),
+      child: CreateAccountScreen(
+        onSubmit: (String email, String password) {},
+        busy: false,
+        onBack: () {},
+      ),
     ),
   ),
   RegisteredScreen(
@@ -321,6 +326,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       child: CreateAccountScreen(
         onSubmit: (String email, String password) {},
         busy: false,
+        onBack: () {},
         problem: 'Ese correo ya tiene una cuenta.',
       ),
     ),
@@ -334,6 +340,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         onSubmit: (String _) {},
         onResend: () {},
         busy: false,
+        onBack: () {},
       ),
     ),
   ),

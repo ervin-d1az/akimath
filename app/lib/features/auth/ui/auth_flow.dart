@@ -59,17 +59,49 @@ class AuthFlow extends StatefulWidget {
 enum _Step { age, consent, create, verify }
 
 class _AuthFlowState extends State<AuthFlow> {
-  _Step _step = _Step.age;
+  /// The steps behind the one on screen, oldest first.
+  ///
+  /// **A stack rather than a predecessor per step**, because more than one
+  /// screen leads to the same place and "where you came from" is the only
+  /// answer a back control can give that is never surprising.
+  final List<_Step> _trail = <_Step>[_Step.age];
+
+  _Step get _step => _trail.last;
+
   AgeBand? _band;
   String _email = '';
   String? _problem;
   bool _busy = false;
   DateTime _codeIssuedAt = DateTime.now();
 
+  /// One rule: back is the step you came from, and behind the first one is the
+  /// way out of the flow entirely.
+  void _back() {
+    if (_trail.length == 1) {
+      widget.onGaveUp();
+      return;
+    }
+    setState(() {
+      _problem = null;
+      _trail.removeLast();
+    });
+  }
+
   void _resolved(AgeBand band, AgeGateRoute route) {
     setState(() {
       _band = band;
-      _step = route == AgeGateRoute.createAccount ? _Step.create : _Step.consent;
+      _problem = null;
+      if (route == AgeGateRoute.createAccount) {
+        _trail.add(_Step.create);
+        return;
+      }
+      // **Consent replaces the trail rather than extending it**, so
+      // `req-age-gate`'s "no path from here reaches 1.2" is true by
+      // construction — there is nothing behind consent to go back to, and the
+      // one control it draws leaves the flow.
+      _trail
+        ..clear()
+        ..add(_Step.consent);
     });
   }
 
@@ -109,13 +141,15 @@ class _AuthFlowState extends State<AuthFlow> {
     setState(() {
       _busy = false;
       _codeIssuedAt = DateTime.now();
-      _step = _Step.verify;
+      _trail.add(_Step.verify);
     });
   }
 
   Future<void> _requestCode({bool moveOn = false}) async {
     setState(() => _busy = true);
-    final AuthResult<Accepted> sent = await widget.auth.sendVerificationCode(_email);
+    final AuthResult<Accepted> sent = await widget.auth.sendVerificationCode(
+      _email,
+    );
     if (!mounted) {
       return;
     }
@@ -125,7 +159,7 @@ class _AuthFlowState extends State<AuthFlow> {
       if (_problem == null) {
         _codeIssuedAt = DateTime.now();
         if (moveOn) {
-          _step = _Step.verify;
+          _trail.add(_Step.verify);
         }
       }
     });
@@ -137,8 +171,10 @@ class _AuthFlowState extends State<AuthFlow> {
       _problem = null;
     });
 
-    final AuthResult<AuthSession> verified =
-        await widget.auth.verifyEmail(email: _email, code: code);
+    final AuthResult<AuthSession> verified = await widget.auth.verifyEmail(
+      email: _email,
+      code: code,
+    );
     if (!mounted) {
       return;
     }
@@ -150,24 +186,25 @@ class _AuthFlowState extends State<AuthFlow> {
       return;
     }
 
-    final AuthResult<String> token = await widget.auth.accessToken(verified.value);
+    final AuthResult<String> token = await widget.auth.accessToken(
+      verified.value,
+    );
     if (!mounted) {
       return;
     }
     if (token is! AuthOk<String>) {
       setState(() {
         _busy = false;
-        _problem = _explain(token) ?? 'La cuenta quedó lista pero no pudimos entrar.';
+        _problem =
+            _explain(token) ?? 'La cuenta quedó lista pero no pudimos entrar.';
       });
       return;
     }
 
     setState(() => _busy = false);
-    widget.onLinked(LinkedAccount(
-      accessToken: token.value,
-      ageBand: _band!,
-      email: _email,
-    ));
+    widget.onLinked(
+      LinkedAccount(accessToken: token.value, ageBand: _band!, email: _email),
+    );
   }
 
   /// A failure as something a person can read, or null if it was not one.
@@ -186,12 +223,17 @@ class _AuthFlowState extends State<AuthFlow> {
 
   @override
   Widget build(BuildContext context) => switch (_step) {
-    _Step.age => AgeGateScreen(today: widget.today, onResolved: _resolved),
+    _Step.age => AgeGateScreen(
+      today: widget.today,
+      onResolved: _resolved,
+      onBack: _back,
+    ),
     _Step.consent => TutorConsentScreen(onBack: widget.onGaveUp),
     _Step.create => CreateAccountScreen(
       onSubmit: _create,
       busy: _busy,
       problem: _problem,
+      onBack: _back,
     ),
     _Step.verify => VerifyEmailScreen(
       email: _email,
@@ -200,6 +242,7 @@ class _AuthFlowState extends State<AuthFlow> {
       onResend: _requestCode,
       busy: _busy,
       problem: _problem,
+      onBack: _back,
     ),
   };
 }
