@@ -182,7 +182,7 @@ class SkillMapScreen extends StatelessWidget {
           borderWidth: BrandShape.borderWidthSmallSurface,
           borderColor: skin.ink,
           borderDash:
-              skin.outline == MasteryOutline.dashed ? DashSpec.locked : null,
+              skin.outline == MasteryOutline.dashed ? _swatchDash : null,
           shadowOffset: Offset.zero,
           child: const SizedBox.shrink(),
         ),
@@ -197,6 +197,16 @@ class SkillMapScreen extends StatelessWidget {
   /// square (BRD-2c).
   static const double _swatch = 14;
   static const double _swatchRadius = 5;
+
+  /// The locked swatch's dash, scaled to the swatch (BRD-2c).
+  ///
+  /// **`DashSpec.locked` cannot be drawn this small.** Its 9-on/9-off period is
+  /// 18 and the swatch's whole outline is about 39, so three dashes land on the
+  /// corners: seen on an iPhone 17, the fourth legend entry was a broken curl
+  /// beside three clean squares. A node is 100 px wide and carries the same
+  /// pattern as some seventeen dashes, which is what "dashed" is supposed to
+  /// look like; at 3 and 3 the swatch gets thirteen and says the same thing.
+  static const DashSpec _swatchDash = DashSpec(on: 3, off: 3);
 
   Widget _nothingToMap() => Padding(
         padding: const EdgeInsets.only(top: BrandShape.space6),
