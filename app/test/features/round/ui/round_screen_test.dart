@@ -586,4 +586,84 @@ void main() {
       expect(outcome!.stumbleIndex, isNull);
     });
   });
+
+  group('the round reports the verdict it decided, for the local record', () {
+    testWidgets('onGraded fires once per answer with the verdict and the time',
+        (WidgetTester tester) async {
+      // **The seam `features/stats/` needs, and it exists so nobody grades
+      // twice.** `onAnswered` carries what the *server* needs and deliberately
+      // no verdict, because the frozen schema has nowhere to put one and the
+      // server regrades. A recorder calling `gradeItem` again at the call site
+      // would be a second decision about one answer — the exact defect
+      // `diagnose` was fixed for.
+      final List<(Verdict, Duration)> graded = <(Verdict, Duration)>[];
+      // Two instants: `initState` takes the first as the item's start, and
+      // `_submit` takes the second as the moment it was answered.
+      final List<DateTime> instants = <DateTime>[
+        DateTime(2026, 8, 20, 9),
+        DateTime(2026, 8, 20, 9, 0, 7),
+      ];
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(
+            items: _oneItem,
+            now: () => instants.isEmpty
+                ? DateTime(2026, 8, 20, 9, 0, 7)
+                : instants.removeAt(0),
+            onGraded: (Verdict verdict, Duration elapsed) =>
+                graded.add((verdict, elapsed)),
+          ),
+        ),
+      );
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+
+      expect(graded, hasLength(1));
+      expect(graded.single.$1, Verdict.correct);
+      expect(graded.single.$2, const Duration(seconds: 7));
+    });
+
+    testWidgets('a wrong answer is reported too', (WidgetTester tester) async {
+      // The control: a recorder fed only the wins would report 100% for ever.
+      final List<Verdict> graded = <Verdict>[];
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoundScreen(
+            items: _oneItem,
+            onGraded: (Verdict verdict, Duration elapsed) => graded.add(verdict),
+          ),
+        ),
+      );
+
+      for (final String id in <String>['9', 'submit']) {
+        await _press(tester, id);
+      }
+
+      expect(graded, <Verdict>[Verdict.wrong]);
+    });
+
+    testWidgets('a round with no recorder wired reports nothing',
+        (WidgetTester tester) async {
+      // **How the teaching item stays out of the figures.** `0.3` is built
+      // without a recorder, the same construction that keeps it out of the day
+      // log — there is nothing to record into rather than a rule to remember.
+      await _pump(tester);
+
+      for (final String id in <String>['4', '2', 'submit']) {
+        await _press(tester, id);
+      }
+
+      expect(find.byType(RoundScreen), findsOneWidget);
+    });
+  });
 }

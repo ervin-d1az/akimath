@@ -29,6 +29,7 @@ Future<void> _pump(
     Verdict.correct,
   ],
   Diagnosis? stumble,
+  int? stumbleIndex,
   VoidCallback? onDone,
 }) async {
   tester.view
@@ -46,6 +47,7 @@ Future<void> _pump(
           streakDays: streakDays,
           outcomes: outcomes,
           stumble: stumble,
+          stumbleIndex: stumbleIndex,
         ),
         onDone: onDone ?? () {},
       ),
@@ -207,6 +209,15 @@ void main() {
 
       expect(find.text('QUÉ SE TORCIÓ'), findsOneWidget);
       expect(find.text(_stumble.steps.single), findsOneWidget);
+    });
+
+    testWidgets('it names the item, counting from one', (WidgetTester tester) async {
+      // The design's copy says *"en el cuarto reto"*, and the round knows
+      // which. A player reading advice about a mistake needs to know which of
+      // five it was about.
+      await _pump(tester, stumble: _stumble, stumbleIndex: 3);
+
+      expect(find.text('Reto 4'), findsOneWidget);
     });
 
     testWidgets('and is absent when nothing went wrong',

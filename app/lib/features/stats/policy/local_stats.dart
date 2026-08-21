@@ -143,13 +143,6 @@ class LocalStats {
     );
   }
 
-  /// Nothing answered yet. What a new player's record adds up to.
-  static const LocalStats none = LocalStats._(
-    answered: 0,
-    correct: 0,
-    totalTime: Duration.zero,
-  );
-
   /// How many answers the window holds. Never more than [answersKept].
   final int answered;
 

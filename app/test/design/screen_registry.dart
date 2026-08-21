@@ -925,6 +925,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
           ],
           explain: 'La diferencia crece; no es la misma cada vez.',
         ),
+        stumbleIndex: 2,
       ),
       onDone: () {},
     ),

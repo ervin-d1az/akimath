@@ -28,6 +28,7 @@ class SeriesResult {
     required this.streakDays,
     this.outcomes = const <Verdict>[],
     this.stumble,
+    this.stumbleIndex,
   });
 
   final int correct;
@@ -52,6 +53,13 @@ class SeriesResult {
   /// copy. The block is absent either way: a heading over nothing is the thing
   /// `HISTORIAL` does not do on `4.1`.
   final Diagnosis? stumble;
+
+  /// Which item [stumble] came from, zero-based, from `RoundOutcome`.
+  ///
+  /// The design's copy names it — *"usaste diferencia constante en el cuarto
+  /// reto"* — and a player reading advice about a mistake needs to know which
+  /// of five it was about. Null leaves the card unnumbered rather than guessing.
+  final int? stumbleIndex;
 }
 
 /// `2.5 Resumen de serie` — the screen that makes a series a thing you finish.
@@ -330,6 +338,7 @@ class SeriesSummaryScreen extends StatelessWidget {
     if (stumble == null) {
       return const <Widget>[];
     }
+    final int? at = result.stumbleIndex;
     return <Widget>[
       const SizedBox(height: BrandShape.space3),
       CandySurface(
@@ -339,11 +348,21 @@ class SeriesSummaryScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'QUÉ SE TORCIÓ',
-              // Ink, not the default muted: `4.1`'s muted eyebrow sits on white,
-              // and the design sets this one on ink because the card is coral.
-              style: BrandText.eyebrow(color: BrandColors.ink),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    'QUÉ SE TORCIÓ',
+                    // Ink, not the default muted: `4.1`'s muted eyebrow sits on
+                    // white, and the design sets this one on ink because the
+                    // card is coral.
+                    style: BrandText.eyebrow(color: BrandColors.ink),
+                  ),
+                ),
+                if (at != null)
+                  // Counting from one, because a player counts from one.
+                  Text('Reto ${at + 1}', style: BrandText.eyebrow(color: BrandColors.ink)),
+              ],
             ),
             for (final String step in stumble.steps) ...<Widget>[
               const SizedBox(height: BrandShape.space2),

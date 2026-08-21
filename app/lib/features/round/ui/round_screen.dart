@@ -43,6 +43,7 @@ class RoundScreen extends StatefulWidget {
     this.onClose,
     this.onFinished,
     this.onAnswered,
+    this.onGraded,
   });
 
   final List<Item> items;
@@ -112,6 +113,22 @@ class RoundScreen extends StatefulWidget {
   /// pack *is* its `(packId, index)` address. Nothing here knows what the
   /// caller does with it; `HomeRoute` journals it.
   final void Function(Item item, String answer, Duration elapsed)? onAnswered;
+
+  /// Reports the verdict **this device decided**, and how long the item took.
+  ///
+  /// **Separate from [onAnswered], and that is the whole reason it exists.**
+  /// That one carries what a *server* needs and deliberately no verdict: the
+  /// frozen schema has nowhere to put one and the server regrades from the item
+  /// it issued. This one carries what the device's own record needs. A recorder
+  /// hung off `onAnswered` would have to call `gradeItem` again, which is a
+  /// second decision about one answer — the exact defect `diagnose` was fixed
+  /// for.
+  ///
+  /// **Optional, and that is how the teaching item stays out of the figures.**
+  /// `0.3 Primer reto` is built without one, the same construction that keeps
+  /// it out of the day log: there is nothing to record into rather than a rule
+  /// somebody has to remember.
+  final void Function(Verdict verdict, Duration elapsed)? onGraded;
 
   @override
   State<RoundScreen> createState() => _RoundScreenState();
@@ -255,6 +272,7 @@ class _RoundScreenState extends State<RoundScreen> {
     final Verdict verdict = gradeItem(_item, _draft.text);
     final Duration elapsed = finishedAt.difference(_startedAt);
     widget.onAnswered?.call(_item, _draft.text, elapsed);
+    widget.onGraded?.call(verdict, elapsed);
     if (verdict == Verdict.correct) {
       _correct += 1;
     }
