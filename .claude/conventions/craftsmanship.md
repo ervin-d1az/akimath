@@ -4,7 +4,7 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Twenty-nine rule IDs — counting `FUN-1a` as the carve-out it
+This book starts small on purpose. Thirty-one rule IDs — counting `FUN-1a` as the carve-out it
 is rather than as a rule — every one of them describing code that is already on disk today, not
 a pattern we hope to have. It grows by **PROC-6** and no other way.
 
@@ -123,6 +123,29 @@ The one structural pattern the repo already commits to, on both sides of the sta
   it before relying on it; if it is not there, the missing gate is part of the change that needed
   it, because the next author will believe the comment too.
 
+## WIRE — What crosses between the stacks
+
+- **WIRE-1** NEVER branch on a server's human-readable `message`. The frozen `Error` shape is
+  `{error, message}`: `error` is the tag a client may switch on and `message` is prose for a
+  developer reading a log. A client that reads the sentence has coupled its behaviour to copy, so a
+  reword on the server silently changes what a player is told — a defect that passes every test on
+  both sides. Found in `f7-conflicto-de-cuenta`: `linkOutcome` refuses a link for **two** distinct
+  reasons and `conflictResponse` sends both as `already_linked`, with the difference surviving only
+  in English prose the client already held and was discarding.
+
+  When two outcomes genuinely have to be told apart, in order of preference: **derive it from
+  another contracted operation** if one answers the same question — the `GET /me` probe there is
+  *exact* rather than heuristic, because the server checks `playerForAccount` before
+  `accountForPlayer` and `GET /me` is `playerForAccount` — or **add a distinct `error` tag**, which
+  is cheaper than it looks and is measured rather than assumed: `ErrorSchema.error` is
+  `z.string()`, not an enum, so a new tag changes no schema, leaves `contract/openapi.json`
+  byte-identical, and needs no `allow-breaking-contract` label. What is never acceptable is a
+  client that says *"the message contains …"*.
+
+  **The state that claims the least is a real state**, not a placeholder. Where the direction
+  cannot be established, say only what the status code said; falling through to either specific
+  answer is inventing one, which is the failure being fixed rather than a smaller version of it.
+
 ## LANG — Language
 
 - **LANG-1** MUST: code, identifiers, file names, comments, doc comments, test names, commit
@@ -206,6 +229,18 @@ credit.
 
 - **BRD-2d** MUST: any interactive target is at least `BrandShape.minTouchTarget` (48 logical
   pixels) in both dimensions — keypad keys and puzzle-board cells alike.
+
+- **BRD-2e** MUST: **a banner action cannot wrap, so a long label does not belong in one.**
+  `InlineBanner` lays out glyph, `Flexible(Text)` and `BrandButton.text` in one `Row`; the button
+  is inflexible and its label is a single line, so once the label plus the message's longest word
+  exceed the width, the row overflows and the chip is squeezed under the 48 px floor. Measured in
+  `f7-conflicto-de-cuenta`: *"Cerrar sesión"* beside a two-line Spanish sentence overflowed by
+  **65 px** at textScaler 1.3 and failed `touch_target_test` as well as `screen_overflow_test`.
+  A one-word chip — *"Detalle"*, *"Reintentar"* — is what the banner is sized for. Anything longer
+  goes below the surface as a full-width `BrandButton`, which is the idiom `ProfileScreen` already
+  uses for the refused session's sign-in door. **Register the new state's screen before believing
+  it fits**: both gates read `app/test/design/screen_registry.dart`, and a state that is not in it
+  is a state neither gate has ever measured.
 
 ## GIT — Commits & branches
 
@@ -316,14 +351,18 @@ credit.
     exist. There is no endpoint, dev environment, deploy or database today, so on the server side
     tier 2 is currently unreachable and saying so is the correct outcome. "It should work" and "it
     compiles" are not evidence; neither is a passing suite that was never executed.
-  - `dart run dart_code_linter:metrics analyze lib` is **not evidence** at any tier.
-    `app/analysis_options.yaml` carries no `dart_code_linter:` block, so the tool has no rules and
-    no metrics enabled and exits 0 even on a file written to be awful — a check that can only ever
-    be green. It becomes evidence the day that block exists; note when adding it that at the tool's
-    documented defaults it flags four pre-existing files (`brand_drawing_painter.dart`,
-    `brand_typography.dart`, `theme.dart`, `character_sheet_screen.dart`), so turning it on means
-    clearing or explicitly accepting that baseline. `.github/workflows/ci.yml` omits the step for
-    this reason.
+  - **`dart run dart_code_linter:metrics analyze lib
+    --set-exit-on-violation-level=warning` is tier-1 evidence and is part of the everyday gate.**
+    This bullet said the opposite until 2026-08-21 and was stale: it read *"not evidence at any
+    tier, `app/analysis_options.yaml` carries no `dart_code_linter:` block"*, and that block has
+    since landed (line 43, with the thresholds set at what the code does today). CI runs the step
+    in its `dart` job and CLAUDE.md documents it, so CLAUDE.md won and this was corrected in the
+    session that noticed — one agent had been told by three documents not to run a gate CI enforces.
+    **The flag is not decoration**: without it the command prints its warnings and exits **0**,
+    which is the green-by-construction trap the old bullet correctly described, one level deeper.
+    The thresholds ratchet *down* as the code gets simpler and never up to accommodate it.
+    `.claude/agents/*.md` may still carry the old prohibition; an agent file that does is wrong and
+    is corrected under this rule.
   - The root `package.json` `verify`/`typecheck` scripts delegate to `pnpm -r`; **pnpm is not
     installed on this machine**, so they do not run. Use the per-package commands above until the
     pnpm migration lands.
