@@ -1209,7 +1209,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'mapa',
     build: () => AppShell(
-      child: SkillMapScreen(map: registrySkillMap, onOpen: (SkillNode _) {}),
+      child: SkillMapScreen(map: registrySkillMap, onOpen: (int _) {}),
     ),
   ),
   RegisteredScreen(
@@ -1217,7 +1217,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => AppShell(
       child: SkillMapScreen(
         map: const SkillMap(nodes: <SkillNode>[], focusIndex: null),
-        onOpen: (SkillNode _) {},
+        onOpen: (int _) {},
       ),
     ),
   ),

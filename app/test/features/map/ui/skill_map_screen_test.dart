@@ -49,7 +49,7 @@ Future<void> _pump(
 
 void main() {
   testWidgets('draws one node per topic the pack carries', (WidgetTester tester) async {
-    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (SkillNode _) {}));
+    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (int _) {}));
 
     expect(find.byType(SkillNodeTile), findsNWidgets(4));
     for (final String label in <String>['Cuentas', 'Series', 'Figuras', 'Cuadros']) {
@@ -59,7 +59,7 @@ void main() {
 
   testWidgets('the topic the player meets next is the largest on the map',
       (WidgetTester tester) async {
-    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (SkillNode _) {}));
+    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (int _) {}));
 
     final Size focused = tester.getSize(
       find.ancestor(
@@ -80,7 +80,7 @@ void main() {
 
   testWidgets('a finished topic carries the check and a locked one the padlock',
       (WidgetTester tester) async {
-    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (SkillNode _) {}));
+    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (int _) {}));
 
     Finder glyphIn(String label) => find.descendant(
           of: find.ancestor(
@@ -96,7 +96,7 @@ void main() {
 
   testWidgets('a topic under way prints how far up the ladder it is',
       (WidgetTester tester) async {
-    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (SkillNode _) {}));
+    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (int _) {}));
 
     // 2 of 4 steps.
     expect(find.text('50%'), findsWidgets);
@@ -108,7 +108,7 @@ void main() {
       tester,
       SkillMapScreen(
         map: _map(),
-        onOpen: (SkillNode node) => opened.add(node.label),
+        onOpen: (int index) => opened.add(_map().nodes[index].label),
       ),
     );
 
@@ -125,7 +125,7 @@ void main() {
       tester,
       SkillMapScreen(
         map: _map(),
-        onOpen: (SkillNode node) => opened.add(node.label),
+        onOpen: (int index) => opened.add(_map().nodes[index].label),
       ),
     );
 
@@ -137,7 +137,7 @@ void main() {
 
   testWidgets('the legend names all four states, including the fourth the '
       'design draws and never names', (WidgetTester tester) async {
-    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (SkillNode _) {}));
+    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (int _) {}));
 
     for (final String state in <String>[
       'Dominado',
@@ -153,7 +153,7 @@ void main() {
       (WidgetTester tester) async {
     // Two of the four nodes have been met; the available and locked ones
     // have not.
-    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (SkillNode _) {}));
+    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (int _) {}));
 
     expect(find.text('2 / 4'), findsOneWidget);
   });
@@ -164,7 +164,7 @@ void main() {
       tester,
       SkillMapScreen(
         map: const SkillMap(nodes: <SkillNode>[], focusIndex: null),
-        onOpen: (SkillNode _) {},
+        onOpen: (int _) {},
       ),
     );
 

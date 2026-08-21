@@ -35,8 +35,17 @@ class SkillMapScreen extends StatelessWidget {
 
   final SkillMap map;
 
-  /// Opens a topic. Never called for a locked one — see [MasterySkin.opens].
-  final void Function(SkillNode node) onOpen;
+  /// Opens the topic at this position in [SkillMap.nodes].
+  ///
+  /// **A position and not the node itself.** `SkillNode` declares no `==`, so
+  /// handing the value back left every caller doing an `indexOf` that resolved
+  /// by identity — and a caller holding a freshly-read map has no node
+  /// identical to the one that was tapped. That returned −1 and made every
+  /// topic claim to be the first one on the map. A position cannot desync from
+  /// the list it indexes.
+  ///
+  /// Never called for a locked topic — see [MasterySkin.opens].
+  final void Function(int index) onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +151,7 @@ class SkillMapScreen extends StatelessWidget {
                 size: index == map.focusIndex
                     ? SkillNodeSize.hero
                     : SkillNodeSize.standard,
-                onOpen: () => onOpen(map.nodes[index]),
+                onOpen: () => onOpen(index),
               ),
             ),
         ],

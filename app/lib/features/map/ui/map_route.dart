@@ -53,7 +53,12 @@ class _MapRouteState extends State<MapRoute> {
 
   Future<_MapContents> _read() async {
     final Pack pack = await widget.reader.load();
-    return _MapContents(pack: pack, itemsServed: await widget.seriesCursor.read());
+    final int served = await widget.seriesCursor.read();
+    return _MapContents(
+      pack: pack,
+      itemsServed: served,
+      map: readSkillMap(items: pack.items, itemsServed: served),
+    );
   }
 
   @override
@@ -69,7 +74,7 @@ class _MapRouteState extends State<MapRoute> {
             ? _loading()
             : SkillMapScreen(
                 map: contents.map,
-                onOpen: (SkillNode node) => _open(context, contents, node),
+                onOpen: (int index) => _open(context, contents, index),
               );
       },
     );
@@ -103,8 +108,8 @@ class _MapRouteState extends State<MapRoute> {
         ),
       );
 
-  void _open(BuildContext context, _MapContents contents, SkillNode node) {
-    final int index = contents.map.nodes.indexOf(node);
+  void _open(BuildContext context, _MapContents contents, int index) {
+    final SkillNode node = contents.map.nodes[index];
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext detailContext) => NodeDetailScreen(
@@ -158,11 +163,17 @@ class _MapRouteState extends State<MapRoute> {
 /// resolves both and the screen cannot be drawn from half of them.
 @immutable
 class _MapContents {
-  const _MapContents({required this.pack, required this.itemsServed});
+  const _MapContents({
+    required this.pack,
+    required this.itemsServed,
+    required this.map,
+  });
 
   final Pack pack;
   final int itemsServed;
 
-  SkillMap get map =>
-      readSkillMap(items: pack.items, itemsServed: itemsServed);
+  /// Read once, in [_MapRouteState._read], and **not a getter**. A getter
+  /// re-derived the whole map on every rebuild, which cost nothing visible and
+  /// handed out a new list of nodes each time.
+  final SkillMap map;
 }

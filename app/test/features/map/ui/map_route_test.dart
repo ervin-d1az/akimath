@@ -122,6 +122,17 @@ void main() {
     expect(find.byType(SkillMapScreen), findsOneWidget);
   });
 
+  testWidgets('a topic that is not the first says what it comes after',
+      (WidgetTester tester) async {
+    await _pump(tester, pack: _pack());
+
+    await tester.tap(find.text('Series'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Viene de Cuentas.'), findsOneWidget);
+    expect(find.text('Es por donde empieza el mapa.'), findsNothing);
+  });
+
   testWidgets('practice plays that topic and nothing else',
       (WidgetTester tester) async {
     await _pump(tester, pack: _pack());
