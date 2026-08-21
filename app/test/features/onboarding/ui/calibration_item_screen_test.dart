@@ -173,6 +173,27 @@ void main() {
     expect(reported?.hasSomethingToReport, isFalse);
   });
 
+  testWidgets('a system back leaves the probe, and does not quit the app',
+      (WidgetTester tester) async {
+    // Same shape as the teaching item's `PopScope`: the visible control and
+    // the system gesture must mean one thing. Unhandled, an Android back here
+    // would close the app in the middle of the first run.
+    CalibrationOutcome? reported;
+    await _pump(
+      tester,
+      items: _probe(3),
+      onFinished: (CalibrationOutcome outcome) => reported = outcome,
+    );
+    await _answer(tester, '1');
+
+    final NavigatorState navigator = tester.state(find.byType(Navigator));
+    final bool handled = await navigator.maybePop();
+    await tester.pumpAndSettle();
+
+    expect(handled, isTrue, reason: 'the back request went unhandled');
+    expect(reported?.answered, 1);
+  });
+
   testWidgets('the strip is one colour, so it cannot leak how you are doing',
       (WidgetTester tester) async {
     // `0.4` promises *"No se califica"*. A green-for-right bar would break

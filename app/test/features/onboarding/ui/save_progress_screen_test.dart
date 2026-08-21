@@ -118,6 +118,19 @@ void main() {
     expect(asked, 0);
   });
 
+  testWidgets('no days practised is no tile, not a tile reading zero',
+      (WidgetTester tester) async {
+    // The `RACHA 1` defect in its other direction: the figure shown must be
+    // the figure the store will yield, and nothing in the first run records a
+    // day. `0 DÍAS` on a screen inviting you to keep your progress is worse
+    // than the absence.
+    await _pump(tester, days: 0, onCreateAccount: () {});
+
+    expect(find.text('DÍA'), findsNothing);
+    expect(find.text('DÍAS'), findsNothing);
+    expect(find.text('RETOS'), findsOneWidget);
+  });
+
   testWidgets('with no account flow wired, it offers nothing it cannot do',
       (WidgetTester tester) async {
     // DR-P2, the same reading as the profile drawing no account row in a build

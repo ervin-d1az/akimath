@@ -132,6 +132,22 @@ class _CalibrationItemScreenState extends State<CalibrationItemScreen> {
     // Scaffold rather than a bare `ColoredBox`, for the same reason the round
     // has one: without a Material ancestor every run of text gets Flutter's
     // yellow debug underline, and `screen_text_style_test.dart` fails on it.
+    return PopScope(
+      // **A system back means what `Saltar` means**, the same agreement the
+      // teaching item's `PopScope` makes. The probe is swapped in rather than
+      // pushed, so without this an Android back would quit the app from the
+      // middle of the first run.
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (!didPop) {
+          _leave();
+        }
+      },
+      child: _screen(),
+    );
+  }
+
+  Widget _screen() {
     return Scaffold(
       backgroundColor: BrandColors.cream,
       body: SafeArea(

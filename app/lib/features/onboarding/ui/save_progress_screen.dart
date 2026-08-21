@@ -117,14 +117,20 @@ class SaveProgressScreen extends StatelessWidget {
                 ),
               ),
             ],
-            const SizedBox(width: BrandShape.space2),
-            Expanded(
-              child: _tile(
-                label: days == 1 ? 'DÍA' : 'DÍAS',
-                value: EsMxNumber.integer(days),
-                background: BrandColors.yellow,
+            // **Absent at zero, not a tile reading zero.** Nothing in the
+            // first run records a day, so the home behind this screen reads
+            // none — and a figure contradicted one tap later is the `RACHA 1`
+            // defect. The same reading as `HISTORIAL` with nothing in it.
+            if (days > 0) ...<Widget>[
+              const SizedBox(width: BrandShape.space2),
+              Expanded(
+                child: _tile(
+                  label: days == 1 ? 'DÍA' : 'DÍAS',
+                  value: EsMxNumber.integer(days),
+                  background: BrandColors.yellow,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       );
