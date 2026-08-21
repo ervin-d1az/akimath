@@ -433,20 +433,32 @@ class _HomeRouteState extends State<HomeRoute> {
           );
         }
 
+        // **The plan the player is about to be served**, not the pack in
+        // general. `_startSeries` calls `seriesPlan` with the same cursor, so
+        // neither the card nor the row can promise an item the series will not
+        // draw. Read once here rather than twice: two calls are two chances to
+        // pass a different cursor, which is how the card came to preview
+        // `pack.items.first` while the row beside it already read the plan.
+        final List<Item> plan = seriesPlan(pack.items, from: _itemsServed);
+        if (plan.isEmpty) {
+          // Only a pack with no items yields none, and both readers refuse
+          // one — so this is the guard `_startSeries` keeps, for the same
+          // reason. `HomeScreen.preview` is non-nullable, and `plan.first`
+          // would throw here, a screen away from where the pack was read.
+          return const AppShell(
+            child: _HomeMessage('No se pudo abrir el paquete de retos.'),
+          );
+        }
+
         return AppShell(
           child: HomeScreen(
-            preview: pack.items.first,
+            preview: plan.first,
             streakDays: streakLength(
               attemptDays: _log.days,
               today: widget.now(),
             ),
             weekMarks: weekMarks(attemptDays: _log.days, today: widget.now()),
-            // **The plan the player is about to be served**, not the pack in
-            // general. `_startSeries` calls `seriesPlan` with the same cursor,
-            // so the row cannot promise a family the series will not draw.
-            todaysFamilies: seriesFamilies(
-              seriesPlan(pack.items, from: _itemsServed),
-            ),
+            todaysFamilies: seriesFamilies(plan),
             // **One card per format**, not one per board: the pack may carry
             // three KenKens, and three cards reading `KenKen` are three cards
             // a player cannot choose between. Which board each opens is the
