@@ -1400,20 +1400,24 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   // ── end f7-ajustes ───────────────────────────────────────────────────────
 ];
 
-/// What `4.1` draws when every figure has a value, invented ones included.
+/// What `4.1` draws for a player who has practised and answered.
 ///
-/// The design's own numbers, so the registry pumps the screen the demo shows.
+/// **Every figure here is one the device produces**, which it was not before:
+/// the rating and the weekly move are gone, because `GET /me/standing` answers
+/// a rating *per skill* and `ratingDelta` is null, and the accuracy and the
+/// mean time are what the answer record adds up to. This is the three-tile row
+/// the gates most need to walk — it is the shape that overflows first — and it
+/// is now also the shape a real phone shows.
 const ProfileFigures registryProfileFigures = ProfileFigures(
   daysPractised: 12,
   streakDays: 5,
   challenges: 312,
-  rating: 1248,
-  ratingThisWeek: 36,
   accuracyPercent: 78,
-  averageTenthsOfSecond: 68,
+  averageTime: Duration(milliseconds: 6800),
 );
 
-/// Only the figures the device can prove: a day log and a series cursor.
+/// A player who has answered nothing: a day log and a series cursor and no
+/// more. The two tiles with no answers behind them are absent, not zero.
 const ProfileFigures registryProvableFigures = ProfileFigures(
   daysPractised: 41,
   streakDays: 7,
@@ -1422,6 +1426,18 @@ const ProfileFigures registryProvableFigures = ProfileFigures(
 
 /// The widest each figure gets: a four-digit rating, a three-digit week, a
 /// five-figure count, a full percent and a mean time in the tens of seconds.
+///
+/// **The one fixture that still carries a rating, and deliberately.** No caller
+/// passes one — there is no single number to pass — but `4.1` draws the card
+/// and [headlineLead] still answers for it, so this is what keeps that layout
+/// measured at 390 px and `textScaler` 1.3 rather than landing unchecked the
+/// day a rating arrives.
+///
+/// **The mean time is the figure with no ceiling.** `AnsweredItem` accepts any
+/// non-negative elapsed and the round measures wall time, so a backgrounded app
+/// can record minutes; 99,9 s is the widest this row is *known* to fit, and a
+/// larger one is a `features/stats/` question about capping rather than a
+/// fixture to widen until it passes.
 const ProfileFigures registryWidestFigures = ProfileFigures(
   daysPractised: 9999,
   streakDays: 9999,
@@ -1429,7 +1445,7 @@ const ProfileFigures registryWidestFigures = ProfileFigures(
   rating: 9999,
   ratingThisWeek: 999,
   accuracyPercent: 100,
-  averageTenthsOfSecond: 999,
+  averageTime: Duration(milliseconds: 99900),
 );
 
 /// A callback for a registry entry, so a screen can be drawn with its control

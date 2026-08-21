@@ -6,7 +6,6 @@ import '../../../api/api_client.dart';
 import '../../../api/me.dart';
 import '../../../api/auth_client.dart';
 import '../../../api/endpoints.dart';
-import '../../../demo/demo_figures.dart';
 import '../../auth/ui/auth_flow.dart';
 import '../../states/policy/account_state.dart';
 import '../../home/data/day_log_store.dart';
@@ -14,6 +13,8 @@ import '../../home/data/prefs_day_log_store.dart';
 import '../../home/data/series_cursor_store.dart';
 import '../../home/policy/day_log.dart';
 import '../../round/policy/streak_policy.dart';
+import '../../stats/data/answer_record_store.dart';
+import '../../stats/policy/local_stats.dart';
 import '../policy/history_view.dart';
 import '../policy/profile_readout.dart';
 import '../../account/data/player_id_store.dart';
@@ -51,6 +52,7 @@ class ProfileRoute extends StatefulWidget {
     this.playerIds,
     this.link,
     this.dayLog,
+    this.answerRecord,
     this.seriesCursor = const SeriesCursorStore(),
     this.fetchHistory,
     this.auth,
@@ -123,6 +125,15 @@ class ProfileRoute extends StatefulWidget {
   /// reaches a plugin.
   final DayLogStore? dayLog;
 
+  /// What this device answered, and the source of `ACIERTOS` and `PROMEDIO`.
+  ///
+  /// **The same store the round writes to**, defaulted rather than required for
+  /// the reason [dayLog] is: the app has one and a widget test hands over an
+  /// in-memory one. Two figures the profile used to invent come out of it, and
+  /// both are **absent over an empty record** rather than zero — that decision
+  /// is `LocalStats`'s and this route only passes it on.
+  final AnswerRecordStore? answerRecord;
+
   /// How many items this device has been served, across every session.
   ///
   /// **The home's store, read here.** It is a persisted running total advanced
@@ -142,8 +153,14 @@ class ProfileRoute extends StatefulWidget {
 
 class _ProfileRouteState extends State<ProfileRoute> {
   late final DayLogStore _dayLog = widget.dayLog ?? const PrefsDayLogStore();
+  late final AnswerRecordStore _answerRecord =
+      widget.answerRecord ?? const PrefsAnswerRecordStore();
   DayLog _log = DayLog.empty;
   int _challenges = 0;
+
+  /// What the record adds up to. Empty until it is read, which is the same
+  /// figure a player who has answered nothing gets — so nothing waits on it.
+  LocalStats _stats = LocalStats.of(const <AnsweredItem>[]);
   HistoryResult? _history;
 
   @override
@@ -163,6 +180,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
   void _readWhatTheDeviceKnows() {
     unawaited(_readDayLog());
     unawaited(_readChallenges());
+    unawaited(_readAnswerRecord());
   }
 
   /// Re-reads storage the moment this root becomes the one on screen.
@@ -205,6 +223,18 @@ class _ProfileRouteState extends State<ProfileRoute> {
     final int served = await widget.seriesCursor.read();
     if (mounted) {
       setState(() => _challenges = served);
+    }
+  }
+
+  /// **Re-read on every visit, like the day log and for the same reason.** The
+  /// round writes an answer while this root sits behind an `IndexedStack`, so a
+  /// record read once at launch is an accuracy from launch time — the staleness
+  /// `_refreshOnComingToTheFront` exists to fix, arriving through a second
+  /// source (PROC-13).
+  Future<void> _readAnswerRecord() async {
+    final List<AnsweredItem> record = await _answerRecord.read();
+    if (mounted) {
+      setState(() => _stats = LocalStats.of(record));
     }
   }
 
@@ -500,30 +530,32 @@ class _ProfileRouteState extends State<ProfileRoute> {
     widget.onSessionChanged?.call(null);
   }
 
-  /// Every figure `4.1` prints, and the one place an invented one enters.
+  /// Every figure `4.1` prints, and **not one of them is invented any more.**
   ///
-  /// **Two of the five are the device's own.** The days and the run come from
-  /// `DayLog`, the count of challenges from the series cursor the home
-  /// advances. Zero before either store answers and zero for a player who has
-  /// never played — the same number, which is why nothing here waits.
-  /// `DemoFigures.challenges` is deliberately not read: `RETOS` has a source.
+  /// The days and the run come from `DayLog`, the count of challenges from the
+  /// series cursor the home advances, and accuracy and mean time from the
+  /// record of what this device actually answered. Zero, or absent, before a
+  /// store answers and the same for a player who has never played — which is
+  /// why nothing here waits on any of them.
   ///
-  /// **Three are invented, and this is the only line that says so.** Rating is
-  /// F4 and has no source anywhere. Accuracy and mean time have one on this
-  /// device — `features/stats/` records a verdict and an elapsed time per
-  /// answer — and this route does not read it yet, so both still arrive from
-  /// `DemoFigures`. With the switch off each is null, and a figure that arrives
-  /// null is not drawn.
+  /// **What is left out is left out on purpose.** A rating is not passed
+  /// because there is no single number to pass: `GET /me/standing` answers one
+  /// **per skill**, an unrated player is the ordinary case, and this client
+  /// cannot so much as name a skill. A weekly move is not passed because
+  /// `HistoryEntry.ratingDelta` is null — `+ 36 esta semana` had no source at
+  /// all. Both stay absent rather than becoming a plausible average or a `± 0`,
+  /// which is the same rule that makes `HISTORIAL` disappear when there is
+  /// nothing true to say.
+  ///
+  /// **No request is made for either.** A `GET /me/standing` whose answer this
+  /// screen has decided it cannot draw is a round trip that buys nothing, and a
+  /// client operation with no caller is a claim about the app that is not true.
   ProfileFigures _figures() => ProfileFigures(
         daysPractised: _log.days.length,
         streakDays: streakLength(attemptDays: _log.days, today: widget.now()),
         challenges: _challenges,
-        rating: DemoFigures.enabled ? DemoFigures.rating : null,
-        ratingThisWeek: DemoFigures.enabled ? DemoFigures.ratingThisWeek : null,
-        accuracyPercent:
-            DemoFigures.enabled ? DemoFigures.accuracyPercent : null,
-        averageTenthsOfSecond:
-            DemoFigures.enabled ? DemoFigures.averageTenthsOfSecond : null,
+        accuracyPercent: _stats.accuracyPercent,
+        averageTime: _stats.meanTime,
       );
 
   /// Whether making an account is worth offering.

@@ -11,7 +11,14 @@ import 'package:akimath_app/features/states/policy/account_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// What the design draws: every figure, invented ones included.
+/// Every slot filled, **the rating included and the rating alone unreachable.**
+///
+/// The four device figures are what a player who has practised and answered
+/// actually produces. The rating is here because `4.1` draws one and
+/// [headlineLead] must keep answering for the day a single number exists — no
+/// caller passes one today, and `profile_route_test.dart` is the test that says
+/// so. Keeping the slot drawn here is what stops the card's layout going
+/// unmeasured in the meantime.
 const ProfileFigures drawn = ProfileFigures(
   daysPractised: 13,
   streakDays: 13,
@@ -19,11 +26,26 @@ const ProfileFigures drawn = ProfileFigures(
   rating: 1248,
   ratingThisWeek: 36,
   accuracyPercent: 78,
-  averageTenthsOfSecond: 68,
+  averageTime: Duration(milliseconds: 6800),
 );
 
-/// What the product can prove today. The same screen with the invented figures
-/// switched off, which is the build that ships.
+/// A player who has practised and answered: what the shipping build draws.
+///
+/// **No rating and no weekly move**, because neither has a single number behind
+/// it — `GET /me/standing` answers a rating per skill and `ratingDelta` is
+/// null. Accuracy and mean time are real, from the record of what was answered.
+const ProfileFigures played = ProfileFigures(
+  daysPractised: 13,
+  streakDays: 5,
+  challenges: 312,
+  accuracyPercent: 78,
+  averageTime: Duration(milliseconds: 6800),
+);
+
+/// A player who has opened the app and answered nothing.
+///
+/// **Absent, not zero.** `0 %` says a new player got everything wrong, so the
+/// two tiles that have no answers behind them are simply not drawn.
 const ProfileFigures provable = ProfileFigures(
   daysPractised: 13,
   streakDays: 5,
@@ -191,7 +213,9 @@ void main() {
 
   group('the tile row', () {
     testWidgets('holds the three the design draws', (WidgetTester tester) async {
-      await pump(tester, figures: drawn);
+      // The shipping build reaches all three: the count is the cursor's, and
+      // accuracy and mean time are the record of what this device answered.
+      await pump(tester, figures: played);
 
       expect(find.text('RETOS'), findsOneWidget);
       expect(find.text('ACIERTOS'), findsOneWidget);
@@ -203,9 +227,8 @@ void main() {
 
     testWidgets('keeps the count and drops the rest when nothing else has a source',
         (WidgetTester tester) async {
-      // The shipping build. Nothing on this screen is then a figure the device
-      // cannot produce, and the row is still a row because the count of
-      // challenges is the cursor's, which every phone has.
+      // A player who has answered nothing. The row is still a row, because the
+      // count of challenges is the cursor's and every phone has one.
       await pump(tester, figures: provable);
 
       expect(find.text('RETOS'), findsOneWidget);

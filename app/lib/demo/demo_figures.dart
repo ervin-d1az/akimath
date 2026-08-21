@@ -13,50 +13,38 @@ import '../design/widgets/spec/mastery_level.dart';
 /// day a real figure arrives its caller stops reading this and the constant
 /// goes.
 ///
+/// **Four of them went that way.** `4.1 Perfil` used to print `RATING 1 248`,
+/// `+ 36 esta semana`, `78 % ACIERTOS` and `6,8 s PROMEDIO` **beside a real
+/// `0 RETOS` and `RACHA 0`** — invented figures contradicting real ones on the
+/// same screen. Accuracy and mean time now come from the record
+/// `features/stats/` keeps, `RETOS` was already the series cursor's, and the
+/// two rating figures are drawn by nothing: `GET /me/standing` answers a rating
+/// per skill rather than one number, and `HistoryEntry.ratingDelta` is null.
+/// The constants went with the callers, which is what this file is for.
+///
 /// Values are taken from the design documents so the screens match what was
 /// drawn, rather than from anyone's imagination.
 abstract final class DemoFigures {
-  /// `4.1` draws `1 248`.
+  /// `0.5 Calibración` and `1.3 Guardar tu avance` each draw `1 248`.
+  ///
+  /// **Named for its readers, because `4.1` stopped being one.** Rating never
+  /// runs in Dart, and the server's own answer is a rating *per skill* — so a
+  /// single number is invented on the onboarding screens whether or not a
+  /// player has ever synced. They are the last two readers; when a rating can
+  /// be stated, this goes the way the profile's four did.
   static const int rating = 1248;
-
-  /// `4.1` draws `+ 36 esta semana`.
-  static const int ratingThisWeek = 36;
-
-  /// `4.1` draws `312 RETOS`.
-  static const int challenges = 312;
-
-  /// `4.1` draws `78% ACIERTOS`, as a whole percent.
-  ///
-  /// **Superseded — there is a real source now.** The belief that put this here
-  /// was that the device has none, and it was wrong:
-  /// `features/round/policy/grading.dart` decides every verdict locally, which
-  /// is how a wrong answer draws `04 Error` with no network. What the device
-  /// does not do is *send* it. `features/stats/` remembers it instead, and
-  /// `LocalStats.accuracyPercent` is the same figure computed from what the
-  /// player actually did — **absent rather than `0` over no answers**, which is
-  /// the one thing a constant cannot be. This goes when `4.1` is wired to it.
-  static const int accuracyPercent = 78;
-
-  /// `4.1` draws `6,8 s PROMEDIO`. Tenths of a second, so the screen formats it
-  /// in es-MX with a decimal comma rather than carrying a `double` that a
-  /// `toString` would print with a point.
-  ///
-  /// **Superseded by `LocalStats.meanTime`, and that is the only source there
-  /// will be.** Time on task has no wire representation in either direction:
-  /// the frozen `Standing` is `{playerId, skills: […]}` with
-  /// `additionalProperties: false` and `GET /me/history` carries a score and no
-  /// timing, so no endpoint can ever answer this. The device measures it or
-  /// nobody does.
-  static const int averageTenthsOfSecond = 68;
-
 
   /// `2.5` draws `+12 RATING`.
   ///
-  /// **A series delta, not [ratingThisWeek].** One is what a sitting was worth
-  /// and the other is what a week was; a screen reading the wrong one would be
-  /// wrong in a way nobody would notice. Rating never runs in Dart, so neither
-  /// can ever become real on this side — `GET /me/standing` is where the real
-  /// one will come from, and it answers 501 today.
+  /// **What a sitting was worth**, which was never the same fact as what a week
+  /// was — `4.1`'s `+ 36 esta semana` was the other one, and a screen reading
+  /// the wrong one would have been wrong in a way nobody would notice. That one
+  /// is deleted; this one is not, because `2.5` still draws it.
+  ///
+  /// It has no source and is not merely waiting for one. Rating never runs in
+  /// Dart, and the server's per-session `ratingDelta` in `GET /me/history` is
+  /// null — `GET /me/standing` reads real ratings now, but it answers a
+  /// standing per skill and never a move.
   static const int seriesRatingDelta = 12;
 
   /// `2.5`'s `QUÉ MEJORÓ` bars.
