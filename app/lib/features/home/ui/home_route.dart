@@ -433,20 +433,32 @@ class _HomeRouteState extends State<HomeRoute> {
           );
         }
 
+        // **The plan the player is about to be served**, not the pack in
+        // general. `_startSeries` calls `seriesPlan` with the same cursor, so
+        // neither the card nor the row can promise an item the series will not
+        // draw. Read once here rather than twice: two calls are two chances to
+        // pass a different cursor, which is how the card came to preview
+        // `pack.items.first` while the row beside it already read the plan.
+        final List<Item> plan = seriesPlan(pack.items, from: _itemsServed);
+        if (plan.isEmpty) {
+          // Only a pack with no items yields none, and both readers refuse
+          // one — so this is the guard `_startSeries` keeps, for the same
+          // reason. `HomeScreen.preview` is non-nullable, and `plan.first`
+          // would throw here, a screen away from where the pack was read.
+          return const AppShell(
+            child: _HomeMessage('No se pudo abrir el paquete de retos.'),
+          );
+        }
+
         return AppShell(
           child: HomeScreen(
-            preview: pack.items.first,
+            preview: plan.first,
             streakDays: streakLength(
               attemptDays: _log.days,
               today: widget.now(),
             ),
             weekMarks: weekMarks(attemptDays: _log.days, today: widget.now()),
-            // **The plan the player is about to be served**, not the pack in
-            // general. `_startSeries` calls `seriesPlan` with the same cursor,
-            // so the row cannot promise a family the series will not draw.
-            todaysFamilies: seriesFamilies(
-              seriesPlan(pack.items, from: _itemsServed),
-            ),
+            todaysFamilies: seriesFamilies(plan),
             // **One card per format**, not one per board: the pack may carry
             // three KenKens, and three cards reading `KenKen` are three cards
             // a player cannot choose between. Which board each opens is the
@@ -474,6 +486,13 @@ class _HomeRouteState extends State<HomeRoute> {
   /// The same shape a series gets, and the argument is stronger here: a puzzle
   /// is a longer commitment than five items, so a bottom bar underneath it
   /// would be an invitation to abandon one halfway.
+  ///
+  /// **It does not flush, where `_startSeries` does.** A board never calls
+  /// `_sync.record` — the route records the *day* and nothing else (design
+  /// D3) — so coming back from one cannot have changed the journal. A flush
+  /// here would only retry a batch some earlier series already tried, on a
+  /// trigger that is not evidence of anything new. It belongs in the change
+  /// that makes a puzzle leave an attempt row, not before.
   Future<void> _startPuzzle(BuildContext context, Puzzle puzzle) async {
     // **The route holds the clock** (design D3). Neither puzzle screen has one,
     // and adding one to both would be the same decision written twice — the
@@ -611,6 +630,17 @@ class _HomeRouteState extends State<HomeRoute> {
         onDone: () => Navigator.of(sessionContext).maybePop(),
       ),
     );
+    // **On the way back, finished or abandoned.** Every answer the series
+    // produced is in the journal by now, and the only other flushes are the
+    // launch and a session arriving — so a player who played and closed the app
+    // left the batch on disk until next time, with `HISTORIAL` empty right
+    // after playing. Coming back from a series is exactly the reason to believe
+    // there is a network worth trying: it is where `record` last ran.
+    //
+    // Never awaited, for the reason `record` never touches a socket at all: a
+    // player must not wait on one. Failure stays the journal's business —
+    // `journalAfter` decides what survives which answer.
+    unawaited(_flush());
     // The series may have recorded today. Re-read rather than assume: the store
     // is the source of truth and the screen holds only what it last read.
     await _refreshLog();

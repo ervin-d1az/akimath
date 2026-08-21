@@ -12,6 +12,7 @@ import 'package:akimath_app/features/account/policy/session.dart';
 import 'package:akimath_app/features/home/data/day_log_store.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
+import 'package:akimath_app/features/round/ui/summary/series_summary_screen.dart';
 import 'package:akimath_app/features/sync/attempt_sync.dart';
 import 'package:akimath_app/features/sync/data/attempt_journal_store.dart';
 import 'package:akimath_app/features/sync/data/issued_pack_store.dart';
@@ -333,6 +334,83 @@ void main() {
     await sync.flush('token');
     expect(sent.single.single.packRef?.packId, 'pk_emitido');
     expect(await journal.read(), isEmpty);
+  });
+
+  testWidgets('coming back from a series sends what it journalled',
+      (WidgetTester tester) async {
+    // **The defect this records.** `_flush` had two callers — the launch, and
+    // the session arriving — and returning from a series was neither. So a
+    // player answered, came home, and the batch sat on disk until the *next*
+    // launch: `HISTORIAL` stayed empty right after playing, which reads as
+    // broken. The test above had to call `sync.flush` by hand, which is what
+    // that gap looks like from inside a suite.
+    tester.view
+      ..physicalSize = const Size(402, 874)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final InMemoryAttemptJournalStore journal = InMemoryAttemptJournalStore();
+    final List<List<AttemptSubmission>> sent = <List<AttemptSubmission>>[];
+    final AttemptSync sync = AttemptSync(
+      store: journal,
+      submit: ({
+        required String accessToken,
+        required List<AttemptSubmission> attempts,
+      }) async {
+        sent.add(attempts);
+        return const SyncDone(<AttemptVerdict>[]);
+      },
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: HomeRoute(
+        reader: PackReader(bundle: _Bundle(_authored)),
+        now: () => DateTime.utc(2026, 8, 20, 12),
+        dayLog: InMemoryDayLogStore(),
+        sync: sync,
+        session: const LinkedSession(
+          email: 'ana@correo.mx',
+          accessToken: 'token',
+          ageBand: AgeBand.adult,
+        ),
+        issuePack: (String accessToken) async => IssueDone(
+          IssuedPack(
+            packId: 'pk_emitido',
+            issuedAt: DateTime.utc(2026, 8, 20),
+            expiresAt: DateTime.utc(2026, 9, 20),
+            pack: jsonDecode(
+              _issuedContent.replaceFirst('SEVEN_TEEN', _digestOfThirteen()),
+            ) as Map<String, Object?>,
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // **Asserted before anything is played**, or the launch flush would be the
+    // thing this test measures.
+    expect(sent, isEmpty, reason: 'the launch flush had nothing to send');
+
+    await tester.tap(find.text('Empezar la serie'));
+    await tester.pumpAndSettle();
+    for (final String key in <String>['1', '3', 'submit']) {
+      await tapKey(tester, key);
+    }
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Siguiente'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SeriesSummaryScreen), findsOneWidget,
+        reason: 'the series never ended');
+
+    await tester.tap(find.text('Volver al inicio'));
+    await tester.pumpAndSettle();
+
+    expect(sent, hasLength(1),
+        reason: 'nothing was sent when the series came back');
+    expect(sent.single.single.packRef?.packId, 'pk_emitido');
+    expect(await journal.read(), isEmpty,
+        reason: 'a batch that landed should be gone');
   });
 
   group('a pack survives a relaunch', () {

@@ -4,6 +4,7 @@ import 'package:akimath_app/content/model/pack.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
 import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/features/home/data/day_log_store.dart';
+import 'package:akimath_app/features/home/data/series_cursor_store.dart';
 import 'package:akimath_app/features/home/policy/day_log.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/home/policy/puzzle_menu.dart';
@@ -61,6 +62,49 @@ const String _pack = '''
         {"kind": "text", "value": "6"},
         {"kind": "operator", "glyph": "×"},
         {"kind": "text", "value": "7"},
+        {"kind": "operator", "glyph": "="}
+      ]
+    }
+  ]
+}
+''';
+
+/// Two items whose prompts are told apart at a glance.
+///
+/// One item cannot show the defect this pack exists for: the preview and the
+/// plan agree trivially when the pack holds a single item, whatever the cursor.
+const String _twoItemPack = '''
+{
+  "pack_version": 1,
+  "pack_id": "test",
+  "issued_at": "2026-08-01T00:00:00Z",
+  "expires_at": "2099-01-01T00:00:00Z",
+  "misconceptions": {
+    "no_specific_diagnosis": {
+      "steps": ["Lee otra vez el reto, sin prisa."],
+      "explain": "Repasa el reto con calma."
+    }
+  },
+  "items": [
+    {
+      "id": "a1",
+      "ladder_step": 2,
+      "answer": "42",
+      "prompt": [
+        {"kind": "text", "value": "6"},
+        {"kind": "operator", "glyph": "×"},
+        {"kind": "text", "value": "7"},
+        {"kind": "operator", "glyph": "="}
+      ]
+    },
+    {
+      "id": "b2",
+      "ladder_step": 2,
+      "answer": "17",
+      "prompt": [
+        {"kind": "text", "value": "8"},
+        {"kind": "operator", "glyph": "+"},
+        {"kind": "text", "value": "9"},
         {"kind": "operator", "glyph": "="}
       ]
     }
@@ -285,6 +329,51 @@ void main() {
 
       expect(find.byType(HomeScreen), findsNothing);
       expect(find.textContaining('No se pudo'), findsOneWidget);
+    });
+  });
+
+  group('the card previews the series it is about to serve', () {
+    testWidgets('a cursor past the first item carries the preview with it',
+        (WidgetTester tester) async {
+      // **The defect this records.** `preview` was `pack.items.first` — the
+      // same expression on every launch, for ever — while `todaysFamilies` and
+      // `_startSeries` both read the plan from the cursor. So the card promised
+      // `6 × 7` and the series it started opened on `8 + 9`, on one screen, in
+      // ten lines of each other.
+      await const SeriesCursorStore().advance(1);
+
+      await _pump(tester, source: _twoItemPack);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<HomeScreen>(find.byType(HomeScreen)).preview.id,
+        'b2',
+        reason: 'the card previewed the pack rather than the plan',
+      );
+
+      // The half that makes it a fact about the player rather than about one
+      // expression: the series has to open on what the card promised.
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<RoundScreen>(find.byType(RoundScreen)).items.first.id,
+        'b2',
+        reason: 'the card promised an item the series did not open with',
+      );
+    });
+
+    testWidgets('a player who has been served nothing sees the first item',
+        (WidgetTester tester) async {
+      // The other direction, so "follow the plan" cannot be satisfied by any
+      // fixed position in it.
+      await _pump(tester, source: _twoItemPack);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<HomeScreen>(find.byType(HomeScreen)).preview.id,
+        'a1',
+      );
     });
   });
 

@@ -180,8 +180,14 @@ void main() {
 
       // The home re-reads the store rather than holding a number it computed
       // once, which is what makes the streak visible without a relaunch.
+      //
+      // **Named, not a bare `1`** (PROC-11). This asserted `find.text('1')`
+      // and passed on the `1` in the preview card's `1 + 0 =` — the day the
+      // card started previewing the *plan*, the preview became `6 + 0 =`, the
+      // assertion went red, and the streak it claims to check had never been
+      // read by it at all.
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.text('1'), findsWidgets);
+      expect(find.text('1 DÍA'), findsOneWidget);
     });
   });
 
