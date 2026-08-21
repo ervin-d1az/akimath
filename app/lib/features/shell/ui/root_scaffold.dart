@@ -30,7 +30,17 @@ class RootScaffold extends StatefulWidget {
     super.key,
     this.sessions = const PrefsSessionStore(),
     this.deriveToken,
+    this.authBaseUrl = Endpoints.authBaseUrl,
   });
+
+  /// Where Neon Auth is, defaulting to the build's own `--dart-define`.
+  ///
+  /// **A parameter and not a direct read of the constant**, the same shape
+  /// `ProfileRoute.authBaseUrl` takes and for the reason recorded there: a
+  /// compile-time constant is one no test can vary, and "the build was
+  /// configured" is exactly the claim worth checking. It was asserted on that
+  /// route once and was false.
+  final String authBaseUrl;
 
   /// Where being signed in is kept between launches. Injected so a widget test
   /// never reaches a plugin.
@@ -103,13 +113,38 @@ class _RootScaffoldState extends State<RootScaffold> {
     }
   }
 
+  /// Trades the stored credential for a token, or says it could not ask.
+  ///
+  /// **A build with no provider configured fails closed**, and it has to be
+  /// said out loud because the open version is silently destructive.
+  /// `Endpoints.authBaseUrl` is a `String.fromEnvironment` and is **empty in
+  /// any build without the `--dart-define`** — every plain `flutter run`, and
+  /// every test. `Uri.parse('')` is relative, and what happens next is not a
+  /// clean failure: measured in `session_survives_a_relaunch_test.dart`, the
+  /// answer came back as a **400**, which `AuthClient` maps to `AuthRefused`,
+  /// which `sessionRestore` reads as *the provider has disowned this
+  /// credential* — and the launch **deleted** a credential it had never
+  /// managed to ask about. On a real device with no `HttpOverrides` the same
+  /// call throws `ArgumentError` instead, an `Error` that
+  /// `AuthClient._send`'s `on Exception` does not catch, so the restore dies
+  /// inside an `unawaited` future with nothing said.
+  ///
+  /// Unreachable is the honest answer: nothing was asked, so nothing was
+  /// learned, so the credential keeps.
   Future<AuthResult<String>> _askForAToken(AuthSession session) async {
     final Future<AuthResult<String>> Function(AuthSession)? injected =
         widget.deriveToken;
     if (injected != null) {
       return injected(session);
     }
-    final AuthClient auth = AuthClient(baseUrl: Uri.parse(Endpoints.authBaseUrl));
+    if (widget.authBaseUrl.isEmpty) {
+      debugPrint('session: NEON_AUTH_BASE_URL is not set in this build, so the '
+          'stored credential could not be checked; keeping it');
+      return const AuthUnreachable<String>(
+        'NEON_AUTH_BASE_URL is not set in this build',
+      );
+    }
+    final AuthClient auth = AuthClient(baseUrl: Uri.parse(widget.authBaseUrl));
     try {
       return await auth.accessToken(session);
     } finally {

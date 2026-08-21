@@ -189,6 +189,40 @@ void main() {
     });
   });
 
+  testWidgets('a build with no provider configured keeps the credential',
+      (WidgetTester tester) async {
+    // **The one branch every other case here injects past.** `deriveToken` is
+    // null in the app, so the shell opens a real `AuthClient` on
+    // `Endpoints.authBaseUrl` — a `String.fromEnvironment` that is **empty in
+    // any build without the `--dart-define`**, which is every `flutter run`
+    // without the flags and every test.
+    //
+    // `Uri.parse('')` is relative, and `HttpClient.getUrl` on a URI with no
+    // host throws `ArgumentError` — an `Error`, not an `Exception`, so
+    // `AuthClient._send`'s `on Exception` does not catch it. Unguarded, the
+    // restore throws inside an `unawaited` future and the credential is
+    // neither restored, nor deleted, nor mentioned. Silent, on the launch
+    // path, in the change whose whole subject is the launch path.
+    //
+    // Fail closed: an unconfigured build cannot tell a dead credential from a
+    // live one, so it must keep it.
+    final InMemorySessionStore sessions = InMemorySessionStore(_stored);
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: RootScaffold(sessions: sessions, authBaseUrl: ''),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull,
+        reason: 'the restore threw where nothing could catch it');
+    expect(await sessions.read(), _stored,
+        reason: 'a build that cannot ask must not answer for the provider');
+    expect(_profile(tester).session, isNull);
+  });
+
   group('the store agrees with the session the shell holds', () {
     testWidgets('a session arriving with a credential is written down',
         (WidgetTester tester) async {
