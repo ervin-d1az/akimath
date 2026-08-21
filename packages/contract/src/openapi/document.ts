@@ -294,10 +294,11 @@ export function buildOpenApiDocument(): unknown {
           // **What an empty `skills` means, said here rather than inferred.**
           // `rating` is required and not nullable, so unlike `ratingDelta` on a
           // history entry there is no null a caller could read as "not yet" —
-          // the absence of a rating is the absence of an entry. Rating is F4
-          // and nothing writes one today, so the list is empty for everybody,
-          // and a client that drew a 0 from it would be inventing a figure the
-          // server never sent.
+          // the absence of a rating is the absence of an entry. The server
+          // writes one when a session is rated against a difficulty class the
+          // players have already measured, so an empty list means "nobody has
+          // measured this player yet" — and a client that drew a 0 from it
+          // would be inventing a figure the server never sent.
           description:
             "The player's rating for each skill that has one. A skill nothing " +
             "has rated yet has no entry rather than a zero, so a player who has " +

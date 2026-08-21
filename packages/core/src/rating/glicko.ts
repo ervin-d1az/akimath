@@ -30,10 +30,13 @@ export interface Skill {
 /**
  * One graded item, against an opponent whose strength the caller supplies.
  *
- * **Core decides nothing about where an opponent rating comes from.** Nothing
- * in the frozen schema supplies one — `template_stats` has no rating column and
- * `ladder_step` is a difficulty label, not a rating — so the provenance is
- * `f3-attempt-sync`'s decision and this module is correct under any of them.
+ * **Core decides nothing about where an opponent rating comes from**, and this
+ * module is correct under any provenance. `packages/server/src/rating.ts` is
+ * where the decision was taken: the opponent is the difficulty class
+ * `(skill_id, ladder_step)`, whose rating is *measured* by feeding the mirrored
+ * outcome back through this same function. `ladder_step` names the class and
+ * never sets its worth — it is a label, not a rating, which is why it is not
+ * mapped onto this scale.
  */
 export interface Outcome {
   readonly opponentRating: number;

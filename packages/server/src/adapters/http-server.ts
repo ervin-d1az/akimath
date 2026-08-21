@@ -228,13 +228,12 @@ export function createHandlers(
         return historyResponse(await recentSessions(client, playerId, HISTORY_LIMIT));
       }),
 
-    // **The standing is the rating, and there is no rating yet.** The frozen
+    // **The standing is the rating, and the rating is real now.** The frozen
     // `Standing` carries `{skillId, rating, deviation, updatedAt}` and has no
     // field for accuracy or time on task, derivable from `attempts` though both
-    // are — so this answers what the shape holds and nothing else. Nothing
-    // writes `user_skills`, which makes the list empty for every player today;
-    // that is read from the table rather than hard-coded, so the day a rating
-    // job writes a row this endpoint already reports it.
+    // are — so this answers what the shape holds and nothing else. It reads
+    // `user_skills`, which `submitAttempts` writes; the list is empty only for a
+    // player nothing has measured yet.
     getStanding: ({ userId }) =>
       database.inRequestRole(async (client) => {
         const playerId = await playerIdForAccount(client, userId);
