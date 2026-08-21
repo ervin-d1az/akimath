@@ -1159,6 +1159,35 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       ),
     ),
   ),
+  // The other half of the same 409, and the one with a door on it. Registered
+  // separately because the banner is the widest thing on the screen and the
+  // chip beside it is what the touch-target and overflow gates have to sweep.
+  RegisteredScreen(
+    label: 'perfil · avance de otra cuenta',
+    build: () => AppShell(
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.otherAccount,
+        onOpenSettings: _nothing,
+        onSignOut: _nothing,
+        figures: registryProfileFigures,
+        historyState: HistoryState.noAccount,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'perfil · cuenta y avance no coinciden',
+    build: () => AppShell(
+      child: ProfileScreen(
+        accountEmail: 'alguien@ejemplo.com',
+        accountState: AccountState.mismatch,
+        onOpenSettings: _nothing,
+        onRetryAccount: _nothing,
+        figures: registryProfileFigures,
+        historyState: HistoryState.noAccount,
+      ),
+    ),
+  ),
   // ── 4.1 Perfil · the two shapes the figures give it ───────────────────────
   RegisteredScreen(
     label: 'perfil · solo lo comprobable',
