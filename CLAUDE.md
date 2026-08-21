@@ -105,7 +105,7 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **1947 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **2208 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **The streak can say it is about to go, and that it went.** `streakLength` has answered *how
@@ -156,6 +156,24 @@ format and its OpenAPI half.
   the adapter; all three pads were white, and the design draws digits white, the operator strip
   accent, backspace quiet and submit the action green. Exactly one key on a pad is green, and a
   test says so.
+  **The offline loop closes.** `issuePack` and `submitAttempts` had zero callers and the attempt
+  journal had zero writers, so seven endpoints, a provisioned database and digest grading were all
+  unreachable from actually playing — and `HISTORIAL` could never fill however much anyone played.
+  With a session the home **asks for a pack and plays that one**: same six families, same boards,
+  every item carrying a `(packId, index)` the server can grade. Without one it plays the bundled
+  pack for ever and by design (ADR 0002). Reading an issued pack needed HMAC, which needed a
+  DEP-1 call: **`package:crypto` is in**, audited in the allowlist test, two packages net-new to
+  the shipping set. `content/answer_digest.dart` is the verifier and is held to
+  `contract/fixtures/digest.golden.json`, a table emitted from TypeScript **before** the Dart side
+  existed so the two could not drift. `Item.answer` is a sealed `PlainAnswer | DigestAnswer`, and
+  `expected` throws on the second — which is how the first digest item played found that
+  `diagnose` was re-deciding the verdict by calling `grade`. It takes the verdict now: one
+  decision, made once. **An item's id is its address**, `packId#index`, so the thing the round
+  carries is the thing the journal needs. `AttemptSync` records on every answer without touching
+  the network and flushes when there is a session — including when the session *arrives*, since a
+  player links on the profile tab while `IndexedStack` keeps the home alive. **Issued per launch
+  and held in memory**; persisting the id and rebuilding through `GET /packs/{packId}` is the next
+  change, and the client has no operation for it yet.
   **Ajustes has a way out.** `features/preferences/` carries the erasure flow: a text door under
   the account, drawn only where `erasureOffered` says a session could carry the request, and a
   full screen rather than a dialog because the question has to fit a sentence about what
