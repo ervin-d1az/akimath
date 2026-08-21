@@ -54,7 +54,7 @@ void main() {
       (WidgetTester tester) async {
     await _reachHome(tester);
 
-    await tester.tap(find.text('Ajustes'));
+    await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
 
     expect(find.text('TU CUENTA'), findsOneWidget);
@@ -62,7 +62,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // `req-age-gate`: the gate is what the door opens onto, not the form.
-    expect(find.text('¿Cuándo naciste?'), findsOneWidget);
+    expect(find.text('¿CUÁNDO NACISTE?'), findsOneWidget);
     expect(find.byKey(const Key('age-gate-date')), findsOneWidget);
 
     // An adult's date, typed on the 3×4 pad — the system keyboard never takes
@@ -86,7 +86,7 @@ void main() {
       (WidgetTester tester) async {
     await _reachHome(tester);
 
-    await tester.tap(find.text('Ajustes'));
+    await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
@@ -111,7 +111,7 @@ void main() {
       (WidgetTester tester) async {
     await _reachHome(tester);
 
-    await tester.tap(find.text('Ajustes'));
+    await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
