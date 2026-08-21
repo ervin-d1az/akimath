@@ -41,6 +41,17 @@ class _EraseAccountRouteState extends State<EraseAccountRoute> {
   /// Null until the player says yes; then the step the attempt reached.
   ErasureStep? _step;
 
+  /// The typed gate's field, owned here because this widget outlives the
+  /// question — the screen is rebuilt into its reporting half and a controller
+  /// created down there would go with it.
+  final TextEditingController _confirmWord = TextEditingController();
+
+  @override
+  void dispose() {
+    _confirmWord.dispose();
+    super.dispose();
+  }
+
   Future<void> _send() async {
     setState(() => _step = ErasureStep.erasing);
     final EraseResult result = await widget.erase();
@@ -58,6 +69,7 @@ class _EraseAccountRouteState extends State<EraseAccountRoute> {
     final ErasureStep? step = _step;
     return EraseAccountScreen(
       step: step,
+      confirmWord: _confirmWord,
       onConfirm: () => unawaited(_send()),
       onCancel: () => widget.onClose(false),
       onDone: () => widget.onClose(step == ErasureStep.gone),
