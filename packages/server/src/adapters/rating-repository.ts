@@ -4,6 +4,7 @@ import {
   difficultyKey,
   type RatedDifficulty,
   type RatedSkill,
+  type SessionDelta,
   type StoredSkill,
 } from "../rating.js";
 import type { Skill } from "@akimath/core";
@@ -163,6 +164,47 @@ export async function writeSkills(
       skills.map((one) => one.skillId),
       skills.map((one) => one.rating),
       skills.map((one) => one.deviation),
+    ],
+  );
+}
+
+/**
+ * Writes what each rating period moved, so `GET /me/history` can report it.
+ *
+ * **It adds rather than replaces, and that is the whole conflict clause.** A
+ * session can reach the server in two batches — a device flushes what it has,
+ * the player answers more of the same session, it flushes again — and each
+ * batch is a rating period of its own against the prior the one before it left.
+ * What the session moved is therefore the sum, and keeping only the last write
+ * would drop everything the earlier flushes did.
+ *
+ * A *resent* batch never gets here: `insertAttempts` is `ON CONFLICT DO
+ * NOTHING`, so nothing lands, no period is formed, and `rateAttempts` returns
+ * no deltas at all.
+ *
+ * `created_at` is deliberately not touched on conflict — it is when the session
+ * was first recorded, which is what the retention sweep ages the row by.
+ */
+export async function writeSessionDeltas(
+  client: pg.ClientBase,
+  playerId: string,
+  deltas: readonly SessionDelta[],
+): Promise<void> {
+  if (deltas.length === 0) {
+    return;
+  }
+  await client.query(
+    `INSERT INTO session_deltas (player_id, session_id, skill_id, rating_delta)
+     SELECT $1::uuid, d.session_id, d.skill_id, d.rating_delta
+       FROM unnest($2::uuid[], $3::smallint[], $4::real[])
+            AS d(session_id, skill_id, rating_delta)
+     ON CONFLICT (player_id, session_id, skill_id) DO UPDATE
+        SET rating_delta = session_deltas.rating_delta + EXCLUDED.rating_delta`,
+    [
+      playerId,
+      deltas.map((one) => one.sessionId),
+      deltas.map((one) => one.skillId),
+      deltas.map((one) => one.change),
     ],
   );
 }

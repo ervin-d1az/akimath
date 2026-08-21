@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   historyResponse,
   HISTORY_LIMIT,
+  roundedDelta,
   sessionScore,
   sessionTitle,
   type SessionSummary,
@@ -15,6 +16,7 @@ const session = (over: Partial<SessionSummary> = {}): SessionSummary => ({
   total: 5,
   correct: 4,
   skillId: 1,
+  ratingDelta: null,
   ...over,
 });
 
@@ -36,6 +38,36 @@ describe("what a session scored", () => {
     expect(sessionScore(4, 5)).toBe("4/5");
     expect(sessionScore(0, 1)).toBe("0/1");
     expect(sessionScore(5, 5)).toBe("5/5");
+  });
+});
+
+describe("how a rating movement reads on a screen", () => {
+  it("is a whole number of rating points, because the schema has no other kind", () => {
+    // `HistoryEntry.ratingDelta` is `{type: integer, nullable: true}`. The
+    // stored figure is the difference between two `real` columns, so somewhere
+    // it has to become whole, and that somewhere is the presentation layer —
+    // the record keeps every digit it was written with.
+    expect(roundedDelta(12.4)).toBe(12);
+    expect(roundedDelta(12.6)).toBe(13);
+    expect(roundedDelta(-8.6)).toBe(-9);
+  });
+
+  it("a measured change too small to show is zero, and that is a measurement", () => {
+    // This is why a session nobody measured is null rather than zero: zero is
+    // already taken. A player who performed exactly as the classes predicted
+    // moved by a third of a point, and `0` is the honest rendering of that.
+    expect(roundedDelta(0.3)).toBe(0);
+  });
+
+  it("and a downward one too small to show is zero, not minus zero", () => {
+    // `Math.round(-0.2)` is `-0`, which `Object.is` — and therefore a test's
+    // `toEqual` — treats as a different value from `0`. A rating that slipped
+    // by a fifth of a point is not a distinct outcome from one that held.
+    expect(Object.is(roundedDelta(-0.2), 0)).toBe(true);
+  });
+
+  it("nothing measured stays nothing", () => {
+    expect(roundedDelta(null)).toBeNull();
   });
 });
 
@@ -70,12 +102,24 @@ describe("the history a player is answered with", () => {
     expect(Object.keys(entries[0]!).sort()).toEqual(Object.keys(schema.properties).sort());
   });
 
-  it("never claims a rating it does not have", () => {
-    // `ratingDelta` is nullable in the frozen schema, and rating is F4. A
-    // number here would be invented.
-    const { entries } = historyResponse([session(), session({ correct: 0 })]).body as {
+  it("reports the movement a session was recorded as causing", () => {
+    const { entries } = historyResponse([session({ ratingDelta: 17.4 })]).body as {
       entries: { ratingDelta: unknown }[];
     };
+    expect(entries[0]!.ratingDelta).toBe(17);
+  });
+
+  it("and never claims a rating that was not recorded", () => {
+    // **Two sessions reach this with nothing to report, and they are the same
+    // null.** One was never measured — every answer met a class nobody had
+    // met, so the answers taught the class and the player did not move. The
+    // other spanned two skills, which moved two ratings by different amounts
+    // in possibly opposite directions, and no single figure is a fact about
+    // it. A number for either would be invented.
+    const { entries } = historyResponse([
+      session({ ratingDelta: null }),
+      session({ correct: 0, skillId: null, ratingDelta: null }),
+    ]).body as { entries: { ratingDelta: unknown }[] };
     expect(entries.every((entry) => entry.ratingDelta === null)).toBe(true);
   });
 

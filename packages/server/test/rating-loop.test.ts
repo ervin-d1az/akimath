@@ -14,6 +14,8 @@ const PLAYER = "018f4e3c-0000-7000-8000-00000000ac01";
 const FIRST_SESSION = "018f4e3c-0000-7000-8000-00000000ac02";
 const SECOND_SESSION = "018f4e3c-0000-7000-8000-00000000ac03";
 const AT = "2026-08-19T09:15:00.000Z";
+/** An hour after `AT`, for the one test that reads the order of two sessions. */
+const LATER = "2026-08-19T10:15:00.000Z";
 
 /**
  * The rating, end to end, against a real database.
@@ -98,6 +100,31 @@ describeWithDatabase("the rating, from answering to GET /me/standing", () => {
     (await (
       await app().fetch(new Request("http://localhost/me/standing"))
     ).json()) as Standing;
+
+  interface HistoryEntry {
+    readonly title: string;
+    readonly score: string;
+    readonly ratingDelta: number | null;
+  }
+
+  /** The entries `GET /me/history` answers, newest first. */
+  const history = async (): Promise<readonly HistoryEntry[]> =>
+    (
+      (await (
+        await app().fetch(new Request("http://localhost/me/history"))
+      ).json()) as { entries: HistoryEntry[] }
+    ).entries;
+
+  /** What was written down about each rating period, unrounded. */
+  const recorded = async (): Promise<
+    readonly { session_id: string; skill_id: number; rating_delta: number }[]
+  > =>
+    (
+      await db.client.query(
+        `SELECT session_id, skill_id, rating_delta
+           FROM session_deltas ORDER BY created_at, skill_id`,
+      )
+    ).rows;
 
   const classes = async (): Promise<
     readonly { skill_id: number; ladder_step: number; rating: number; deviation: number }[]
@@ -258,6 +285,117 @@ describeWithDatabase("the rating, from answering to GET /me/standing", () => {
 
     expect(response.status).toBe(404);
     expect(await classes()).toEqual([]);
+  });
+
+  it("a session that only calibrated reports no movement, and records none", async () => {
+    // **The end `GET /me/history` reads from.** Nothing measured the player —
+    // both classes were new — so there is no movement to record and the entry
+    // says so with a null rather than with a zero it would have to invent.
+    const { packId } = await issue();
+
+    await sync([
+      answer(packId, FIRST_STEP[0]!, FIRST_SESSION),
+      answer(packId, SECOND_STEP[0]!, FIRST_SESSION),
+    ]);
+
+    expect(await recorded()).toEqual([]);
+    expect(await history()).toEqual([
+      { kind: "series", title: "Restas", at: AT, score: "2/2", ratingDelta: null },
+    ]);
+  });
+
+  it("and the session that was rated reports the movement, in whole points", async () => {
+    const { packId } = await issue();
+    await sync([
+      answer(packId, FIRST_STEP[0]!, FIRST_SESSION),
+      answer(packId, SECOND_STEP[0]!, FIRST_SESSION),
+    ]);
+
+    // **An hour later, spelled out.** Every other test here answers at `AT`,
+    // which leaves the two sessions tied on `max(answered_at)` and "newest
+    // first" satisfied by either order. This test reads the order, so it has
+    // to earn one.
+    await sync([
+      { ...answer(packId, FIRST_STEP[1]!, SECOND_SESSION), clientTs: LATER },
+      { ...answer(packId, SECOND_STEP[1]!, SECOND_SESSION), clientTs: LATER },
+    ]);
+
+    const moved = (await standing()).skills[0]!.rating - initialSkill().rating;
+    expect(moved).not.toBe(0);
+    const written = await recorded();
+    expect(written).toHaveLength(1);
+    expect(written[0]!.session_id).toBe(SECOND_SESSION);
+    expect(written[0]!.rating_delta).toBeCloseTo(moved, 3);
+
+    // Newest first, so the rated session leads and the calibrating one keeps
+    // its null underneath — the two facts side by side in one answer.
+    expect((await history()).map((entry) => entry.ratingDelta)).toEqual([
+      Math.round(moved),
+      null,
+    ]);
+  });
+
+  it("**a resent batch does not record a second movement**", async () => {
+    // Inherited from 0004 rather than re-implemented: nothing lands, so no
+    // rating period is formed and there is nothing to write. The assertion is
+    // still worth making, because "the rating did not move twice" and "the
+    // history did not report the move twice" are two rows in two tables.
+    const { packId } = await issue();
+    await sync([
+      answer(packId, FIRST_STEP[0]!, FIRST_SESSION),
+      answer(packId, SECOND_STEP[0]!, FIRST_SESSION),
+    ]);
+    const batch = [
+      answer(packId, FIRST_STEP[1]!, SECOND_SESSION),
+      answer(packId, SECOND_STEP[1]!, SECOND_SESSION),
+    ];
+    await sync(batch);
+    const once = await recorded();
+
+    await sync(batch);
+
+    expect(once).toHaveLength(1);
+    expect(await recorded()).toEqual(once);
+    expect(await history()).toEqual(await history());
+  });
+
+  it("a session synced in two batches records what both of them moved", async () => {
+    // **The other half of idempotency, and a different branch.** A resend
+    // lands nothing and never reaches the upsert; a device that flushed
+    // mid-session and answered more of it does land, on a session that already
+    // has a row. What that row must hold is everything the session moved, so
+    // the two writes add rather than the second replacing the first.
+    const { packId } = await issue();
+    await sync([
+      answer(packId, FIRST_STEP[0]!, FIRST_SESSION),
+      answer(packId, SECOND_STEP[0]!, FIRST_SESSION),
+    ]);
+
+    await sync([answer(packId, FIRST_STEP[1]!, SECOND_SESSION)]);
+    const afterFirstFlush = (await standing()).skills[0]!.rating;
+    expect((await recorded())[0]!.rating_delta).toBeCloseTo(
+      afterFirstFlush - initialSkill().rating,
+      3,
+    );
+
+    await sync([answer(packId, SECOND_STEP[1]!, SECOND_SESSION, false)]);
+
+    const afterSecondFlush = (await standing()).skills[0]!.rating;
+    // **The two readings have to disagree, or this proves nothing** (PROC-11).
+    // The second flush is a wrong answer, so it moves the rating the other way
+    // and `EXCLUDED.rating_delta` alone is a visibly different number from the
+    // sum. Replacing instead of adding would record only that second movement.
+    expect(afterSecondFlush).not.toBeCloseTo(afterFirstFlush, 3);
+    const written = await recorded();
+    expect(written).toHaveLength(1);
+    expect(written[0]!.rating_delta).toBeCloseTo(
+      afterSecondFlush - initialSkill().rating,
+      3,
+    );
+    expect(written[0]!.rating_delta).not.toBeCloseTo(
+      afterSecondFlush - afterFirstFlush,
+      3,
+    );
   });
 
   it("the rating survives the player being erased, minus the player", async () => {

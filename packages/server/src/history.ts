@@ -31,6 +31,12 @@ export interface SessionSummary {
   readonly correct: number;
   /** Null when the session spans more than one, which no content can do yet. */
   readonly skillId: number | null;
+  /**
+   * What the session moved the player's rating by, as it was recorded, or null
+   * when no single figure is a fact about the session. See `historyResponse`
+   * for the two ways that happens.
+   */
+  readonly ratingDelta: number | null;
 }
 
 /**
@@ -58,16 +64,48 @@ export function sessionScore(correct: number, total: number): string {
 }
 
 /**
+ * How a recorded movement reads on a screen.
+ *
+ * **Whole rating points, because the frozen schema has no other kind** —
+ * `HistoryEntry.ratingDelta` is `{type: integer, nullable: true}`. The stored
+ * figure is the difference between two `real` columns, so it becomes whole
+ * somewhere, and it becomes whole here rather than in the record: what was
+ * measured keeps every digit it was measured with, and rounding is a
+ * presentation decision.
+ */
+export function roundedDelta(change: number | null): number | null {
+  if (change === null) {
+    return null;
+  }
+  const points = Math.round(change);
+  // `Math.round(-0.2)` is `-0`, a different value from `0` to `Object.is`. A
+  // rating that slipped by a fifth of a point is not a distinct outcome from
+  // one that held, and a JSON `-0` would be a distinction nobody meant.
+  return Object.is(points, -0) ? 0 : points;
+}
+
+/**
  * The frozen `History`, newest first.
  *
- * **`ratingDelta` is still null, and the reason has changed.** There is a
- * rating now — `POST /attempts` writes `user_skills` — but a *delta* is a
- * difference between two instants and nothing records the first one.
- * `user_skills` holds only the current figure, no table snapshots a rating per
- * session, and it cannot be recomputed after the fact because the difficulty
- * classes the session was rated against have moved since. Filling this needs a
- * per-session record that does not exist yet; until it does, null is the
- * schema's way of saying "not this time" and a number would be invented.
+ * **`ratingDelta` is a real figure now, and null is still an answer.** It is
+ * the movement the rating engine recorded for that session, taken from the row
+ * `POST /attempts` wrote at the moment both ends of the subtraction existed —
+ * never recomputed here, because the difficulty classes a session was rated
+ * against move on the very next batch and a figure derived from today's would
+ * look like a measurement without being one.
+ *
+ * Two kinds of session have no such figure, and both answer null:
+ *
+ *   · **One that spans two skills.** Two ratings moved, by different amounts
+ *     and possibly in opposite directions. Summing them adds two independent
+ *     scales together and picking one is `min(skill_id)` again — the same
+ *     reason `sessionTitle` refuses to name such a session after either.
+ *   · **One that only calibrated.** Every answer met a difficulty class nobody
+ *     had met, so it taught the class and left the player where it found them
+ *     (`rating.ts`). Nothing measured the player, and *zero is already taken*:
+ *     the wire type is an integer, so a measured change of a third of a point
+ *     renders as `0`. Reporting `0` for an unmeasured session would collapse
+ *     "we did not measure you" into "we measured you and you held".
  *
  * **`kind` is always `series`.** The other value is `puzzle`, and a puzzle
  * leaves no row in any table — nothing records that one was solved, so nothing
@@ -83,7 +121,7 @@ export function historyResponse(sessions: readonly SessionSummary[]): Response {
         title: sessionTitle(session.skillId),
         at: session.at.toISOString(),
         score: sessionScore(session.correct, session.total),
-        ratingDelta: null,
+        ratingDelta: roundedDelta(session.ratingDelta),
       })),
     },
   };
