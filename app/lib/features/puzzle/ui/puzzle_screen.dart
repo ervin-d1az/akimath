@@ -7,8 +7,10 @@ import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/icon_button_tile.dart';
 import '../../../design/widgets/keypad.dart';
 import '../../../design/widgets/spec/keypad_layout.dart';
+import '../policy/pause.dart';
 import '../policy/puzzle_entry.dart';
 import '../policy/reference_card.dart';
+import 'paused_board.dart';
 import 'puzzle_board_view.dart';
 import 'reference_card.dart';
 
@@ -69,6 +71,12 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
   bool _practised = false;
   bool _rulesOpen = false;
 
+  /// **In memory only.** Nothing writes a half-finished board to disk, so a
+  /// pause survives leaving the screen for as long as this `State` does and no
+  /// longer — which is what `PausedBoardView`'s copy says out loud rather than
+  /// promising a board that comes back.
+  bool _paused = false;
+
   void _apply(PuzzleEntry next) {
     // **What landed on the board**, not what was pressed. Selecting a cell, and
     // a digit the board cannot hold, both leave `filled` alone — and neither
@@ -110,6 +118,13 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_paused) {
+      return PausedBoardView(
+        summary: pauseSummary(widget.puzzle, _entry),
+        onResume: () => setState(() => _paused = false),
+        onLeave: widget.onClose ?? () => Navigator.of(context).maybePop(),
+      );
+    }
     return Scaffold(
       backgroundColor: BrandColors.cream,
       body: SafeArea(
@@ -172,7 +187,9 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
         // **Labelled**, because a glyph-only control says nothing to a screen
-        // reader — and this one is the only way out of a full-screen session.
+        // reader — and a full-screen session has no system back on iOS. It is
+        // the direct way out; the pause screen offers the same exit with the
+        // cost of taking it spelled out.
         Semantics(
           label: 'Salir',
           button: true,
@@ -201,6 +218,19 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
             toggled: _rulesOpen,
             onPressed: () => setState(() => _rulesOpen = !_rulesOpen),
             child: const BrandIcon(BrandGlyph.hint, size: 22),
+          ),
+        ),
+        const SizedBox(width: BrandShape.space2),
+        // Where the design puts it: the right of the board's own header.
+        Semantics(
+          label: 'Pausar',
+          button: true,
+          child: IconButtonTile(
+            onPressed: () => setState(() {
+              _paused = true;
+              _rulesOpen = false;
+            }),
+            child: const BrandIcon(BrandGlyph.pause, size: 20),
           ),
         ),
       ],

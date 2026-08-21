@@ -336,5 +336,65 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('se repite'), findsOneWidget);
     });
+
+    testWidgets('and open, the sheet is a card over the board rather than text '
+        'pushed above it', (WidgetTester tester) async {
+      await _pump(tester);
+      await tester.tap(_labelled('Cómo se juega'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('KENKEN EN CORTO'), findsOneWidget);
+      // The board is gone rather than squeezed: a grid that resized under a
+      // player's hand while they read the rules is what the card replaces.
+      expect(find.byType(PuzzleBoardView), findsNothing);
+    });
+  });
+
+  group('pausing', () {
+    testWidgets('covers the board and says which one it is',
+        (WidgetTester tester) async {
+      await _pump(tester);
+
+      await tester.tap(_labelled('Pausar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('EN PAUSA'), findsOneWidget);
+      expect(find.byType(PuzzleBoardView), findsNothing);
+    });
+
+    testWidgets('does not erase what was entered', (WidgetTester tester) async {
+      // *Tablero tapado, no borrado.* The entry is the `State`'s and pausing
+      // only changes what is drawn, which is the whole reason this is one
+      // screen and not two routes.
+      await _pump(tester);
+      await _tapCell(tester, 0, 0);
+      await _press(tester, '1');
+      expect(_onBoard('1'), findsOneWidget);
+
+      await tester.tap(_labelled('Pausar'));
+      await tester.pumpAndSettle();
+      // One of nine cells is the player's work, reported as a count.
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('DE 9 CELDAS'), findsOneWidget);
+
+      await tester.tap(find.text('Reanudar'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PuzzleBoardView), findsOneWidget);
+      expect(_onBoard('1'), findsOneWidget);
+    });
+
+    testWidgets('and leaving from it is the board\'s own way out',
+        (WidgetTester tester) async {
+      bool closed = false;
+      await _pump(tester, onClose: () => closed = true);
+
+      await tester.tap(_labelled('Pausar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Salir del tablero'));
+      await tester.pumpAndSettle();
+
+      expect(closed, isTrue);
+    });
   });
 }
