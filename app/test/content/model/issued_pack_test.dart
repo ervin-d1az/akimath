@@ -241,6 +241,37 @@ void main() {
       expect(() => read(without('items')), throwsFormatException);
     });
 
+    test('a distractor whose copy cannot be read', () {
+      // **Every entry or none.** One that silently never fires is worse than a
+      // pack refused at the door — the player would meet the fallback and
+      // nobody would know the specific copy existed. Found by a falsification:
+      // the strictness was written and nothing asserted it.
+      final Map<String, dynamic> content = shippedContent();
+      final Map<String, dynamic> item = (content['items']! as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .firstWhere((Map<String, dynamic> i) => i['diagnosis'] != null);
+      final List<dynamic> distractors =
+          (item['diagnosis']! as Map<String, dynamic>)['distractors']!
+              as List<dynamic>;
+      (distractors.first as Map<String, dynamic>)['diagnosis'] =
+          <String, dynamic>{'explain': 'sin pasos'};
+
+      expect(() => read(content), throwsFormatException);
+    });
+
+    test('a distractor with no digest', () {
+      final Map<String, dynamic> content = shippedContent();
+      final Map<String, dynamic> item = (content['items']! as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .firstWhere((Map<String, dynamic> i) => i['diagnosis'] != null);
+      final List<dynamic> distractors =
+          (item['diagnosis']! as Map<String, dynamic>)['distractors']!
+              as List<dynamic>;
+      (distractors.first as Map<String, dynamic>).remove('digest');
+
+      expect(() => read(content), throwsFormatException);
+    });
+
     test('an item with no digest', () {
       final Map<String, dynamic> content = shippedContent();
       (content['items']! as List<dynamic>)[0] = <String, dynamic>{
