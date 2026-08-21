@@ -5,8 +5,11 @@ import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/design/theme.dart';
 import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/design/widgets/spec/verdict.dart';
+import 'package:akimath_app/features/home/data/day_log_store.dart';
 import 'package:akimath_app/features/home/data/prefs_day_log_store.dart';
 import 'package:akimath_app/features/home/data/series_cursor_store.dart';
+import 'package:akimath_app/features/home/policy/day_log.dart';
 import 'package:akimath_app/features/home/policy/series_families.dart';
 import 'package:akimath_app/features/map/data/practised_step_store.dart';
 import 'package:akimath_app/features/map/ui/map_route.dart';
@@ -14,6 +17,11 @@ import 'package:akimath_app/features/map/ui/node_detail_screen.dart';
 import 'package:akimath_app/features/map/ui/skill_map_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:akimath_app/features/shell/policy/visible_tabs.dart';
+import 'package:akimath_app/features/stats/data/answer_record_store.dart';
+import 'package:akimath_app/features/stats/policy/local_stats.dart';
+import 'package:akimath_app/features/sync/attempt_sync.dart';
+import 'package:akimath_app/features/sync/data/attempt_journal_store.dart';
+import 'package:akimath_app/features/sync/policy/attempt_journal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -101,6 +109,19 @@ String _ladderPack() {
 ''';
 }
 
+/// The same pack, with the ids an **issued** pack carries.
+///
+/// `readIssuedItemId` reads an id as `packId#index` and returns null for
+/// anything else, so an authored item is dropped by `AttemptSync.record` on
+/// purpose — nothing on the server addresses it. Both shapes are fixtures here
+/// because the difference is the whole reason a practice run does or does not
+/// reach the server, and a test written only against one of them would report
+/// a loop that closes when it does not.
+String _issuedShapedPack() => _ladderPack().replaceAllMapped(
+      RegExp(r'"id": "(a|s)(\d)"'),
+      (Match m) => '"id": "pk-1#${m.group(2)}"',
+    );
+
 /// Answers the item on screen and moves past its verdict.
 ///
 /// The digit is arbitrary: what a practice run records about a topic is the
@@ -145,6 +166,9 @@ Future<void> _pump(
   RootVisibility visibility = RootVisibility.showing,
   FakeViewPadding padding = FakeViewPadding.zero,
   Size size = const Size(390, 844),
+  DayLogStore? dayLog,
+  AnswerRecordStore? answerRecord,
+  AttemptSync? sync,
 }) async {
   // **The hardware goes on the view, not into a `MediaQuery` below
   // `MaterialApp`.** A wrapper under `home` sits *below* the app's `Navigator`,
@@ -158,7 +182,14 @@ Future<void> _pump(
     ..viewPadding = padding;
   addTearDown(tester.view.reset);
 
-  await _pumpAgain(tester, pack: pack, visibility: visibility);
+  await _pumpAgain(
+    tester,
+    pack: pack,
+    visibility: visibility,
+    dayLog: dayLog,
+    answerRecord: answerRecord,
+    sync: sync,
+  );
 }
 
 /// The same tree again, so `didUpdateWidget` runs on the state already there.
@@ -169,6 +200,9 @@ Future<void> _pumpAgain(
   WidgetTester tester, {
   required String pack,
   required RootVisibility visibility,
+  DayLogStore? dayLog,
+  AnswerRecordStore? answerRecord,
+  AttemptSync? sync,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -176,10 +210,34 @@ Future<void> _pumpAgain(
       home: MapRoute(
         reader: PackReader(bundle: _FakeBundle(pack)),
         visibility: visibility,
+        dayLog: dayLog,
+        answerRecord: answerRecord,
+        sync: sync,
       ),
     ),
   );
   await tester.pumpAndSettle();
+}
+
+/// A [DayLog] holding [days], built the only way one can be — by recording.
+DayLog _seeded(List<DateTime> days) {
+  DayLog log = DayLog.empty;
+  for (final DateTime day in days) {
+    log = log.recording(day);
+  }
+  return log;
+}
+
+/// The [count] days ending yesterday, so a round today makes a run of
+/// `count + 1`.
+List<DateTime> _daysBeforeToday(int count) {
+  final DateTime today = DateTime.now();
+  return <DateTime>[
+    for (int back = count; back >= 1; back--)
+      DateTime(today.year, today.month, today.day).subtract(
+        Duration(days: back),
+      ),
+  ];
 }
 
 void main() {
@@ -366,6 +424,131 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('100%'), findsOneWidget);
+    });
+  });
+
+  // Three losses measured beside the one above, on the same device and the same
+  // night. A practice run reported nothing to the device's own figures, nothing
+  // to the journal, and told the round the player had practised on no day at
+  // all. The home path wires all three; this one wired none.
+  group('a practice run counts everywhere a series counts', () {
+    testWidgets('every answer reaches the record the profile reads',
+        (WidgetTester tester) async {
+      final InMemoryAnswerRecordStore record = InMemoryAnswerRecordStore();
+      await _pump(tester, pack: _ladderPack(), answerRecord: record);
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      await _answerOne(tester);
+      await _answerOne(tester);
+
+      // `8` is the answer every series item in the fixture carries, so both are
+      // right — which is the half that could be faked by recording a constant.
+      // The verdict has to travel, so the third answer is deliberately wrong.
+      await tester.tap(
+        find.byWidgetPredicate(
+          (Widget w) => w is KeypadKeyView && w.data.id == '3',
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byWidgetPredicate(
+          (Widget w) => w is KeypadKeyView && w.data.id == 'submit',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        (await record.read()).map((AnsweredItem a) => a.verdict),
+        <Verdict>[Verdict.correct, Verdict.correct, Verdict.wrong],
+      );
+    });
+
+    testWidgets('an answer the server can address reaches the journal',
+        (WidgetTester tester) async {
+      final InMemoryAttemptJournalStore journal =
+          InMemoryAttemptJournalStore();
+      await _pump(
+        tester,
+        pack: _issuedShapedPack(),
+        sync: AttemptSync(store: journal),
+      );
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      await _answerOne(tester);
+      await _answerOne(tester);
+
+      final List<JournalledAttempt> held = await journal.read();
+      expect(held, hasLength(2));
+      // One sitting, one session id: `GET /me/history` groups by it, and a
+      // history of one-item sessions is a history nobody can read.
+      expect(
+        held.map((JournalledAttempt a) => a.sessionId).toSet(),
+        hasLength(1),
+      );
+      // The address the server grades by, not the position in the run.
+      expect(held.map((JournalledAttempt a) => a.index), <int>[1, 2]);
+    });
+
+    testWidgets('an authored item reaches it as nothing at all, and says so '
+        'here rather than at a 404', (WidgetTester tester) async {
+      // The contrast that keeps the case above honest. `_ladderPack` carries the
+      // bundled pack's ids, which name no `(packId, index)` — so this is what
+      // the app really does today whenever it is playing the pack it ships.
+      final InMemoryAttemptJournalStore journal =
+          InMemoryAttemptJournalStore();
+      await _pump(
+        tester,
+        pack: _ladderPack(),
+        sync: AttemptSync(store: journal),
+      );
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      await _answerOne(tester);
+
+      expect(await journal.read(), isEmpty);
+    });
+
+    testWidgets('the verdict reports the run the player is really on',
+        (WidgetTester tester) async {
+      // `attemptDays: const <DateTime>[]` told the round the player had
+      // practised on no day ever, while a store underneath it recorded today —
+      // so `03 Acierto` printed `RACHA 1` to somebody on a run of four. That is
+      // the two-screens-one-morning contradiction `StreakPolicy` was fixed for,
+      // and it was reintroduced one screen over.
+      await _pump(
+        tester,
+        pack: _ladderPack(),
+        dayLog: InMemoryDayLogStore(_seeded(_daysBeforeToday(3))),
+      );
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byWidgetPredicate(
+          (Widget w) => w is KeypadKeyView && w.data.id == '8',
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byWidgetPredicate(
+          (Widget w) => w is KeypadKeyView && w.data.id == 'submit',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('RACHA'), findsOneWidget);
+      expect(find.text('4'), findsOneWidget);
     });
   });
 

@@ -6,14 +6,19 @@ import '../../../content/model/item.dart';
 import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../design/widgets/spec/verdict.dart';
 import '../../home/data/day_log_store.dart';
 import '../../home/data/prefs_day_log_store.dart';
 import '../../home/data/series_cursor_store.dart';
+import '../../home/policy/day_log.dart';
 import '../../home/policy/series_families.dart';
 import '../../round/ui/round_screen.dart';
 import '../../shell/policy/visible_tabs.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../shell/ui/skeleton_block.dart';
+import '../../stats/data/answer_record_store.dart';
+import '../../stats/policy/local_stats.dart';
+import '../../sync/attempt_sync.dart';
 import '../data/practised_step_store.dart';
 import '../policy/practice_series.dart';
 import '../policy/skill_map.dart';
@@ -35,6 +40,8 @@ class MapRoute extends StatefulWidget {
     this.seriesCursor = const SeriesCursorStore(),
     this.dayLog,
     this.practisedSteps,
+    this.answerRecord,
+    this.sync,
     this.visibility = RootVisibility.showing,
   });
 
@@ -67,6 +74,22 @@ class MapRoute extends StatefulWidget {
   /// is now able to move the number above it. Injected for the reason [dayLog]
   /// is: a `testWidgets` must never reach a plugin.
   final PractisedStepStore? practisedSteps;
+
+  /// Where the device's own record of answered items is kept — the one source
+  /// of the accuracy and the mean time `4.1 Perfil` draws.
+  ///
+  /// **A practice run is a run.** The home wires this for a series; the map did
+  /// not, so five items answered from a topic moved neither figure and the
+  /// profile reported on a fraction of what the player had actually done.
+  final AnswerRecordStore? answerRecord;
+
+  /// What remembers an answered item until the server has it.
+  ///
+  /// The home wires this for a series and the map did not, so a topic run
+  /// reached the server as nothing: no attempt row, no history entry, no
+  /// rating. It records without touching the network — flushing is the home's,
+  /// on the launch, on a session arriving, and on the way back from a series.
+  final AttemptSync? sync;
 
   @override
   State<MapRoute> createState() => _MapRouteState();
@@ -102,6 +125,21 @@ class _MapRouteState extends State<MapRoute> {
   /// nothing, and a store nobody supplies is a record nobody writes.
   late final PractisedStepStore _practisedSteps =
       widget.practisedSteps ?? const PrefsPractisedStepStore();
+
+  late final AnswerRecordStore _answerRecord =
+      widget.answerRecord ?? const PrefsAnswerRecordStore();
+
+  late final AttemptSync _sync = widget.sync ?? AttemptSync();
+
+  /// The days the player has practised, as the last reading found them.
+  ///
+  /// **Held here because the round has to be told.** `RoundScreen` prints the
+  /// streak on its verdict, and it computes it from what it is handed plus
+  /// today; handed an empty list it reported `RACHA 1` to a player on a run of
+  /// twelve, one screen away from the home saying otherwise. Read with
+  /// everything else so a run started after coming back to Mapa sees what the
+  /// home wrote.
+  DayLog _log = DayLog.empty;
 
   @override
   void initState() {
@@ -151,9 +189,11 @@ class _MapRouteState extends State<MapRoute> {
       final Pack pack = await widget.reader.load();
       final int served = await widget.seriesCursor.read();
       final Map<String, int> practised = await _practisedSteps.read();
+      final DayLog log = await _dayLog.read();
       if (!mounted) {
         return;
       }
+      _log = log;
       setState(() => _packRefused = false);
       _contents.value = _MapContents(
         pack: pack,
@@ -319,23 +359,54 @@ class _MapRouteState extends State<MapRoute> {
     // is a screen that shows the old number.
     int hardestStepServed = 0;
 
+    // **One id per sitting**, minted before the push so every answer in this
+    // run carries the same one, exactly as `_startSeries` does. `GET
+    // /me/history` groups by it, and a history of one-item sessions is a
+    // history nobody can read.
+    final String sessionId = _sync.newSessionId();
+
     await pushSession<void>(
       context,
       (BuildContext roundContext) => RoundScreen(
         items: items,
         fallbackDiagnosis: contents.pack.fallbackDiagnosis,
-        attemptDays: const <DateTime>[],
+        // **What the round prints as `RACHA`.** Empty said the player had
+        // practised on no day at all, while the store below it recorded today —
+        // so a practice verdict read `RACHA 1` however long the real run was.
+        attemptDays: _log.days,
         dayLog: _dayLog,
         onClose: () => Navigator.of(roundContext).pop(),
-        // **The item and never the verdict.** How far up a topic a run took the
-        // player is a fact about what was *served*, the same reading the cursor
-        // takes for a series — so it is `onAnswered`, which carries the item,
-        // rather than `onGraded`, which carries a decision this has no use for.
+        // **The item and never the verdict.** Two things want an answered item
+        // here, and neither of them wants a verdict: how far up a topic the run
+        // took the player is a fact about what was *served*, and what travels
+        // to the server deliberately carries no verdict at all, because the
+        // frozen schema has nowhere to put one.
         onAnswered: (Item item, String answer, Duration elapsed) {
           if (item.ladderStep > hardestStepServed) {
             hardestStepServed = item.ladderStep;
           }
+          // Never touches the network — play is offline, and a submit that
+          // waited on a socket would be a pause mid-round. An item the server
+          // cannot address is dropped inside `record`, on purpose.
+          unawaited(
+            _sync.record(
+              itemId: item.id,
+              sessionId: sessionId,
+              answer: answer,
+              at: DateTime.now(),
+              elapsed: elapsed,
+            ),
+          );
         },
+        // **`onGraded` and never `onAnswered`.** That one carries what the
+        // server needs and deliberately no verdict; reading a verdict off it
+        // would mean calling `gradeItem` a second time, which is a second
+        // decision about one answer — the defect `diagnose` was fixed for.
+        onGraded: (Verdict verdict, Duration elapsed) => unawaited(
+          _answerRecord.record(
+            AnsweredItem(verdict: verdict, elapsed: elapsed),
+          ),
+        ),
         // Wired, or the round cycles its five items for ever.
         onFinished: (RoundOutcome _) => Navigator.of(roundContext).pop(),
       ),
