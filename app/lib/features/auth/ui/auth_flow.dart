@@ -5,6 +5,8 @@ import '../../../api/me.dart';
 import '../policy/age_gate.dart';
 import 'age_gate_screen.dart';
 import 'create_account_screen.dart';
+import 'recover_password_screen.dart';
+import 'sign_in_screen.dart';
 import 'tutor_consent_screen.dart';
 import 'verify_email_screen.dart';
 
@@ -56,7 +58,7 @@ class AuthFlow extends StatefulWidget {
   State<AuthFlow> createState() => _AuthFlowState();
 }
 
-enum _Step { age, consent, create, verify }
+enum _Step { age, consent, create, signIn, recover, verify }
 
 class _AuthFlowState extends State<AuthFlow> {
   /// The steps behind the one on screen, oldest first.
@@ -72,6 +74,11 @@ class _AuthFlowState extends State<AuthFlow> {
   String _email = '';
   String? _problem;
   bool _busy = false;
+
+  /// Whether the provider has accepted a reset request. Set from its answer and
+  /// cleared on the way into `1.4`, so a second visit does not open on the
+  /// confirmation the first one earned.
+  bool _resetSent = false;
   DateTime _codeIssuedAt = DateTime.now();
 
   /// One rule: back is the step you came from, and behind the first one is the
@@ -84,6 +91,39 @@ class _AuthFlowState extends State<AuthFlow> {
     setState(() {
       _problem = null;
       _trail.removeLast();
+    });
+  }
+
+  void _goTo(_Step step) {
+    setState(() {
+      _problem = null;
+      _trail.add(step);
+    });
+  }
+
+  Future<void> _sendPasswordReset(String email) async {
+    setState(() {
+      _busy = true;
+      _problem = null;
+      _email = email;
+    });
+
+    final AuthResult<Accepted> asked = await widget.auth.sendPasswordReset(
+      email: email,
+      // The same trusted origin sign-up uses. A scheme of our own is 403
+      // `INVALID_CALLBACK_URL` until somebody adds one in the console.
+      redirectTo: widget.callbackUrl,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _busy = false;
+      _problem = _explain(asked);
+      // **Only the provider's yes turns this on.** Setting it on the way into
+      // the call would show "ya va en camino" to a player whose provider has
+      // no reset mailer configured and answered a refusal.
+      _resetSent = _problem == null;
     });
   }
 
@@ -186,9 +226,49 @@ class _AuthFlowState extends State<AuthFlow> {
       return;
     }
 
-    final AuthResult<String> token = await widget.auth.accessToken(
-      verified.value,
+    await _linkWith(verified.value);
+  }
+
+  Future<void> _signIn(String email, String password) async {
+    setState(() {
+      _busy = true;
+      _problem = null;
+      _email = email;
+    });
+
+    final AuthResult<AuthSession> session = await widget.auth.signIn(
+      email: email,
+      password: password,
     );
+    if (!mounted) {
+      return;
+    }
+    if (session is! AuthOk<AuthSession>) {
+      setState(() {
+        _busy = false;
+        _problem = _explain(session) ?? 'No pudimos entrar con esos datos.';
+      });
+      return;
+    }
+    // **No code is asked for here.** `requireEmailVerification` is on, so the
+    // provider hands out no session for an unverified address at all — a
+    // session in hand means the address is already confirmed, and sending a
+    // code would be sending one nobody needs.
+    //
+    // **The unverified account is a dead end, and it is not handled.** Somebody
+    // who created an account and closed the app before typing the code gets a
+    // refusal here with no way on, even though `sendVerificationCode` and
+    // `_Step.verify` both exist. Routing to them needs the refusal's code
+    // string, and nobody has enumerated the provider's codes — guessing at one
+    // is what `_explain` refuses to do. It is a gap waiting on a measurement,
+    // not an oversight.
+    await _linkWith(session.value);
+  }
+
+  /// The last stretch both doors share: a session becomes the JWT the AkiMath
+  /// server verifies, or the screen says why it did not.
+  Future<void> _linkWith(AuthSession session) async {
+    final AuthResult<String> token = await widget.auth.accessToken(session);
     if (!mounted) {
       return;
     }
@@ -234,6 +314,27 @@ class _AuthFlowState extends State<AuthFlow> {
       busy: _busy,
       problem: _problem,
       onBack: _back,
+      onSignInInstead: () => _goTo(_Step.signIn),
+    ),
+    _Step.signIn => SignInScreen(
+      onSubmit: _signIn,
+      busy: _busy,
+      problem: _problem,
+      onBack: _back,
+      initialEmail: _email,
+      onForgotPassword: (String email) {
+        _email = email;
+        _resetSent = false;
+        _goTo(_Step.recover);
+      },
+    ),
+    _Step.recover => RecoverPasswordScreen(
+      onSubmit: _sendPasswordReset,
+      busy: _busy,
+      sent: _resetSent,
+      onBack: _back,
+      initialEmail: _email,
+      problem: _problem,
     ),
     _Step.verify => VerifyEmailScreen(
       email: _email,
