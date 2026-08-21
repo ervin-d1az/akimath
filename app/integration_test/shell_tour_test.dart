@@ -127,12 +127,23 @@ void main() {
     // progress screen, and every line it held is a line `4.1` puts under the
     // identity.
     //
-    // The wide card reads `RATING` rather than `DÍAS` while the demo figures
-    // are on: the days practised are what that slot falls back to when there
-    // is no rating to show. `RACHA` and `RETOS` are the device's own and are
-    // true either way.
+    // **Every figure here is now one the device can prove, on a real phone.**
+    // The wide card reads `DÍAS` because nothing hands over a rating any more:
+    // `GET /me/standing` answers a rating *per skill* and there is no single
+    // number to print, so the slot falls back to the days practised rather
+    // than to an invented `1 248`.
+    expect(find.text('DÍAS'), findsOneWidget);
     expect(find.text('RACHA'), findsOneWidget);
     expect(find.text('RETOS'), findsOneWidget);
+    expect(find.text('RATING'), findsNothing);
+    expect(find.textContaining('esta semana'), findsNothing);
+
+    // **Absent, not zero.** This device has answered nothing that counts — the
+    // teaching item deliberately records no answer — so accuracy and mean time
+    // have nothing behind them and their tiles are simply not drawn. `0 %`
+    // here would tell a new player they got everything wrong.
+    expect(find.text('ACIERTOS'), findsNothing);
+    expect(find.text('PROMEDIO'), findsNothing);
     // No account on a fresh install, so there is no history section at all —
     // a `HISTORIAL` nothing can ever fill is a promise the product cannot keep
     // while nothing syncs.

@@ -10,7 +10,7 @@ ProfileFigures figures({
   int? rating,
   int? ratingThisWeek,
   int? accuracyPercent,
-  int? averageTenthsOfSecond,
+  Duration? averageTime,
 }) =>
     ProfileFigures(
       daysPractised: daysPractised,
@@ -19,7 +19,7 @@ ProfileFigures figures({
       rating: rating,
       ratingThisWeek: ratingThisWeek,
       accuracyPercent: accuracyPercent,
-      averageTenthsOfSecond: averageTenthsOfSecond,
+      averageTime: averageTime,
     );
 
 void main() {
@@ -96,7 +96,7 @@ void main() {
       final List<ProfileTile> tiles = profileTiles(figures(
         challenges: 312,
         accuracyPercent: 78,
-        averageTenthsOfSecond: 68,
+        averageTime: const Duration(milliseconds: 6800),
       ));
 
       expect(
@@ -106,6 +106,20 @@ void main() {
       expect(tiles.first.value, EsMxNumber.integer(312));
       expect(tiles[1].value, EsMxNumber.percent(78));
       expect(tiles.last.value, EsMxNumber.seconds(6.8, places: 1));
+    });
+
+    test('a mean time is rounded to the tenth, not cut off at it', () {
+      // The record stores milliseconds and the tile prints one decimal, so
+      // somebody decides what happens between the two. **Rounded**, because
+      // truncating prints every player faster than they were — and the figure
+      // this pins is one truncation gets wrong: `6 950 ms` is `7,0 s`, and
+      // `mean.inMilliseconds ~/ 100 / 10` would say `6,9 s`.
+      final List<ProfileTile> tiles = profileTiles(
+        figures(averageTime: const Duration(milliseconds: 6950)),
+      );
+
+      expect(tiles.last.label, 'PROMEDIO');
+      expect(tiles.last.value, EsMxNumber.seconds(7, places: 1));
     });
 
     test('the row never empties, because the count is this device own', () {

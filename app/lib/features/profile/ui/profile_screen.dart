@@ -32,12 +32,15 @@ import '../policy/profile_readout.dart';
 ///
 /// **The screen draws what it is handed and decides nothing.** Which figures
 /// exist, what each one is called and how each is spelt is [ProfileFigures] and
-/// the three functions beside it. Rating has no source anywhere — it is F4 and
-/// `GET /me/standing` answers 501. Accuracy and mean time have one on this
-/// device, since `features/stats/` began remembering a verdict and an elapsed
-/// time per answer, and the caller has not been pointed at it yet — so today
-/// all three still arrive invented from `DemoFigures`, and a figure that
-/// arrives null is simply not drawn.
+/// the three functions beside it.
+///
+/// **Nothing it is handed is invented any more.** Accuracy and mean time come
+/// from the record `features/stats/` keeps of what was answered; the days, the
+/// run and the count of challenges were always the device's. A rating is handed
+/// over by nobody — `GET /me/standing` answers one *per skill* and there is no
+/// single number to print — and a weekly move by nobody either, since
+/// `ratingDelta` is null. Both are simply not drawn, the same rule that makes
+/// `HISTORIAL` disappear when there is nothing true to say.
 ///
 /// **Aki appears once, inside the avatar tile.** Declared rule 5 names her
 /// homes — *inicio, resultados, estados de racha y tutorial* — and the profile

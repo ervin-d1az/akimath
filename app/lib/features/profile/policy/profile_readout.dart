@@ -7,14 +7,20 @@ import '../../states/policy/account_state.dart';
 ///
 /// **PURE** — figures in, strings out. No widget, no clock, no storage.
 ///
-/// **It exists so a figure can be swapped at one point.** Three of the numbers
-/// the design draws — a rating, an accuracy and a mean time — arrive invented
-/// today; the two the device does know come from `DayLog` and the series
-/// cursor. Only the **rating** is invented for want of a source: it is F4 and
-/// `GET /me/standing` answers 501. Accuracy and mean time have one —
-/// `features/stats/` records a verdict and an elapsed time per answer — and the
-/// caller filling [ProfileFigures] has not been pointed at it yet, which is
-/// exactly the one line this type exists to make the whole change.
+/// **Nothing invented reaches it any more.** Every figure the caller fills in
+/// is now the device's own: the days and the run from `DayLog`, the count from
+/// the series cursor, and accuracy and mean time from the record
+/// `features/stats/` keeps of what was actually answered. The screen used to
+/// print `RATING 1 248` and `78 % ACIERTOS` beside a real `0 RETOS` — invented
+/// figures contradicting real ones on the same screen.
+///
+/// **The rating slot stays and stays empty**, which is a different statement
+/// from the slot not existing. `4.1` draws a rating and `GET /me/standing`
+/// answers one **per skill**; there is no single number on the wire, and this
+/// client cannot even name a skill (`skillId` is an integer and `skillName()`
+/// lives server-side in `@akimath/core`). Until somebody decides what one
+/// number means over a list of Glicko ratings, the honest figure is none —
+/// `api/standing.dart` refuses to do arithmetic over them for the same reason.
 ///
 /// **A figure with no source is null, and a null figure is not drawn.** That is
 /// the whole degradation rule: the tile row loses a tile, and the headline
@@ -29,7 +35,7 @@ final class ProfileFigures {
     this.rating,
     this.ratingThisWeek,
     this.accuracyPercent,
-    this.averageTenthsOfSecond,
+    this.averageTime,
   });
 
   /// Distinct days recorded on this device.
@@ -41,24 +47,39 @@ final class ProfileFigures {
   /// Items served across every session, from the persisted series cursor.
   final int challenges;
 
-  /// Null until rating exists. Rating is F4 and `GET /me/standing` answers 501.
+  /// Null, and null from every caller there is.
+  ///
+  /// **The data exists and the number does not.** F4 landed and
+  /// `GET /me/standing` reads `user_skills` truthfully, but it answers a rating
+  /// **per skill** — and a player who has never synced has none at all, which
+  /// is the ordinary state rather than a failure. Averaging six Glicko ratings
+  /// is not a rating; it is a figure nobody could explain. The slot is kept
+  /// because the design draws one and the day the product says what the single
+  /// number means, this is the one line that changes.
   final int? rating;
 
   /// How much the rating moved this week. Null when there is no rating, and
   /// null on its own when there is one and nobody can say how it moved.
+  ///
+  /// Nothing can say it today: `HistoryEntry.ratingDelta` comes back null, so
+  /// `+ 36 esta semana` had no source at all — not a weak one, none.
   final int? ratingThisWeek;
 
-  /// A whole percent, or null while nothing hands one over.
+  /// A whole percent, or null over no answers at all.
   ///
-  /// **Null is no longer the same statement it was.** It used to mean the
-  /// device could not know; `features/stats/` knows now, and null means the
-  /// caller has not asked it.
+  /// **Real, from `LocalStats.accuracyPercent`.** Null means the player has
+  /// answered nothing, and it stays absent rather than becoming `0 %` — a new
+  /// player is not 0 % accurate, and a screen that says so teaches them they
+  /// are already failing.
   final int? accuracyPercent;
 
-  /// Tenths of a second, so the screen formats it with a decimal comma rather
-  /// than carrying a `double` a `toString` would print with a point. Null for
-  /// the same reason [accuracyPercent] is.
-  final int? averageTenthsOfSecond;
+  /// How long an answer takes, or null over no answers at all.
+  ///
+  /// **A [Duration] rather than a number of tenths**, because it arrives as one
+  /// from `LocalStats.meanTime` and the rounding to the tenth the screen prints
+  /// is a decision — so it is made once, here in the pure layer, by
+  /// [profileTiles] rather than by whichever caller happened to divide.
+  final Duration? averageTime;
 }
 
 /// The hue the sign run in front of a note takes.
@@ -165,15 +186,19 @@ HeadlineCard headlineRun(ProfileFigures figures) => HeadlineCard(
 /// the player is invited to wonder about.
 List<ProfileTile> profileTiles(ProfileFigures figures) {
   final int? accuracy = figures.accuracyPercent;
-  final int? tenths = figures.averageTenthsOfSecond;
+  final Duration? mean = figures.averageTime;
 
   return <ProfileTile>[
     ProfileTile(value: EsMxNumber.integer(figures.challenges), label: 'RETOS'),
     if (accuracy != null)
       ProfileTile(value: EsMxNumber.percent(accuracy), label: 'ACIERTOS'),
-    if (tenths != null)
+    if (mean != null)
       ProfileTile(
-        value: EsMxNumber.seconds(tenths / 10, places: 1),
+        // One tenth of a second, rounded rather than truncated: the record
+        // stores milliseconds, and 6 950 ms is `7,0 s`. Cutting it to `6,9 s`
+        // would print every player a twentieth of a second faster than they
+        // were.
+        value: EsMxNumber.seconds(mean.inMilliseconds / 1000, places: 1),
         label: 'PROMEDIO',
       ),
   ];
