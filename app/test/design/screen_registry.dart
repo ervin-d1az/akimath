@@ -11,6 +11,7 @@ import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart
 import 'package:akimath_app/features/states/policy/account_state.dart';
 import 'package:akimath_app/features/states/ui/account_state_view.dart';
 import 'package:akimath_app/features/states/ui/empty_state_screen.dart';
+import 'package:akimath_app/features/states/ui/offline_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
@@ -1096,6 +1097,16 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   RegisteredScreen(
     label: 'estado · 4.8 vacío',
     build: () => AppShell(child: EmptyStateScreen(onStart: _nothing)),
+  ),
+  RegisteredScreen(
+    label: 'estado · 4.9 sin conexión',
+    build: () => AppShell(
+      child: OfflineScreen(
+        challenges: 40,
+        puzzles: 2,
+        onSolveOffline: _nothing,
+      ),
+    ),
   ),
 ];
 
