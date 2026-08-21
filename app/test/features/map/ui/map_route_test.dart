@@ -4,6 +4,8 @@ import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/design/theme.dart';
 import 'package:akimath_app/design/widgets/icon_button_tile.dart';
+import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/features/home/data/prefs_day_log_store.dart';
 import 'package:akimath_app/features/home/data/series_cursor_store.dart';
 import 'package:akimath_app/features/home/policy/series_families.dart';
 import 'package:akimath_app/features/map/ui/map_route.dart';
@@ -204,6 +206,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(await const SeriesCursorStore().read(), 0);
+  });
+
+  testWidgets('practising records the day on the device, with no store handed '
+      'in', (WidgetTester tester) async {
+    // **The shell hands this route nothing.** `RootScaffold` builds
+    // `MapRoute(visibility: …)` and no `dayLog`, `RoundScreen` resolves a null
+    // one to no store at all — `store?.record(…)` — and a day practised from
+    // Mapa was therefore never written. Every other case here injects a store
+    // and so could never see it; this one deliberately does not, which is the
+    // only way the default is under test.
+    await _pump(tester, pack: _pack());
+
+    await tester.tap(find.text('Cuentas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Practicar 5 retos'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byWidgetPredicate((Widget w) => w is KeypadKeyView && w.data.id == '7'),
+    );
+    await tester.tap(
+      find.byWidgetPredicate(
+        (Widget w) => w is KeypadKeyView && w.data.id == 'submit',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect((await const PrefsDayLogStore().read()).days, hasLength(1));
   });
 
   group('the hardware in the way', () {

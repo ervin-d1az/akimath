@@ -7,6 +7,7 @@ import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../home/data/day_log_store.dart';
+import '../../home/data/prefs_day_log_store.dart';
 import '../../home/data/series_cursor_store.dart';
 import '../../round/ui/round_screen.dart';
 import '../../shell/policy/visible_tabs.dart';
@@ -63,6 +64,16 @@ class _MapRouteState extends State<MapRoute> {
 
   /// Whether the last reading refused the pack.
   bool _packRefused = false;
+
+  /// Where a practice run records the day.
+  ///
+  /// **Defaulted here, because nothing downstream defaults it.** `RoundScreen`
+  /// takes a nullable store and writes through `store?.record(…)`, which is
+  /// deliberate — the teaching item is a round that must record nothing — and
+  /// `RootScaffold` hands this route no store, so a practice run started from
+  /// Mapa wrote no day at all. `HomeRoute` has resolved its own the same way
+  /// since it landed.
+  late final DayLogStore _dayLog = widget.dayLog ?? const PrefsDayLogStore();
 
   @override
   void initState() {
@@ -220,7 +231,7 @@ class _MapRouteState extends State<MapRoute> {
         items: items,
         fallbackDiagnosis: contents.pack.fallbackDiagnosis,
         attemptDays: const <DateTime>[],
-        dayLog: widget.dayLog,
+        dayLog: _dayLog,
         onClose: () => Navigator.of(roundContext).pop(),
         // Wired, or the round cycles its five items for ever. What it reports
         // is not read: a practice run is not a series, so it opens no summary
