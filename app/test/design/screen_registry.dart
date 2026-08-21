@@ -731,7 +731,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => AppShell(
       child: EraseAccountScreen(
         step: null,
-        confirmWord: _emptyGate,
+        confirmWord: TextEditingController(),
         onConfirm: () {},
         onCancel: () {},
         onDone: () {},
@@ -743,7 +743,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => AppShell(
       child: EraseAccountScreen(
         step: ErasureStep.offline,
-        confirmWord: _emptyGate,
+        confirmWord: TextEditingController(),
         onConfirm: () {},
         onCancel: () {},
         onDone: () {},
@@ -756,7 +756,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => AppShell(
       child: EraseAccountScreen(
         step: ErasureStep.gone,
-        confirmWord: _emptyGate,
+        confirmWord: TextEditingController(),
         onConfirm: () {},
         onCancel: () {},
         onDone: () {},
@@ -872,7 +872,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => AppShell(
       child: EraseAccountScreen(
         step: null,
-        confirmWord: _openGate,
+        confirmWord: TextEditingController(text: erasureConfirmWord),
         onConfirm: _nothing,
         onCancel: _nothing,
         onDone: _nothing,
@@ -884,11 +884,3 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
 /// A callback for a registry entry, so a screen can be drawn with its control
 /// live without every entry declaring its own closure.
 void _nothing() {}
-
-/// The erasure gate's field, before anything is typed into it.
-final TextEditingController _emptyGate = TextEditingController();
-
-/// The same field with the word in it, which is the only state in which the
-/// destructive confirm is a control at all.
-final TextEditingController _openGate =
-    TextEditingController(text: erasureConfirmWord);
