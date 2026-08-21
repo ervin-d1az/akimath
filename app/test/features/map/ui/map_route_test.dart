@@ -3,13 +3,14 @@ import 'dart:convert';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/design/theme.dart';
+import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/features/home/data/series_cursor_store.dart';
 import 'package:akimath_app/features/home/policy/series_families.dart';
 import 'package:akimath_app/features/map/ui/map_route.dart';
 import 'package:akimath_app/features/map/ui/node_detail_screen.dart';
 import 'package:akimath_app/features/map/ui/skill_map_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
-import 'package:akimath_app/features/shell/ui/app_shell.dart';
+import 'package:akimath_app/features/shell/policy/visible_tabs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,16 +60,58 @@ String _pack() {
 ''';
 }
 
-Future<void> _pump(WidgetTester tester, {required String pack}) async {
+/// The hardware of the phone this app is developed against, measured on the
+/// device and copied from `test/design/screen_registry.dart`'s `notchedPhone`.
+///
+/// It is here rather than imported because the point of these cases is that the
+/// **route** must survive it, and the registry walks screens.
+const FakeViewPadding _notch = FakeViewPadding(top: 62, bottom: 34);
+
+/// Pumps the route the way `RootScaffold` builds it: **bare**.
+///
+/// **No `AppShell` around it, and that is the whole point.** The shell puts
+/// `const MapRoute()` straight into an `IndexedStack`, so anything the route
+/// does not inset for itself is drawn under the Dynamic Island. This helper
+/// used to wrap it, which is exactly why every test here passed while the
+/// title was illegible on a real phone.
+Future<void> _pump(
+  WidgetTester tester, {
+  required String pack,
+  RootVisibility visibility = RootVisibility.showing,
+  FakeViewPadding padding = FakeViewPadding.zero,
+  Size size = const Size(390, 844),
+}) async {
+  // **The hardware goes on the view, not into a `MediaQuery` below
+  // `MaterialApp`.** A wrapper under `home` sits *below* the app's `Navigator`,
+  // so a pushed route is above it and gets a flat rectangle back — which is how
+  // the detail screen's case first read as fixed when it was not. The view is
+  // where a real phone's insets come from, so both routes see them.
   tester.view
-    ..physicalSize = const Size(390, 844)
-    ..devicePixelRatio = 1;
+    ..physicalSize = size
+    ..devicePixelRatio = 1
+    ..padding = padding
+    ..viewPadding = padding;
   addTearDown(tester.view.reset);
 
+  await _pumpAgain(tester, pack: pack, visibility: visibility);
+}
+
+/// The same tree again, so `didUpdateWidget` runs on the state already there.
+///
+/// Separate from [_pump] because [_pump] configures the view, and doing that
+/// twice would make it unclear which frame a measurement came from.
+Future<void> _pumpAgain(
+  WidgetTester tester, {
+  required String pack,
+  required RootVisibility visibility,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: AkiMathTheme.build(),
-      home: AppShell(child: MapRoute(reader: PackReader(bundle: _FakeBundle(pack)))),
+      home: MapRoute(
+        reader: PackReader(bundle: _FakeBundle(pack)),
+        visibility: visibility,
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -161,5 +204,74 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(await const SeriesCursorStore().read(), 0);
+  });
+
+  group('the hardware in the way', () {
+    // Measured on an iPhone 17 running this build: the title sat at y=6 with
+    // 62 px of status bar and Dynamic Island over it, so `MAPA DE TEMAS` read
+    // as `MAPA D` with the clock printed across it, and the `0 / 6` chip was
+    // under the battery. `HomeRoute` and `ProfileRoute` both return an
+    // `AppShell`; this route returned its screen bare.
+    testWidgets('the map insets itself, because the shell hands it none',
+        (WidgetTester tester) async {
+      await _pump(
+        tester,
+        pack: _pack(),
+        padding: _notch,
+        size: const Size(402, 874),
+      );
+
+      expect(
+        tester.getTopLeft(find.text('MAPA DE TEMAS')).dy,
+        greaterThanOrEqualTo(_notch.top),
+      );
+    });
+
+    testWidgets('and so does the topic it opens', (WidgetTester tester) async {
+      // A sibling route on the same navigator inherits nothing from the root's
+      // inset, so this is a second place to get right rather than the same one.
+      // Measured: the back control sat at y=4, entirely under the clock.
+      await _pump(
+        tester,
+        pack: _pack(),
+        padding: _notch,
+        size: const Size(402, 874),
+      );
+
+      await tester.tap(find.text('Cuentas'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getTopLeft(find.byType(IconButtonTile)).dy,
+        greaterThanOrEqualTo(_notch.top),
+      );
+    });
+  });
+
+  // PROC-13. `_contents` was a `late final` future read once in a field
+  // initialiser, so the map drew launch-time percentages for ever: play a
+  // series on Inicio, come back to Mapa, and nothing had moved. `IndexedStack`
+  // keeps every root alive, so there is no second `initState` to hook — the
+  // transition to the front is the only signal there is.
+  testWidgets('coming to the front re-reads the cursor, and a rebuild behind '
+      'does not', (WidgetTester tester) async {
+    await _pump(tester, pack: _pack(), visibility: RootVisibility.behind);
+    // Two families, nothing served.
+    expect(find.text('0%'), findsNWidgets(2));
+
+    // A series is played on Inicio while the map sits behind it.
+    await const SeriesCursorStore().advance(2);
+
+    // **A rebuild is not a visit.** The shell rebuilds every root on every tab
+    // switch; refreshing on any rebuild would read storage for a screen nobody
+    // is looking at, and would hide the case this exists for.
+    await _pumpAgain(tester, pack: _pack(), visibility: RootVisibility.behind);
+    expect(find.text('25%'), findsNothing);
+    expect(find.text('0%'), findsNWidgets(2));
+
+    // Now the player taps `Mapa`.
+    await _pumpAgain(tester, pack: _pack(), visibility: RootVisibility.showing);
+    expect(find.text('25%'), findsOneWidget);
+    expect(find.text('50%'), findsOneWidget);
   });
 }

@@ -111,7 +111,15 @@ class _RootScaffoldState extends State<RootScaffold> {
             onSessionChanged: (LinkedSession? session) =>
                 setState(() => _session = session),
           ),
-        AppTab.skills => const MapRoute(),
+        // **Told when it is being looked at, for the reason the profile is.**
+        // The map's figures come from the series cursor, which a series played
+        // on Inicio advances while this root sits behind — so without this it
+        // draws launch-time percentages for ever (PROC-13).
+        AppTab.skills => MapRoute(
+            visibility: _current == AppTab.skills
+                ? RootVisibility.showing
+                : RootVisibility.behind,
+          ),
         // **The last tab with no root**, and `rootsPresentToday` says so — so
         // `visibleTabs` never hands it over. Exhaustive rather than defaulted,
         // so a root arriving is a compile error here instead of a blank tab.
