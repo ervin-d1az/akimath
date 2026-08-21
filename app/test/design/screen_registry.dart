@@ -23,6 +23,8 @@ import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/onboarding/policy/calibration.dart';
 import 'package:akimath_app/features/onboarding/ui/calibration_intro_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/calibration_item_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/calibration_result_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/save_progress_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
@@ -473,6 +475,43 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
           registryRoundItems.single,
       ],
       onFinished: (CalibrationOutcome outcome) {},
+    ),
+  ),
+  RegisteredScreen(
+    label: 'calibración · resultado',
+    // The widest figures the probe can produce: ten of ten, and a probe that
+    // ran over an hour — `EsMxNumber.elapsed` does not cap at 59 minutes.
+    build: () => AppShell(
+      child: CalibrationResultScreen(
+        outcome: const CalibrationOutcome(
+          asked: calibrationLength,
+          answered: calibrationLength,
+          correct: calibrationLength,
+          elapsed: Duration(hours: 1, minutes: 4, seconds: 9),
+        ),
+        onEnter: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'guardar progreso',
+    // Both buttons, which is the taller of the two shapes this screen has.
+    build: () => AppShell(
+      child: SaveProgressScreen(
+        challenges: 6,
+        days: 1,
+        onCreateAccount: _nothing,
+        onLater: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'guardar progreso · sin flujo de cuenta',
+    // A build with no account flow wired. It offers nothing it cannot do, and
+    // the widest figures it can hold: three days' worth of digits in every
+    // tile, at the plural label.
+    build: () => AppShell(
+      child: SaveProgressScreen(challenges: 312, days: 90, onLater: _nothing),
     ),
   ),
   RegisteredScreen(
