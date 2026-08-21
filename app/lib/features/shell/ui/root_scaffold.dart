@@ -1,7 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../api/auth_client.dart';
+import '../../../api/endpoints.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../account/data/session_store.dart';
 import '../../account/policy/session.dart';
+import '../../account/policy/session_restore.dart';
 import '../../home/ui/home_route.dart';
 import '../../map/ui/map_route.dart';
 import '../../profile/ui/profile_route.dart';
@@ -9,14 +15,35 @@ import '../policy/visible_tabs.dart';
 import 'nav_bar.dart';
 import 'tab_stack.dart';
 
-/// The roots and the bar between them.
+/// The roots, the bar between them, and the account they share.
 ///
-/// It holds which root is showing and nothing else. Each root keeps its own
-/// state across a switch — an `IndexedStack` rather than a rebuild — because a
-/// player who checks their streak and comes back should not find the home
-/// re-reading its pack and flashing a skeleton.
+/// Each root keeps its own state across a switch — an `IndexedStack` rather
+/// than a rebuild — because a player who checks their streak and comes back
+/// should not find the home re-reading its pack and flashing a skeleton.
+///
+/// **It owns the session because two roots have to agree about one**, and it
+/// owns the *storing* of the session for the same reason: the shell is the one
+/// place that sees a sign-in, a sign-out and a launch, so the credential on
+/// disk and the session in memory cannot drift apart.
 class RootScaffold extends StatefulWidget {
-  const RootScaffold({super.key});
+  const RootScaffold({
+    super.key,
+    this.sessions = const PrefsSessionStore(),
+    this.deriveToken,
+  });
+
+  /// Where being signed in is kept between launches. Injected so a widget test
+  /// never reaches a plugin.
+  final SessionStore sessions;
+
+  /// Asks the provider for an access token from a stored credential.
+  ///
+  /// A closure rather than an `AuthApi`, the shape `EraseAccountRoute.erase`
+  /// and `ProfileRoute.whoAmI` take and for the same reason: `testWidgets` runs
+  /// in a fake-async zone and a real socket inside one hangs on
+  /// `!timersPending`. Null in the app, where the shell opens an [AuthClient]
+  /// of its own and closes it again.
+  final Future<AuthResult<String>> Function(AuthSession session)? deriveToken;
 
   @override
   State<RootScaffold> createState() => _RootScaffoldState();
@@ -25,15 +52,94 @@ class RootScaffold extends StatefulWidget {
 class _RootScaffoldState extends State<RootScaffold> {
   AppTab _current = AppTab.home;
 
-  /// The account this device is signed in to, for as long as the app is open.
+  /// The account this device is signed in to.
   ///
   /// **Here rather than in a root**, because it outlives any one of them and
   /// the next root to need it should not have to ask the profile. `IndexedStack`
   /// keeps every root alive, so a session held inside one would never reach
   /// another.
   ///
-  /// In memory only — where a token may be written down is its own decision.
+  /// It starts null on every launch and a stored credential fills it in a frame
+  /// or two later — [_restoreTheStoredSession] — so a root reading it once at
+  /// construction reads *signed out* and never hears otherwise. That is
+  /// PROC-13's territory and `TabStack` is what makes the later value arrive.
   LinkedSession? _session;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_restoreTheStoredSession());
+  }
+
+  /// Comes up signed in where the device has a credential the provider honours.
+  ///
+  /// **The token is derived, never stored.** A Better Auth access token is
+  /// minted per request and expires in minutes; the durable half is the
+  /// provider's session cookie, so a launch trades the cookie for a fresh token
+  /// rather than reading a stale one off disk.
+  ///
+  /// Nothing here waits on the network before the app is usable: the shell
+  /// builds signed out and the session arrives when it arrives, so a player
+  /// with no signal opens the app at the same speed as anyone else.
+  Future<void> _restoreTheStoredSession() async {
+    final StoredSession? stored = await widget.sessions.read();
+    if (stored == null || !mounted) {
+      return;
+    }
+    final AuthResult<String> answer = await _askForAToken(stored.provider);
+    if (!mounted) {
+      return;
+    }
+    switch (sessionRestore(stored: stored, providerAnswer: answer)) {
+      case SessionRestored(session: final LinkedSession restored):
+        setState(() => _session = restored);
+      case SessionForgotten():
+        await widget.sessions.forget();
+      case SessionKept():
+        // Offline, or a provider having a bad minute. The credential stays and
+        // the app comes up signed out for this launch only — deleting it here
+        // is the failure `sessionRestore` exists to prevent.
+        break;
+    }
+  }
+
+  Future<AuthResult<String>> _askForAToken(AuthSession session) async {
+    final Future<AuthResult<String>> Function(AuthSession)? injected =
+        widget.deriveToken;
+    if (injected != null) {
+      return injected(session);
+    }
+    final AuthClient auth = AuthClient(baseUrl: Uri.parse(Endpoints.authBaseUrl));
+    try {
+      return await auth.accessToken(session);
+    } finally {
+      auth.close();
+    }
+  }
+
+  /// Makes the store agree with the session the shell holds.
+  ///
+  /// **One rule for all three callers, because all three want the same thing.**
+  /// `onSessionChanged(null)` reaches here from a manual `Cerrar sesión` and
+  /// from a successful `DELETE /me`, and cannot tell them apart — the callback
+  /// carries no reason. It does not have to: a sign-out must leave nothing
+  /// behind because the player asked, and an erasure must leave nothing behind
+  /// because the account is gone. The day a third caller nulls the session for
+  /// a reason that wants the credential *kept*, this callback needs that reason
+  /// and this method needs to read it.
+  ///
+  /// **A session arriving with no credential deletes what was there**, rather
+  /// than leaving it. Anything else would let the next launch restore an
+  /// account this device is no longer signed in to — possibly somebody else's.
+  Future<void> _holdAndRemember(LinkedSession? session) async {
+    setState(() => _session = session);
+    final StoredSession? storable = session?.storable;
+    if (storable == null) {
+      await widget.sessions.forget();
+      return;
+    }
+    await widget.sessions.write(storable);
+  }
 
   /// One navigator per tab, so a pushed screen lands **under** the bar.
   ///
@@ -118,7 +224,7 @@ class _RootScaffoldState extends State<RootScaffold> {
                 : RootVisibility.behind,
             session: _session,
             onSessionChanged: (LinkedSession? session) =>
-                setState(() => _session = session),
+                unawaited(_holdAndRemember(session)),
           ),
         // **Told when it is being looked at, for the reason the profile is.**
         // The map's figures come from the series cursor, which a series played

@@ -1,3 +1,4 @@
+import 'package:akimath_app/features/account/data/session_store.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/map/ui/skill_map_screen.dart';
 import 'package:akimath_app/features/profile/ui/profile_route.dart';
@@ -18,7 +19,17 @@ Future<void> _pump(WidgetTester tester) async {
     ..physicalSize = const Size(390, 844)
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(const MaterialApp(home: RootScaffold()));
+  // **Signed out on purpose, rather than by accident.** The shell's default
+  // store is `PrefsSessionStore`, which in a widget test throws
+  // `MissingPluginException` — and the store's broad catch turns that into *no
+  // session*. Every case below would pass either way, which is PROC-11's
+  // "a `catch` no test reaches" wearing a shell: whether these screens are
+  // reachable without an account is the claim, and it is only a claim if the
+  // store is empty by declaration. `session_survives_a_relaunch_test.dart`
+  // holds the other half.
+  await tester.pumpWidget(MaterialApp(
+    home: RootScaffold(sessions: InMemorySessionStore()),
+  ));
   await tester.pumpAndSettle();
 }
 
