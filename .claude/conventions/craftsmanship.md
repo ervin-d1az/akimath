@@ -4,7 +4,7 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Twenty-eight rule IDs — counting `FUN-1a` as the carve-out it
+This book starts small on purpose. Twenty-nine rule IDs — counting `FUN-1a` as the carve-out it
 is rather than as a rule — every one of them describing code that is already on disk today, not
 a pattern we hope to have. It grows by **PROC-6** and no other way.
 
@@ -409,6 +409,29 @@ credit.
   The remedy is the same in every case: **state the mutation the test would catch, then make it.**
   When a test is the record of a defect that shipped, PROC-5's tier-1b falsification is not optional
   — invert the fix and watch that specific test go red.
+
+- **PROC-13** MUST: **a value that flows from a parent into a child is asserted on the *second*
+  frame, not the first.** A test that pumps a widget once and reads what it drew has checked
+  construction and nothing else — and construction is the half that never breaks. Measured in
+  `f7-cuenta-y-perfil`: `TabStack` built its root through `onGenerateRoute`, which the Navigator
+  calls **once**, so the `pageBuilder` closure captured whichever `child` the first build passed.
+  Every later `RootScaffold.setState` produced a root widget that was constructed and never
+  mounted. The session the shell holds travels that way, so **signing in changed nothing in the
+  running app** — no address, no `POST /players/link`, no history, no sync — while the suite was
+  green and `CLAUDE.md` described the behaviour as working. Nothing had ever pumped the shell
+  twice.
+
+  The remedy is two lines: `pumpWidget` with one value, `pumpWidget` with another, and assert the
+  screen moved. Where the parent is also meant to preserve the child's state — the shell's
+  `IndexedStack` exists so the home does not re-read its pack — assert **both halves in one test**,
+  because they pull against each other and a fix for either alone is a regression in the other
+  (`app/test/features/shell/ui/tab_stack_test.dart`'s `a root keeps its state while a changed
+  field reaches it` counts `initState` calls and reads the new value in the same run).
+
+  The general form, beyond Flutter: **any framework callback documented as running once is a place
+  a data path can die silently.** `onGenerateRoute`, a route's `builder`, a `late final` field, a
+  `Future` created in `initState` — each captures its inputs, and each keeps handing back the
+  first ones for ever. Grep for the capture, not for the symptom.
 
 - **PROC-12** MUST: **the change satisfies its approved delta spec.** `CLAUDE.md` makes the
   `#### Scenario:` blocks under `openspec/changes/<id>/specs/**` the acceptance criteria, and each one
