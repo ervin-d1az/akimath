@@ -626,6 +626,43 @@ void main() {
       expect(find.text('RACHA'), findsOneWidget);
       expect(find.text('4'), findsOneWidget);
     });
+
+    testWidgets('and a second run the same day does not add a day',
+        (WidgetTester tester) async {
+      // The realistic sequence, and the one handing `_log.days` to the round
+      // creates: practise, `_read` puts **today** into the log, practise again,
+      // and the round appends today a second time. `streakLength` collapses to
+      // a set of whole days, so the figure holds — asserted here rather than
+      // assumed, because the store it reads from does dedup and the list handed
+      // past it does not.
+      await _pump(
+        tester,
+        pack: _ladderPack(),
+        dayLog: InMemoryDayLogStore(
+          _seeded(<DateTime>[..._daysBeforeToday(2), DateTime.now()]),
+        ),
+      );
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byWidgetPredicate(
+          (Widget w) => w is KeypadKeyView && w.data.id == '8',
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byWidgetPredicate(
+          (Widget w) => w is KeypadKeyView && w.data.id == 'submit',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('4'), findsNothing);
+    });
   });
 
   // The half that makes the wiring above worth having. `AttemptSync.record`
