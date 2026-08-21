@@ -234,6 +234,56 @@ final class IssueDone extends IssueResult {
   final IssuedPack issued;
 }
 
+/// What `GET /packs/{packId}` answered.
+///
+/// **Separate from [IssueResult], because the 404s mean different things.**
+/// Issuing 404s when the account has no player; fetching 404s when the pack is
+/// gone, expired past its window, or belongs to somebody else — the server
+/// deliberately cannot tell those apart, because saying so would confirm a
+/// stranger's pack exists.
+@immutable
+sealed class FetchPackResult {
+  const FetchPackResult();
+}
+
+/// 200 — the pack, rebuilt byte for byte from the row and its content.
+@immutable
+final class FetchPackDone extends FetchPackResult {
+  const FetchPackDone(this.issued);
+  final IssuedPack issued;
+}
+
+/// 404 — there is no such pack for this player, and asking again will not help.
+///
+/// The one answer that means *issue a new one*.
+@immutable
+final class FetchPackGone extends FetchPackResult {
+  const FetchPackGone();
+}
+
+/// 401 — the session is not good.
+@immutable
+final class FetchPackRejected extends FetchPackResult {
+  const FetchPackRejected({required this.tag, required this.message});
+  final String tag;
+  final String message;
+}
+
+/// Anything else the server said, or a body that could not be read.
+@immutable
+final class FetchPackFailed extends FetchPackResult {
+  const FetchPackFailed({required this.status, required this.reason});
+  final int status;
+  final String reason;
+}
+
+/// Nothing answered. The pack this device holds is still the pack it holds.
+@immutable
+final class FetchPackUnreachable extends FetchPackResult {
+  const FetchPackUnreachable(this.reason);
+  final String reason;
+}
+
 /// 404 — the session is good and no player is linked to it.
 @immutable
 final class IssueNoPlayer extends IssueResult {

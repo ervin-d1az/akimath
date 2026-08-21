@@ -5,6 +5,7 @@ import 'package:akimath_app/content/answer_digest.dart';
 import 'package:akimath_app/content/model/issued_pack.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/content/model/pack.dart';
+import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -126,6 +127,99 @@ void main() {
     });
   });
 
+
+  group('the wrong answers an item anticipates', () {
+    test('are read, and the count is reported', () {
+      final int anticipating = readShipped()
+          .items
+          .where((Item i) => i.distractors.isNotEmpty)
+          .length;
+
+      // Ten of eighty in the shipped artifact. The number is not the point —
+      // that it is neither zero nor all of them is.
+      expect(anticipating, greaterThan(0),
+          reason: 'items anticipating a wrong answer → $anticipating');
+      expect(anticipating, lessThan(readShipped().items.length));
+    });
+
+    test('are keyed by the digest and never by the answer', () {
+      // A pack that listed its distractors in the clear would name the right
+      // answer by omission: the one wrong answer missing from a readable list.
+      final Item anticipating =
+          readShipped().items.firstWhere((Item i) => i.distractors.isNotEmpty);
+
+      for (final String key in anticipating.distractors.keys) {
+        expect(key, matches(RegExp(r'^[0-9a-f]{64}$')), reason: key);
+      }
+    });
+
+    test('a specific one reaches the player who earns it', () {
+      // End to end for the case this change exists for: a wrong answer the item
+      // anticipated gets its own copy, not the pack's fallback.
+      final Pack pack = readShipped();
+      final Item item =
+          pack.items.firstWhere((Item i) => i.distractors.isNotEmpty);
+      final DigestAnswer answer = item.answer as DigestAnswer;
+      final String anticipated = item.distractors.keys.first;
+      final Diagnosis expected = item.distractors[anticipated]!;
+
+      // Find the plaintext that hashes to that key by trying the small integers
+      // a mis-subtraction produces. The pack states digests, so this is the
+      // same search a player performs by typing.
+      String? typed;
+      for (int guess = -99; guess <= 99 && typed == null; guess++) {
+        if (answerDigest(saltHex: answer.saltHex, canonicalAnswer: '$guess') ==
+            anticipated) {
+          typed = '$guess';
+        }
+      }
+      expect(typed, isNotNull,
+          reason: 'no small integer hashes to the anticipated distractor');
+
+      final Diagnosis? given = diagnoseItem(
+        item: item,
+        typed: typed!,
+        verdict: gradeItem(item, typed),
+        fallback: pack.fallbackDiagnosis!,
+      );
+
+      expect(given, isNotNull);
+      expect(given!.explain, expected.explain);
+      expect(given.explain, isNot(pack.fallbackDiagnosis!.explain),
+          reason: 'it fell through to the fallback');
+    });
+
+    test('an unanticipated wrong answer still gets the fallback', () {
+      final Pack pack = readShipped();
+      final Item item =
+          pack.items.firstWhere((Item i) => i.distractors.isNotEmpty);
+
+      final Diagnosis? given = diagnoseItem(
+        item: item,
+        typed: '987654',
+        verdict: gradeItem(item, '987654'),
+        fallback: pack.fallbackDiagnosis!,
+      );
+
+      expect(given!.explain, pack.fallbackDiagnosis!.explain);
+    });
+
+    test('and a right answer gets nothing at all', () {
+      final Pack pack = readShipped();
+      final Item first = pack.items.first;
+
+      expect(
+        diagnoseItem(
+          item: first,
+          typed: '13',
+          verdict: gradeItem(first, '13'),
+          fallback: pack.fallbackDiagnosis!,
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('what it refuses', () {
     Map<String, dynamic> without(String key) {
       final Map<String, dynamic> content = shippedContent()..remove(key);
@@ -145,6 +239,37 @@ void main() {
 
     test('a pack with no items', () {
       expect(() => read(without('items')), throwsFormatException);
+    });
+
+    test('a distractor whose copy cannot be read', () {
+      // **Every entry or none.** One that silently never fires is worse than a
+      // pack refused at the door — the player would meet the fallback and
+      // nobody would know the specific copy existed. Found by a falsification:
+      // the strictness was written and nothing asserted it.
+      final Map<String, dynamic> content = shippedContent();
+      final Map<String, dynamic> item = (content['items']! as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .firstWhere((Map<String, dynamic> i) => i['diagnosis'] != null);
+      final List<dynamic> distractors =
+          (item['diagnosis']! as Map<String, dynamic>)['distractors']!
+              as List<dynamic>;
+      (distractors.first as Map<String, dynamic>)['diagnosis'] =
+          <String, dynamic>{'explain': 'sin pasos'};
+
+      expect(() => read(content), throwsFormatException);
+    });
+
+    test('a distractor with no digest', () {
+      final Map<String, dynamic> content = shippedContent();
+      final Map<String, dynamic> item = (content['items']! as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .firstWhere((Map<String, dynamic> i) => i['diagnosis'] != null);
+      final List<dynamic> distractors =
+          (item['diagnosis']! as Map<String, dynamic>)['distractors']!
+              as List<dynamic>;
+      (distractors.first as Map<String, dynamic>).remove('digest');
+
+      expect(() => read(content), throwsFormatException);
     });
 
     test('an item with no digest', () {

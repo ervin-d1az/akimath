@@ -154,6 +154,64 @@ class ApiClient {
     }
   }
 
+  /// Fetches a pack the server issued earlier.
+  ///
+  /// **This is what makes a pack survive a relaunch.** The device stores the
+  /// id and nothing else; the server rebuilds from the row it wrote plus the
+  /// content that row names, byte for byte, so a re-fetch is the same pack and
+  /// not a new one. Issuing again on every launch would work and would leave a
+  /// row per launch behind it.
+  ///
+  /// **A 404 is the one answer that means issue a new one.** Gone, lapsed past
+  /// its window, or somebody else's — the server cannot tell those apart on
+  /// purpose, because distinguishing them confirms a stranger's pack exists.
+  Future<FetchPackResult> fetchPack({
+    required String accessToken,
+    required String packId,
+  }) async {
+    // `resolve` against a base ending in a slash, and the id percent-encoded:
+    // it comes from storage, and a stored value is the one input nobody
+    // reviews.
+    final Uri url = _baseUrl.resolve('packs/${Uri.encodeComponent(packId)}');
+    try {
+      final HttpClientRequest request = await _transport.getUrl(url);
+      if (accessToken.trim().isNotEmpty) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $accessToken');
+      }
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final HttpClientResponse response = await request.close().timeout(timeout);
+      final String body = await response.transform(utf8.decoder).join();
+      return _readFetchPack(response.statusCode, body);
+    } on Exception catch (cause) {
+      return FetchPackUnreachable(cause.toString());
+    }
+  }
+
+  FetchPackResult _readFetchPack(int status, String body) {
+    final Map<String, Object?> error = _errorOr(body);
+    final String message = error['message'] as String? ?? '';
+    switch (status) {
+      case 200:
+        try {
+          return FetchPackDone(IssuedPack.fromJson(_object(body)));
+        } on FormatException catch (cause) {
+          return FetchPackFailed(status: status, reason: cause.message);
+        }
+      case 404:
+        return const FetchPackGone();
+      case 401:
+        return FetchPackRejected(
+          tag: error['error'] as String? ?? 'unauthenticated',
+          message: message,
+        );
+      default:
+        return FetchPackFailed(
+          status: status,
+          reason: message.isEmpty ? body : message,
+        );
+    }
+  }
+
   /// Sends a session's answers and reads back what they were worth.
   ///
   /// **The batch is one transaction on the far side.** Every source is resolved

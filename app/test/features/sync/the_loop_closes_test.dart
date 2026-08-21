@@ -14,6 +14,7 @@ import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:akimath_app/features/sync/attempt_sync.dart';
 import 'package:akimath_app/features/sync/data/attempt_journal_store.dart';
+import 'package:akimath_app/features/sync/data/issued_pack_store.dart';
 import 'package:akimath_app/features/sync/policy/attempt_journal.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:flutter/material.dart';
@@ -332,6 +333,127 @@ void main() {
     await sync.flush('token');
     expect(sent.single.single.packRef?.packId, 'pk_emitido');
     expect(await journal.read(), isEmpty);
+  });
+
+  group('a pack survives a relaunch', () {
+    IssuedPack issued(String id) => IssuedPack(
+          packId: id,
+          issuedAt: DateTime.utc(2026, 8, 20),
+          expiresAt: DateTime.utc(2026, 9, 20),
+          pack: jsonDecode(
+            _issuedContent.replaceFirst('SEVEN_TEEN', _digestOfThirteen()),
+          ) as Map<String, Object?>,
+        );
+
+    Future<void> launch(
+      WidgetTester tester, {
+      required IssuedPackStore packs,
+      required List<String> issues,
+      required List<String> fetches,
+      FetchPackResult Function(String packId)? answerFetch,
+    }) async {
+      tester.view
+        ..physicalSize = const Size(402, 874)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(MaterialApp(
+        home: HomeRoute(
+          reader: PackReader(bundle: _Bundle(_authored)),
+          now: () => DateTime.utc(2026, 8, 20, 12),
+          dayLog: InMemoryDayLogStore(),
+          sync: AttemptSync(store: InMemoryAttemptJournalStore()),
+          issuedPacks: packs,
+          session: const LinkedSession(
+            email: 'ana@correo.mx',
+            accessToken: 'token',
+            ageBand: AgeBand.adult,
+          ),
+          issuePack: (String accessToken) async {
+            issues.add(accessToken);
+            return IssueDone(issued('pk_nuevo${issues.length}'));
+          },
+          fetchPack: ({
+            required String accessToken,
+            required String packId,
+          }) async {
+            fetches.add(packId);
+            return answerFetch?.call(packId) ?? FetchPackDone(issued(packId));
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the first launch issues one and writes the id down',
+        (WidgetTester tester) async {
+      final InMemoryIssuedPackStore packs = InMemoryIssuedPackStore();
+      final List<String> issues = <String>[];
+      final List<String> fetches = <String>[];
+
+      await launch(tester, packs: packs, issues: issues, fetches: fetches);
+
+      expect(issues, hasLength(1));
+      expect(fetches, isEmpty);
+      expect(await packs.read(), 'pk_nuevo1');
+    });
+
+    testWidgets('the next one fetches it and issues nothing',
+        (WidgetTester tester) async {
+      // **The whole point of the change.** Before this the device minted a row
+      // per launch per player; the server rebuilds byte for byte, so a fetch is
+      // the same pack.
+      final InMemoryIssuedPackStore packs = InMemoryIssuedPackStore('pk_guardado');
+      final List<String> issues = <String>[];
+      final List<String> fetches = <String>[];
+
+      await launch(tester, packs: packs, issues: issues, fetches: fetches);
+
+      expect(fetches, <String>['pk_guardado']);
+      expect(issues, isEmpty, reason: 'it minted a second pack');
+      expect(await packs.read(), 'pk_guardado');
+    });
+
+    testWidgets('a pack the server no longer has is replaced, once',
+        (WidgetTester tester) async {
+      // A 404 is the one answer meaning *there is no such pack for you* —
+      // gone, lapsed, or somebody else's, which the server cannot tell apart on
+      // purpose.
+      final InMemoryIssuedPackStore packs = InMemoryIssuedPackStore('pk_viejo');
+      final List<String> issues = <String>[];
+      final List<String> fetches = <String>[];
+
+      await launch(
+        tester,
+        packs: packs,
+        issues: issues,
+        fetches: fetches,
+        answerFetch: (String _) => const FetchPackGone(),
+      );
+
+      expect(fetches, <String>['pk_viejo']);
+      expect(issues, hasLength(1));
+      expect(await packs.read(), 'pk_nuevo1');
+    });
+
+    testWidgets('a network blip mints nothing', (WidgetTester tester) async {
+      // Refused, broken or unreachable: the id is still good and the bundled
+      // pack still plays. Issuing here would mint a row for a blip.
+      final InMemoryIssuedPackStore packs = InMemoryIssuedPackStore('pk_guardado');
+      final List<String> issues = <String>[];
+      final List<String> fetches = <String>[];
+
+      await launch(
+        tester,
+        packs: packs,
+        issues: issues,
+        fetches: fetches,
+        answerFetch: (String _) => const FetchPackUnreachable('sin red'),
+      );
+
+      expect(issues, isEmpty);
+      expect(await packs.read(), 'pk_guardado');
+    });
   });
 }
 

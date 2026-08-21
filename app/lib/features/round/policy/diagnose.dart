@@ -1,6 +1,4 @@
-import '../../../content/model/canon.dart';
 import '../../../content/model/diagnosis.dart';
-import '../../../content/model/item.dart';
 import '../../../design/widgets/spec/verdict.dart';
 
 /// What to tell a player about the answer they gave.
@@ -27,16 +25,23 @@ import '../../../design/widgets/spec/verdict.dart';
 /// items of seventy — and an empty diagnosis would leave the screen as bare as
 /// it was before any of this existed.
 ///
+/// **It no longer knows what an item is.** The key to look up is handed in,
+/// because resolving one differs by how the answer is known: a plaintext item
+/// keys its distractors by the canonical answer, and an issued one keys them by
+/// the *digest* of it — a pack that listed its distractors in the clear would
+/// name the right answer by omission. Computing a digest needs `package:crypto`
+/// and this is a pure root, so `diagnoseItem` resolves the key and this picks
+/// the copy.
+///
 /// **Only the typed side is canonicalised, and that is a decision** (design
 /// D3). Learner mode folds the keypad's U+2212 to the hyphen a content author
 /// types, which is the difference that would otherwise make every distractor
-/// dead. The authored key is *not* canonicalised here because it cannot need
-/// it: `Pack.fromJson` refuses a key that is not already storage-canonical, by
-/// name and at load. Canonicalising it again would be an identity nothing can
-/// observe — the second half of a symmetry that reads well and does nothing.
+/// dead. The authored key is *not* canonicalised because it cannot need it:
+/// `Pack.fromJson` refuses a key that is not already storage-canonical, by name
+/// and at load.
 Diagnosis? diagnose({
-  required Item item,
-  required String answer,
+  required Map<String, Diagnosis> distractors,
+  required String? key,
   required Verdict verdict,
   required Diagnosis fallback,
 }) {
@@ -44,9 +49,8 @@ Diagnosis? diagnose({
     return null;
   }
 
-  // Null when the canonicaliser refuses the input outright, which no key can
-  // equal — so an unreadable answer falls through to the fallback rather than
-  // needing a guard of its own.
-  final String? typed = canonicalise(answer, mode: CanonMode.learner).value;
-  return item.distractors[typed] ?? fallback;
+  // Null when the caller could not resolve a key — an answer the canonicaliser
+  // refused, which no key can equal. It falls through to the fallback rather
+  // than needing a guard of its own.
+  return distractors[key] ?? fallback;
 }

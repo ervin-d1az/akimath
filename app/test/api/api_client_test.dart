@@ -221,6 +221,103 @@ void main() {
     });
   });
 
+  group('GET /packs/{packId} over a real socket', () {
+    Map<String, Object?> stored() => <String, Object?>{
+      'packId': '018f4e3c-0000-7000-8000-0000000000d1',
+      'issuedAt': '2026-08-19T09:15:00.000Z',
+      'expiresAt': '2026-09-18T09:15:00.000Z',
+      'pack': <String, Object?>{'pack_format_version': 1},
+    };
+
+    test('a 200 is the same pack, rebuilt', () async {
+      await serving((HttpRequest request) => _json(request, 200, stored()));
+
+      final FetchPackResult result = await client.fetchPack(
+        accessToken: _token,
+        packId: '018f4e3c-0000-7000-8000-0000000000d1',
+      );
+
+      expect(result, isA<FetchPackDone>());
+      expect((result as FetchPackDone).issued.packId,
+          '018f4e3c-0000-7000-8000-0000000000d1');
+      expect(server.requests.single.method, 'GET');
+      expect(server.requests.single.uri.path,
+          '/packs/018f4e3c-0000-7000-8000-0000000000d1');
+    });
+
+    test('the id is percent-encoded, because storage is nobody-reviewed input',
+        () async {
+      await serving((HttpRequest request) => _json(request, 404, <String, Object?>{
+            'error': 'not_found',
+            'message': 'no such pack',
+          }));
+
+      await client.fetchPack(accessToken: _token, packId: 'a/../b?x=1');
+
+      // The path is one segment, not three and a query.
+      expect(server.requests.single.uri.path, '/packs/a%2F..%2Fb%3Fx%3D1');
+      expect(server.requests.single.uri.query, isEmpty);
+    });
+
+    test('a 404 is the one answer that means issue a new one', () async {
+      // Gone, lapsed, or somebody else's — the server cannot tell those apart
+      // on purpose, because distinguishing them confirms a stranger's pack
+      // exists.
+      await serving((HttpRequest request) => _json(request, 404, <String, Object?>{
+            'error': 'not_found',
+            'message': 'no such pack',
+          }));
+
+      expect(
+        await client.fetchPack(accessToken: _token, packId: 'pk'),
+        isA<FetchPackGone>(),
+      );
+    });
+
+    test('a 401 keeps its tag', () async {
+      await serving((HttpRequest request) => _json(request, 401, <String, Object?>{
+            'error': 'invalid_session',
+            'message': 'caducó',
+          }));
+
+      final FetchPackResult result =
+          await client.fetchPack(accessToken: _token, packId: 'pk');
+
+      expect((result as FetchPackRejected).tag, 'invalid_session');
+    });
+
+    test('a 500 and an unreadable 200 are both failures', () async {
+      await serving((HttpRequest request) => _json(request, 500, <String, Object?>{}));
+      expect(
+        await client.fetchPack(accessToken: _token, packId: 'pk'),
+        isA<FetchPackFailed>(),
+      );
+
+      await serving((HttpRequest request) async {
+        request.response.statusCode = 200;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write('no soy json');
+      });
+      expect(
+        await client.fetchPack(accessToken: _token, packId: 'pk'),
+        isA<FetchPackFailed>(),
+      );
+    });
+
+    test('no answer at all leaves the pack the device already has', () async {
+      final HttpServer dead = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final Uri gone = Uri.parse('http://${dead.address.host}:${dead.port}/');
+      await dead.close(force: true);
+      final ApiClient orphan = ApiClient(baseUrl: gone);
+      addTearDown(orphan.close);
+
+      expect(
+        await orphan.fetchPack(accessToken: _token, packId: 'pk'),
+        isA<FetchPackUnreachable>(),
+      );
+    });
+  });
+
   group('POST /packs over a real socket', () {
     Map<String, Object?> issued() => <String, Object?>{
       'packId': '018f4e3c-0000-7000-8000-0000000000d1',
