@@ -341,6 +341,84 @@ describeWithDatabase("the job, against a real database", () => {
     expect((await db.client.query("SELECT 1 FROM issued_items")).rowCount).toBe(0);
   });
 
+  it("a session's recorded movement goes when the session's attempts do", async () => {
+    // **It is an attribute of a history entry, so it is swept on the entry's
+    // own cutoff.** A delta kept after its attempts would be a row nothing can
+    // reach; a delta swept before them would make an entry that still appears
+    // in `GET /me/history` silently lose the figure it had. Reusing
+    // `cutoffs.attempts` rather than declaring a third 400 is what makes the
+    // two impossible to set apart.
+    const session = "018f4e3c-0000-7000-8000-0000000004a1";
+    await db.client.query(
+      `INSERT INTO session_deltas (player_id, session_id, skill_id, rating_delta, created_at)
+       VALUES ($1, $2, 1, 23.5, now() - interval '401 days')`,
+      [PLAYER, session],
+    );
+    const young = "018f4e3c-0000-7000-8000-0000000004a2";
+    await db.client.query(
+      `INSERT INTO session_deltas (player_id, session_id, skill_id, rating_delta, created_at)
+       VALUES ($1, $2, 1, -4.25, now() - interval '399 days')`,
+      [PLAYER, young],
+    );
+
+    const run = await runRetention(db.client, new Date());
+
+    expect(run.sessionDeltas).toBe(1);
+    const left = await db.client.query<{ session_id: string }>(
+      "SELECT session_id FROM session_deltas",
+    );
+    expect(left.rows.map((row) => row.session_id)).toEqual([young]);
+  });
+
+  it("and never while an attempt of that session is still there", async () => {
+    // The same guard as the two source tables, for the same reason turned
+    // round: here the row that must not vanish first is the delta, because the
+    // history entry its attempts still produce would lose its figure without
+    // anything recording that it had one.
+    const session = "018f4e3c-0000-7000-8000-0000000004b1";
+    await db.client.query(
+      `INSERT INTO session_deltas (player_id, session_id, skill_id, rating_delta, created_at)
+       VALUES ($1, $2, 1, 11.5, now() - interval '401 days')`,
+      [PLAYER, session],
+    );
+    await db.client.query(
+      `INSERT INTO attempts
+         (id, player_id, pack_id, pack_index, skill_id, is_correct, elapsed_ms,
+          answered_at, created_at, session_id)
+       VALUES (gen_random_uuid(), $1, $2, 77, 1, true, 4200, now(), now(), $3)`,
+      [PLAYER, PACK, session],
+    );
+
+    const run = await runRetention(db.client, new Date());
+
+    expect(run.sessionDeltas).toBe(0);
+    expect((await db.client.query("SELECT 1 FROM session_deltas")).rowCount).toBe(1);
+  });
+
+  it("the job runs as the role that will actually run it", async () => {
+    // **The grant is the one thing a suite running as the owner cannot see.**
+    // PostgreSQL requires SELECT on every column a DELETE's condition reads,
+    // including the target table's own, so a new table granted DELETE and not
+    // SELECT is green here for ever and `permission denied` in the nightly job.
+    // Every statement is exercised, so this covers the tables that already
+    // existed as well as the newest one.
+    await aged("018f4e3c-0000-7000-8000-0000000004c1", 401);
+    await db.client.query(
+      `INSERT INTO session_deltas (player_id, session_id, skill_id, rating_delta, created_at)
+       VALUES ($1, gen_random_uuid(), 1, 3.5, now() - interval '401 days')`,
+      [PLAYER],
+    );
+
+    await db.client.query("SET ROLE retention_job");
+    try {
+      const run = await runRetention(db.client, new Date());
+      expect(run.attempts).toBe(1);
+      expect(run.sessionDeltas).toBe(1);
+    } finally {
+      await db.client.query("RESET ROLE");
+    }
+  });
+
   it("the aggregates calibration reads are untouched by either run", async () => {
     // Deleting attempts is only safe because `template_stats` is maintained on
     // write. If a future path starts deriving from raw rows, this breaks a test

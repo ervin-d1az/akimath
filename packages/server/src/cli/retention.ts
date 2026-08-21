@@ -28,6 +28,7 @@ try {
   log.info("retention run complete", {
     attemptsDeleted: run.attempts,
     diagEventsDeleted: run.diagEvents,
+    sessionDeltasDeleted: run.sessionDeltas,
     offlinePacksDeleted: run.offlinePacks,
     issuedItemsDeleted: run.issuedItems,
   });
