@@ -123,14 +123,15 @@ Item _item(
     // **Difficulty comes from the pack and is never computed in Dart** — the
     // same invariant the authored reader keeps.
     ladderStep: ladder,
-    answer: DigestAnswer(digest: digest, saltHex: saltHex),
-    // **No per-item distractors yet, and that is a stated gap.** The frozen
-    // format keys them by digest — `{digest, diagnosis}` — where the authored
-    // one keys them by the answer, which is exactly the change
-    // `Item.distractors` predicted. Ten of eighty items carry one; the rest
-    // already fall through to the pack's fallback, so an issued pack degrades
-    // to the common case rather than to nothing. Wiring them is its own change,
-    // because it moves the map onto `DigestAnswer` and `diagnose` with it.
+    answer: DigestAnswer(
+      digest: digest,
+      saltHex: saltHex,
+      // **Keyed by digest, which is why the map lives on the answer.** A pack
+      // that listed its distractors in the clear would name the right answer by
+      // omission — the one wrong answer missing from a readable list is the
+      // right one.
+      distractors: _distractors(raw['diagnosis'], id),
+    ),
   );
 }
 
@@ -148,19 +149,63 @@ Diagnosis? _fallback(Object? raw) {
     if (entry is! Map<String, dynamic>) {
       continue;
     }
-    final Object? diagnosis = entry['diagnosis'];
-    if (diagnosis is! Map<String, dynamic>) {
-      continue;
+    final Diagnosis? copy = _diagnosis(entry['diagnosis']);
+    if (copy != null) {
+      return copy;
     }
-    final Object? steps = diagnosis['steps'];
-    final Object? explain = diagnosis['explain'];
-    if (steps is! List || explain is! String) {
-      continue;
-    }
-    return Diagnosis(
-      steps: <String>[for (final Object? step in steps) step! as String],
-      explain: explain,
-    );
   }
   return null;
+}
+
+/// The wrong answers this item anticipates, and what to say about each.
+///
+/// **Every entry or none.** A distractor whose copy cannot be read is a
+/// distractor that would silently never fire, which is worse than a pack
+/// refused at the door — the same rule this file keeps everywhere else.
+Map<String, Diagnosis> _distractors(Object? raw, String itemId) {
+  if (raw == null) {
+    return const <String, Diagnosis>{};
+  }
+  if (raw is! Map<String, dynamic>) {
+    throw FormatException('item "$itemId" has a malformed diagnosis');
+  }
+  final Object? entries = raw['distractors'];
+  if (entries is! List) {
+    return const <String, Diagnosis>{};
+  }
+
+  final Map<String, Diagnosis> found = <String, Diagnosis>{};
+  for (final Object? entry in entries) {
+    if (entry is! Map<String, dynamic>) {
+      throw FormatException('item "$itemId" has a malformed distractor');
+    }
+    final Object? digest = entry['digest'];
+    if (digest is! String || digest.isEmpty) {
+      throw FormatException('item "$itemId" has a distractor with no digest');
+    }
+    final Diagnosis? copy = _diagnosis(entry['diagnosis']);
+    if (copy == null) {
+      throw FormatException(
+        'item "$itemId" has a distractor with no readable copy',
+      );
+    }
+    found[digest] = copy;
+  }
+  return found;
+}
+
+/// One diagnosis, or null when there is nothing readable there.
+Diagnosis? _diagnosis(Object? raw) {
+  if (raw is! Map<String, dynamic>) {
+    return null;
+  }
+  final Object? steps = raw['steps'];
+  final Object? explain = raw['explain'];
+  if (steps is! List || explain is! String) {
+    return null;
+  }
+  return Diagnosis(
+    steps: <String>[for (final Object? step in steps) step! as String],
+    explain: explain,
+  );
 }

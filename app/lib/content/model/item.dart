@@ -185,13 +185,27 @@ final class FigurateStimulus extends Stimulus {
 /// with both and a grader cannot forget one.
 sealed class ItemAnswer {
   const ItemAnswer();
+
+  /// Wrong answers this item anticipates, and what to say about each.
+  ///
+  /// **The key means a different thing on each side, which is why it lives
+  /// here.** A plaintext item keys them by the answer; an issued one keys them
+  /// by its digest, because a pack that listed its distractors in the clear
+  /// would name the right answer by omission. One map on `Item` would be one
+  /// map with two meanings, and the lookup would eventually use the wrong one.
+  Map<String, Diagnosis> get distractors;
 }
 
 /// The answer itself, in the canonical form `packages/contract` froze.
 final class PlainAnswer extends ItemAnswer {
-  const PlainAnswer(this.canonical);
+  const PlainAnswer(this.canonical, {this.distractors = const <String, Diagnosis>{}});
 
   final String canonical;
+
+  /// Wrong answers this item anticipates, **keyed by the answer itself**, and
+  /// what to say about each.
+  @override
+  final Map<String, Diagnosis> distractors;
 }
 
 /// An HMAC of the answer, keyed by the pack's salt.
@@ -201,13 +215,25 @@ final class PlainAnswer extends ItemAnswer {
 /// could get wrong — or forget. Carrying it here makes a digest item
 /// self-sufficient and `gradeItem` a two-argument function.
 final class DigestAnswer extends ItemAnswer {
-  const DigestAnswer({required this.digest, required this.saltHex});
+  const DigestAnswer({
+    required this.digest,
+    required this.saltHex,
+    this.distractors = const <String, Diagnosis>{},
+  });
 
   /// Lowercase hex, untruncated.
   final String digest;
 
   /// The pack's salt, as hex. Shared by every item in one pack.
   final String saltHex;
+
+  /// Wrong answers this item anticipates, **keyed by the digest of each**.
+  ///
+  /// The frozen format keys them this way so that the correct answer is not the
+  /// one missing from a readable list — a pack that named its distractors in
+  /// the clear would name the right answer by omission.
+  @override
+  final Map<String, Diagnosis> distractors;
 }
 
 class Item {
@@ -216,7 +242,6 @@ class Item {
     required this.stimulus,
     required this.answer,
     required this.ladderStep,
-    this.distractors = const <String, Diagnosis>{},
   });
 
 
@@ -246,17 +271,9 @@ class Item {
   /// Difficulty comes from the pack and is **never computed in Dart**.
   final int ladderStep;
 
-  /// Wrong answers this item anticipates, and what to say about each.
+  /// Wrong answers this item anticipates, from whichever side knows them.
   ///
-  /// **Keyed by the answer, not by a digest** (design D1). The frozen format
-  /// keys by `HMAC(canonical answer)` so that the correct answer is not the one
-  /// missing from a readable list — an argument that does not apply here,
-  /// because this format carries [expected] in plaintext and the answer is
-  /// already in the file. It starts applying when the app reads the frozen pack
-  /// at F4, and the keying changes with it.
-  ///
-  /// The keys are resolved to copy by `PackReader`, so an id naming a
-  /// misconception the pack does not define fails at load rather than showing
-  /// an empty screen later.
-  final Map<String, Diagnosis> distractors;
+  /// A pass-through to [answer], because the keying belongs to the answer and
+  /// not to the item — see `ItemAnswer.distractors`.
+  Map<String, Diagnosis> get distractors => answer.distractors;
 }

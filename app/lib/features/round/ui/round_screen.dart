@@ -16,7 +16,6 @@ import '../../../design/widgets/spec/keypad_layout.dart';
 import '../../../design/widgets/spec/verdict.dart';
 import '../../home/data/day_log_store.dart';
 import '../policy/answer_draft.dart';
-import '../policy/diagnose.dart';
 import '../policy/streak_policy.dart';
 import 'stimulus/stimulus_view.dart';
 import 'verdict/verdict_screen.dart';
@@ -227,9 +226,9 @@ class _RoundScreenState extends State<RoundScreen> {
       // so it cannot disagree with the verdict above it.
       diagnosis: fallback == null
           ? null
-          : diagnose(
+          : diagnoseItem(
               item: _item,
-              answer: _draft.text,
+              typed: _draft.text,
               verdict: verdict,
               fallback: fallback,
             ),

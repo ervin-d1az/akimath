@@ -214,11 +214,13 @@ class Pack {
     final String id = _requireString(entry, 'id');
     return Item(
       id: id,
-      answer: PlainAnswer(answer),
+      answer: PlainAnswer(
+        answer,
+        distractors: _distractors(entry, id, answer, misconceptions),
+      ),
       // Difficulty travels with the item. Rating never runs in Dart.
       ladderStep: _requireInt(entry, 'ladder_step'),
       stimulus: _stimulus(entry),
-      distractors: _distractors(entry, id, answer, misconceptions),
     );
   }
 

@@ -25,7 +25,9 @@ import 'package:crypto/crypto.dart';
 
 import '../design/widgets/spec/verdict.dart';
 import 'model/canon.dart';
+import 'model/diagnosis.dart';
 import 'model/item.dart';
+import '../features/round/policy/diagnose.dart';
 import '../features/round/policy/grading.dart';
 
 /// `HMAC-SHA256(salt, canonicalAnswer)`, lowercase hex.
@@ -97,3 +99,35 @@ Verdict gradeItem(Item item, String typed) => switch (item.answer) {
             ? Verdict.correct
             : Verdict.wrong,
     };
+
+/// What to tell a player about the answer they gave.
+///
+/// **The adapter half of `diagnose`, for the same reason `gradeItem` is.** The
+/// key a distractor is looked up by differs with how the answer is known: a
+/// plaintext item keys by the canonical answer, an issued one by the *digest*
+/// of it. Computing that digest needs `package:crypto`, which a pure root
+/// cannot import — so this resolves the key and the pure policy picks the copy.
+Diagnosis? diagnoseItem({
+  required Item item,
+  required String typed,
+  required Verdict verdict,
+  required Diagnosis fallback,
+}) {
+  // Null when the canonicaliser refuses the input outright, which no key can
+  // equal — so an unreadable answer falls through to the fallback.
+  final String? canonical = canonicalise(typed, mode: CanonMode.learner).value;
+
+  final String? key = switch (item.answer) {
+    PlainAnswer() => canonical,
+    DigestAnswer(:final String saltHex) => canonical == null
+        ? null
+        : answerDigest(saltHex: saltHex, canonicalAnswer: canonical),
+  };
+
+  return diagnose(
+    distractors: item.distractors,
+    key: key,
+    verdict: verdict,
+    fallback: fallback,
+  );
+}
