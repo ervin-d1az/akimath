@@ -2,6 +2,8 @@ import 'package:akimath_app/design/icons/brand_icon.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/map/ui/skill_map_screen.dart';
 import 'package:akimath_app/features/shell/ui/nav_bar.dart';
+import 'package:akimath_app/features/onboarding/ui/calibration_intro_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/save_progress_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/preferences/ui/legend_screen.dart';
 import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
@@ -35,8 +37,34 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // **Calibration stands between the first run and the home now** (#97), and
+    // it is skipped rather than played: what this suite is about is the shell,
+    // and ten measured items in front of it would make every failure here a
+    // failure about something else. Guarded, because a device that has already
+    // been through it does not see this screen.
+    if (find.byType(CalibrationIntroScreen).evaluate().isNotEmpty) {
+      await tester.tap(find.text('Saltar por ahora'));
+      await tester.pumpAndSettle();
+    }
+
+    // **And the offer to keep it stands after that** (#98). `Después` is the
+    // honest answer for this suite: it is about the shell with no account, and
+    // the signed-out profile is one of the three roots it walks.
+    if (find.byType(SaveProgressScreen).evaluate().isNotEmpty) {
+      await tester.tap(find.text('Después'));
+      await tester.pumpAndSettle();
+    }
+
     for (int i = 0; i < 20 && find.byType(HomeScreen).evaluate().isEmpty; i++) {
       await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    }
+    if (find.byType(HomeScreen).evaluate().isEmpty) {
+      final Iterable<String> onScreen = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((Text t) => t.data ?? '')
+          .where((String s) => s.isNotEmpty);
+      // ignore: avoid_print
+      print('ON SCREEN INSTEAD: ${onScreen.join(" | ")}');
     }
     expect(find.byType(HomeScreen), findsOneWidget, reason: 'never reached the home');
 
