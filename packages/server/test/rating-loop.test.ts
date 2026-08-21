@@ -228,6 +228,29 @@ describeWithDatabase("the rating, from answering to GET /me/standing", () => {
     expect(await classes()).toEqual(classesOnce);
   });
 
+  it("an item named in upper case is still the item that was rated", async () => {
+    // **Silent and unrepairable if it were wrong.** The frozen `uuid` pattern
+    // accepts either case and the reader keeps what it was sent, but Postgres
+    // canonicalises to lower case — so the id that comes back from `RETURNING`
+    // is not textually the id that went in. Matching those two by raw string
+    // would record the attempt and rate nothing, and a resend could not fix it:
+    // the row already exists, so the second batch lands nothing either.
+    const { packId } = await issue();
+    await sync([
+      answer(packId, FIRST_STEP[0]!, FIRST_SESSION),
+      answer(packId, SECOND_STEP[0]!, FIRST_SESSION),
+    ]);
+
+    const shouted = {
+      ...answer(packId, FIRST_STEP[1]!, SECOND_SESSION),
+      packRef: { packId: packId.toUpperCase(), index: FIRST_STEP[1]! },
+    };
+    const response = await sync([shouted]);
+
+    expect(response.status).toBe(200);
+    expect((await standing()).skills).toHaveLength(1);
+  });
+
   it("nothing is rated for an account with no player, and nothing is written", async () => {
     await db.client.query("DELETE FROM players WHERE id = $1", [PLAYER]);
 

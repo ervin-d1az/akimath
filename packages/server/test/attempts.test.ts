@@ -301,6 +301,15 @@ describe("or refused, with the reason and the index", () => {
       "attempts[2] names the same item as attempts[0]; an item is answered once.",
     ],
     [
+      "a batch naming the same item in two spellings of the same uuid",
+      // The frozen pattern accepts either case, so `A1B2…` and `a1b2…` are one
+      // item to the database's unique index and must be one item here. The
+      // rating depends on the same folding: it matches what was submitted
+      // against what `RETURNING` handed back, and Postgres canonicalises.
+      batch(submission(), submission({ itemId: ITEM.toUpperCase() })),
+      "attempts[1] names the same item as attempts[0]; an item is answered once.",
+    ],
+    [
       "the second attempt, named by its index",
       // A batch of fifty with one bad row is undiagnosable from "the body was
       // malformed", and the client cannot bisect a request it has already sent.
