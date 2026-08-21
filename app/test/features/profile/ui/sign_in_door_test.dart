@@ -97,10 +97,19 @@ class _Shell extends StatefulWidget {
     required this.auth,
     required this.whoAmI,
     required this.onSession,
+    this.startsSignedInAs,
+    this.linkResult,
   });
 
   final AuthApi auth;
   final Future<MeResult> Function(String accessToken) whoAmI;
+
+  /// A session the device is already holding when the profile opens.
+  final LinkedSession? startsSignedInAs;
+
+  /// What `POST /players/link` says about that session. A refusal is the state
+  /// this file's last case is about.
+  final LinkResult? linkResult;
 
   /// Reports what the shell was handed, so a test can read the band rather
   /// than infer it from an address on screen.
@@ -111,7 +120,7 @@ class _Shell extends StatefulWidget {
 }
 
 class _ShellState extends State<_Shell> {
-  LinkedSession? _session;
+  late LinkedSession? _session = widget.startsSignedInAs;
 
   @override
   Widget build(BuildContext context) => ProfileRoute(
@@ -129,11 +138,12 @@ class _ShellState extends State<_Shell> {
           required String playerId,
           required AgeBand ageBand,
         }) async =>
+            widget.linkResult ??
             LinkDone(Me(
-          playerId: playerId,
-          ageBand: ageBand,
-          createdAt: DateTime.utc(2026, 8, 20),
-        )),
+              playerId: playerId,
+              ageBand: ageBand,
+              createdAt: DateTime.utc(2026, 8, 20),
+            )),
         fetchHistory: (String accessToken) async => const HistoryNoPlayer(),
       );
 }
@@ -143,6 +153,8 @@ Future<void> _pump(
   required AuthApi auth,
   required Future<MeResult> Function(String accessToken) whoAmI,
   ValueChanged<LinkedSession?> onSession = _ignore,
+  LinkedSession? startsSignedInAs,
+  LinkResult? linkResult,
 }) async {
   tester.view
     ..physicalSize = const Size(390, 844)
@@ -150,7 +162,13 @@ Future<void> _pump(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
-      home: _Shell(auth: auth, whoAmI: whoAmI, onSession: onSession),
+      home: _Shell(
+        auth: auth,
+        whoAmI: whoAmI,
+        onSession: onSession,
+        startsSignedInAs: startsSignedInAs,
+        linkResult: linkResult,
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -291,5 +309,63 @@ void main() {
     expect(find.byType(AgeGateScreen), findsOneWidget);
     expect(find.text('ana@correo.mx'), findsNothing,
         reason: 'the session was handed over before the band was resolved');
+  });
+
+  testWidgets('a refused session is told to come back in and can',
+      (WidgetTester tester) async {
+    // **`4.1` instructs an action it did not offer.** `AccountState.rejected`
+    // draws *"Tu sesión caducó. Vuelve a entrar."* and then nothing: no banner,
+    // no retry — asking twice with a dead token gets the same refusal — and no
+    // door, because the door required there to be no session and a refused one
+    // is still a session. The session lives in memory, so force-quitting the
+    // app was the only way back in.
+    await _pump(
+      tester,
+      auth: _Provider(),
+      whoAmI: (String token) async => MeFound(linkedPlayer),
+      startsSignedInAs: const LinkedSession(
+        email: 'ana@correo.mx',
+        accessToken: 'a.dead.token',
+        ageBand: AgeBand.adult,
+      ),
+      linkResult: const LinkRejected(
+        tag: 'invalid_session',
+        message: 'invalid session',
+      ),
+    );
+
+    expect(find.text('Tu sesión caducó. Vuelve a entrar.'), findsOneWidget);
+    // The door says the same words the caption does, because it is the act the
+    // caption names.
+    expect(find.text('Volver a entrar'), findsOneWidget);
+    // Not a second way to make an account: there already is one.
+    expect(find.text('Crear cuenta'), findsNothing);
+
+    await tester.tap(find.text('Volver a entrar'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SignInScreen), findsOneWidget);
+    expect(find.byType(AgeGateScreen), findsNothing);
+  });
+
+  testWidgets('and a healthy session is offered no door at all',
+      (WidgetTester tester) async {
+    // The door is a recovery, not furniture. A linked account has nothing to
+    // recover from, and a control that acts on a state you are not in is the
+    // DR-P2 failure the other way round.
+    await _pump(
+      tester,
+      auth: _Provider(),
+      whoAmI: (String token) async => MeFound(linkedPlayer),
+      startsSignedInAs: const LinkedSession(
+        email: 'ana@correo.mx',
+        accessToken: 'a.live.token',
+        ageBand: AgeBand.adult,
+      ),
+    );
+
+    expect(find.text('Volver a entrar'), findsNothing);
+    expect(find.text('Ya tengo cuenta'), findsNothing);
+    expect(find.text('Crear cuenta'), findsNothing);
   });
 }

@@ -851,12 +851,17 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
   ),
   RegisteredScreen(
     label: 'perfil · cuenta sesión caducada',
+    // **The one state that draws an address and a door together.** The section
+    // says *"Vuelve a entrar"* and the button under it is the only thing on the
+    // screen that can, so it is the only screen where these two stack — and the
+    // only place the touch-target sweep can measure that button.
     build: () => AppShell(
       child: ProfileScreen(
         accountEmail: 'alguien@ejemplo.com',
         accountState: AccountState.rejected,
         onRetryAccount: null,
         onOpenSettings: () {},
+        onSignIn: () {},
         figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),

@@ -130,6 +130,17 @@ class ProfileScreen extends StatelessWidget {
                 onRetry: onRetryAccount,
               ),
             ),
+            // **A refused session is the one state with an address and a way
+            // out.** The section above it says *"Vuelve a entrar"* and, until
+            // this, offered nothing that could — the door required there to be
+            // no session, and a refused one is still a session.
+            if (onSignIn != null) ...<Widget>[
+              const SizedBox(height: BrandShape.space3),
+              BrandButton.secondary(
+                label: signInDoorLabel(accountState),
+                onPressed: onSignIn!,
+              ),
+            ],
           ] else
             ..._doors(),
           const SizedBox(height: BrandShape.space4),
@@ -165,7 +176,10 @@ class ProfileScreen extends StatelessWidget {
       ],
       if (signIn != null) ...<Widget>[
         SizedBox(height: create == null ? BrandShape.space3 : BrandShape.space2),
-        BrandButton.secondary(label: 'Ya tengo cuenta', onPressed: signIn),
+        BrandButton.secondary(
+          label: signInDoorLabel(accountState),
+          onPressed: signIn,
+        ),
       ],
     ];
   }

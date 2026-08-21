@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import '../../../design/math/spec/es_mx_number.dart';
+import '../../states/policy/account_state.dart';
 
 /// What `4.1 Perfil` prints, decided before anything is drawn.
 ///
@@ -177,3 +178,14 @@ List<ProfileTile> profileTiles(ProfileFigures figures) {
       ),
   ];
 }
+
+/// What the sign-in door on `4.1` says.
+///
+/// **Two labels for one act, and the second is a recovery.** Over a signed-out
+/// profile the door stands beside *Crear cuenta* and reads as the alternative
+/// to it. Over a session the server has refused it stands under the player's
+/// own address, where *Ya tengo cuenta* would be answering a question nobody
+/// asked — and the words it uses instead are the ones `4.1`'s own caption for
+/// that state already uses: *"Tu sesión caducó. Vuelve a entrar."*
+String signInDoorLabel(AccountState state) =>
+    state == AccountState.rejected ? 'Volver a entrar' : 'Ya tengo cuenta';

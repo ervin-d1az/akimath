@@ -526,12 +526,23 @@ class _ProfileRouteState extends State<ProfileRoute> {
             DemoFigures.enabled ? DemoFigures.averageTenthsOfSecond : null,
       );
 
-  /// Whether either account door is worth drawing.
+  /// Whether making an account is worth offering.
   ///
-  /// One condition for both: a build with no endpoints can reach no provider,
-  /// and a device that already has a session has nowhere to go through either.
-  bool get _offerADoor =>
+  /// A build with no endpoints can reach no provider, and a device that already
+  /// has a session has one already.
+  bool get _offerToCreate =>
       widget.authBaseUrl.isNotEmpty && widget.session == null;
+
+  /// Whether signing in is worth offering.
+  ///
+  /// **The same cases, plus a refused session.** `AccountState.rejected` means
+  /// the account is real and this device's token is not; `4.1` says
+  /// *"Vuelve a entrar"* and used to offer nothing that could, because the door
+  /// required there to be no session at all. The session is in memory, so the
+  /// only recovery left was force-quitting the app.
+  bool get _offerToSignIn =>
+      widget.authBaseUrl.isNotEmpty &&
+      (widget.session == null || _accountState == AccountState.rejected);
 
   @override
   Widget build(BuildContext context) {
@@ -565,14 +576,14 @@ class _ProfileRouteState extends State<ProfileRoute> {
             ? () => unawaited(_askWhoIAm(widget.session!.accessToken))
             : null,
         // Absent rather than broken when the build was given no endpoints.
-        onCreateAccount: _offerADoor
+        onCreateAccount: _offerToCreate
             ? () => _openAccountFlow(AuthEntry.createAccount)
             : null,
         // **The returning player's door, and it is on the root.** It used to
         // exist only as a text link at the bottom of the sign-up form, three
         // screens and a birth date past this point.
         onSignIn:
-            _offerADoor ? () => _openAccountFlow(AuthEntry.signIn) : null,
+            _offerToSignIn ? () => _openAccountFlow(AuthEntry.signIn) : null,
       ),
     );
   }
