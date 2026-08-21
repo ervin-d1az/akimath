@@ -404,7 +404,7 @@ describe("two sessions are two periods, and that is not the same as one", () => 
   it("an empty batch changes nothing", () => {
     expect(
       rateAttempts({ attempts: [], skills: new Map(), difficulties: new Map(), now: NOW }),
-    ).toEqual({ skills: [], difficulties: [], unplaced: 0, calibrating: 0 });
+    ).toEqual({ skills: [], difficulties: [], deltas: [], unplaced: 0, calibrating: 0 });
   });
 });
 
@@ -443,5 +443,168 @@ describe("what is written back is what the columns hold", () => {
     });
 
     expect(update.skills.map((s) => s.skillId)).toEqual([1]);
+  });
+});
+
+describe("what a session did to a rating is recorded while it is knowable", () => {
+  /** The prior a player nobody has rated is measured against. */
+  const UNRATED = initialSkill();
+
+  it("a rated period records the movement it produced, and nothing rounds", () => {
+    // **The whole reason the table behind this exists.** A delta is a
+    // difference between two instants, and the first one is gone the moment
+    // the row is written: the classes move, so the same batch replayed
+    // tomorrow produces a different figure. Recomputing it later is the
+    // dishonesty this is here to avoid, so it is captured while both ends of
+    // the subtraction still exist.
+    const update = rateAttempts({
+      attempts: [answered()],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+
+    const engine = rateSession(UNRATED, [
+      { opponentRating: MEASURED.rating, opponentDeviation: MEASURED.deviation, score: 1 },
+    ]);
+    expect(update.deltas).toEqual([
+      { sessionId: SESSION_A, skillId: 1, change: engine.rating - UNRATED.rating },
+    ]);
+  });
+
+  it("a right answer against a measured class records a rise", () => {
+    const update = rateAttempts({
+      attempts: [answered({ isCorrect: true })],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+
+    expect(update.deltas[0]!.change).toBeGreaterThan(0);
+  });
+
+  it("and a wrong one records a fall", () => {
+    // PROC-11: the pair is the test. Either one alone passes for a module that
+    // subtracts its two operands the other way round.
+    const update = rateAttempts({
+      attempts: [answered({ isCorrect: false })],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+
+    expect(update.deltas[0]!.change).toBeLessThan(0);
+  });
+
+  it("a period that only calibrated records nothing at all", () => {
+    // **Nothing, not zero.** Nobody measured the player — the answers taught
+    // the class instead — and `ratingDelta` is an *integer* on the wire, so a
+    // measured change of a third of a point already renders as `0`. A zero
+    // here would make "we did not measure you" indistinguishable from "we
+    // measured you and you held", which is the one distinction that field has
+    // room for.
+    const update = rateAttempts({
+      attempts: [answered()],
+      skills: new Map(),
+      difficulties: new Map(),
+      now: NOW,
+    });
+
+    expect(update.calibrating).toBe(1);
+    expect(update.deltas).toEqual([]);
+  });
+
+  it("a period nothing could place records nothing either", () => {
+    const update = rateAttempts({
+      attempts: [answered({ ladderStep: null })],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+
+    expect(update.unplaced).toBe(1);
+    expect(update.deltas).toEqual([]);
+  });
+
+  it("a partly calibrating period still records what the rated half did", () => {
+    // The engine ran, on one answer of two. That is a measurement, and the
+    // other answer teaching a class does not make it less of one.
+    const update = rateAttempts({
+      attempts: [answered({ ladderStep: 3 }), answered({ ladderStep: 9 })],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+
+    expect(update.calibrating).toBe(1);
+    expect(update.deltas).toHaveLength(1);
+    expect(update.deltas[0]!.change).not.toBe(0);
+  });
+
+  it("one change per session, named by the session that caused it", () => {
+    const update = rateAttempts({
+      attempts: [
+        answered({ sessionId: SESSION_A }),
+        answered({ sessionId: SESSION_B, isCorrect: false }),
+      ],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+
+    expect(update.deltas.map((delta) => delta.sessionId)).toEqual([SESSION_A, SESSION_B]);
+    // The second period is measured against what the first left behind, so the
+    // two changes compose into the one row `user_skills` ends up holding.
+    const total = update.deltas.reduce((sum, delta) => sum + delta.change, 0);
+    expect(update.skills[0]!.rating).toBeCloseTo(UNRATED.rating + total, 4);
+  });
+
+  it("and one change per skill, because that is the unit the engine works in", () => {
+    // A session spanning two skills is two rating periods and two real
+    // movements. Both are recorded; whether either can be *reported* is
+    // `GET /me/history`'s question, not this one's.
+    const update = rateAttempts({
+      attempts: [answered({ skillId: 1 }), answered({ skillId: 2, isCorrect: false })],
+      skills: new Map(),
+      difficulties: calibrated([
+        [1, 3, MEASURED],
+        [2, 3, MEASURED],
+      ]),
+      now: NOW,
+    });
+
+    expect(update.deltas.map((delta) => [delta.sessionId, delta.skillId])).toEqual([
+      [SESSION_A, 1],
+      [SESSION_A, 2],
+    ]);
+    expect(update.deltas[0]!.change).toBeGreaterThan(0);
+    expect(update.deltas[1]!.change).toBeLessThan(0);
+  });
+
+  it("the change added to where the player was is where the player now is", () => {
+    // **Named for what it checks.** The tempting name is "measured from the
+    // decayed prior", and this body cannot check that: `decay` grows the
+    // deviation and leaves the rating alone, so the decayed prior's *rating*
+    // is the stored rating and the two readings agree by construction
+    // (PROC-11's fourth bullet).
+    //
+    // What it does pin is that the recorded change and the written rating are
+    // one calculation. A client that adds up its history must land on the
+    // figure `GET /me/standing` reports, and this is the arithmetic that makes
+    // that true — with a stored prior, so a module returning the new rating
+    // itself rather than the difference fails here.
+    const stored: StoredSkill = {
+      rating: 1400,
+      deviation: 60,
+      updatedAt: new Date("2026-02-20T12:00:00.000Z"),
+    };
+    const update = rateAttempts({
+      attempts: [answered()],
+      skills: new Map([[1, stored]]),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+
+    expect(update.deltas[0]!.change).toBe(update.skills[0]!.rating - stored.rating);
   });
 });

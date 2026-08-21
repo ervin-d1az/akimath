@@ -51,6 +51,7 @@ import {
   measuredDifficulties,
   storedSkills,
   writeDifficulties,
+  writeSessionDeltas,
   writeSkills,
 } from "./rating-repository.js";
 import type { RequestDatabase } from "./request-database.js";
@@ -433,6 +434,10 @@ async function applyRating(
 
   await writeSkills(client, playerId, update.skills);
   await writeDifficulties(client, update.difficulties);
+  // In the same transaction as the rating it describes: a delta the history
+  // reports while the rating it came from was rolled back would be a figure
+  // nothing on the server agrees with.
+  await writeSessionDeltas(client, playerId, update.deltas);
 }
 
 /**

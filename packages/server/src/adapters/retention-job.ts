@@ -21,6 +21,7 @@ import { retentionCutoffs } from "../retention.js";
 export interface RetentionRun {
   readonly attempts: number;
   readonly diagEvents: number;
+  readonly sessionDeltas: number;
   readonly offlinePacks: number;
   readonly issuedItems: number;
 }
@@ -39,6 +40,25 @@ export async function runRetention(
   );
   const attempts = await client.query(
     "DELETE FROM attempts WHERE created_at < $1",
+    [cutoffs.attempts],
+  );
+
+  // **What each session did to the rating, on the attempts cutoff and not a
+  // figure of its own.** A delta is an attribute of the history entry the
+  // attempts above produce, so the two have to expire together: kept longer it
+  // is a row nothing can reach, swept sooner it takes the figure off an entry
+  // that is still being reported. One cutoff for both makes that difference
+  // impossible to introduce.
+  //
+  // After the attempts delete, and guarded the same way as the two source
+  // tables below: while any attempt of the session survives, the entry still
+  // appears and it keeps its number.
+  const sessionDeltas = await client.query(
+    `DELETE FROM session_deltas
+      WHERE created_at < $1
+        AND NOT EXISTS (SELECT 1 FROM attempts
+                         WHERE attempts.player_id = session_deltas.player_id
+                           AND attempts.session_id = session_deltas.session_id)`,
     [cutoffs.attempts],
   );
 
@@ -72,6 +92,7 @@ export async function runRetention(
   return {
     attempts: attempts.rowCount ?? 0,
     diagEvents: diagEvents.rowCount ?? 0,
+    sessionDeltas: sessionDeltas.rowCount ?? 0,
     offlinePacks: offlinePacks.rowCount ?? 0,
     issuedItems: issuedItems.rowCount ?? 0,
   };

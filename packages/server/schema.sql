@@ -126,6 +126,19 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: session_deltas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.session_deltas (
+    player_id uuid NOT NULL,
+    session_id uuid NOT NULL,
+    skill_id smallint NOT NULL,
+    rating_delta real NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: template_stats; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -218,6 +231,14 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: session_deltas session_deltas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session_deltas
+    ADD CONSTRAINT session_deltas_pkey PRIMARY KEY (player_id, session_id, skill_id);
+
+
+--
 -- Name: template_stats template_stats_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -290,6 +311,13 @@ CREATE INDEX offline_packs_player_idx ON public.offline_packs USING btree (playe
 
 
 --
+-- Name: session_deltas_created_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX session_deltas_created_idx ON public.session_deltas USING btree (created_at);
+
+
+--
 -- Name: attempts attempts_issued_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -343,6 +371,14 @@ ALTER TABLE ONLY public.issued_items
 
 ALTER TABLE ONLY public.offline_packs
     ADD CONSTRAINT offline_packs_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id) ON DELETE CASCADE;
+
+
+--
+-- Name: session_deltas session_deltas_player_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session_deltas
+    ADD CONSTRAINT session_deltas_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id) ON DELETE CASCADE;
 
 
 --
@@ -406,6 +442,14 @@ GRANT SELECT,DELETE ON TABLE public.offline_packs TO retention_job;
 
 GRANT SELECT,INSERT,UPDATE ON TABLE public.players TO app_request;
 GRANT SELECT,DELETE ON TABLE public.players TO retention_job;
+
+
+--
+-- Name: TABLE session_deltas; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,UPDATE ON TABLE public.session_deltas TO app_request;
+GRANT SELECT,DELETE ON TABLE public.session_deltas TO retention_job;
 
 
 --

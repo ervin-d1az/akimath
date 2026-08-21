@@ -30,6 +30,7 @@ const PLAYER_TABLES = [
   "diag_events",
   "issued_items",
   "offline_packs",
+  "session_deltas",
   "user_skills",
 ] as const;
 
@@ -107,6 +108,14 @@ describeWithDatabase("DELETE /me, against a real database", () => {
     );
     await db.client.query(
       "INSERT INTO user_skills (player_id, skill_id, rating, deviation) VALUES ($1, 1, 1000, 300)",
+      [player],
+    );
+    // What one session did to this player's rating. Unlike
+    // `difficulty_ratings`, which is an aggregate over everyone who met a
+    // difficulty class, this is one person's history and it goes with them.
+    await db.client.query(
+      `INSERT INTO session_deltas (player_id, session_id, skill_id, rating_delta)
+            VALUES ($1, gen_random_uuid(), 1, 23.5)`,
       [player],
     );
     await db.client.query(

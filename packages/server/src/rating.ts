@@ -95,6 +95,36 @@ export interface RatedSkill {
   readonly deviation: number;
 }
 
+/**
+ * What one rating period did to one skill's rating.
+ *
+ * **Recorded here because here is the only place it is knowable.** A delta is
+ * a difference between two instants, and the earlier one stops existing the
+ * moment this returns: the classes the period was rated against move on the
+ * very next batch, so replaying the same answers tomorrow produces a different
+ * figure. Nothing downstream can recover it, which is why `GET /me/history`
+ * answered null for it until this existed.
+ *
+ * **Only a period that ran the engine has one**, and the reason is the wire
+ * type rather than a preference: the frozen `HistoryEntry.ratingDelta` is a
+ * nullable *integer*, so a measured change of a third of a point already
+ * renders as `0`. If a period that measured nothing also rendered `0`, "we did
+ * not measure you" and "we measured you and you held" would be the same value
+ * on the wire — and those are two different facts about a session. A period
+ * that only calibrated is therefore absent from this list, and absent becomes
+ * null.
+ *
+ * The change is kept unrounded: `user_skills` is `real` and this is the
+ * difference between two of them. Rounding is a presentation decision and it
+ * belongs where the presentation is, in `history.ts`.
+ */
+export interface SessionDelta {
+  readonly sessionId: string;
+  readonly skillId: number;
+  /** The movement on the rating scale — signed, and never rounded. */
+  readonly change: number;
+}
+
 export interface RatedDifficulty extends RatedSkill {
   readonly ladderStep: number;
 }
@@ -113,6 +143,8 @@ export interface RatingUpdate {
   readonly skills: readonly RatedSkill[];
   /** Only the classes this batch actually observed. */
   readonly difficulties: readonly RatedDifficulty[];
+  /** One per rating period that moved the player, in the order they happened. */
+  readonly deltas: readonly SessionDelta[];
   /** Answers whose item names no difficulty, so nothing could rate them. */
   readonly unplaced: number;
   /** Answers that taught a class rather than moving the player. */
@@ -207,6 +239,7 @@ export function rateAttempts(inputs: RatingInputs): RatingUpdate {
   const moved = new Set<number>();
   const difficulties = new Map(inputs.difficulties);
   const measured = new Set<string>();
+  const deltas: SessionDelta[] = [];
   let unplaced = 0;
   let calibrating = 0;
 
@@ -243,8 +276,17 @@ export function rateAttempts(inputs: RatingInputs): RatingUpdate {
     }
 
     if (playerOutcomes.length > 0) {
-      skills.set(period.skillId, rateSession(before, playerOutcomes));
+      const after = rateSession(before, playerOutcomes);
+      skills.set(period.skillId, after);
       moved.add(period.skillId);
+      // Against `before` and not against the stored row: `before` is the
+      // decayed prior the engine was actually handed, so this is the movement
+      // that happened rather than the difference from a figure nothing used.
+      deltas.push({
+        sessionId: period.sessionId,
+        skillId: period.skillId,
+        change: after.rating - before.rating,
+      });
     }
 
     for (const [key, answers] of byClass) {
@@ -275,6 +317,7 @@ export function rateAttempts(inputs: RatingInputs): RatingUpdate {
       ...classOf(key),
       ...difficulties.get(key)!,
     })),
+    deltas,
     unplaced,
     calibrating,
   };

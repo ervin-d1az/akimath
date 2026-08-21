@@ -64,6 +64,20 @@ describeWithDatabase("GET /me/history, against a real database", () => {
     );
   };
 
+  /** What the rating engine recorded for one session of one skill. */
+  const moved = async (options: {
+    player?: string;
+    session: string;
+    skillId?: number;
+    by: number;
+  }): Promise<void> => {
+    await db.client.query(
+      `INSERT INTO session_deltas (player_id, session_id, skill_id, rating_delta)
+       VALUES ($1, $2, $3::smallint, $4::real)`,
+      [options.player ?? PLAYER, options.session, options.skillId ?? 1, options.by],
+    );
+  };
+
   const uuid = (tail: number): string =>
     `018f4e3c-0000-7000-8000-${tail.toString(16).padStart(12, "0")}`;
 
@@ -145,6 +159,55 @@ describeWithDatabase("GET /me/history, against a real database", () => {
     await answered({ session, correct: true, minutes: 2, skillId: 4 });
 
     expect((await entries())[0]?.title).toBe("Serie de retos");
+  });
+
+  it("the movement a session was recorded as causing is what it reports", async () => {
+    const session = uuid(0x91);
+    await answered({ session, correct: true, minutes: 1 });
+    await moved({ session, by: 23.4 });
+
+    expect((await entries())[0]?.ratingDelta).toBe(23);
+  });
+
+  it("a session nothing measured reports nothing, not zero", async () => {
+    // The calibrating case as the endpoint sees it: attempts landed, the rating
+    // engine formed no period, and there is no row to read. Zero would claim a
+    // measurement — and zero is already what a measured third of a point reads
+    // as, so the two would be one value.
+    const session = uuid(0x92);
+    await answered({ session, correct: true, minutes: 1 });
+
+    expect((await entries())[0]?.ratingDelta).toBeNull();
+  });
+
+  it("and a session spanning two skills reports none, though both of them moved", async () => {
+    // **Decision 1, and the fixture is what makes it a test.** Two skills moved
+    // by different amounts in opposite directions: summing them adds two
+    // independent scales, and picking either is `min(skill_id)` wearing a
+    // number. The two rows are +40 and -25, so a query that summed (15), took
+    // the first (40) or took the lowest skill (40) would each report something
+    // visibly different from null.
+    const session = uuid(0x93);
+    await answered({ session, correct: true, minutes: 1, skillId: 1 });
+    await answered({ session, correct: false, minutes: 2, skillId: 4 });
+    await moved({ session, skillId: 1, by: 40 });
+    await moved({ session, skillId: 4, by: -25 });
+
+    const entry = (await entries())[0];
+    expect(entry?.title).toBe("Serie de retos");
+    expect(entry?.ratingDelta).toBeNull();
+  });
+
+  it("nobody else's movement can arrive on your session", async () => {
+    // The join is scoped to the player as well as to the session. A session id
+    // is minted on a device, so two players sharing one is not a thing that
+    // happens — but the clause that makes it not a thing that *can* happen is
+    // untested otherwise, and what leaks through it is another person's rating.
+    const session = uuid(0x94);
+    await answered({ session, correct: true, minutes: 1 });
+    await moved({ player: OTHER_PLAYER, session, by: 99 });
+
+    expect((await entries())[0]?.ratingDelta).toBeNull();
   });
 
   it("a player who has played nothing gets a list, not a 404", async () => {
