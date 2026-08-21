@@ -64,12 +64,58 @@ describe("a rating period is one session of one skill", () => {
   it("orders periods by when they finished, oldest first", () => {
     // Successive sessions are successive rating periods, so a batch carrying a
     // week of play must apply them in the order they happened.
+    //
+    // **PROC-11: the later-keyed session is the one that finished first.** The
+    // first version of this test had `SESSION_A` both earlier and lower-keyed,
+    // so the expected order was the same under the timestamp and under the
+    // tie-break — and a mutant that read no timestamp at all passed it.
     const periods = ratingPeriods([
-      answered({ sessionId: SESSION_B, answeredAt: new Date("2026-08-19T10:00:00.000Z") }),
-      answered({ sessionId: SESSION_A, answeredAt: new Date("2026-08-18T10:00:00.000Z") }),
+      answered({ sessionId: SESSION_A, answeredAt: new Date("2026-08-19T10:00:00.000Z") }),
+      answered({ sessionId: SESSION_B, answeredAt: new Date("2026-08-18T10:00:00.000Z") }),
+    ]);
+
+    expect(periods.map((p) => p.sessionId)).toEqual([SESSION_B, SESSION_A]);
+  });
+
+  it("and breaks a tie by the key, so an order always exists", () => {
+    // Two sessions that ended in the same millisecond still have to come back
+    // in one order, or a batch would rate differently depending on how a `Map`
+    // happened to enumerate. Inserted against the key order, so a comparator
+    // that stopped at the timestamp would leave them as they arrived.
+    const together = new Date("2026-08-19T10:00:00.000Z");
+    const periods = ratingPeriods([
+      answered({ sessionId: SESSION_B, answeredAt: together }),
+      answered({ sessionId: SESSION_A, answeredAt: together }),
     ]);
 
     expect(periods.map((p) => p.sessionId)).toEqual([SESSION_A, SESSION_B]);
+  });
+
+  it("keeps every answer of a class, not just the first", () => {
+    const periods = ratingPeriods([answered(), answered(), answered()]);
+
+    expect(periods).toHaveLength(1);
+    expect(periods[0]!.attempts).toHaveLength(3);
+  });
+
+  it("a period ends at its last answer, which is what orders it", () => {
+    // A long session that started before a short one still finished after it.
+    // Ordering on the *first* answer instead would apply them backwards, and
+    // the two disagree only when one period straddles the other — which is
+    // exactly what a player who left a session open does.
+    const straddling = [
+      answered({ sessionId: SESSION_A, answeredAt: new Date("2026-08-19T10:00:00.000Z") }),
+      answered({ sessionId: SESSION_A, answeredAt: new Date("2026-08-19T10:20:00.000Z") }),
+    ];
+    const inTheMiddle = answered({
+      sessionId: SESSION_B,
+      answeredAt: new Date("2026-08-19T10:10:00.000Z"),
+    });
+
+    const periods = ratingPeriods([...straddling, inTheMiddle]);
+
+    expect(periods.map((p) => p.sessionId)).toEqual([SESSION_B, SESSION_A]);
+    expect(periods[1]!.endedAt.toISOString()).toBe("2026-08-19T10:20:00.000Z");
   });
 });
 
@@ -283,6 +329,53 @@ describe("two sessions are two periods, and that is not the same as one", () => 
     });
 
     expect(two.skills[0]!.deviation).not.toBeCloseTo(one.skills[0]!.deviation, 3);
+  });
+
+  it("the second period is rated from what the first one left, not from the stored row", () => {
+    // Inside one batch the periods are sequential, so the later session must
+    // meet the player the earlier one produced. Reading the stored prior again
+    // would silently discard the first session — and a device that had been
+    // offline for a week sends exactly this shape.
+    const twoSessions = rateAttempts({
+      attempts: [
+        answered({ sessionId: SESSION_A, answeredAt: new Date("2026-08-19T10:00:00.000Z") }),
+        answered({ sessionId: SESSION_B, answeredAt: new Date("2026-08-20T10:00:00.000Z") }),
+      ],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+    const oneSession = rateAttempts({
+      attempts: [answered({ sessionId: SESSION_A })],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+
+    // Two wins beat one, and both are more certain than one.
+    expect(twoSessions.skills[0]!.rating).toBeGreaterThan(oneSession.skills[0]!.rating);
+    expect(twoSessions.skills[0]!.deviation).toBeLessThan(oneSession.skills[0]!.deviation);
+  });
+
+  it("every answer against a class counts, not just the first of them", () => {
+    // Two answers at the same step in one session are two games against that
+    // class. Keeping one would make a session's evidence depend on how many
+    // distinct steps it happened to touch.
+    const twice = rateAttempts({
+      attempts: [answered(), answered()],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+    const once = rateAttempts({
+      attempts: [answered()],
+      skills: new Map(),
+      difficulties: calibrated([[1, 3, MEASURED]]),
+      now: NOW,
+    });
+
+    expect(twice.difficulties[0]!.rating).toBeLessThan(once.difficulties[0]!.rating);
+    expect(twice.skills[0]!.rating).toBeGreaterThan(once.skills[0]!.rating);
   });
 
   it("the order of answers inside one session does not matter", () => {
