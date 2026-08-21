@@ -5,7 +5,11 @@ import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/design/theme.dart';
 import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/api/me.dart';
+import 'package:akimath_app/api/me_result.dart';
+import 'package:akimath_app/api/sync.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
+import 'package:akimath_app/features/account/policy/session.dart';
 import 'package:akimath_app/features/home/data/day_log_store.dart';
 import 'package:akimath_app/features/home/data/prefs_day_log_store.dart';
 import 'package:akimath_app/features/home/data/series_cursor_store.dart';
@@ -21,6 +25,7 @@ import 'package:akimath_app/features/stats/data/answer_record_store.dart';
 import 'package:akimath_app/features/stats/policy/local_stats.dart';
 import 'package:akimath_app/features/sync/attempt_sync.dart';
 import 'package:akimath_app/features/sync/data/attempt_journal_store.dart';
+import 'package:akimath_app/features/sync/data/issued_pack_store.dart';
 import 'package:akimath_app/features/sync/policy/attempt_journal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -122,6 +127,59 @@ String _issuedShapedPack() => _ladderPack().replaceAllMapped(
       (Match m) => '"id": "pk-1#${m.group(2)}"',
     );
 
+/// A pack in the **frozen** format, which is what the server issues: two number
+/// series, answers stated as digests keyed by the salt. `readIssuedPack` mints
+/// each item's id as `packId#index`, which is the address the journal needs.
+const String _issuedContent = '''
+{
+  "pack_format_version": 1,
+  "pack_salt": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+  "skill_nodes": [],
+  "skill_fallbacks": [
+    {"skill_id": 1, "diagnosis": {"misconception": "no_specific_diagnosis",
+      "steps": ["Lee otra vez el reto, sin prisa."],
+      "explain": "Repasa el reto con calma."}}
+  ],
+  "puzzles": [],
+  "items": [
+    {"skill_id": 1, "ladder_step": 1, "keypad": "item",
+     "stimulus": {"kind": "numberSeries",
+       "payload": {"terms": [2, 4, 6, 8], "unknown_index": 3}},
+     "answer": {"shape": "integer",
+       "digest": "0f0e0d0c0b0a09080706050403020100"},
+     "diagnosis": null},
+    {"skill_id": 1, "ladder_step": 2, "keypad": "item",
+     "stimulus": {"kind": "numberSeries",
+       "payload": {"terms": [3, 6, 9, 12], "unknown_index": 3}},
+     "answer": {"shape": "integer",
+       "digest": "100f0e0d0c0b0a090807060504030201"},
+     "diagnosis": null}
+  ]
+}
+''';
+
+const LinkedSession _session = LinkedSession(
+  email: 'geineryodan@gmail.com',
+  accessToken: 'token',
+  ageBand: AgeBand.adult,
+);
+
+/// A `GET /packs/{packId}` that always answers with [content].
+Future<FetchPackResult> Function({
+  required String accessToken,
+  required String packId,
+}) _fetches(String content) => ({
+      required String accessToken,
+      required String packId,
+    }) async => FetchPackDone(
+          IssuedPack(
+            packId: packId,
+            issuedAt: DateTime.utc(2026, 8, 1),
+            expiresAt: DateTime.utc(2099),
+            pack: json.decode(content),
+          ),
+        );
+
 /// Answers the item on screen and moves past its verdict.
 ///
 /// The digit is arbitrary: what a practice run records about a topic is the
@@ -169,6 +227,12 @@ Future<void> _pump(
   DayLogStore? dayLog,
   AnswerRecordStore? answerRecord,
   AttemptSync? sync,
+  LinkedSession? session,
+  IssuedPackStore? issuedPacks,
+  Future<FetchPackResult> Function({
+    required String accessToken,
+    required String packId,
+  })? fetchPack,
 }) async {
   // **The hardware goes on the view, not into a `MediaQuery` below
   // `MaterialApp`.** A wrapper under `home` sits *below* the app's `Navigator`,
@@ -189,6 +253,9 @@ Future<void> _pump(
     dayLog: dayLog,
     answerRecord: answerRecord,
     sync: sync,
+    session: session,
+    issuedPacks: issuedPacks,
+    fetchPack: fetchPack,
   );
 }
 
@@ -203,6 +270,12 @@ Future<void> _pumpAgain(
   DayLogStore? dayLog,
   AnswerRecordStore? answerRecord,
   AttemptSync? sync,
+  LinkedSession? session,
+  IssuedPackStore? issuedPacks,
+  Future<FetchPackResult> Function({
+    required String accessToken,
+    required String packId,
+  })? fetchPack,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -213,6 +286,9 @@ Future<void> _pumpAgain(
         dayLog: dayLog,
         answerRecord: answerRecord,
         sync: sync,
+        session: session,
+        issuedPacks: issuedPacks,
+        fetchPack: fetchPack,
       ),
     ),
   );
@@ -549,6 +625,69 @@ void main() {
 
       expect(find.text('RACHA'), findsOneWidget);
       expect(find.text('4'), findsOneWidget);
+    });
+  });
+
+  // The half that makes the wiring above worth having. `AttemptSync.record`
+  // drops an item with no `(packId, index)`, and the map read the bundled pack
+  // — whose items are authored — so a practice run could journal correctly and
+  // still reach the server as nothing. The home plays what the server issued;
+  // this root played the asset for ever, which also meant its percentages
+  // described a pack the player was not being served.
+  group('the map plays the pack the server can grade', () {
+    testWidgets('it fetches the pack the home was issued, and grades against '
+        'that one', (WidgetTester tester) async {
+      final InMemoryAttemptJournalStore journal =
+          InMemoryAttemptJournalStore();
+      await _pump(
+        tester,
+        pack: _ladderPack(),
+        session: _session,
+        issuedPacks: InMemoryIssuedPackStore('pk_mapa'),
+        fetchPack: _fetches(_issuedContent),
+        sync: AttemptSync(store: journal),
+      );
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      await _answerOne(tester);
+
+      final List<JournalledAttempt> held = await journal.read();
+      expect(held, hasLength(1));
+      expect(held.single.packId, 'pk_mapa');
+    });
+
+    testWidgets('the bundled pack keeps playing when there is nothing to '
+        'fetch', (WidgetTester tester) async {
+      // Unlinked play is entirely offline (ADR 0002), and a device with no
+      // issued pack is the ordinary state rather than a failure. It must not
+      // become a blank map.
+      await _pump(tester, pack: _ladderPack(), session: _session);
+
+      expect(find.text('Series'), findsOneWidget);
+      expect(find.text('Cuentas'), findsOneWidget);
+    });
+
+    testWidgets('a fetch that fails leaves the bundled pack playing',
+        (WidgetTester tester) async {
+      // A blip on a request the player never made is not worth a screen, and
+      // the app they already had works. The map never *issues* — that is the
+      // home's, which is also what writes the id this reads.
+      await _pump(
+        tester,
+        pack: _ladderPack(),
+        session: _session,
+        issuedPacks: InMemoryIssuedPackStore('pk_mapa'),
+        fetchPack: ({
+          required String accessToken,
+          required String packId,
+        }) async => const FetchPackUnreachable('no network'),
+      );
+
+      expect(find.byType(SkillMapScreen), findsOneWidget);
+      expect(find.text('Series'), findsOneWidget);
     });
   });
 

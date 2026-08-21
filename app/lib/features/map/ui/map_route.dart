@@ -2,11 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../api/api_client.dart';
+import '../../../api/endpoints.dart';
+import '../../../content/model/issued_pack.dart';
 import '../../../content/model/item.dart';
 import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/spec/verdict.dart';
+import '../../account/policy/session.dart';
 import '../../home/data/day_log_store.dart';
 import '../../home/data/prefs_day_log_store.dart';
 import '../../home/data/series_cursor_store.dart';
@@ -19,6 +23,7 @@ import '../../shell/ui/skeleton_block.dart';
 import '../../stats/data/answer_record_store.dart';
 import '../../stats/policy/local_stats.dart';
 import '../../sync/attempt_sync.dart';
+import '../../sync/data/issued_pack_store.dart';
 import '../data/practised_step_store.dart';
 import '../policy/practice_series.dart';
 import '../policy/skill_map.dart';
@@ -42,6 +47,9 @@ class MapRoute extends StatefulWidget {
     this.practisedSteps,
     this.answerRecord,
     this.sync,
+    this.session,
+    this.issuedPacks,
+    this.fetchPack,
     this.visibility = RootVisibility.showing,
   });
 
@@ -90,6 +98,30 @@ class MapRoute extends StatefulWidget {
   /// rating. It records without touching the network — flushing is the home's,
   /// on the launch, on a session arriving, and on the way back from a series.
   final AttemptSync? sync;
+
+  /// The account this device is signed in to, if it is.
+  ///
+  /// **The map needs it for one reason**: to play the pack the server issued,
+  /// which is the only pack whose items carry the `(packId, index)` an attempt
+  /// is addressed by. Without it the bundled pack keeps playing for ever and by
+  /// design (ADR 0002), and nothing a practice run answers could ever be sent.
+  final LinkedSession? session;
+
+  /// Where the id of that pack is kept between launches.
+  ///
+  /// **Read here and written only by the home.** Issuing is the home's act —
+  /// it is the root that opens the app and the one that knows whether a device
+  /// has a pack at all — and a second minter would leave a row per tab.
+  final IssuedPackStore? issuedPacks;
+
+  /// Fetches the pack this device already has an id for. A closure, the same
+  /// shape every other request in this app takes and for the same reason: a
+  /// `testWidgets` runs in a fake-async zone and a real socket inside one hangs
+  /// on `!timersPending`.
+  final Future<FetchPackResult> Function({
+    required String accessToken,
+    required String packId,
+  })? fetchPack;
 
   @override
   State<MapRoute> createState() => _MapRouteState();
@@ -141,6 +173,17 @@ class _MapRouteState extends State<MapRoute> {
   /// home wrote.
   DayLog _log = DayLog.empty;
 
+  late final IssuedPackStore _issuedPacks =
+      widget.issuedPacks ?? const PrefsIssuedPackStore();
+
+  /// The pack the server issued, once this root has fetched it.
+  ///
+  /// **Null is the ordinary state**, and it is what an unlinked device draws
+  /// and plays for ever. When it is not null it *replaces* the bundled pack —
+  /// same six families, same ladder — and the difference is that every item
+  /// carries an address the server can grade.
+  Pack? _issued;
+
   @override
   void initState() {
     super.initState();
@@ -186,7 +229,8 @@ class _MapRouteState extends State<MapRoute> {
   /// player taps `Mapa`.
   Future<void> _read() async {
     try {
-      final Pack pack = await widget.reader.load();
+      await _fetchIssuedPack();
+      final Pack pack = _issued ?? await widget.reader.load();
       final int served = await widget.seriesCursor.read();
       final Map<String, int> practised = await _practisedSteps.read();
       final DayLog log = await _dayLog.read();
@@ -212,6 +256,58 @@ class _MapRouteState extends State<MapRoute> {
         return;
       }
       setState(() => _packRefused = true);
+    }
+  }
+
+  /// Fetches the pack the home was issued, once, when there is one to fetch.
+  ///
+  /// **It never issues, and never clears the id.** Minting is the home's — the
+  /// root that opens the app, and the one that writes the id before it adopts
+  /// the pack — so this asks for what is already recorded and takes silence for
+  /// an answer. A blip on a request the player did not make is worth no screen
+  /// and no second row; the app they already had works.
+  ///
+  /// It runs inside [_read], so a device that links on the profile tab picks
+  /// the pack up the next time it comes to Mapa rather than only next launch.
+  Future<void> _fetchIssuedPack() async {
+    final LinkedSession? session = widget.session;
+    if (session == null || _issued != null) {
+      return;
+    }
+    final String? packId = await _issuedPacks.read();
+    if (packId == null || !mounted) {
+      return;
+    }
+    final FetchPackResult fetched = await (widget.fetchPack ?? _fetchOverASocket)(
+      accessToken: session.accessToken,
+      packId: packId,
+    );
+    if (fetched is! FetchPackDone || !mounted) {
+      return;
+    }
+    try {
+      _issued = readIssuedPack(
+        Map<String, dynamic>.from(fetched.issued.pack),
+        packId: fetched.issued.packId,
+        issuedAt: fetched.issued.issuedAt,
+        expiresAt: fetched.issued.expiresAt,
+      );
+      // **A pack this app cannot read is a pack it does not play**, which is
+      // the rule `PackReader` already keeps. The bundled one is still there.
+    } on FormatException {
+      // Nothing to say to a player about a request they did not make.
+    }
+  }
+
+  Future<FetchPackResult> _fetchOverASocket({
+    required String accessToken,
+    required String packId,
+  }) async {
+    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+    try {
+      return await api.fetchPack(accessToken: accessToken, packId: packId);
+    } finally {
+      api.close();
     }
   }
 
@@ -418,11 +514,31 @@ class _MapRouteState extends State<MapRoute> {
     if (hardestStepServed > 0) {
       await _practisedSteps.record(family: family, step: hardestStepServed);
     }
+    // **On the way back, finished or abandoned**, for `_startSeries`'s reason:
+    // coming back from a run is exactly where `record` last ran, so it is the
+    // best evidence this root ever gets that there is a network worth trying.
+    // Never awaited — a player must not wait on a socket — and failure stays
+    // the journal's business, since `journalAfter` decides what survives which
+    // answer.
+    unawaited(_flush());
     // The run recorded the day as well. Re-read rather than adjust what this
     // screen holds: the stores are the source of truth, and a screen that
     // increments locally is how it ends up showing a figure they would not
     // yield.
     await _read();
+  }
+
+  /// Sends what the journal is holding, if there is a session to send it on.
+  ///
+  /// Failure is the journal's business rather than this screen's, the same
+  /// reading `HomeRoute._flush` takes: there is nothing useful to say to a
+  /// player about a batch they never asked to send.
+  Future<void> _flush() async {
+    final LinkedSession? session = widget.session;
+    if (session == null) {
+      return;
+    }
+    await _sync.flush(session.accessToken);
   }
 
   /// Roughly the graph's own height, so the screen does not jump when the pack
