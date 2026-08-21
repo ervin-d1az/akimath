@@ -257,9 +257,12 @@ format and its OpenAPI half.
   *`NEON_AUTH_BASE_URL` is not set anywhere yet* — stopped being true the day somebody pasted it
   into `.env.local` and stayed in this file for weeks. All three variables were there; `npm run
   dev` was `tsx watch src/main.ts`, which reads none of them. The three scripts that run against a
-  real environment now carry `--env-file=.env.local`, and `test/scripts-load-their-env.test.ts`
+  real environment now carry `--env-file-if-exists=.env.local`, and `test/scripts-load-their-env.test.ts`
   keeps it that way — while asserting the **suite** does not, because a test run that picked up a
-  live `DATABASE_URL` would be a test run against Neon.
+  live `DATABASE_URL` would be a test run against Neon. **The tolerant spelling matters**: the
+  strict `--env-file` fails the process outright when the file is absent, and CI has none — it
+  hands the connection strings in as real environment variables against a service container. Where
+  both exist the real environment wins, which is the order that makes CI authoritative.
   The refusal to boot without a key set is right and stays: a server answering 401 to everything
   reads as broken authentication rather than as a missing variable.
   **`PORT` defaults to 3000**, and `.env.local` overrides it to 8787 on this machine, which is what

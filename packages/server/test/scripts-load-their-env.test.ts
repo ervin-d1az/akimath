@@ -19,6 +19,12 @@ import { fileURLToPath } from "node:url";
  *
  * A test over `package.json` rather than over code, because that is where the
  * defect was. It reports what it scanned and fails at zero (PROC-10).
+ *
+ * **`--env-file-if-exists`, not `--env-file`.** The file is a developer's
+ * convenience and CI has none: it hands the connection strings in as real
+ * environment variables against a service container, and the strict spelling
+ * fails the process with `node: .env.local: not found`. Where both exist the
+ * real environment wins, which is the order that makes CI authoritative.
  */
 interface Manifest {
   readonly scripts: Readonly<Record<string, string>>;
@@ -48,8 +54,20 @@ describe("a script that needs a secret loads the file it is in", () => {
     }
   });
 
-  it.each(NEEDS_SECRETS)("%s reads .env.local", (name) => {
-    expect(manifest.scripts[name]).toContain(`--env-file=${ENV_FILE}`);
+  it.each(NEEDS_SECRETS)("%s reads .env.local when there is one", (name) => {
+    expect(manifest.scripts[name]).toContain(`--env-file-if-exists=${ENV_FILE}`);
+  });
+
+  it.each(NEEDS_SECRETS)("%s does not require the file to exist", (name) => {
+    // **`--env-file` hard-fails when the file is absent**, and CI has no
+    // `.env.local` — it hands `MIGRATE_DATABASE_URL` in as a real environment
+    // variable against a service container. The first version of this broke
+    // the `integration` job with `node: .env.local: not found`.
+    //
+    // Asserted as its own case rather than folded into the one above, because
+    // the difference between the two spellings is the whole defect and a
+    // `toContain` on the longer one would pass for the shorter.
+    expect(manifest.scripts[name]).not.toMatch(/--env-file=[^-]/);
   });
 
   it("and the suite deliberately does not", () => {
