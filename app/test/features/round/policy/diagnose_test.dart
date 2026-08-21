@@ -1,6 +1,7 @@
 import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/features/round/policy/diagnose.dart';
+import 'package:akimath_app/content/answer_digest.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const Diagnosis _reversed = Diagnosis(
@@ -31,11 +32,18 @@ Item _item({Map<String, Diagnosis> distractors = const <String, Diagnosis>{}}) =
       distractors: distractors,
     );
 
-Diagnosis? _for(String answer, {Map<String, Diagnosis>? distractors}) => diagnose(
-      item: _item(distractors: distractors ?? <String, Diagnosis>{'-9': _reversed}),
-      answer: answer,
-      fallback: _fallback,
-    );
+Diagnosis? _for(String answer, {Map<String, Diagnosis>? distractors}) {
+  final Item item =
+      _item(distractors: distractors ?? <String, Diagnosis>{'-9': _reversed});
+  // **The verdict is handed in now**, so the helper computes it once with the
+  // same function the round does. Nothing here can disagree with the screen.
+  return diagnose(
+    item: item,
+    answer: answer,
+    verdict: gradeItem(item, answer),
+    fallback: _fallback,
+  );
+}
 
 void main() {
   group('a wrong answer always gets something to read', () {
