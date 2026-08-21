@@ -37,8 +37,11 @@ import '../../stats/policy/local_stats.dart';
 import '../../states/data/streak_notice_store.dart';
 import '../../states/policy/streak_notice.dart';
 import '../../states/ui/streak_at_risk_screen.dart';
+import '../../states/policy/offline_bag.dart';
+import '../../states/ui/offline_screen.dart';
 import '../../states/ui/streak_lost_screen.dart';
 import '../policy/broken_run.dart';
+import '../policy/offline_notice.dart';
 import '../policy/streak_state.dart';
 import 'home_screen.dart';
 
@@ -146,6 +149,27 @@ class _HomeRouteState extends State<HomeRoute> {
   /// is `4.12`'s case exactly, since nothing about it is stored on purpose.
   bool _noticeSettled = false;
 
+  /// Whether this launch's `4.9` has been settled, shown or not.
+  ///
+  /// The same launch-scoped latch `_noticeSettled` is, and for the same reason:
+  /// nothing about being offline is recorded on purpose, so without it a pack
+  /// request answering late would be free to push a second time.
+  bool _offlineSettled = false;
+
+  /// How many full-screen sessions this route has open.
+  ///
+  /// **`4.9` is the only screen here that nobody asked for, so it is the only
+  /// one that has to check.** A dead network usually answers by timing out,
+  /// which is minutes — long after the player tapped `Empezar la serie` — and
+  /// declared rule 1 gives a session exactly one way out and no interruptions.
+  ///
+  /// **A count and not a flag, though it has one reader.** The read happens
+  /// once, at whatever moment the network gives up, and what it needs to know
+  /// is whether *anything* is up — a bool would have to be set and cleared by
+  /// each of the three pushes, which is three places to get wrong instead of
+  /// the one [_openSession] gives it.
+  int _sessionsOpen = 0;
+
   late final AttemptSync _sync = widget.sync ?? AttemptSync();
 
   late final AnswerRecordStore _answerRecord =
@@ -175,6 +199,19 @@ class _HomeRouteState extends State<HomeRoute> {
     _open();
   }
 
+  /// Opens a full-screen session, and counts it while it is up.
+  ///
+  /// Every push this route makes goes through here, so [_sessionsOpen] cannot
+  /// drift away from what is on screen by somebody adding a fourth caller.
+  Future<T?> _openSession<T>(BuildContext context, WidgetBuilder builder) async {
+    _sessionsOpen += 1;
+    try {
+      return await pushSession<T>(context, builder);
+    } finally {
+      _sessionsOpen -= 1;
+    }
+  }
+
   /// The launch: read what is stored, then show what it owes.
   ///
   /// **In that order, and only here.** `_refreshLog` runs again on every return
@@ -186,12 +223,20 @@ class _HomeRouteState extends State<HomeRoute> {
     // waiting since a bus ride days ago; sending it is not something a player
     // should watch, and a failure leaves the journal exactly as it was.
     unawaited(_flush());
-    unawaited(_askForPack());
+    // **Started here and read last.** The request must not hold up the home or
+    // the streak notice — both draw on what is already on the device — and
+    // `4.9` must not land on top of either, so its answer is the last thing
+    // this launch waits on. Total order beats a race between two pushes.
+    final Future<PackAsk> asked = _askForPack();
     await _refreshLog();
     if (!mounted) {
       return;
     }
     await _showNoticeIfDue();
+    if (!mounted) {
+      return;
+    }
+    await _tellOfflineIfDue(await asked);
   }
 
   Future<void> _refreshLog() async {
@@ -215,6 +260,11 @@ class _HomeRouteState extends State<HomeRoute> {
     // This is the same reading `ProfileRoute` needed for its history.
     if (widget.session?.accessToken != old.session?.accessToken) {
       unawaited(_flush());
+      // **The answer is dropped here, where `_open` reads it.** A session
+      // appears when a player links on the profile tab, so this route is alive
+      // and invisible; a full-screen notice over another tab is not something
+      // a background request gets to do. The link itself also just proved the
+      // network works, so a blip on the very next request is not a state.
       unawaited(_askForPack());
     }
   }
@@ -230,11 +280,13 @@ class _HomeRouteState extends State<HomeRoute> {
   ///
   /// **A failure is silent and the bundled pack keeps playing.** There is
   /// nothing useful to tell a player about a request they did not make, and the
-  /// app they already had works.
-  Future<void> _askForPack() async {
+  /// app they already had works — with one exception, which is what the return
+  /// value is for: nothing answering at all is the only evidence this app ever
+  /// gets that the device is offline, and `4.9` is built to say so.
+  Future<PackAsk> _askForPack() async {
     final LinkedSession? session = widget.session;
     if (session == null || _issued != null) {
-      return;
+      return PackAsk.notAsked;
     }
 
     // **The decision is `packRefresh`'s and this only carries it out.** Three
@@ -243,7 +295,7 @@ class _HomeRouteState extends State<HomeRoute> {
     // is no such pack for you*.
     final String? stored = await _issuedPacks.read();
     if (!mounted) {
-      return;
+      return PackAsk.notAsked;
     }
     switch (packRefresh(
       hasSession: true,
@@ -255,48 +307,46 @@ class _HomeRouteState extends State<HomeRoute> {
       now: widget.now(),
     )) {
       case PackRefresh.none:
-        return;
+        return PackAsk.notAsked;
       case PackRefresh.fetch:
         final FetchPackResult fetched = await (widget.fetchPack ?? _fetchOverASocket)(
           accessToken: session.accessToken,
           packId: stored!,
         );
-        if (!mounted) {
-          return;
-        }
-        if (fetched is FetchPackDone) {
+        if (fetched is FetchPackDone && mounted) {
           _adopt(fetched.issued);
-          return;
+          return fetchAsk(fetched);
         }
-        if (fetched is! FetchPackGone) {
+        if (fetched is! FetchPackGone || !mounted) {
           // Refused, broken or unreachable: the id is still good and the
           // bundled pack still plays. Issuing here would mint a row for a
-          // network blip.
-          return;
+          // network blip. The answer still travels — `fetchAsk` is the one
+          // place that decides which of them means no signal.
+          return fetchAsk(fetched);
         }
         await _issuedPacks.clear();
         if (!mounted) {
-          return;
+          return fetchAsk(fetched);
         }
-        await _issueAndKeep(session);
+        return _issueAndKeep(session);
       case PackRefresh.issue:
-        await _issueAndKeep(session);
+        return _issueAndKeep(session);
     }
   }
 
-  Future<void> _issueAndKeep(LinkedSession session) async {
+  Future<PackAsk> _issueAndKeep(LinkedSession session) async {
     final IssueResult result =
         await (widget.issuePack ?? _issueOverASocket)(session.accessToken);
-    if (!mounted || result is! IssueDone) {
-      return;
+    if (mounted && result is IssueDone) {
+      // **Written before it is adopted.** A device that plays a pack it did not
+      // record would issue another next launch, and the row it just made would
+      // be one nobody ever fetches.
+      await _issuedPacks.write(result.issued.packId);
+      if (mounted) {
+        _adopt(result.issued);
+      }
     }
-    // **Written before it is adopted.** A device that plays a pack it did not
-    // record would issue another next launch, and the row it just made would be
-    // one nobody ever fetches.
-    await _issuedPacks.write(result.issued.packId);
-    if (mounted) {
-      _adopt(result.issued);
-    }
+    return issueAsk(result);
   }
 
   /// Reads an issued pack and starts playing it.
@@ -396,7 +446,7 @@ class _HomeRouteState extends State<HomeRoute> {
     }
 
     bool solve = false;
-    await pushSession<void>(context, (BuildContext noticeContext) {
+    await _openSession<void>(context, (BuildContext noticeContext) {
       void leave({required bool andSolve}) {
         solve = andSolve;
         Navigator.of(noticeContext).pop();
@@ -423,6 +473,84 @@ class _HomeRouteState extends State<HomeRoute> {
         await _startSeries(context, pack);
       }
     }
+  }
+
+  /// Shows `4.9 Sin conexión` when the launch's request went nowhere.
+  ///
+  /// **The trigger is evidence, not a guess.** The only network fact this route
+  /// ever learns is what its pack request came back as, and `PackAsk` decides
+  /// which of those means no signal — the same call `accountStateFor` makes for
+  /// the profile. A refusal, a 5xx or a 404 is the server *talking*, so none of
+  /// them is this screen.
+  ///
+  /// **It counts the pack that is actually in play**, which is why `4.9` is
+  /// pushed from here and from nowhere else: the profile cannot know whether
+  /// the bundled pack or an issued one is loaded, and the headline is a count.
+  ///
+  /// A player with no account never sees it, and that is not an omission —
+  /// unlinked play makes no request, so there is nothing to be evidence of, and
+  /// a permanent notice over the ordinary state of the app would say nothing
+  /// true.
+  Future<void> _tellOfflineIfDue(PackAsk ask) async {
+    if (_offlineSettled || ask != PackAsk.nothingAnswered) {
+      return;
+    }
+    // Set before the first await, for the reason `_showNoticeIfDue` sets its
+    // own: a guard and a set straddling one is two callers both passing.
+    _offlineSettled = true;
+
+    final Pack? pack = await _playablePack();
+    if (pack == null || !mounted || _sessionsOpen > 0) {
+      return;
+    }
+    // The screen's own precondition, asked rather than reimplemented: with
+    // nothing in the bag the headline would read *"TRAES 0 RETOS EN LA
+    // BOLSA"*, which helps nobody.
+    if (!bagWorthShowing(pack.items.length)) {
+      return;
+    }
+
+    bool solve = false;
+    await _openSession<void>(
+      context,
+      (BuildContext offlineContext) => OfflineScreen(
+        challenges: pack.items.length,
+        puzzles: pack.puzzles.length,
+        onSolveOffline: () {
+          solve = true;
+          Navigator.of(offlineContext).pop();
+        },
+      ),
+    );
+    if (solve && mounted) {
+      await _startSeries(context, pack);
+    }
+  }
+
+  /// The pack a series would be played from right now, or null when there is
+  /// none.
+  ///
+  /// **The same three refusals `build` draws a message for**: a pack that could
+  /// not be read, one whose window has closed, and one the cursor has run past.
+  /// `4.9` counts a bag and offers to open it, so on any of the three it would
+  /// be wrong twice — a figure about nothing, over a button that returns
+  /// immediately from `_startSeries`'s own guard.
+  Future<Pack?> _playablePack() async {
+    Pack? pack = _issued;
+    if (pack == null) {
+      try {
+        pack = await _pack;
+      } catch (_) {
+        // Deliberately broad, and silent: `build` is already showing the
+        // message for an unreadable pack, and a second thing wrong on the same
+        // launch is not news to a player.
+        return null;
+      }
+    }
+    if (pack.isExpiredAt(widget.now().toUtc())) {
+      return null;
+    }
+    return seriesPlan(pack.items, from: _itemsServed).isEmpty ? null : pack;
   }
 
   @override
@@ -521,7 +649,7 @@ class _HomeRouteState extends State<HomeRoute> {
     // sitting, not a reaction test.
     final DateTime startedAt = widget.now();
 
-    await pushSession<void>(context, (BuildContext sessionContext) {
+    await _openSession<void>(context, (BuildContext sessionContext) {
       void leave() => Navigator.of(sessionContext).pop();
       void solved() => _showSolved(sessionContext, puzzle, startedAt);
       // **The route records, the screens report** (design D3). The two
@@ -625,7 +753,7 @@ class _HomeRouteState extends State<HomeRoute> {
     // history of one-item sessions is a history nobody can read.
     final String sessionId = _sync.newSessionId();
 
-    await pushSession<void>(
+    await _openSession<void>(
       context,
       (BuildContext sessionContext) => _SeriesSession(
         items: plan,
