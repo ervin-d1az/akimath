@@ -34,6 +34,14 @@ import 'package:akimath_app/features/preferences/ui/account_screen.dart';
 import 'package:akimath_app/features/preferences/ui/change_password_screen.dart';
 import 'package:akimath_app/features/preferences/ui/legend_screen.dart';
 import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
+import 'package:akimath_app/features/preferences/data/settings_store.dart';
+import 'package:akimath_app/features/preferences/policy/accessibility_settings.dart';
+import 'package:akimath_app/features/preferences/policy/notification_settings.dart';
+import 'package:akimath_app/features/preferences/policy/sound_settings.dart';
+import 'package:akimath_app/features/preferences/ui/accessibility_screen.dart';
+import 'package:akimath_app/features/preferences/ui/data_privacy_screen.dart';
+import 'package:akimath_app/features/preferences/ui/notifications_screen.dart';
+import 'package:akimath_app/features/preferences/ui/sound_screen.dart';
 import 'package:akimath_app/features/profile/ui/profile_screen.dart';
 import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/features/profile/policy/history_view.dart';
@@ -1323,6 +1331,62 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   // ── end f5-skill-map ─────────────────────────────────────────────────────
+  // ── f7-ajustes: 4.4-4.7, the four screens behind 4.2's rows ──────────────
+  RegisteredScreen(
+    label: 'ajustes · 4.4 notificaciones',
+    // The stores are handed in so the gates pump a screen in a known state
+    // rather than whatever the device happens to hold.
+    build: () => AppShell(
+      child: NotificationsScreen(
+        onBack: _nothing,
+        store: InMemorySettingsStore<NotificationSettings>(
+          NotificationSettings.defaults,
+        ),
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · 4.5 accesibilidad',
+    build: () => AppShell(
+      child: AccessibilityScreen(
+        onBack: _nothing,
+        store: InMemorySettingsStore<AccessibilitySettings>(
+          AccessibilitySettings.defaults,
+        ),
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · 4.5 accesibilidad · en el paso más grande',
+    // **Registered separately because the chip's label is its own preview.**
+    // The largest step draws its `A` at 30, which at textScaler 1.3 is the
+    // widest this card ever gets — the same hole `verdict · error · con
+    // diagnóstico` was added for.
+    build: () => AppShell(
+      child: AccessibilityScreen(
+        onBack: _nothing,
+        store: InMemorySettingsStore<AccessibilitySettings>(
+          AccessibilitySettings.defaults.copyWith(
+            textSize: TextSizeStep.largest,
+          ),
+        ),
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · 4.6 sonido y vibración',
+    build: () => AppShell(
+      child: SoundScreen(
+        onBack: _nothing,
+        store: InMemorySettingsStore<SoundSettings>(SoundSettings.defaults),
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'ajustes · 4.7 datos y privacidad',
+    build: () => AppShell(child: DataPrivacyScreen(onBack: _nothing)),
+  ),
+  // ── end f7-ajustes ───────────────────────────────────────────────────────
 ];
 
 /// What `4.1` draws when every figure has a value, invented ones included.
