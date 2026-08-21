@@ -10,6 +10,12 @@ import 'package:akimath_app/features/auth/ui/verify_email_screen.dart';
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
 import 'package:akimath_app/features/states/policy/account_state.dart';
 import 'package:akimath_app/features/states/ui/account_state_view.dart';
+import 'package:akimath_app/features/states/ui/empty_state_screen.dart';
+import 'package:akimath_app/features/states/ui/offline_screen.dart';
+import 'package:akimath_app/features/states/ui/server_error_screen.dart';
+import 'package:akimath_app/features/states/policy/topic_suggestion.dart';
+import 'package:akimath_app/features/states/ui/skill_mastered_screen.dart';
+import 'package:akimath_app/features/states/ui/topic_exhausted_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
@@ -1088,6 +1094,65 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         onConfirm: _nothing,
         onCancel: _nothing,
         onDone: _nothing,
+      ),
+    ),
+  ),
+  // --- cross-cutting states 4.8-4.10, 4.14-4.15 (f7-estados-transversales) ---
+  RegisteredScreen(
+    label: 'estado · 4.8 vacío',
+    build: () => AppShell(child: EmptyStateScreen(onStart: _nothing)),
+  ),
+  RegisteredScreen(
+    label: 'estado · 4.9 sin conexión',
+    build: () => AppShell(
+      child: OfflineScreen(
+        challenges: 40,
+        puzzles: 2,
+        onSolveOffline: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    // The tallest of the five: a note and both buttons, which is the case the
+    // overflow gate has to survive at textScaler 1.3.
+    label: 'estado · 4.10 error de servidor',
+    build: () => AppShell(
+      child: ServerErrorScreen(
+        note: 'error 503 · 18:42',
+        onRetry: _nothing,
+        onSolveOffline: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    // Renders only — no skill can be completed, so nothing routes here. Every
+    // figure is supplied from this test file rather than from `lib/`.
+    label: 'estado · 4.14 habilidad dominada',
+    build: () => AppShell(
+      child: SkillMasteredScreen(
+        skillName: 'Fracciones',
+        weekAgoPercent: 88,
+        unlockedTopics: const <String>['Porcentajes', 'Decimales'],
+        onOpenMap: _nothing,
+        onContinue: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    // Renders only — a topic cannot run out, because there are no topics.
+    label: 'estado · 4.15 tema agotado',
+    build: () => AppShell(
+      child: TopicExhaustedScreen(
+        skillName: 'Fracciones',
+        nextTopic: const NextTopic(
+          name: 'Decimales',
+          percent: 38,
+          readyCount: 5,
+        ),
+        puzzleSubtitle: 'KenKen · 15 min, sin prisa',
+        onOpenTopic: _nothing,
+        onOpenPuzzle: _nothing,
+        onSwitch: _nothing,
       ),
     ),
   ),

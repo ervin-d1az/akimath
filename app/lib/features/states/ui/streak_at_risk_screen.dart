@@ -1,11 +1,10 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../design/math/spec/es_mx_number.dart';
-import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
-import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/centered_state_view.dart';
 import '../../../design/widgets/streak_badge.dart';
+import 'state_chip.dart';
 
 /// `4.12 Racha en riesgo` — late in the day with nothing solved.
 ///
@@ -56,7 +55,11 @@ class StreakAtRiskScreen extends StatelessWidget {
       kicker: StreakBadge(days: days),
       headlineLines: const <String>['HOY TODAVÍA NO', 'RESUELVES NADA'],
       body: 'Con un reto de cuatro minutos queda cerrado el día.',
-      content: Center(child: _runway()),
+      content: Center(
+        child: StateChip.emphasis(
+          label: 'TE QUEDAN ${EsMxNumber.hoursAndMinutes(left).toUpperCase()}',
+        ),
+      ),
       primary: BrandButton.primary(
         label: 'Resolver uno ahora',
         onPressed: onSolve,
@@ -68,28 +71,6 @@ class StreakAtRiskScreen extends StatelessWidget {
       // than an honest one (DR-P2). This is a real way out, which is what the
       // second slot is for.
       secondary: BrandButton.secondary(label: 'Ahora no', onPressed: onLater),
-    );
-  }
-
-  /// The time left, in a chip that is annotation rather than surface.
-  ///
-  /// Composed from `CandySurface` rather than extracted: `4.10` wants the same
-  /// chip and `4.10` is not built. A widget with one caller is a name nobody
-  /// needs yet, and the second caller is where the shape gets settled.
-  Widget _runway() {
-    return CandySurface(
-      borderWidth: BrandShape.borderWidthSmallSurface,
-      borderRadius: BrandShape.radiusChip,
-      shadowOffset: Offset.zero,
-      padding: const EdgeInsets.symmetric(
-        horizontal: BrandShape.space4,
-        vertical: BrandShape.space2,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        'TE QUEDAN ${EsMxNumber.hoursAndMinutes(left).toUpperCase()}',
-        style: BrandText.eyebrow(size: 12, letterSpacing: 0.06),
-      ),
     );
   }
 }

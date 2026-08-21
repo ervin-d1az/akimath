@@ -3,9 +3,12 @@ import 'package:flutter/widgets.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../shell/policy/banner_visual.dart';
+import '../../shell/ui/app_shell.dart';
 import '../../shell/ui/inline_banner.dart';
 import '../../shell/ui/skeleton_block.dart';
 import '../policy/account_state.dart';
+import '../policy/server_error_note.dart';
+import 'server_error_screen.dart';
 
 /// What the account section shows, for every state it can be in.
 ///
@@ -19,17 +22,38 @@ import '../policy/account_state.dart';
 ///
 /// `4.9 Sin conexión` is a **notice**, not an error — yellow, not coral:
 /// *"Sin conexión no es un error del usuario: va en amarillo."*
+///
+/// **A server error opens `4.10`, and offline does not open `4.9`.** The two
+/// are drawn as full states and both survive as banners, because the design
+/// itself draws `4.9` with its notice band *inside* the full state — they are
+/// two surfaces, not two renderings of one. A banner belongs where the screen
+/// around it is still true, and Perfil's días and racha are true with no
+/// signal; the full state is what you get when the thing you asked for is the
+/// whole screen.
+///
+/// The asymmetry is not an oversight. `4.10` needs nothing this section does
+/// not have, so the banner is a door to it. `4.9` is *about a count* — its
+/// headline is *"TRAES 40 RETOS EN LA BOLSA"* — and the profile holds no pack:
+/// the bundled one is not necessarily the one in play, since a linked device
+/// plays an issued pack instead. Opening it from here would put a guessed
+/// figure in a headline, so it is reached from the home, which holds the real
+/// pack.
 class AccountStateView extends StatelessWidget {
   const AccountStateView({
     super.key,
     required this.state,
     this.email,
     this.onRetry,
+    this.now = DateTime.now,
   });
 
   final AccountState state;
   final String? email;
   final VoidCallback? onRetry;
+
+  /// Reads the wall clock for `4.10`'s note. Injected rather than called
+  /// directly so the pushed screen is the same screen on every run.
+  final DateTime Function() now;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +81,10 @@ class AccountStateView extends StatelessWidget {
         state == AccountState.offline ||
         state == AccountState.otherDevice;
 
+    // **No retry, no door.** `4.10`'s primary action is the retry, so a state
+    // that cannot be retried would open onto a dead end (DR-P2).
+    final bool detail = state == AccountState.serverError && onRetry != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -75,8 +103,12 @@ class AccountStateView extends StatelessWidget {
               // what the hue encodes.
               kind: isOurFault(state) ? BannerKind.error : BannerKind.notice,
               message: message,
-              onAction: onRetry,
-              actionLabel: onRetry == null ? null : 'Reintentar',
+              onAction: detail ? () => _openServerError(context) : onRetry,
+              actionLabel: switch ((detail, onRetry)) {
+                (true, _) => 'Detalle',
+                (false, null) => null,
+                (false, _) => 'Reintentar',
+              },
             )
           else
             Text(
@@ -86,6 +118,32 @@ class AccountStateView extends StatelessWidget {
             ),
         ],
       ],
+    );
+  }
+}
+
+/// Opens `4.10` over the profile, carrying the retry the banner was offering.
+///
+/// **Pushed from the view rather than handed down as a callback.** Every other
+/// push in this app is owned by a route, and that is the shape to prefer; this
+/// one is here because the profile route is the caller and the alternative is
+/// a parameter it does not pass — an unreachable screen. A `ProfileRoute` that
+/// grows an `onOpenServerError` should take this over and this method should
+/// go.
+extension on AccountStateView {
+  void _openServerError(BuildContext context) {
+    pushSession<void>(
+      context,
+      (BuildContext pushed) => ServerErrorScreen(
+        // The state carries no status code — `accountStateFor` collapses every
+        // unusable answer into one member — so the note names only the time.
+        note: serverErrorNote(status: null, at: now()),
+        onRetry: () {
+          Navigator.of(pushed).pop();
+          onRetry!();
+        },
+        // Nothing here can start a series: the round lives on the other tab.
+      ),
     );
   }
 }
