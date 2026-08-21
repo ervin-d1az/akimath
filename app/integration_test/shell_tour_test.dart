@@ -83,12 +83,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ProfileScreen), findsOneWidget);
 
-    // **The two figures are here, not on a root of their own.** `Avance` was
+    // **The figures are here, not on a root of their own.** `Avance` was
     // invented because the shell needed a second root; no document draws a
     // progress screen, and every line it held is a line `4.1` puts under the
     // identity.
-    expect(find.text('DÍAS'), findsOneWidget);
+    //
+    // The wide card reads `RATING` rather than `DÍAS` while the demo figures
+    // are on: the days practised are what that slot falls back to when there
+    // is no rating to show. `RACHA` and `RETOS` are the device's own and are
+    // true either way.
     expect(find.text('RACHA'), findsOneWidget);
+    expect(find.text('RETOS'), findsOneWidget);
     // No account on a fresh install, so there is no history section at all —
     // a `HISTORIAL` nothing can ever fill is a promise the product cannot keep
     // while nothing syncs.
