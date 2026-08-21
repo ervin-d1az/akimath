@@ -21,6 +21,7 @@ import '../../account/policy/session.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../preferences/policy/erasure.dart';
 import '../../preferences/ui/account_screen.dart';
+import '../../preferences/ui/change_password_screen.dart';
 import '../../preferences/ui/erase_account_route.dart';
 import '../../preferences/ui/legend_screen.dart';
 import '../../preferences/ui/settings_list_screen.dart';
@@ -421,9 +422,44 @@ class _ProfileRouteState extends State<ProfileRoute> {
           // Only where a session exists that the request could travel on.
           // `erasureOffered` is the judgement; the token is the fact.
           onErase: erasureOffered(_accountState) ? _openEraseFlow : null,
+          onChangePassword: () => _push(
+            (VoidCallback back) =>
+                AppShell(child: ChangePasswordScreen(onBack: back)),
+          ),
+          // Unconditional, because this screen only opens with a session:
+          // `_openAccountDetail` returns before pushing when there is no
+          // address to show.
+          onSignOut: _signOut,
         ),
       ),
     );
+  }
+
+  /// Forgets the session and leaves the account's own stack.
+  ///
+  /// **The same two statements the erasure success path runs**, because the
+  /// same thing is true afterwards: this device is not signed in. The shell
+  /// owns the session (`RootScaffold`), so `onSessionChanged(null)` is the only
+  /// thing that actually forgets it — clearing this route's state alone would
+  /// leave the home flushing its journal under a token the player asked us to
+  /// drop.
+  ///
+  /// **Nothing device-local goes with it, and that is the decision.** Unlinked
+  /// play is entirely offline (ADR 0002), so the days practised, the run, the
+  /// challenge count and the answers waiting to sync all belong to a player who
+  /// need never have had an account. A row labelled *Cerrar sesión* that
+  /// deleted them would be a destructive act wearing a non-destructive label —
+  /// the destructive door is `Eliminar mi cuenta`, two rows down, behind a
+  /// typed `BORRAR`.
+  ///
+  /// **It pops to the root rather than back one screen.** `4.3 Cuenta` is a
+  /// screen about an account this device no longer has, and the row above it in
+  /// `4.2` opens nothing without a session — landing on either would be leaving
+  /// the player somewhere that has stopped being true.
+  void _signOut() {
+    Navigator.of(context).popUntil((Route<Object?> route) => route.isFirst);
+    setState(() => _accountState = AccountState.none);
+    widget.onSessionChanged?.call(null);
   }
 
   /// Every figure `4.1` prints, and the one place an invented one enters.
