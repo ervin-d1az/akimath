@@ -29,6 +29,8 @@ import '../../account/policy/session.dart';
 import '../../../content/model/issued_pack.dart';
 import '../../shell/ui/skeleton_block.dart';
 import '../../sync/attempt_sync.dart';
+import '../../sync/data/issued_pack_store.dart';
+import '../../sync/policy/pack_refresh.dart';
 import '../../states/data/streak_notice_store.dart';
 import '../../states/policy/streak_notice.dart';
 import '../../states/ui/streak_at_risk_screen.dart';
@@ -57,6 +59,8 @@ class HomeRoute extends StatefulWidget {
     this.session,
     this.sync,
     this.issuePack,
+    this.fetchPack,
+    this.issuedPacks,
   });
 
   /// The account this device is signed in to, if it is.
@@ -76,6 +80,15 @@ class HomeRoute extends StatefulWidget {
   /// in this app takes and for the same reason: a `testWidgets` runs in a
   /// fake-async zone and a real socket inside one hangs on `!timersPending`.
   final Future<IssueResult> Function(String accessToken)? issuePack;
+
+  /// Fetches the pack this device already has an id for.
+  final Future<FetchPackResult> Function({
+    required String accessToken,
+    required String packId,
+  })? fetchPack;
+
+  /// Where the id of that pack is kept between launches.
+  final IssuedPackStore? issuedPacks;
 
   final PackReader reader;
   final DateTime Function() now;
@@ -127,6 +140,9 @@ class _HomeRouteState extends State<HomeRoute> {
   /// bundled pack — same six families, same boards, and an address on every
   /// item, which is the whole difference.
   Pack? _issued;
+
+  late final IssuedPackStore _issuedPacks =
+      widget.issuedPacks ?? const PrefsIssuedPackStore();
 
   /// How many items have been served, held here as well as read in
   /// `_startSeries`, because the home now *shows* what the next series holds
@@ -201,24 +217,97 @@ class _HomeRouteState extends State<HomeRoute> {
     if (session == null || _issued != null) {
       return;
     }
+
+    // **The decision is `packRefresh`'s and this only carries it out.** Three
+    // branches — nothing, fetch, issue — and the third is also where a fetch
+    // that came back 404 lands, because that is the one answer meaning *there
+    // is no such pack for you*.
+    final String? stored = await _issuedPacks.read();
+    if (!mounted) {
+      return;
+    }
+    switch (packRefresh(
+      hasSession: true,
+      storedPackId: stored,
+      // The device knows the id and not the window: it stores one and not the
+      // other. A lapsed pack costs a round trip to be told so, which is cheaper
+      // than a second thing that can disagree with the row.
+      expiresAt: null,
+      now: widget.now(),
+    )) {
+      case PackRefresh.none:
+        return;
+      case PackRefresh.fetch:
+        final FetchPackResult fetched = await (widget.fetchPack ?? _fetchOverASocket)(
+          accessToken: session.accessToken,
+          packId: stored!,
+        );
+        if (!mounted) {
+          return;
+        }
+        if (fetched is FetchPackDone) {
+          _adopt(fetched.issued);
+          return;
+        }
+        if (fetched is! FetchPackGone) {
+          // Refused, broken or unreachable: the id is still good and the
+          // bundled pack still plays. Issuing here would mint a row for a
+          // network blip.
+          return;
+        }
+        await _issuedPacks.clear();
+        if (!mounted) {
+          return;
+        }
+        await _issueAndKeep(session);
+      case PackRefresh.issue:
+        await _issueAndKeep(session);
+    }
+  }
+
+  Future<void> _issueAndKeep(LinkedSession session) async {
     final IssueResult result =
         await (widget.issuePack ?? _issueOverASocket)(session.accessToken);
     if (!mounted || result is! IssueDone) {
       return;
     }
+    // **Written before it is adopted.** A device that plays a pack it did not
+    // record would issue another next launch, and the row it just made would be
+    // one nobody ever fetches.
+    await _issuedPacks.write(result.issued.packId);
+    if (mounted) {
+      _adopt(result.issued);
+    }
+  }
+
+  /// Reads an issued pack and starts playing it.
+  ///
+  /// **A pack this app cannot read is a pack it does not play.** The bundled
+  /// one is still there, and refusing where it is read is the rule
+  /// `PackReader` already keeps.
+  void _adopt(IssuedPack issued) {
     try {
-      setState(() {
-        _issued = readIssuedPack(
-          Map<String, dynamic>.from(result.issued.pack),
-          packId: result.issued.packId,
-          issuedAt: result.issued.issuedAt,
-          expiresAt: result.issued.expiresAt,
-        );
-      });
+      final Pack pack = readIssuedPack(
+        Map<String, dynamic>.from(issued.pack),
+        packId: issued.packId,
+        issuedAt: issued.issuedAt,
+        expiresAt: issued.expiresAt,
+      );
+      setState(() => _issued = pack);
     } on FormatException {
-      // A pack this app cannot read is a pack it does not play. The bundled one
-      // is still there, and refusing where it is read is the same rule
-      // `PackReader` keeps.
+      // Nothing to say to a player about a request they did not make.
+    }
+  }
+
+  Future<FetchPackResult> _fetchOverASocket({
+    required String accessToken,
+    required String packId,
+  }) async {
+    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+    try {
+      return await api.fetchPack(accessToken: accessToken, packId: packId);
+    } finally {
+      api.close();
     }
   }
 
