@@ -56,6 +56,19 @@ CREATE TABLE public.diag_events (
 
 
 --
+-- Name: difficulty_ratings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.difficulty_ratings (
+    skill_id smallint NOT NULL,
+    ladder_step smallint NOT NULL,
+    rating real NOT NULL,
+    deviation real NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: issued_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -154,6 +167,14 @@ ALTER TABLE ONLY public.attempts
 
 ALTER TABLE ONLY public.diag_events
     ADD CONSTRAINT diag_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: difficulty_ratings difficulty_ratings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.difficulty_ratings
+    ADD CONSTRAINT difficulty_ratings_pkey PRIMARY KEY (skill_id, ladder_step);
 
 
 --
@@ -354,6 +375,13 @@ GRANT SELECT,DELETE ON TABLE public.attempts TO retention_job;
 
 GRANT SELECT,INSERT ON TABLE public.diag_events TO app_request;
 GRANT SELECT,DELETE ON TABLE public.diag_events TO retention_job;
+
+
+--
+-- Name: TABLE difficulty_ratings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,UPDATE ON TABLE public.difficulty_ratings TO app_request;
 
 
 --
