@@ -99,7 +99,14 @@ class _RootScaffoldState extends State<RootScaffold> {
         // there is somewhere to send it — unlinked play is entirely offline
         // (ADR 0002).
         AppTab.home => HomeRoute(session: _session),
+        // **It is told when it is being looked at.** Every root stays mounted,
+        // so the profile's `initState` runs once per launch — and it reads
+        // figures the home writes while it is behind. Without this it showed
+        // `RACHA 0` on the same screenful of app that had just drawn `RACHA 1`.
         AppTab.profile => ProfileRoute(
+            visibility: _current == AppTab.profile
+                ? RootVisibility.showing
+                : RootVisibility.behind,
             session: _session,
             onSessionChanged: (LinkedSession? session) =>
                 setState(() => _session = session),

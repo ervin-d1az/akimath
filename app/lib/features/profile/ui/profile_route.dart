@@ -18,6 +18,7 @@ import '../policy/history_view.dart';
 import '../policy/profile_readout.dart';
 import '../../account/data/player_id_store.dart';
 import '../../account/policy/session.dart';
+import '../../shell/policy/visible_tabs.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../preferences/policy/erasure.dart';
 import '../../preferences/ui/account_screen.dart';
@@ -54,7 +55,20 @@ class ProfileRoute extends StatefulWidget {
     this.fetchHistory,
     this.auth,
     this.whoAmI,
+    this.visibility = RootVisibility.showing,
   });
+
+  /// Whether this root is the one on screen.
+  ///
+  /// **The moment it comes to the front is the only moment it can refresh.**
+  /// `RootScaffold` keeps every root alive in an `IndexedStack`, so `initState`
+  /// runs once per launch and there is no second one to hook — a figure read
+  /// only there is a figure from launch time. Measured on a device: the verdict
+  /// screen said `RACHA 1`, the home said `RACHA 1 DÍA`, and Perfil said `0`.
+  ///
+  /// Defaults to [RootVisibility.showing], because every caller that is not the
+  /// shell — a test, the screen registry — is looking at it.
+  final RootVisibility visibility;
 
   /// Neon Auth, when a test stands in for it.
   ///
@@ -136,15 +150,39 @@ class _ProfileRouteState extends State<ProfileRoute> {
   void initState() {
     super.initState();
     _linkIfNeeded(null);
+    _readWhatTheDeviceKnows();
+    unawaited(_askForHistory());
+  }
+
+  /// Every figure that comes from this device's own storage.
+  ///
+  /// **One list, called from two places**, so a reading added here is refreshed
+  /// by [_refreshOnComingToTheFront] without anybody remembering to add it
+  /// there too. That is the whole reason this is a method rather than two lines
+  /// in `initState`.
+  void _readWhatTheDeviceKnows() {
     unawaited(_readDayLog());
     unawaited(_readChallenges());
-    unawaited(_askForHistory());
+  }
+
+  /// Re-reads storage the moment this root becomes the one on screen.
+  ///
+  /// **A rebuild is not a visit.** The shell rebuilds every root on every tab
+  /// switch, so refreshing on any rebuild would read storage for a screen
+  /// nobody is looking at — and would hide the case this exists for. The
+  /// transition is what matters: behind, then showing.
+  void _refreshOnComingToTheFront(RootVisibility before) {
+    if (widget.visibility == RootVisibility.showing &&
+        before == RootVisibility.behind) {
+      _readWhatTheDeviceKnows();
+    }
   }
 
   @override
   void didUpdateWidget(ProfileRoute old) {
     super.didUpdateWidget(old);
     _linkIfNeeded(old.session);
+    _refreshOnComingToTheFront(old.visibility);
     // The session may arrive after this screen is built — `IndexedStack` keeps
     // the roots alive, so signing in elsewhere does not rebuild this one.
     if (widget.session?.accessToken != old.session?.accessToken) {

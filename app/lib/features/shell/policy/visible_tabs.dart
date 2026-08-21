@@ -36,6 +36,18 @@ const Set<AppTab> rootsPresentToday = <AppTab>{
   AppTab.profile,
 };
 
+/// Whether a root is the one the player is looking at.
+///
+/// **Two named arms rather than a boolean** (FUN-2): a root that is not showing
+/// is not merely off — it is alive, built, and holding whatever it last read,
+/// and `behind` is the word that says so.
+///
+/// It exists because `IndexedStack` keeps every root mounted, so `initState`
+/// runs once per launch and there is no second one to hook. A root that reads
+/// storage needs to know when it came to the front, and this is the only signal
+/// that carries it.
+enum RootVisibility { showing, behind }
+
 /// The tabs to render, given which ones have roots.
 ///
 /// Returns **nothing** for a single root: a bar with one tab has nothing to
