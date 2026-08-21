@@ -46,6 +46,11 @@ import 'package:akimath_app/features/round/ui/summary/series_summary_screen.dart
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
 import 'package:akimath_app/design/tokens/tokens.dart';
 import 'package:flutter/material.dart';
+// f5-skill-map — the two screens of the topic map.
+import 'package:akimath_app/design/widgets/spec/mastery_level.dart';
+import 'package:akimath_app/features/map/policy/skill_map.dart';
+import 'package:akimath_app/features/map/ui/node_detail_screen.dart';
+import 'package:akimath_app/features/map/ui/skill_map_screen.dart';
 
 /// A surface the design gates pump a screen at.
 ///
@@ -1194,6 +1199,65 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       ),
     ),
   ),
+  // ── f5-skill-map ─────────────────────────────────────────────────────────
+  // `05 Mapa de habilidades` and `2.7 Detalle de nodo`. The map is registered
+  // with **all four states on it**, which is what makes the locked arm
+  // load-bearing: `readSkillMap` never produces one from the shipped pack —
+  // nothing gates anything — so this entry is the only thing that draws the
+  // dashed node and the dashed connector, and the only thing that would go red
+  // if either stopped working.
+  RegisteredScreen(
+    label: 'mapa',
+    build: () => AppShell(
+      child: SkillMapScreen(map: registrySkillMap, onOpen: (int _) {}),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'mapa · sin temas',
+    build: () => AppShell(
+      child: SkillMapScreen(
+        map: const SkillMap(nodes: <SkillNode>[], focusIndex: null),
+        onOpen: (int _) {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'nodo · en curso',
+    // The most a detail screen can hold: a topic under way, the topic before it
+    // finished, and the practice door open.
+    build: () => AppShell(
+      child: NodeDetailScreen(
+        node: registrySkillMap.nodes[1],
+        previous: registrySkillMap.nodes.first,
+        onBack: _nothing,
+        onPractise: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'nodo · dominado',
+    build: () => AppShell(
+      child: NodeDetailScreen(
+        node: registrySkillMap.nodes.first,
+        onBack: _nothing,
+        onPractise: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'nodo · bloqueado',
+    // No practice door, because there is nothing to practise — and the longest
+    // family name in the set, which is the one that tests the 52 px title.
+    build: () => AppShell(
+      child: NodeDetailScreen(
+        node: registrySkillMap.nodes.last,
+        previous: registrySkillMap.nodes[4],
+        onBack: _nothing,
+        onPractise: _nothing,
+      ),
+    ),
+  ),
+  // ── end f5-skill-map ─────────────────────────────────────────────────────
 ];
 
 /// What `4.1` draws when every figure has a value, invented ones included.
@@ -1231,3 +1295,58 @@ const ProfileFigures registryWidestFigures = ProfileFigures(
 /// A callback for a registry entry, so a screen can be drawn with its control
 /// live without every entry declaring its own closure.
 void _nothing() {}
+
+/// Six topics, because the shipped pack carries six families; the four states
+/// are spread across them on purpose, so a gate walking this screen sees the
+/// dashed node and the dashed connector that no real pack produces today.
+const SkillMap registrySkillMap = SkillMap(
+  nodes: <SkillNode>[
+    SkillNode(
+      label: 'Cuentas',
+      blurb: 'Sumar, restar y comparar: cuentas con enteros y con fracciones.',
+      level: MasteryLevel.mastered,
+      reachedStep: 5,
+      topStep: 5,
+    ),
+    SkillNode(
+      label: 'Parejas',
+      blurb:
+          'Dos parejas con la misma relación: si entiendes una, tienes la otra.',
+      level: MasteryLevel.inProgress,
+      reachedStep: 4,
+      topStep: 6,
+    ),
+    SkillNode(
+      label: 'Figuras',
+      blurb:
+          'Figuras de puntos que crecen con un patrón. ¿Cuántos trae la que sigue?',
+      level: MasteryLevel.inProgress,
+      reachedStep: 4,
+      topStep: 5,
+    ),
+    SkillNode(
+      label: 'Máquina',
+      blurb:
+          'Una máquina que transforma números. Averigua qué les hace por dentro.',
+      level: MasteryLevel.inProgress,
+      reachedStep: 3,
+      topStep: 5,
+    ),
+    SkillNode(
+      label: 'Cuadros',
+      blurb:
+          'Cuadros de números donde cada fila y cada columna esconden una regla.',
+      level: MasteryLevel.available,
+      reachedStep: 0,
+      topStep: 6,
+    ),
+    SkillNode(
+      label: 'Series',
+      blurb: 'Encontrar la regla de una fila de números y decir cuál sigue.',
+      level: MasteryLevel.locked,
+      reachedStep: 0,
+      topStep: 4,
+    ),
+  ],
+  focusIndex: 1,
+);
