@@ -20,7 +20,9 @@ import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
+import 'package:akimath_app/features/onboarding/policy/calibration.dart';
 import 'package:akimath_app/features/onboarding/ui/calibration_intro_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/calibration_item_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/content/model/diagnosis.dart';
 import 'package:akimath_app/content/model/puzzle.dart';
@@ -458,6 +460,19 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     // ancestor of its own, and that is how `OnboardingFlow` builds it.
     build: () => AppShell(
       child: CalibrationIntroScreen(onStart: _nothing, onSkip: _nothing),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'calibración · reactivo',
+    // Bare, like the round: it brings its own `Scaffold`. Ten items, because
+    // ten is the longest strip the probe can draw and the strip is the part
+    // that grows — a probe registered with one bar would measure nothing.
+    build: () => CalibrationItemScreen(
+      items: <Item>[
+        for (int index = 0; index < calibrationLength; index++)
+          registryRoundItems.single,
+      ],
+      onFinished: (CalibrationOutcome outcome) {},
     ),
   ),
   RegisteredScreen(
