@@ -15,7 +15,9 @@ import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_solved_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
+import 'package:akimath_app/features/round/ui/summary/series_summary_screen.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
+import 'package:akimath_app/design/widgets/verdict_ring.dart';
 import 'package:akimath_app/features/shell/ui/skeleton_block.dart';
 import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
@@ -843,6 +845,98 @@ void main() {
       await tester.pumpAndSettle();
 
       expect((await store.read()).days, hasLength(1));
+    });
+  });
+
+  group('the summary draws the series that was actually played', () {
+    // **`2.5` was built with a ring and a diagnosis card and got neither.**
+    // `SeriesResult` defaults `outcomes` to empty and `stumble` to null, so a
+    // route that omits them compiles, renders, and quietly falls back to
+    // `"2 de 2"` in words — a screen that is right about the score and silent
+    // about which item was missed. Nothing but an end-to-end play can see it.
+
+    /// Answers [keys] on whichever pad is up, then submits.
+    Future<void> answer(WidgetTester tester, List<String> keys) async {
+      for (final String id in <String>[...keys, 'submit']) {
+        await tester.tap(find.byWidgetPredicate(
+          (Widget w) => w is KeypadKeyView && w.data.id == id,
+        ));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+    }
+
+    /// Leaves the verdict screen by whichever label it is showing.
+    Future<void> carryOn(WidgetTester tester) async {
+      await tester.tap(find.text('Siguiente').evaluate().isEmpty
+          ? find.text('Intentar otro')
+          : find.text('Siguiente'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('one mark per answered item, not the score in words',
+        (WidgetTester tester) async {
+      await _pump(tester, source: _twoItemPack);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      await answer(tester, <String>['4', '2']);
+      await carryOn(tester);
+      await answer(tester, <String>['1', '7']);
+      await carryOn(tester);
+
+      expect(find.byType(SeriesSummaryScreen), findsOneWidget);
+      expect(
+        find.byType(VerdictRing),
+        findsNWidgets(2),
+        reason: 'the round knew both outcomes and the summary drew none',
+      );
+      expect(
+        find.text('2 de 2'),
+        findsNothing,
+        reason: 'the score in words is the fallback for a caller with no '
+            'outcomes, and this caller has them',
+      );
+    });
+
+    testWidgets('the coral card names the reto that went wrong',
+        (WidgetTester tester) async {
+      await _pump(tester, source: _twoItemPack);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      // Wrong on the first, right on the second: the card explains the
+      // earliest slip and numbers it from one.
+      await answer(tester, <String>['9']);
+      await carryOn(tester);
+      await answer(tester, <String>['1', '7']);
+      await carryOn(tester);
+
+      expect(find.text('QUÉ SE TORCIÓ'), findsOneWidget);
+      expect(find.text('Reto 1'), findsOneWidget);
+      expect(find.textContaining('Lee otra vez el reto'), findsOneWidget);
+    });
+
+    testWidgets('a clean series draws no diagnosis card at all',
+        (WidgetTester tester) async {
+      // The card is absent rather than empty — the same reading `HISTORIAL`
+      // takes on `4.1`.
+      await _pump(tester, source: _twoItemPack);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Empezar la serie'));
+      await tester.pumpAndSettle();
+
+      await answer(tester, <String>['4', '2']);
+      await carryOn(tester);
+      await answer(tester, <String>['1', '7']);
+      await carryOn(tester);
+
+      expect(find.text('QUÉ SE TORCIÓ'), findsNothing);
     });
   });
 }

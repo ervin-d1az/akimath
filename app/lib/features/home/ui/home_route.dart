@@ -781,6 +781,14 @@ class _SeriesSessionState extends State<_SeriesSession> {
             attemptDays: <DateTime>[...widget.attemptDays, widget.now()],
             today: widget.now(),
           ),
+          // **Passed on rather than re-derived.** The round graded every item
+          // and is the only thing that can say which one was missed; a count
+          // cannot draw the ring, and `SeriesResult` defaults both to nothing,
+          // so omitting them here is a summary that renders and says less than
+          // it knows.
+          outcomes: outcome.outcomes,
+          stumble: outcome.stumble,
+          stumbleIndex: outcome.stumbleIndex,
         ),
         onDone: widget.onDone,
       );

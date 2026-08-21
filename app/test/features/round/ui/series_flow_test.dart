@@ -9,6 +9,8 @@ import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:akimath_app/features/round/ui/summary/series_summary_screen.dart';
 import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/design/widgets/spec/verdict.dart';
+import 'package:akimath_app/design/widgets/verdict_ring.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,6 +86,12 @@ Future<void> _answer(WidgetTester tester, int answer) async {
   await tester.pumpAndSettle();
 }
 
+/// How many marks on the summary's ring carry [verdict].
+int _marks(WidgetTester tester, Verdict verdict) => tester
+    .widgetList<VerdictRing>(find.byType(VerdictRing))
+    .where((VerdictRing ring) => ring.verdict == verdict)
+    .length;
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -136,7 +144,11 @@ void main() {
         await _answer(tester, i);
       }
 
-      expect(find.text('5 de 5'), findsOneWidget);
+      // **The ring, not `5 de 5`.** The words are `SeriesSummaryScreen`'s
+      // fallback for a caller that hands over no outcomes, and `HomeRoute`
+      // hands over the round's — so the score is now one mark per item.
+      expect(_marks(tester, Verdict.correct), 5);
+      expect(_marks(tester, Verdict.wrong), 0);
 
       await tester.tap(find.text('Volver al inicio'));
       await tester.pumpAndSettle();
@@ -146,8 +158,8 @@ void main() {
     });
 
     testWidgets('a wrong answer is counted as such', (WidgetTester tester) async {
-      // The control: `5 de 5` above is also what a screen showing the total
-      // twice would print.
+      // The control: five correct marks above is also what a screen drawing
+      // one mark per item regardless of its verdict would draw.
       await _pump(tester);
       await tester.tap(find.text('Empezar la serie'));
       await tester.pumpAndSettle();
@@ -162,7 +174,11 @@ void main() {
         await _answer(tester, i);
       }
 
-      expect(find.text('4 de 5'), findsOneWidget);
+      // And the ring says *which* one, which `4 de 5` never could — that half
+      // is asserted in `home_route_test.dart`, over a pack that carries the
+      // misconception copy this fixture deliberately does not.
+      expect(_marks(tester, Verdict.correct), 4);
+      expect(_marks(tester, Verdict.wrong), 1);
     });
   });
 
