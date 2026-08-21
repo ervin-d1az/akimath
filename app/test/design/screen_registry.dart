@@ -24,6 +24,9 @@ import 'package:akimath_app/features/profile/ui/profile_screen.dart';
 import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/features/profile/policy/history_view.dart';
 import 'package:akimath_app/features/profile/policy/profile_readout.dart';
+import 'package:akimath_app/features/puzzle/policy/pause.dart';
+import 'package:akimath_app/features/puzzle/ui/paused_board.dart';
+import 'package:akimath_app/features/puzzle/ui/reference_card.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_solved_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
@@ -32,7 +35,8 @@ import 'package:akimath_app/features/shell/ui/app_shell.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
 import 'package:akimath_app/features/round/ui/summary/series_summary_screen.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
-import 'package:flutter/widgets.dart';
+import 'package:akimath_app/design/tokens/tokens.dart';
+import 'package:flutter/material.dart';
 
 /// A surface the design gates pump a screen at.
 ///
@@ -508,6 +512,74 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         tutorialSteps: <String>['Encuentra las palabras escondidas.'],
         referenceSheet: <String>['Las palabras van en ocho direcciones.'],
       ),
+    ),
+  ),
+  // **Labelled under `puzzle · kenken`, and that prefix is load-bearing.**
+  // `quiet_while_you_solve_test.dart` decides what counts as a solving surface
+  // with `startsWith` over a list of prefixes; both screens below are mid-solve
+  // — one is the board's rules, the other is the board paused — so naming them
+  // this way puts them under the Aki-absence and no-clock gates with no edit to
+  // that file. Renaming either to `pausa · kenken` drops it silently out of
+  // both, which is the PROC-10 failure this repository keeps rediscovering.
+  RegisteredScreen(
+    label: 'puzzle · kenken · hoja de referencia',
+    // **This entry measures the card, not the screen around it.** The rules
+    // live behind a tap and a registry builder cannot tap, so what is pumped
+    // is the card in the board screen's own padding — with the 48px header
+    // above it left out. The real surface gives the card that much less, and
+    // the board screen itself is registered above at both viewports. Its rules
+    // band scrolls, so the shortfall costs scroll extent rather than an
+    // overflow, but the gate below is not measuring the shipping height and
+    // should not be read as if it were.
+    build: () => Scaffold(
+      backgroundColor: BrandColors.cream,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: BrandShape.space4,
+            vertical: BrandShape.space3,
+          ),
+          child: ReferenceCard(
+            // The shipped copy, not a stub: these are the longest lines the
+            // pack carries, which is the case the card has to survive.
+            // **A deliberate long sample, not a fourth source of truth.**
+            // `packages/core/test/reference-sheet.test.ts` is what holds the
+            // generator and the pack together; this is a fixture that has to
+            // stay roughly this long, and nothing goes red if the wording
+            // moves — which is correct, because what is being measured here is
+            // height, not words.
+            puzzle: KenKenPuzzle(
+              board: registryKenKen(6).board,
+              cages: registryKenKen(6).cages,
+              tutorialSteps: const <String>[],
+              referenceSheet: const <String>[
+                'Llena todas las casillas con números del 1 al 6.',
+                'Las jaulas son los grupos de casillas con borde punteado: en '
+                    'su esquina traen el resultado y el signo (+ suma, - resta, '
+                    '× multiplica, ÷ divide).',
+                'Las casillas de cada jaula dan ese resultado en el orden que '
+                    'sea, y ningún número se repite en su fila ni en su columna.',
+              ],
+            ),
+            onClose: () {},
+          ),
+        ),
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'puzzle · kenken · pausa',
+    // The longest format name and the largest board, so nothing wider can
+    // arrive: `CUADRO MÁGICO` beside a count in the tens.
+    build: () => PausedBoardView(
+      summary: const PauseSummary(
+        filled: 11,
+        total: 36,
+        formatName: 'CUADRO MÁGICO',
+        sizeLabel: '6 × 6',
+      ),
+      onResume: () {},
+      onLeave: () {},
     ),
   ),
   RegisteredScreen(

@@ -7,7 +7,9 @@ import '../../../design/puzzle/spec/letter_grid_geometry.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/icon_button_tile.dart';
+import '../policy/reference_card.dart';
 import '../policy/word_search.dart';
+import 'reference_card.dart';
 
 /// A grid of letters and the words hidden in it.
 ///
@@ -94,10 +96,19 @@ class _WordSearchScreenState extends State<WordSearchScreen> {
             children: <Widget>[
               _header(),
               const SizedBox(height: BrandShape.space3),
-              if (_rulesOpen) _rules(),
-              Expanded(child: Center(child: _grid())),
+              Expanded(
+                child: _rulesOpen
+                    ? ReferenceCard(
+                        puzzle: widget.puzzle,
+                        onClose: () => setState(() => _rulesOpen = false),
+                      )
+                    : Center(child: _grid()),
+              ),
               const SizedBox(height: BrandShape.space3),
-              _wordList(),
+              // The card covers the grid, and the list of words is about the
+              // grid — leaving it under an open sheet reads as two screens
+              // stacked rather than one thing consulted.
+              if (!_rulesOpen) _wordList(),
             ],
           ),
         ),
@@ -117,7 +128,16 @@ class _WordSearchScreenState extends State<WordSearchScreen> {
               child: const BrandIcon(BrandGlyph.close, size: 22),
             ),
           ),
-          Text('SOPA DE LETRAS', style: BrandText.eyebrow()),
+          Expanded(
+            child: Center(
+              child: Text(
+                puzzleFormatName(widget.puzzle),
+                style: BrandText.eyebrow(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
           Semantics(
             label: 'Cómo se juega',
             button: true,
@@ -128,18 +148,6 @@ class _WordSearchScreenState extends State<WordSearchScreen> {
             ),
           ),
         ],
-      );
-
-  Widget _rules() => Padding(
-        padding: const EdgeInsets.only(bottom: BrandShape.space3),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            for (final String line in widget.puzzle.referenceSheet)
-              Text('· $line', style: BrandText.caption()),
-          ],
-        ),
       );
 
   /// **One gesture for the whole grid**, not one per cell.

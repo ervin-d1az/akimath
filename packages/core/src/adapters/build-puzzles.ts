@@ -1,5 +1,6 @@
 import { mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   generateCagedBatch,
@@ -28,7 +29,7 @@ import type { CagedKind } from "../puzzles/caged.js";
 const CAGED_KINDS: readonly CagedKind[] = ["kenken", "killer"];
 
 /** Every kind this generator can build. */
-type BuildableKind = CagedKind | "wordSearch" | "magicSquare" | "kakuro";
+export type BuildableKind = CagedKind | "wordSearch" | "magicSquare" | "kakuro";
 
 const KINDS: readonly BuildableKind[] = [
   ...CAGED_KINDS,
@@ -63,59 +64,100 @@ const VOCABULARY: readonly string[] = [
   "CUENTA",
 ];
 
-/** The es-MX copy each kind carries, the same lines the authored boards use. */
-const COPY: Readonly<Record<BuildableKind, PuzzleCopy>> = Object.freeze({
-  kenken: {
-    tutorialSteps: [
-      "Cada fila y cada columna llevan cada número una vez.",
-      "La esquina de la jaula dice el resultado y con qué operación.",
-    ],
-    referenceSheet: [
-      "Los números van del 1 al tamaño del cuadro.",
-      "Una jaula de una sola celda ya trae su número.",
-    ],
-  },
-  killer: {
-    tutorialSteps: [
-      "Cada fila y cada columna llevan cada número una vez.",
-      "La esquina de la jaula dice a cuánto suman sus celdas.",
-    ],
-    referenceSheet: [
-      "Dentro de una jaula no se repite ningún número.",
-      "Los números van del 1 al tamaño del cuadro.",
-    ],
-  },
-  wordSearch: {
-    tutorialSteps: [
-      "Arrastra el dedo de la primera letra a la última.",
-      "Una palabra puede ir en cualquiera de las ocho direcciones.",
-    ],
-    referenceSheet: [
-      "Las palabras se leen en línea recta, nunca dan vuelta.",
-      "Tacha la lista: terminas cuando no queda ninguna.",
-    ],
-  },
-  magicSquare: {
-    tutorialSteps: [
-      "Cada fila y cada columna llegan al número de su ficha.",
-      "Ningún número se repite en todo el cuadro.",
-    ],
-    referenceSheet: [
-      "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
-      "Se usan los números del 1 al total de casillas.",
-    ],
-  },
-  kakuro: {
-    tutorialSteps: [
-      "Cada tramo suma el número de su pista.",
-      "Dentro de un tramo no se repite ningún dígito.",
-    ],
-    referenceSheet: [
-      "Los tramos van hacia la derecha y hacia abajo.",
-      "Solo se usan los dígitos del 1 al 9.",
-    ],
-  },
+/** The es-MX tutorial each kind carries, shown once before its first board. */
+const TUTORIAL: Readonly<Record<BuildableKind, readonly string[]>> = Object.freeze({
+  kenken: [
+    "Cada fila y cada columna llevan cada número una vez.",
+    "La esquina de la jaula dice el resultado y con qué operación.",
+  ],
+  killer: [
+    "Cada fila y cada columna llevan cada número una vez.",
+    "La esquina de la jaula dice a cuánto suman sus celdas.",
+  ],
+  wordSearch: [
+    "Arrastra el dedo de la primera letra a la última.",
+    "Una palabra puede ir en cualquiera de las ocho direcciones.",
+  ],
+  magicSquare: [
+    "Cada fila y cada columna llegan al número de su ficha.",
+    "Ningún número se repite en todo el cuadro.",
+  ],
+  kakuro: [
+    "Cada tramo suma el número de su pista.",
+    "Dentro de un tramo no se repite ningún dígito.",
+  ],
 });
+
+/**
+ * How many lines a reference sheet has, in every format.
+ *
+ * **Objective, then vocabulary, then constraints** — the design annotates
+ * `3.3 Hoja de referencia` as *"consulta, no clase"*, and a fixed three keeps
+ * the card one shape rather than one per kind. The frozen schema admits one to
+ * six; three is a product decision, so it is stated here and asserted in
+ * `test/reference-sheet.test.ts` rather than left implicit in five literals.
+ */
+export const REFERENCE_SHEET_LINES = 3;
+
+/**
+ * The sheet a player opens mid-board, for a board of this kind at this size.
+ *
+ * **Size is a parameter because the objective cannot be stated without it.**
+ * The sheets these boards used to carry said *"del 1 al tamaño del cuadro"*,
+ * which asks a player mid-board to work out the answer to the question they
+ * opened the sheet to ask. A 5×5 KenKen now says *del 1 al 5* and a 3×3 magic
+ * square says *del 1 al 9*, because a magic square holds one of every number up
+ * to its cell count and a caged board holds one of every number up to its side.
+ *
+ * The operators are the characters `puzzle_board_view.dart` prints in a cage's
+ * corner — an ASCII hyphen, not U+2212 — because a reference sheet that spells
+ * a mark differently from the board is not a reference.
+ */
+export function referenceSheetFor(
+  kind: BuildableKind,
+  size: number,
+): readonly string[] {
+  switch (kind) {
+    case "kenken":
+      return [
+        `Llena todas las casillas con números del 1 al ${size}.`,
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen el resultado y el signo (+ suma, - resta, × multiplica, ÷ divide).",
+        "Las casillas de cada jaula dan ese resultado en el orden que sea, y ningún número se repite en su fila ni en su columna.",
+      ];
+    case "killer":
+      return [
+        `Llena todas las casillas con números del 1 al ${size}.`,
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen a cuánto suman, sin signo porque siempre se suma.",
+        "Cada jaula llega a esa suma sin repetir ningún número, y tampoco se repite ninguno en su fila ni en su columna.",
+      ];
+    case "magicSquare":
+      return [
+        `Llena todas las casillas con los números del 1 al ${size * size}, uno en cada una.`,
+        "Las fichas de la orilla son los objetivos: dicen a cuánto tiene que llegar cada fila y cada columna.",
+        "Cada fila y cada columna suman justo su objetivo, y ningún número se repite en el cuadro.",
+      ];
+    case "kakuro":
+      return [
+        "Llena las casillas blancas con dígitos del 1 al 9.",
+        "El tramo es una hilera de casillas blancas seguidas; la casilla oscura donde empieza dice a cuánto suma.",
+        "Cada tramo suma justo esa pista, y dentro de un tramo no se repite ningún dígito.",
+      ];
+    case "wordSearch":
+      return [
+        "Encuentra en la cuadrícula todas las palabras de la lista.",
+        "Arrastra el dedo desde la primera letra hasta la última y la palabra queda marcada.",
+        "Las palabras van en línea recta, en cualquiera de las ocho direcciones, y nunca dan vuelta.",
+      ];
+  }
+}
+
+/** The es-MX copy a board of this kind and size carries. */
+function copyFor(kind: BuildableKind, size: number): PuzzleCopy {
+  return {
+    tutorialSteps: TUTORIAL[kind],
+    referenceSheet: referenceSheetFor(kind, size),
+  };
+}
 
 function requireKind(raw: string): BuildableKind {
   const found = KINDS.find((kind) => kind === raw);
@@ -139,18 +181,19 @@ function switchKind(
   count: number,
   firstSeed: bigint,
 ): Batch {
+  const copy = copyFor(kind, size);
   switch (kind) {
     case "wordSearch":
       return generateWordSearchBatch(
         { size, count, firstSeed, vocabulary: VOCABULARY },
-        COPY[kind],
+        copy,
       );
     case "magicSquare":
-      return generateMagicSquareBatch({ size, count, firstSeed }, COPY[kind]);
+      return generateMagicSquareBatch({ size, count, firstSeed }, copy);
     case "kakuro":
-      return generateKakuroBatch({ size, count, firstSeed }, COPY[kind]);
+      return generateKakuroBatch({ size, count, firstSeed }, copy);
     default:
-      return generateCagedBatch({ kind, size, count, firstSeed }, COPY[kind]);
+      return generateCagedBatch({ kind, size, count, firstSeed }, copy);
   }
 }
 
@@ -193,10 +236,26 @@ function main(): void {
   );
 }
 
-try {
-  main();
-} catch (cause) {
-  // eslint-disable-next-line no-console
-  console.error(`puzzles: ${cause instanceof Error ? cause.message : String(cause)}`);
-  process.exitCode = 1;
+/**
+ * Whether this module was run, rather than imported.
+ *
+ * **Without it, reading the copy generates a batch.** `referenceSheetFor` is
+ * the one definition of words that also ship inside
+ * `app/assets/packs/starter.json`, and the test that holds those two together
+ * has to import this file — which, at module scope, built three 4×4 KenKens and
+ * wrote `puzzles-kenken-4.json` into the package root. Measured, not guessed:
+ * the file was there after the first run of that test.
+ */
+const runFromCommandLine =
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (runFromCommandLine) {
+  try {
+    main();
+  } catch (cause) {
+    // eslint-disable-next-line no-console
+    console.error(`puzzles: ${cause instanceof Error ? cause.message : String(cause)}`);
+    process.exitCode = 1;
+  }
 }

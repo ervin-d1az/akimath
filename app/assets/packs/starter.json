@@ -1701,9 +1701,9 @@
         "La esquina de cada jaula dice el resultado y la operación."
       ],
       "reference_sheet": [
-        "Una jaula de dos celdas con − pide la diferencia.",
-        "Ningún número se repite en su fila ni en su columna.",
-        "Una jaula de una sola celda ya trae su número."
+        "Llena todas las casillas con números del 1 al 3.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen el resultado y el signo (+ suma, - resta, × multiplica, ÷ divide).",
+        "Las casillas de cada jaula dan ese resultado en el orden que sea, y ningún número se repite en su fila ni en su columna."
       ]
     },
     {
@@ -1869,8 +1869,9 @@
         "La esquina de la jaula dice el resultado y con qué operación."
       ],
       "reference_sheet": [
-        "Los números van del 1 al tamaño del cuadro.",
-        "Una jaula de una sola celda ya trae su número."
+        "Llena todas las casillas con números del 1 al 4.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen el resultado y el signo (+ suma, - resta, × multiplica, ÷ divide).",
+        "Las casillas de cada jaula dan ese resultado en el orden que sea, y ningún número se repite en su fila ni en su columna."
       ]
     },
     {
@@ -2030,8 +2031,9 @@
         "La esquina de la jaula dice el resultado y con qué operación."
       ],
       "reference_sheet": [
-        "Los números van del 1 al tamaño del cuadro.",
-        "Una jaula de una sola celda ya trae su número."
+        "Llena todas las casillas con números del 1 al 4.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen el resultado y el signo (+ suma, - resta, × multiplica, ÷ divide).",
+        "Las casillas de cada jaula dan ese resultado en el orden que sea, y ningún número se repite en su fila ni en su columna."
       ]
     },
     {
@@ -2256,8 +2258,9 @@
         "La esquina de la jaula dice el resultado y con qué operación."
       ],
       "reference_sheet": [
-        "Los números van del 1 al tamaño del cuadro.",
-        "Una jaula de una sola celda ya trae su número."
+        "Llena todas las casillas con números del 1 al 5.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen el resultado y el signo (+ suma, - resta, × multiplica, ÷ divide).",
+        "Las casillas de cada jaula dan ese resultado en el orden que sea, y ningún número se repite en su fila ni en su columna."
       ]
     },
     {
@@ -2423,8 +2426,9 @@
         "La esquina de la jaula dice el resultado y con qué operación."
       ],
       "reference_sheet": [
-        "Los números van del 1 al tamaño del cuadro.",
-        "Una jaula de una sola celda ya trae su número."
+        "Llena todas las casillas con números del 1 al 4.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen el resultado y el signo (+ suma, - resta, × multiplica, ÷ divide).",
+        "Las casillas de cada jaula dan ese resultado en el orden que sea, y ningún número se repite en su fila ni en su columna."
       ]
     },
     {
@@ -2643,8 +2647,9 @@
         "La esquina de la jaula dice el resultado y con qué operación."
       ],
       "reference_sheet": [
-        "Los números van del 1 al tamaño del cuadro.",
-        "Una jaula de una sola celda ya trae su número."
+        "Llena todas las casillas con números del 1 al 5.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen el resultado y el signo (+ suma, - resta, × multiplica, ÷ divide).",
+        "Las casillas de cada jaula dan ese resultado en el orden que sea, y ningún número se repite en su fila ni en su columna."
       ]
     },
     {
@@ -2875,8 +2880,9 @@
         "La esquina de la jaula dice el resultado y con qué operación."
       ],
       "reference_sheet": [
-        "Los números van del 1 al tamaño del cuadro.",
-        "Una jaula de una sola celda ya trae su número."
+        "Llena todas las casillas con números del 1 al 5.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen el resultado y el signo (+ suma, - resta, × multiplica, ÷ divide).",
+        "Las casillas de cada jaula dan ese resultado en el orden que sea, y ningún número se repite en su fila ni en su columna."
       ]
     },
     {
@@ -2973,8 +2979,9 @@
         "La esquina de cada jaula dice cuánto suman sus celdas."
       ],
       "reference_sheet": [
-        "Las jaulas piden una suma; no traen signo.",
-        "Ningún número se repite en su fila ni en su columna."
+        "Llena todas las casillas con números del 1 al 3.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen a cuánto suman, sin signo porque siempre se suma.",
+        "Cada jaula llega a esa suma sin repetir ningún número, y tampoco se repite ninguno en su fila ni en su columna."
       ]
     },
     {
@@ -3127,8 +3134,9 @@
         "La esquina de la jaula dice a cuánto suman sus celdas."
       ],
       "reference_sheet": [
-        "Dentro de una jaula no se repite ningún número.",
-        "Los números van del 1 al tamaño del cuadro."
+        "Llena todas las casillas con números del 1 al 4.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen a cuánto suman, sin signo porque siempre se suma.",
+        "Cada jaula llega a esa suma sin repetir ningún número, y tampoco se repite ninguno en su fila ni en su columna."
       ]
     },
     {
@@ -3306,8 +3314,9 @@
         "La esquina de la jaula dice a cuánto suman sus celdas."
       ],
       "reference_sheet": [
-        "Dentro de una jaula no se repite ningún número.",
-        "Los números van del 1 al tamaño del cuadro."
+        "Llena todas las casillas con números del 1 al 4.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen a cuánto suman, sin signo porque siempre se suma.",
+        "Cada jaula llega a esa suma sin repetir ningún número, y tampoco se repite ninguno en su fila ni en su columna."
       ]
     },
     {
@@ -3517,8 +3526,9 @@
         "La esquina de la jaula dice a cuánto suman sus celdas."
       ],
       "reference_sheet": [
-        "Dentro de una jaula no se repite ningún número.",
-        "Los números van del 1 al tamaño del cuadro."
+        "Llena todas las casillas con números del 1 al 5.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen a cuánto suman, sin signo porque siempre se suma.",
+        "Cada jaula llega a esa suma sin repetir ningún número, y tampoco se repite ninguno en su fila ni en su columna."
       ]
     },
     {
@@ -3671,8 +3681,9 @@
         "La esquina de la jaula dice a cuánto suman sus celdas."
       ],
       "reference_sheet": [
-        "Dentro de una jaula no se repite ningún número.",
-        "Los números van del 1 al tamaño del cuadro."
+        "Llena todas las casillas con números del 1 al 4.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen a cuánto suman, sin signo porque siempre se suma.",
+        "Cada jaula llega a esa suma sin repetir ningún número, y tampoco se repite ninguno en su fila ni en su columna."
       ]
     },
     {
@@ -3907,8 +3918,9 @@
         "La esquina de la jaula dice a cuánto suman sus celdas."
       ],
       "reference_sheet": [
-        "Dentro de una jaula no se repite ningún número.",
-        "Los números van del 1 al tamaño del cuadro."
+        "Llena todas las casillas con números del 1 al 5.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen a cuánto suman, sin signo porque siempre se suma.",
+        "Cada jaula llega a esa suma sin repetir ningún número, y tampoco se repite ninguno en su fila ni en su columna."
       ]
     },
     {
@@ -4148,8 +4160,9 @@
         "La esquina de la jaula dice a cuánto suman sus celdas."
       ],
       "reference_sheet": [
-        "Dentro de una jaula no se repite ningún número.",
-        "Los números van del 1 al tamaño del cuadro."
+        "Llena todas las casillas con números del 1 al 5.",
+        "Las jaulas son los grupos de casillas con borde punteado: en su esquina traen a cuánto suman, sin signo porque siempre se suma.",
+        "Cada jaula llega a esa suma sin repetir ningún número, y tampoco se repite ninguno en su fila ni en su columna."
       ]
     },
     {
@@ -4206,8 +4219,9 @@
         "Ningún número se repite en todo el cuadro."
       ],
       "reference_sheet": [
-        "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
-        "Se usan los números del 1 al 9, uno por celda."
+        "Llena todas las casillas con los números del 1 al 9, uno en cada una.",
+        "Las fichas de la orilla son los objetivos: dicen a cuánto tiene que llegar cada fila y cada columna.",
+        "Cada fila y cada columna suman justo su objetivo, y ningún número se repite en el cuadro."
       ]
     },
     {
@@ -4264,8 +4278,9 @@
         "Ningún número se repite en todo el cuadro."
       ],
       "reference_sheet": [
-        "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
-        "Se usan los números del 1 al total de casillas."
+        "Llena todas las casillas con los números del 1 al 9, uno en cada una.",
+        "Las fichas de la orilla son los objetivos: dicen a cuánto tiene que llegar cada fila y cada columna.",
+        "Cada fila y cada columna suman justo su objetivo, y ningún número se repite en el cuadro."
       ]
     },
     {
@@ -4322,8 +4337,9 @@
         "Ningún número se repite en todo el cuadro."
       ],
       "reference_sheet": [
-        "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
-        "Se usan los números del 1 al total de casillas."
+        "Llena todas las casillas con los números del 1 al 9, uno en cada una.",
+        "Las fichas de la orilla son los objetivos: dicen a cuánto tiene que llegar cada fila y cada columna.",
+        "Cada fila y cada columna suman justo su objetivo, y ningún número se repite en el cuadro."
       ]
     },
     {
@@ -4380,8 +4396,9 @@
         "Ningún número se repite en todo el cuadro."
       ],
       "reference_sheet": [
-        "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
-        "Se usan los números del 1 al total de casillas."
+        "Llena todas las casillas con los números del 1 al 9, uno en cada una.",
+        "Las fichas de la orilla son los objetivos: dicen a cuánto tiene que llegar cada fila y cada columna.",
+        "Cada fila y cada columna suman justo su objetivo, y ningún número se repite en el cuadro."
       ]
     },
     {
@@ -4438,8 +4455,9 @@
         "Ningún número se repite en todo el cuadro."
       ],
       "reference_sheet": [
-        "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
-        "Se usan los números del 1 al total de casillas."
+        "Llena todas las casillas con los números del 1 al 9, uno en cada una.",
+        "Las fichas de la orilla son los objetivos: dicen a cuánto tiene que llegar cada fila y cada columna.",
+        "Cada fila y cada columna suman justo su objetivo, y ningún número se repite en el cuadro."
       ]
     },
     {
@@ -4496,8 +4514,9 @@
         "Ningún número se repite en todo el cuadro."
       ],
       "reference_sheet": [
-        "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
-        "Se usan los números del 1 al total de casillas."
+        "Llena todas las casillas con los números del 1 al 9, uno en cada una.",
+        "Las fichas de la orilla son los objetivos: dicen a cuánto tiene que llegar cada fila y cada columna.",
+        "Cada fila y cada columna suman justo su objetivo, y ningún número se repite en el cuadro."
       ]
     },
     {
@@ -4554,8 +4573,9 @@
         "Ningún número se repite en todo el cuadro."
       ],
       "reference_sheet": [
-        "Las fichas de la orilla dicen a cuánto tiene que llegar cada línea.",
-        "Se usan los números del 1 al total de casillas."
+        "Llena todas las casillas con los números del 1 al 9, uno en cada una.",
+        "Las fichas de la orilla son los objetivos: dicen a cuánto tiene que llegar cada fila y cada columna.",
+        "Cada fila y cada columna suman justo su objetivo, y ningún número se repite en el cuadro."
       ]
     },
     {
@@ -4699,8 +4719,9 @@
         "Dentro de un tramo no se repite ningún dígito."
       ],
       "reference_sheet": [
-        "Los tramos van hacia la derecha y hacia abajo.",
-        "Solo se usan los dígitos del 1 al 9."
+        "Llena las casillas blancas con dígitos del 1 al 9.",
+        "El tramo es una hilera de casillas blancas seguidas; la casilla oscura donde empieza dice a cuánto suma.",
+        "Cada tramo suma justo esa pista, y dentro de un tramo no se repite ningún dígito."
       ]
     },
     {
@@ -4885,8 +4906,9 @@
         "Dentro de un tramo no se repite ningún dígito."
       ],
       "reference_sheet": [
-        "Los tramos van hacia la derecha y hacia abajo.",
-        "Solo se usan los dígitos del 1 al 9."
+        "Llena las casillas blancas con dígitos del 1 al 9.",
+        "El tramo es una hilera de casillas blancas seguidas; la casilla oscura donde empieza dice a cuánto suma.",
+        "Cada tramo suma justo esa pista, y dentro de un tramo no se repite ningún dígito."
       ]
     },
     {
@@ -5088,8 +5110,9 @@
         "Dentro de un tramo no se repite ningún dígito."
       ],
       "reference_sheet": [
-        "Los tramos van hacia la derecha y hacia abajo.",
-        "Solo se usan los dígitos del 1 al 9."
+        "Llena las casillas blancas con dígitos del 1 al 9.",
+        "El tramo es una hilera de casillas blancas seguidas; la casilla oscura donde empieza dice a cuánto suma.",
+        "Cada tramo suma justo esa pista, y dentro de un tramo no se repite ningún dígito."
       ]
     },
     {
@@ -5381,8 +5404,9 @@
         "Dentro de un tramo no se repite ningún dígito."
       ],
       "reference_sheet": [
-        "Los tramos van hacia la derecha y hacia abajo.",
-        "Solo se usan los dígitos del 1 al 9."
+        "Llena las casillas blancas con dígitos del 1 al 9.",
+        "El tramo es una hilera de casillas blancas seguidas; la casilla oscura donde empieza dice a cuánto suma.",
+        "Cada tramo suma justo esa pista, y dentro de un tramo no se repite ningún dígito."
       ]
     },
     {
@@ -5657,8 +5681,9 @@
         "Dentro de un tramo no se repite ningún dígito."
       ],
       "reference_sheet": [
-        "Los tramos van hacia la derecha y hacia abajo.",
-        "Solo se usan los dígitos del 1 al 9."
+        "Llena las casillas blancas con dígitos del 1 al 9.",
+        "El tramo es una hilera de casillas blancas seguidas; la casilla oscura donde empieza dice a cuánto suma.",
+        "Cada tramo suma justo esa pista, y dentro de un tramo no se repite ningún dígito."
       ]
     },
     {
@@ -6060,8 +6085,9 @@
         "Dentro de un tramo no se repite ningún dígito."
       ],
       "reference_sheet": [
-        "Los tramos van hacia la derecha y hacia abajo.",
-        "Solo se usan los dígitos del 1 al 9."
+        "Llena las casillas blancas con dígitos del 1 al 9.",
+        "El tramo es una hilera de casillas blancas seguidas; la casilla oscura donde empieza dice a cuánto suma.",
+        "Cada tramo suma justo esa pista, y dentro de un tramo no se repite ningún dígito."
       ]
     },
     {
@@ -6483,8 +6509,9 @@
         "Dentro de un tramo no se repite ningún dígito."
       ],
       "reference_sheet": [
-        "Los tramos van hacia la derecha y hacia abajo.",
-        "Solo se usan los dígitos del 1 al 9."
+        "Llena las casillas blancas con dígitos del 1 al 9.",
+        "El tramo es una hilera de casillas blancas seguidas; la casilla oscura donde empieza dice a cuánto suma.",
+        "Cada tramo suma justo esa pista, y dentro de un tramo no se repite ningún dígito."
       ]
     },
     {
@@ -6588,8 +6615,9 @@
         "Una palabra puede ir en cualquiera de las ocho direcciones."
       ],
       "reference_sheet": [
-        "Las palabras se leen en línea recta, nunca dan vuelta.",
-        "Tacha la lista: terminas cuando no queda ninguna."
+        "Encuentra en la cuadrícula todas las palabras de la lista.",
+        "Arrastra el dedo desde la primera letra hasta la última y la palabra queda marcada.",
+        "Las palabras van en línea recta, en cualquiera de las ocho direcciones, y nunca dan vuelta."
       ]
     },
     {
@@ -6660,8 +6688,9 @@
         "Una palabra puede ir en cualquiera de las ocho direcciones."
       ],
       "reference_sheet": [
-        "Las palabras se leen en línea recta, nunca dan vuelta.",
-        "Tacha la lista: terminas cuando no queda ninguna."
+        "Encuentra en la cuadrícula todas las palabras de la lista.",
+        "Arrastra el dedo desde la primera letra hasta la última y la palabra queda marcada.",
+        "Las palabras van en línea recta, en cualquiera de las ocho direcciones, y nunca dan vuelta."
       ]
     },
     {
@@ -6733,8 +6762,9 @@
         "Una palabra puede ir en cualquiera de las ocho direcciones."
       ],
       "reference_sheet": [
-        "Las palabras se leen en línea recta, nunca dan vuelta.",
-        "Tacha la lista: terminas cuando no queda ninguna."
+        "Encuentra en la cuadrícula todas las palabras de la lista.",
+        "Arrastra el dedo desde la primera letra hasta la última y la palabra queda marcada.",
+        "Las palabras van en línea recta, en cualquiera de las ocho direcciones, y nunca dan vuelta."
       ]
     },
     {
@@ -6821,8 +6851,9 @@
         "Una palabra puede ir en cualquiera de las ocho direcciones."
       ],
       "reference_sheet": [
-        "Las palabras se leen en línea recta, nunca dan vuelta.",
-        "Tacha la lista: terminas cuando no queda ninguna."
+        "Encuentra en la cuadrícula todas las palabras de la lista.",
+        "Arrastra el dedo desde la primera letra hasta la última y la palabra queda marcada.",
+        "Las palabras van en línea recta, en cualquiera de las ocho direcciones, y nunca dan vuelta."
       ]
     },
     {
@@ -6909,8 +6940,9 @@
         "Una palabra puede ir en cualquiera de las ocho direcciones."
       ],
       "reference_sheet": [
-        "Las palabras se leen en línea recta, nunca dan vuelta.",
-        "Tacha la lista: terminas cuando no queda ninguna."
+        "Encuentra en la cuadrícula todas las palabras de la lista.",
+        "Arrastra el dedo desde la primera letra hasta la última y la palabra queda marcada.",
+        "Las palabras van en línea recta, en cualquiera de las ocho direcciones, y nunca dan vuelta."
       ]
     },
     {
@@ -7014,8 +7046,9 @@
         "Una palabra puede ir en cualquiera de las ocho direcciones."
       ],
       "reference_sheet": [
-        "Las palabras se leen en línea recta, nunca dan vuelta.",
-        "Tacha la lista: terminas cuando no queda ninguna."
+        "Encuentra en la cuadrícula todas las palabras de la lista.",
+        "Arrastra el dedo desde la primera letra hasta la última y la palabra queda marcada.",
+        "Las palabras van en línea recta, en cualquiera de las ocho direcciones, y nunca dan vuelta."
       ]
     },
     {
@@ -7119,8 +7152,9 @@
         "Una palabra puede ir en cualquiera de las ocho direcciones."
       ],
       "reference_sheet": [
-        "Las palabras se leen en línea recta, nunca dan vuelta.",
-        "Tacha la lista: terminas cuando no queda ninguna."
+        "Encuentra en la cuadrícula todas las palabras de la lista.",
+        "Arrastra el dedo desde la primera letra hasta la última y la palabra queda marcada.",
+        "Las palabras van en línea recta, en cualquiera de las ocho direcciones, y nunca dan vuelta."
       ]
     }
   ]
