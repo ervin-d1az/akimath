@@ -61,6 +61,21 @@ export { fallbackDiagnosis, misconceptionCopy } from "./pack/misconceptions.js";
 
 export { skillName } from "./pack/skill-names.js";
 
+// The rating, which `packages/server` runs inside the sync transaction —
+// `ARCHITECTURE.md` §5 puts the Glicko computation between the INSERT's
+// `RETURNING` and the `user_skills` upsert, so the engine has to cross the
+// package boundary. It lives here rather than there because this package is the
+// one allowed `Math.exp` (§3) and because a second transcription of Glickman's
+// formulas is exactly the drift R2 names, against a module whose golden vector
+// is his own worked example.
+export { decay } from "./rating/decay.js";
+export {
+  initialSkill,
+  rateSession,
+  type Outcome,
+  type Skill,
+} from "./rating/glicko.js";
+
 export type {
   GeneratedItem,
   PromptToken,

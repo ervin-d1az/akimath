@@ -46,6 +46,21 @@ export interface Outcome {
 export const INITIAL_RATING = 1500;
 export const INITIAL_DEVIATION = 350;
 
+/**
+ * The prior for something this system has never rated.
+ *
+ * **A function, because the package's front door exports only functions** —
+ * `test/public_surface.test.ts` asserts it, so that nothing crossing the
+ * boundary can grow a `toString`. The two constants above stay module-level for
+ * `decay`, which needs the ceiling rather than the pair.
+ *
+ * **Frozen, like every other value this module returns.** A caller that mutated
+ * the prior would be mutating the default for the next one.
+ */
+export function initialSkill(): Skill {
+  return Object.freeze({ rating: INITIAL_RATING, deviation: INITIAL_DEVIATION });
+}
+
 /** `g(RD)` — how much an opponent's uncertainty damps the update. */
 function g(deviation: number): number {
   return 1 / Math.sqrt(1 + (3 * Q * Q * deviation * deviation) / (Math.PI * Math.PI));

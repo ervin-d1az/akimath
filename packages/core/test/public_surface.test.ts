@@ -66,6 +66,18 @@ const PUBLIC_SURFACE = [
   // What a skill is called. `skill_id` is a smallint in five tables and a name
   // in none of them, and `GET /me/history` has to put a title on an entry.
   "skillName",
+  // The rating. `packages/server` writes `user_skills` inside the sync
+  // transaction, so the engine has to cross the boundary — and a second copy of
+  // Glickman's formulas over there is exactly the drift R2 names, against a
+  // module whose golden vector is his own worked example.
+  //
+  // `initialSkill` is a call rather than the two constants beside it, because
+  // every export here is a function: a number would satisfy the surface test's
+  // `typeof value === "function"` clause by failing it, and the caller wants the
+  // prior, not the two figures it is assembled from.
+  "rateSession",
+  "decay",
+  "initialSkill",
 ].sort();
 
 /** Anything that turns a value into text belongs in the contract, not here. */
