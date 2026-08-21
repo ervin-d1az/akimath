@@ -19,6 +19,7 @@ import '../policy/puzzle_of_day.dart';
 import '../policy/series_families.dart';
 import '../../round/ui/round_screen.dart';
 import '../../round/ui/summary/series_summary_screen.dart';
+import '../../shell/policy/visible_tabs.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../../content/model/puzzle.dart';
 import '../../puzzle/ui/puzzle_screen.dart';
@@ -68,7 +69,21 @@ class HomeRoute extends StatefulWidget {
     this.fetchPack,
     this.issuedPacks,
     this.answerRecord,
+    this.visibility = RootVisibility.showing,
   });
+
+  /// Whether this root is the one on screen.
+  ///
+  /// **A day practised elsewhere reaches the streak only here.** `_refreshLog`
+  /// runs when a series or a board *this route pushed* comes back, and a
+  /// practice run started from Mapa is neither — it records the day into the
+  /// same `DayLogStore` this reads, while `IndexedStack` keeps the home alive
+  /// with no second `initState` to hook (PROC-13).
+  ///
+  /// Defaults to [RootVisibility.showing], the same default and for the same
+  /// reason `ProfileRoute` gives it: every caller that is not the shell is
+  /// looking at it.
+  final RootVisibility visibility;
 
   /// The account this device is signed in to, if it is.
   ///
@@ -251,9 +266,24 @@ class _HomeRouteState extends State<HomeRoute> {
     });
   }
 
+  /// Re-reads the day log the moment this root becomes the one on screen.
+  ///
+  /// **A rebuild is not a visit**, which is `ProfileRoute`'s wording because it
+  /// is the same problem. The transition is what matters: behind, then showing.
+  void _refreshOnComingToTheFront(RootVisibility before) {
+    if (widget.visibility == RootVisibility.showing &&
+        before == RootVisibility.behind) {
+      unawaited(_refreshLog());
+    }
+  }
+
   @override
   void didUpdateWidget(HomeRoute old) {
     super.didUpdateWidget(old);
+    // **A day can be practised on another tab.** Mapa starts a practice run
+    // against this same store, and nothing here pushed it — so returning to
+    // Inicio is the only moment the streak can catch up (PROC-13).
+    _refreshOnComingToTheFront(old.visibility);
     // **The session arrives after this screen is built.** A player links on the
     // profile tab, and `IndexedStack` keeps the home alive — so `initState` has
     // long since run and a journal filled offline would sit there for ever.

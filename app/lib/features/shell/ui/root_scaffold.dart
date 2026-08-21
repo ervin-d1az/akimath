@@ -98,7 +98,16 @@ class _RootScaffoldState extends State<RootScaffold> {
         // produces an answer, and an answer is only worth remembering when
         // there is somewhere to send it — unlinked play is entirely offline
         // (ADR 0002).
-        AppTab.home => HomeRoute(session: _session),
+        // **It is told when it is being looked at too.** Mapa starts a practice
+        // run against the same day log the home reads, and the home pushed
+        // none of it — so without this the streak on Inicio is whatever it was
+        // when the player last left it (PROC-13).
+        AppTab.home => HomeRoute(
+            visibility: _current == AppTab.home
+                ? RootVisibility.showing
+                : RootVisibility.behind,
+            session: _session,
+          ),
         // **It is told when it is being looked at.** Every root stays mounted,
         // so the profile's `initState` runs once per launch — and it reads
         // figures the home writes while it is behind. Without this it showed
