@@ -226,6 +226,12 @@ void main() {
     expect(linked!.accessToken, 'header.payload.signature');
     expect(linked!.email, 'alguien@ejemplo.com');
     expect(linked!.ageBand, AgeBand.adult);
+    // **The cookie the token was derived from travels with it.** An access
+    // token expires in minutes, so it is the wrong thing to keep; this is what
+    // a later launch re-derives one from. The flow held it and dropped it
+    // before building the account, which made the whole persistence path
+    // dormant while every one of its own tests stayed green.
+    expect(linked!.provider, const AuthSession('session_token=abc'));
     // **The create path never asks the server for a band.** It has one, from
     // the gate, and a lookup here would be a second answer to a settled
     // question — the sign-in door asks precisely because it has no gate behind
