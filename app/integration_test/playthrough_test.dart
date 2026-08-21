@@ -1,5 +1,6 @@
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/design/widgets/verdict_ring.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
@@ -159,7 +160,15 @@ void main() {
 
       expect(find.byType(SeriesSummaryScreen), findsOneWidget,
           reason: 'series ${series + 1} did not end');
-      expect(find.text('5 de 5'), findsOneWidget);
+      // **The ring on a real device, not `5 de 5`.** The words are the
+      // summary's fallback for a caller handing over no outcomes; the route
+      // hands over the round's, so five items answered are five marks. This
+      // assertion is what caught the wiring being absent on the simulator
+      // while every widget test was green.
+      expect(
+        tester.widgetList<VerdictRing>(find.byType(VerdictRing)),
+        hasLength(5),
+      );
 
       await tester.tap(find.text('Volver al inicio'));
       await tester.pumpAndSettle();
