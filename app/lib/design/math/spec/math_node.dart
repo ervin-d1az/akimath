@@ -471,7 +471,18 @@ final class OperatorNode extends MathNode {
     }
     return OperatorNode(
       glyph,
-      face: glyph == '=' ? MathFace.textHeavy : MathFace.display,
+      // **`=` and `×` both leave the display face, for different reasons.**
+      // The equals sits on Plus Jakarta's axis so it lines up with a fraction
+      // bar. The multiplication sign is there because **Darumadrop draws
+      // U+00D7 as a slashed O** — measured against every candidate the font
+      // carries, and on a device `6 × 7` read `6 Ø 7`.
+      //
+      // The character is not substituted. A letter `x` renders correctly and
+      // would put a letter in the content, which a screen reader says as
+      // "equis" rather than "por".
+      face: glyph == '=' || glyph == '×'
+          ? MathFace.textHeavy
+          : MathFace.display,
       tone: MathTone.ink,
     );
   }
