@@ -10,6 +10,7 @@ import 'package:akimath_app/features/auth/ui/verify_email_screen.dart';
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
 import 'package:akimath_app/features/states/policy/account_state.dart';
 import 'package:akimath_app/features/states/ui/account_state_view.dart';
+import 'package:akimath_app/features/states/ui/empty_state_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/widgets/spec/verdict.dart';
@@ -1090,6 +1091,11 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         onDone: _nothing,
       ),
     ),
+  ),
+  // --- cross-cutting states 4.8-4.10, 4.14-4.15 (f7-estados-transversales) ---
+  RegisteredScreen(
+    label: 'estado · 4.8 vacío',
+    build: () => AppShell(child: EmptyStateScreen(onStart: _nothing)),
   ),
 ];
 
