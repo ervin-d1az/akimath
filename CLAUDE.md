@@ -105,7 +105,7 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **2208 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **2238 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **The streak can say it is about to go, and that it went.** `streakLength` has answered *how
@@ -171,9 +171,16 @@ format and its OpenAPI half.
   decision, made once. **An item's id is its address**, `packId#index`, so the thing the round
   carries is the thing the journal needs. `AttemptSync` records on every answer without touching
   the network and flushes when there is a session — including when the session *arrives*, since a
-  player links on the profile tab while `IndexedStack` keeps the home alive. **Issued per launch
-  and held in memory**; persisting the id and rebuilding through `GET /packs/{packId}` is the next
-  change, and the client has no operation for it yet.
+  player links on the profile tab while `IndexedStack` keeps the home alive. **A pack survives a
+  relaunch**: the device stores the id and nothing else, and `GET /packs/{packId}` — the client's
+  ninth operation — rebuilds it byte for byte, so a fetch is the same pack rather than a row per
+  launch per player. `packRefresh` is pure and holds the three branches; **a 404 is the one answer
+  that means issue a new one**, while refused, broken or unreachable mint nothing. The id is
+  written *before* the pack is adopted, or a device would play one it had not recorded.
+  **An issued item explains the mistake it anticipated**: the frozen format keys a distractor by
+  the digest of the wrong answer, so the map lives on `ItemAnswer` — one map on `Item` would be one
+  map with two meanings. `diagnose` no longer knows what an item is; the key is handed in, the same
+  split `gradeItem` made, and the pure half got smaller.
   **Ajustes has a way out.** `features/preferences/` carries the erasure flow: a text door under
   the account, drawn only where `erasureOffered` says a session could carry the request, and a
   full screen rather than a dialog because the question has to fit a sentence about what
