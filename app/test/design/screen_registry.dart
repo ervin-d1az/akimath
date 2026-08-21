@@ -888,6 +888,43 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         total: 5,
         elapsed: Duration(seconds: 47),
         streakDays: 3,
+        outcomes: <Verdict>[
+          Verdict.correct,
+          Verdict.correct,
+          Verdict.correct,
+          Verdict.wrong,
+          Verdict.correct,
+        ],
+      ),
+      onDone: () {},
+    ),
+  ),
+  RegisteredScreen(
+    // The tallest state the screen has: the ring, the three tiles, both
+    // invented blocks *and* the coral one, which only a slip with copy behind
+    // it draws. Registered separately because the entry above never renders
+    // it, and an overflow gate can only see what it is handed.
+    label: 'series summary · con diagnostico',
+    build: () => SeriesSummaryScreen(
+      result: const SeriesResult(
+        correct: 2,
+        total: 5,
+        elapsed: Duration(milliseconds: 128400),
+        streakDays: 13,
+        outcomes: <Verdict>[
+          Verdict.wrong,
+          Verdict.correct,
+          Verdict.wrong,
+          Verdict.wrong,
+          Verdict.correct,
+        ],
+        stumble: Diagnosis(
+          steps: <String>[
+            'Fijate en cuanto crece la serie entre un numero y el otro.',
+            'Suma esa diferencia al ultimo numero que ves.',
+          ],
+          explain: 'La diferencia crece; no es la misma cada vez.',
+        ),
       ),
       onDone: () {},
     ),

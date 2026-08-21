@@ -1,3 +1,7 @@
+import 'package:meta/meta.dart';
+
+import '../design/widgets/spec/mastery_level.dart';
+
 /// Figures the product cannot compute yet, for the demo.
 ///
 /// **PURE, and deliberately quarantined.** Every number here is invented. They
@@ -45,9 +49,69 @@ abstract final class DemoFigures {
   /// nobody does.
   static const int averageTenthsOfSecond = 68;
 
+
+  /// `2.5` draws `+12 RATING`.
+  ///
+  /// **A series delta, not [ratingThisWeek].** One is what a sitting was worth
+  /// and the other is what a week was; a screen reading the wrong one would be
+  /// wrong in a way nobody would notice. Rating never runs in Dart, so neither
+  /// can ever become real on this side — `GET /me/standing` is where the real
+  /// one will come from, and it answers 501 today.
+  static const int seriesRatingDelta = 12;
+
+  /// `2.5`'s `QUÉ MEJORÓ` bars.
+  ///
+  /// Nothing tracks mastery per skill. `attempts.skill_id` is a `smallint` the
+  /// device never sees, the local record `features/stats/` keeps carries no
+  /// skill, and `GET /me/history` reports a session at a time. So both the
+  /// names and both the numbers are invented, together.
+  static const List<DemoSkillBar> seriesSkills = <DemoSkillBar>[
+    DemoSkillBar(skill: 'Fracciones', percent: 68, before: 62),
+    DemoSkillBar(skill: 'Multiplicar', percent: 96, before: 94),
+  ];
+
+  /// `2.5`'s `QUÉ SIGUE · UNA SOLA COSA`.
+  ///
+  /// A recommendation needs something that decides what to practise next, and
+  /// there is no such thing — `GET /items/next` is the endpoint that would, and
+  /// it answers 501.
+  static const String seriesNext = 'Tres series numéricas mañana';
+
+  /// The line under [seriesNext].
+  static const String seriesNextNote =
+      'Es lo único pendiente. Nada más se recomienda hoy.';
+
   /// Whether the invented figures are drawn at all.
   ///
   /// **The one switch.** A build that flips this to false shows only what the
   /// product can prove, which is what shipping looks like.
   static const bool enabled = true;
+}
+
+/// One invented mastery bar on `2.5`.
+///
+/// It carries a [MasteryLevel] rather than a colour for the same reason
+/// `BaselineMeter` takes one: with no hue to pass, an invented figure cannot
+/// invent a meaning for it too.
+@immutable
+class DemoSkillBar {
+  const DemoSkillBar({
+    required this.skill,
+    required this.percent,
+    required this.before,
+  });
+
+  /// es-MX, because it is drawn.
+  final String skill;
+
+  /// Where the bar fills to, as a whole percent.
+  final int percent;
+
+  /// Where the ink marker sits — where the player supposedly started.
+  final int before;
+
+  /// `available` is the design's pink and `mastered` its green, at the
+  /// threshold the two bars it draws sit either side of.
+  MasteryLevel get level =>
+      percent >= 90 ? MasteryLevel.mastered : MasteryLevel.available;
 }
