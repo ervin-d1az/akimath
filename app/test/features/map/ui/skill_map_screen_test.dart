@@ -1,5 +1,7 @@
 import 'package:akimath_app/design/icons/brand_icon.dart';
+import 'package:akimath_app/design/painting/spec/dash_spec.dart';
 import 'package:akimath_app/design/theme.dart';
+import 'package:akimath_app/design/widgets/candy_surface.dart';
 import 'package:akimath_app/design/widgets/spec/mastery_level.dart';
 import 'package:akimath_app/features/map/policy/skill_map.dart';
 import 'package:akimath_app/features/map/ui/skill_map_screen.dart';
@@ -147,6 +149,35 @@ void main() {
     ]) {
       expect(find.text(state), findsOneWidget);
     }
+  });
+
+  testWidgets("the locked legend swatch reads as a dashed square, not as two "
+      'arcs', (WidgetTester tester) async {
+    // **Measured on an iPhone 17.** The swatch is 14 px across and carried
+    // `DashSpec.locked`, whose 9-on/9-off period is 18 — nearly half the
+    // outline's whole 39 px. Three dashes landed on the corners and the fourth
+    // legend entry rendered as a broken curl beside three clean squares.
+    //
+    // The rule this pins: an outline has four sides, and a pattern must repeat
+    // at least twice along one of them before it reads as a dash rather than as
+    // a stroke that stopped. The mutation it catches is handing the swatch
+    // `DashSpec.locked` again.
+    await _pump(tester, SkillMapScreen(map: _map(), onOpen: (int _) {}));
+
+    final Finder swatch = find.descendant(
+      of: find
+          .ancestor(of: find.text('Bloqueado'), matching: find.byType(Row))
+          .first,
+      matching: find.byType(CandySurface),
+    );
+    final DashSpec dash = tester.widget<CandySurface>(swatch).borderDash!;
+    final double side = tester.getSize(swatch).width;
+
+    expect(
+      dash.on + dash.off,
+      lessThanOrEqualTo(side / 2),
+      reason: 'a ${dash.on}+${dash.off} period on a ${side}px side draws arcs',
+    );
   });
 
   testWidgets('the counter says how many topics are under way',

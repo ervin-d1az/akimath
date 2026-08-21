@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../content/model/item.dart';
@@ -5,8 +7,10 @@ import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../home/data/day_log_store.dart';
+import '../../home/data/prefs_day_log_store.dart';
 import '../../home/data/series_cursor_store.dart';
 import '../../round/ui/round_screen.dart';
+import '../../shell/policy/visible_tabs.dart';
 import '../../shell/ui/app_shell.dart';
 import '../../shell/ui/skeleton_block.dart';
 import '../policy/practice_series.dart';
@@ -27,7 +31,15 @@ class MapRoute extends StatefulWidget {
     this.reader = const PackReader(),
     this.seriesCursor = const SeriesCursorStore(),
     this.dayLog,
+    this.visibility = RootVisibility.showing,
   });
+
+  /// Whether this root is the one on screen.
+  ///
+  /// Defaults to [RootVisibility.showing], the same default and for the same
+  /// reason `ProfileRoute` gives it: every caller that is not the shell — a
+  /// test, the screen registry — is looking at it.
+  final RootVisibility visibility;
 
   final PackReader reader;
 
@@ -47,37 +59,104 @@ class MapRoute extends StatefulWidget {
 }
 
 class _MapRouteState extends State<MapRoute> {
-  /// Read once, in the field initialiser, so a rebuild does not re-read the
-  /// bundle — the same shape `HomeRoute` uses.
-  late final Future<_MapContents> _contents = _read();
+  /// What the map is drawn from, or null until the first reading lands.
+  _MapContents? _contents;
 
-  Future<_MapContents> _read() async {
-    final Pack pack = await widget.reader.load();
-    final int served = await widget.seriesCursor.read();
-    return _MapContents(
-      pack: pack,
-      itemsServed: served,
-      map: readSkillMap(items: pack.items, itemsServed: served),
-    );
+  /// Whether the last reading refused the pack.
+  bool _packRefused = false;
+
+  /// Where a practice run records the day.
+  ///
+  /// **Defaulted here, because nothing downstream defaults it.** `RoundScreen`
+  /// takes a nullable store and writes through `store?.record(…)`, which is
+  /// deliberate — the teaching item is a round that must record nothing — and
+  /// `RootScaffold` hands this route no store, so a practice run started from
+  /// Mapa wrote no day at all. `HomeRoute` has resolved its own the same way
+  /// since it landed.
+  late final DayLogStore _dayLog = widget.dayLog ?? const PrefsDayLogStore();
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_read());
+  }
+
+  @override
+  void didUpdateWidget(MapRoute old) {
+    super.didUpdateWidget(old);
+    _refreshOnComingToTheFront(old.visibility);
+  }
+
+  /// Re-reads the cursor the moment this root becomes the one on screen.
+  ///
+  /// **A rebuild is not a visit**, which is `ProfileRoute`'s wording because it
+  /// is the same problem: `IndexedStack` keeps every root alive, so `initState`
+  /// runs once per launch and there is no second one to hook. Reading on any
+  /// rebuild would read storage for a screen nobody is looking at, and would
+  /// hide the case this exists for.
+  ///
+  /// Measured on a device: the map showed launch-time percentages for ever —
+  /// play a series on Inicio, come back to Mapa, and nothing had moved (PROC-13).
+  void _refreshOnComingToTheFront(RootVisibility before) {
+    if (widget.visibility == RootVisibility.showing &&
+        before == RootVisibility.behind) {
+      unawaited(_read());
+    }
+  }
+
+  /// The pack and the cursor, and the map the two of them make.
+  ///
+  /// **What it drew survives a re-read that has not landed yet.** Assigning
+  /// only on success is what keeps the graph on screen while the second
+  /// reading is in flight, instead of flashing the skeleton every time the
+  /// player taps `Mapa`.
+  Future<void> _read() async {
+    try {
+      final Pack pack = await widget.reader.load();
+      final int served = await widget.seriesCursor.read();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _packRefused = false;
+        _contents = _MapContents(
+          pack: pack,
+          itemsServed: served,
+          map: readSkillMap(items: pack.items, itemsServed: served),
+        );
+      });
+      // Anything at all, the way `FutureBuilder.hasError` took anything at all:
+      // a pack is refused where it is read and this screen only reports that it
+      // was, so narrowing the clause would turn one refusal into a crash.
+    } on Object catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _packRefused = true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_MapContents>(
-      future: _contents,
-      builder: (BuildContext context, AsyncSnapshot<_MapContents> snapshot) {
-        if (snapshot.hasError) {
-          return _unreadable();
-        }
-        final _MapContents? contents = snapshot.data;
-        return contents == null
-            ? _loading()
-            : SkillMapScreen(
-                map: contents.map,
-                onOpen: (int index) => _open(context, contents, index),
-              );
-      },
-    );
+    // **The route insets, not the screen.** `RootScaffold` puts this straight
+    // into an `IndexedStack` with no `SafeArea` of its own, so without this the
+    // title is drawn under the Dynamic Island — measured on an iPhone 17, where
+    // `MAPA DE TEMAS` sat at y=6 with the clock printed across it. `HomeRoute`
+    // and `ProfileRoute` have both returned an `AppShell` since they landed.
+    return AppShell(child: _body(context));
+  }
+
+  Widget _body(BuildContext context) {
+    if (_packRefused) {
+      return _unreadable();
+    }
+    final _MapContents? contents = _contents;
+    return contents == null
+        ? _loading()
+        : SkillMapScreen(
+            map: contents.map,
+            onOpen: (int index) => _open(context, contents, index),
+          );
   }
 
   /// A block the size of the graph that is coming.
@@ -112,11 +191,19 @@ class _MapRouteState extends State<MapRoute> {
     final SkillNode node = contents.map.nodes[index];
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (BuildContext detailContext) => NodeDetailScreen(
-          node: node,
-          previous: index > 0 ? contents.map.nodes[index - 1] : null,
-          onBack: () => Navigator.of(detailContext).pop(),
-          onPractise: () => _practise(detailContext, contents, node),
+        // **Its own `AppShell`, because a sibling route inherits none.** The
+        // detail is pushed onto the tab's navigator, above the shell this route
+        // built and not inside it, so the inset has to be taken a second time —
+        // measured on an iPhone 17, where the back control sat at y=4, entirely
+        // under the clock. `ProfileRoute` wraps each of its pushed screens for
+        // the same reason.
+        builder: (BuildContext detailContext) => AppShell(
+          child: NodeDetailScreen(
+            node: node,
+            previous: index > 0 ? contents.map.nodes[index - 1] : null,
+            onBack: () => Navigator.of(detailContext).pop(),
+            onPractise: () => _practise(detailContext, contents, node),
+          ),
         ),
       ),
     );
@@ -144,7 +231,7 @@ class _MapRouteState extends State<MapRoute> {
         items: items,
         fallbackDiagnosis: contents.pack.fallbackDiagnosis,
         attemptDays: const <DateTime>[],
-        dayLog: widget.dayLog,
+        dayLog: _dayLog,
         onClose: () => Navigator.of(roundContext).pop(),
         // Wired, or the round cycles its five items for ever. What it reports
         // is not read: a practice run is not a series, so it opens no summary

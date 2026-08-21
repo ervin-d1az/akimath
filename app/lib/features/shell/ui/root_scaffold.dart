@@ -98,7 +98,16 @@ class _RootScaffoldState extends State<RootScaffold> {
         // produces an answer, and an answer is only worth remembering when
         // there is somewhere to send it — unlinked play is entirely offline
         // (ADR 0002).
-        AppTab.home => HomeRoute(session: _session),
+        // **It is told when it is being looked at too.** Mapa starts a practice
+        // run against the same day log the home reads, and the home pushed
+        // none of it — so without this the streak on Inicio is whatever it was
+        // when the player last left it (PROC-13).
+        AppTab.home => HomeRoute(
+            visibility: _current == AppTab.home
+                ? RootVisibility.showing
+                : RootVisibility.behind,
+            session: _session,
+          ),
         // **It is told when it is being looked at.** Every root stays mounted,
         // so the profile's `initState` runs once per launch — and it reads
         // figures the home writes while it is behind. Without this it showed
@@ -111,7 +120,15 @@ class _RootScaffoldState extends State<RootScaffold> {
             onSessionChanged: (LinkedSession? session) =>
                 setState(() => _session = session),
           ),
-        AppTab.skills => const MapRoute(),
+        // **Told when it is being looked at, for the reason the profile is.**
+        // The map's figures come from the series cursor, which a series played
+        // on Inicio advances while this root sits behind — so without this it
+        // draws launch-time percentages for ever (PROC-13).
+        AppTab.skills => MapRoute(
+            visibility: _current == AppTab.skills
+                ? RootVisibility.showing
+                : RootVisibility.behind,
+          ),
         // **The last tab with no root**, and `rootsPresentToday` says so — so
         // `visibleTabs` never hands it over. Exhaustive rather than defaulted,
         // so a root arriving is a compile error here instead of a blank tab.

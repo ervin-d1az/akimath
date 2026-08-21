@@ -15,6 +15,7 @@ import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_solved_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/word_search_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
+import 'package:akimath_app/features/shell/policy/visible_tabs.dart';
 import 'package:akimath_app/features/round/ui/summary/series_summary_screen.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
 import 'package:akimath_app/design/widgets/verdict_ring.dart';
@@ -193,18 +194,37 @@ Future<void> _pump(
   String source = _pack,
   Duration delay = Duration.zero,
   DayLogStore? dayLog,
+  RootVisibility visibility = RootVisibility.showing,
 }) async {
   tester.view
     ..physicalSize = const Size(390, 844)
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
+  await _pumpAgain(
+    tester,
+    source: source,
+    delay: delay,
+    dayLog: dayLog,
+    visibility: visibility,
+  );
+}
+
+/// The same tree again, so `didUpdateWidget` runs on the state already there.
+Future<void> _pumpAgain(
+  WidgetTester tester, {
+  String source = _pack,
+  Duration delay = Duration.zero,
+  DayLogStore? dayLog,
+  RootVisibility visibility = RootVisibility.showing,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       home: HomeRoute(
         reader: PackReader(bundle: _FakeBundle(source, delay: delay)),
         now: () => DateTime(2026, 8, 16),
         dayLog: dayLog,
+        visibility: visibility,
       ),
     ),
   );
@@ -821,6 +841,45 @@ void main() {
         findsOneWidget,
         reason: 'today was not recorded, or the home did not re-read',
       );
+    });
+
+    testWidgets('coming back to the front re-reads the streak, and a rebuild '
+        'behind does not', (WidgetTester tester) async {
+      // PROC-13, and the mirror of the map's own case. `_refreshLog` runs when
+      // a series this route pushed comes back, so a day recorded by practising
+      // from Mapa left the home saying `1 DÍA` — the map hands the practice
+      // round the same `DayLogStore` the home reads, and `IndexedStack` keeps
+      // the home alive with no second `initState` to hook.
+      final DayLogStore store = InMemoryDayLogStore(
+        DayLog.empty.recording(DateTime(2026, 8, 15)),
+      );
+
+      await _pump(tester, dayLog: store, visibility: RootVisibility.behind);
+      await tester.pumpAndSettle();
+      expect(find.text('1 DÍA'), findsOneWidget, reason: 'yesterday alone');
+
+      // A practice run on Mapa records today, while the home sits behind it.
+      await store.record(DateTime(2026, 8, 16));
+
+      // **A rebuild is not a visit.** The shell rebuilds every root on every
+      // tab switch, so reading here would read storage for a screen nobody is
+      // looking at, and would hide the case this exists for.
+      await _pumpAgain(
+        tester,
+        dayLog: store,
+        visibility: RootVisibility.behind,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('1 DÍA'), findsOneWidget);
+
+      // Now the player taps `Inicio`.
+      await _pumpAgain(
+        tester,
+        dayLog: store,
+        visibility: RootVisibility.showing,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('2 DÍAS'), findsOneWidget);
     });
 
     testWidgets('a wrong answer records the day just the same',

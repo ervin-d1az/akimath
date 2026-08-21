@@ -92,8 +92,17 @@ Future<List<Tappable>> _pump(
       // wrapper above it is overridden and every screen silently passes at 1.0.
       home: Builder(
         builder: (BuildContext context) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: TextScaler.linear(viewport.textScale)),
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(viewport.textScale),
+            // **The hardware, and it was missing here.** Without these two the
+            // `con muescas` viewports were flat rectangles and this gate could
+            // not see a press squeezed by an inset — `screen_overflow_test.dart`
+            // has applied them since that viewport was added, and the two files
+            // read the same `ScreenViewport`, so one honouring `padding` and the
+            // other ignoring it made the entry mean two different things.
+            padding: viewport.padding,
+            viewPadding: viewport.padding,
+          ),
           child: screen,
         ),
       ),
@@ -136,6 +145,41 @@ void main() {
 
       expect(found.single.fits, isFalse);
       expect(found.single.toString(), contains('24.0×24.0'));
+    });
+
+    testWidgets('the hardware in the way reaches the screen',
+        (WidgetTester tester) async {
+      // **The control for the two `con muescas` viewports, and it was missing.**
+      // This harness set `physicalSize` and the text size and nothing else, so
+      // both notched entries were flat 402×874 rectangles — the same shape as
+      // the two above them, differing only in how much room a screen got.
+      // `screen_overflow_test.dart` had applied `padding` since the day that
+      // viewport was added; this one never did, so the gate could not have
+      // caught a press squeezed by an inset. Nothing on the registry failed
+      // when the two lines landed, which is exactly why the control has to
+      // exist: without it the fix is indistinguishable from no fix.
+      //
+      // A press measured off the inset the screen is actually given: 100 less
+      // the 62 the hardware takes is 38, which is under the floor. With the
+      // inset missing it stays 100 and reads as a pass.
+      final List<Tappable> found = await _pump(
+        tester,
+        Builder(
+          builder: (BuildContext context) => Center(
+            child: GestureDetector(
+              onTap: () {},
+              child: SizedBox(
+                width: 100,
+                height: 100 - MediaQuery.of(context).padding.top,
+              ),
+            ),
+          ),
+        ),
+        viewport: ScreenViewport.notchedPhone,
+      );
+
+      expect(found.single.fits, isFalse);
+      expect(found.single.toString(), contains('100.0×38.0'));
     });
 
     testWidgets('a detector nobody can tap is not counted', (WidgetTester tester) async {
