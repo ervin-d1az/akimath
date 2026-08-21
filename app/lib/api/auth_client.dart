@@ -101,6 +101,11 @@ abstract interface class AuthApi {
     required String redirectTo,
   });
 
+  Future<AuthResult<Accepted>> resetPassword({
+    required String token,
+    required String newPassword,
+  });
+
   Future<AuthResult<String>> accessToken(AuthSession session);
 }
 
@@ -245,6 +250,7 @@ class AuthClient implements AuthApi {
   /// `AndroidManifest.xml` and `Info.plist` plus that scheme added to the
   /// provider's `trusted_origins` — none of which exists. The operation is
   /// written so the screen above it is driving something real the day it does.
+  @override
   Future<AuthResult<Accepted>> resetPassword({
     required String token,
     required String newPassword,

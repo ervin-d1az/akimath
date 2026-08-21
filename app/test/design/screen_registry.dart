@@ -2,6 +2,7 @@ import 'package:akimath_app/api/me.dart';
 import 'package:akimath_app/features/auth/policy/age_gate.dart';
 import 'package:akimath_app/features/auth/ui/age_gate_screen.dart';
 import 'package:akimath_app/features/auth/ui/create_account_screen.dart';
+import 'package:akimath_app/features/auth/ui/new_password_screen.dart';
 import 'package:akimath_app/features/auth/ui/recover_password_screen.dart';
 import 'package:akimath_app/features/auth/ui/sign_in_screen.dart';
 import 'package:akimath_app/features/auth/ui/tutor_consent_screen.dart';
@@ -379,6 +380,30 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         sent: true,
         onBack: () {},
         initialEmail: 'alguien@ejemplo.com',
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'contraseña nueva',
+    build: () => AppShell(
+      child: NewPasswordScreen(
+        onSubmit: (String password) {},
+        busy: false,
+        saved: false,
+        onBack: () {},
+        onSignIn: () {},
+      ),
+    ),
+  ),
+  RegisteredScreen(
+    label: 'contraseña nueva · guardada',
+    build: () => AppShell(
+      child: NewPasswordScreen(
+        onSubmit: (String password) {},
+        busy: false,
+        saved: true,
+        onBack: () {},
+        onSignIn: () {},
       ),
     ),
   ),

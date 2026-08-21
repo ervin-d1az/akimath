@@ -5,6 +5,7 @@ import '../../../api/me.dart';
 import '../policy/age_gate.dart';
 import 'age_gate_screen.dart';
 import 'create_account_screen.dart';
+import 'new_password_screen.dart';
 import 'recover_password_screen.dart';
 import 'sign_in_screen.dart';
 import 'tutor_consent_screen.dart';
@@ -43,6 +44,7 @@ class AuthFlow extends StatefulWidget {
     required this.today,
     required this.onLinked,
     required this.onGaveUp,
+    this.resetToken,
   });
 
   final AuthApi auth;
@@ -54,11 +56,23 @@ class AuthFlow extends StatefulWidget {
   final void Function(LinkedAccount account) onLinked;
   final VoidCallback onGaveUp;
 
+  /// The token out of a password-reset email. Non-null opens the flow on `1.5`
+  /// instead of the gate — resetting a password is not creating an account, so
+  /// there is no band to resolve.
+  ///
+  /// **Nothing passes one today.** The token only ever arrives inside the
+  /// emailed link, and receiving that needs a URL scheme registered in
+  /// `AndroidManifest.xml` and `Info.plist` and added to the provider's
+  /// `trusted_origins` — none of which exists. This is the seam that opens the
+  /// day it does, and it is what lets the screen be driven for real now rather
+  /// than sit unreachable.
+  final String? resetToken;
+
   @override
   State<AuthFlow> createState() => _AuthFlowState();
 }
 
-enum _Step { age, consent, create, signIn, recover, verify }
+enum _Step { age, consent, create, signIn, recover, newPassword, verify }
 
 class _AuthFlowState extends State<AuthFlow> {
   /// The steps behind the one on screen, oldest first.
@@ -66,7 +80,9 @@ class _AuthFlowState extends State<AuthFlow> {
   /// **A stack rather than a predecessor per step**, because more than one
   /// screen leads to the same place and "where you came from" is the only
   /// answer a back control can give that is never surprising.
-  final List<_Step> _trail = <_Step>[_Step.age];
+  late final List<_Step> _trail = <_Step>[
+    widget.resetToken == null ? _Step.age : _Step.newPassword,
+  ];
 
   _Step get _step => _trail.last;
 
@@ -79,6 +95,9 @@ class _AuthFlowState extends State<AuthFlow> {
   /// cleared on the way into `1.4`, so a second visit does not open on the
   /// confirmation the first one earned.
   bool _resetSent = false;
+
+  /// Whether the provider has accepted a new password.
+  bool _passwordSaved = false;
   DateTime _codeIssuedAt = DateTime.now();
 
   /// One rule: back is the step you came from, and behind the first one is the
@@ -265,6 +284,28 @@ class _AuthFlowState extends State<AuthFlow> {
     await _linkWith(session.value);
   }
 
+  Future<void> _savePassword(String password) async {
+    setState(() {
+      _busy = true;
+      _problem = null;
+    });
+
+    final AuthResult<Accepted> saved = await widget.auth.resetPassword(
+      token: widget.resetToken!,
+      newPassword: password,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _busy = false;
+      _problem = _explain(saved);
+      // A reset hands back no session, so this is as far as it goes: the
+      // player signs in next, which is what the screen offers.
+      _passwordSaved = _problem == null;
+    });
+  }
+
   /// The last stretch both doors share: a session becomes the JWT the AkiMath
   /// server verifies, or the screen says why it did not.
   Future<void> _linkWith(AuthSession session) async {
@@ -327,6 +368,14 @@ class _AuthFlowState extends State<AuthFlow> {
         _resetSent = false;
         _goTo(_Step.recover);
       },
+    ),
+    _Step.newPassword => NewPasswordScreen(
+      onSubmit: _savePassword,
+      busy: _busy,
+      saved: _passwordSaved,
+      onBack: _back,
+      onSignIn: () => _goTo(_Step.signIn),
+      problem: _problem,
     ),
     _Step.recover => RecoverPasswordScreen(
       onSubmit: _sendPasswordReset,

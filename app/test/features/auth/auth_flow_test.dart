@@ -18,14 +18,17 @@ class _Provider implements AuthApi {
     this.verifyRefusal,
     this.signInRefusal,
     this.recoveryRefusal,
+    this.resetRefusal,
   });
 
   final AuthRefused<Accepted>? signUpRefusal;
   final AuthRefused<AuthSession>? verifyRefusal;
   final AuthRefused<AuthSession>? signInRefusal;
   final AuthRefused<Accepted>? recoveryRefusal;
+  final AuthRefused<Accepted>? resetRefusal;
   final List<String> calls = <String>[];
   String? recoveryAskedFor;
+  String? resetWith;
 
   @override
   Future<AuthResult<Accepted>> signUp({
@@ -70,6 +73,16 @@ class _Provider implements AuthApi {
     calls.add('sendPasswordReset');
     recoveryAskedFor = email;
     return recoveryRefusal ?? const AuthOk<Accepted>(Accepted());
+  }
+
+  @override
+  Future<AuthResult<Accepted>> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    calls.add('resetPassword');
+    resetWith = '$token/$newPassword';
+    return resetRefusal ?? const AuthOk<Accepted>(Accepted());
   }
 
   @override
@@ -544,5 +557,102 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('sign-in-email')), findsOneWidget);
+  });
+
+  /// The flow opened on a reset token, which is how `1.5` is entered.
+  Future<void> pumpReset(WidgetTester tester, {String token = 'tok-123'}) async {
+    linked = null;
+    gaveUp = false;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AuthFlow(
+          auth: provider,
+          callbackUrl: 'https://auth.example/neondb/auth',
+          today: DateTime.utc(2026, 8, 19),
+          onLinked: (LinkedAccount account) => linked = account,
+          onGaveUp: () => gaveUp = true,
+          resetToken: token,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a reset token opens the new-password screen, not the gate',
+      (WidgetTester tester) async {
+    provider = _Provider();
+    await pumpReset(tester);
+
+    expect(find.text('CONTRASEÑA NUEVA'), findsOneWidget);
+    expect(find.byKey(const Key('age-gate-date')), findsNothing);
+  });
+
+  testWidgets('the new password reaches the provider with its token',
+      (WidgetTester tester) async {
+    provider = _Provider();
+    await pumpReset(tester);
+
+    await tester.enterText(
+        find.byKey(const Key('new-password')), 'una-contra-larga');
+    await tester.enterText(
+        find.byKey(const Key('new-password-again')), 'una-contra-larga');
+    await tester.tap(find.text('Guardar la contraseña'));
+    await tester.pumpAndSettle();
+
+    expect(provider.calls, <String>['resetPassword']);
+    expect(provider.resetWith, 'tok-123/una-contra-larga');
+    expect(find.byKey(const Key('new-password-done')), findsOneWidget);
+  });
+
+  testWidgets('two passwords that differ never reach the provider',
+      (WidgetTester tester) async {
+    provider = _Provider();
+    await pumpReset(tester);
+
+    await tester.enterText(
+        find.byKey(const Key('new-password')), 'una-contra-larga');
+    await tester.enterText(
+        find.byKey(const Key('new-password-again')), 'otra-contra-larga');
+    await tester.tap(find.text('Guardar la contraseña'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('new-password-problem')), findsOneWidget);
+    expect(provider.calls, isEmpty);
+  });
+
+  testWidgets('a short password is refused before the round trip',
+      (WidgetTester tester) async {
+    provider = _Provider();
+    await pumpReset(tester);
+
+    await tester.enterText(find.byKey(const Key('new-password')), 'corta');
+    await tester.enterText(find.byKey(const Key('new-password-again')), 'corta');
+    await tester.tap(find.text('Guardar la contraseña'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('new-password-problem')), findsOneWidget);
+    expect(provider.calls, isEmpty);
+  });
+
+  testWidgets('an expired token is said out loud, not swallowed',
+      (WidgetTester tester) async {
+    provider = _Provider(
+      resetRefusal: const AuthRefused<Accepted>(
+        status: 400,
+        code: 'INVALID_TOKEN',
+        message: 'Ese enlace ya venció.',
+      ),
+    );
+    await pumpReset(tester);
+
+    await tester.enterText(
+        find.byKey(const Key('new-password')), 'una-contra-larga');
+    await tester.enterText(
+        find.byKey(const Key('new-password-again')), 'una-contra-larga');
+    await tester.tap(find.text('Guardar la contraseña'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ese enlace ya venció.'), findsOneWidget);
+    expect(find.byKey(const Key('new-password-done')), findsNothing);
   });
 }
