@@ -235,8 +235,19 @@ void main() {
       // D7: operators default to Darumadrop, `=` to Plus Jakarta 800. The
       // conflict the sources could not settle is defused at the API — a screen
       // that draws it differently says so on the token.
+      //
+      // **`×` is the second exception, and it is a font defect rather than a
+      // design choice.** Darumadrop draws U+00D7 as a slashed O: rendered
+      // against every candidate the font carries, `÷` is correct, `·` is
+      // correct but tiny, and `✕`, `∙`, `⋅` and `⨯` are absent. On a device
+      // `6 × 7` read `6 Ø 7`, which a learner cannot parse.
+      //
+      // The character is **not** substituted. A letter `x` renders correctly
+      // and would put a letter in the content, which a screen reader says as
+      // "equis" rather than "por".
       expect(OperatorNode.of('+').face, MathFace.display);
-      expect(OperatorNode.of('×').face, MathFace.display);
+      expect(OperatorNode.of('÷').face, MathFace.display);
+      expect(OperatorNode.of('×').face, MathFace.textHeavy);
       expect(OperatorNode.of('=').face, MathFace.textHeavy);
     });
 
