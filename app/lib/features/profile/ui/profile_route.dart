@@ -51,7 +51,20 @@ class ProfileRoute extends StatefulWidget {
     this.dayLog,
     this.seriesCursor = const SeriesCursorStore(),
     this.fetchHistory,
+    this.auth,
+    this.whoAmI,
   });
+
+  /// Neon Auth, when a test stands in for it.
+  ///
+  /// Null in the app, where this route opens an [AuthClient] of its own and
+  /// closes it again — it closes only what it opened, so an injected provider
+  /// outlives the flow it was handed to.
+  final AuthApi? auth;
+
+  /// Asks the AkiMath server who a token belongs to. A closure, for the reason
+  /// every other request here is one.
+  final Future<MeResult> Function(String accessToken)? whoAmI;
 
   /// Where this device's own player id lives. Injected so a widget test never
   /// reaches a plugin.
@@ -262,13 +275,29 @@ class _ProfileRouteState extends State<ProfileRoute> {
   Future<void> _askWhoIAm(String accessToken) async {
     setState(() => _accountState = AccountState.loading);
 
-    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
-    final MeResult result = await api.getMe(accessToken);
-    api.close();
+    final MeResult result = await _whoAmI(accessToken);
     if (!mounted) {
       return;
     }
     setState(() => _accountState = accountStateFor(result));
+  }
+
+  /// One lookup, used by the retry here and by the sign-in door's band.
+  ///
+  /// **Both had to be the same call.** The flow asks who a token belongs to in
+  /// order to read the band the server stores; this route asks the same
+  /// question to redraw the account section. Two spellings of `GET /me` is two
+  /// places to change the day it moves.
+  Future<MeResult> Function(String accessToken) get _whoAmI =>
+      widget.whoAmI ?? _meOverASocket;
+
+  Future<MeResult> _meOverASocket(String accessToken) async {
+    final ApiClient api = ApiClient(baseUrl: Uri.parse(Endpoints.apiBaseUrl));
+    try {
+      return await api.getMe(accessToken);
+    } finally {
+      api.close();
+    }
   }
 
   /// The one destructive act, and it is a full screen rather than a dialog.
@@ -306,19 +335,31 @@ class _ProfileRouteState extends State<ProfileRoute> {
     ));
   }
 
-  void _openAccountFlow() {
-    final AuthClient auth = AuthClient(baseUrl: Uri.parse(widget.authBaseUrl));
+  /// Opens the account flow on the door the player pressed.
+  ///
+  /// **Two doors, one flow.** Creating an account and coming back to one are
+  /// different errands and the sign-in one used to be four screens deep, behind
+  /// a birth date nobody coming back should be asked for.
+  void _openAccountFlow(AuthEntry entry) {
+    // Only what this route opened is this route's to close. An injected
+    // provider belongs to whoever handed it over.
+    final AuthClient? own = widget.auth == null
+        ? AuthClient(baseUrl: Uri.parse(widget.authBaseUrl))
+        : null;
+    final AuthApi auth = own ?? widget.auth!;
     Navigator.of(context).push(MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (BuildContext _) => AppShell(
         child: AuthFlow(
           auth: auth,
+          whoAmI: _whoAmI,
+          entry: entry,
           // The provider's own origin: the only one it trusts while
           // `trusted_origins` is empty. See `Endpoints.callbackUrl`.
           callbackUrl: widget.authBaseUrl,
           today: widget.now(),
           onLinked: (LinkedAccount account) {
-            auth.close();
+            own?.close();
             if (!mounted) {
               return;
             }
@@ -333,7 +374,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
             // that arrives any other way is linked too.
           },
           onGaveUp: () {
-            auth.close();
+            own?.close();
             Navigator.of(context).pop();
           },
         ),
@@ -409,6 +450,13 @@ class _ProfileRouteState extends State<ProfileRoute> {
             DemoFigures.enabled ? DemoFigures.averageTenthsOfSecond : null,
       );
 
+  /// Whether either account door is worth drawing.
+  ///
+  /// One condition for both: a build with no endpoints can reach no provider,
+  /// and a device that already has a session has nowhere to go through either.
+  bool get _offerADoor =>
+      widget.authBaseUrl.isNotEmpty && widget.session == null;
+
   @override
   Widget build(BuildContext context) {
     // **`noAccount` before anything else.** With no session there is no request
@@ -441,9 +489,14 @@ class _ProfileRouteState extends State<ProfileRoute> {
             ? () => unawaited(_askWhoIAm(widget.session!.accessToken))
             : null,
         // Absent rather than broken when the build was given no endpoints.
-        onCreateAccount: widget.authBaseUrl.isNotEmpty && widget.session == null
-            ? _openAccountFlow
+        onCreateAccount: _offerADoor
+            ? () => _openAccountFlow(AuthEntry.createAccount)
             : null,
+        // **The returning player's door, and it is on the root.** It used to
+        // exist only as a text link at the bottom of the sign-up form, three
+        // screens and a birth date past this point.
+        onSignIn:
+            _offerADoor ? () => _openAccountFlow(AuthEntry.signIn) : null,
       ),
     );
   }

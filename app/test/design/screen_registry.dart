@@ -874,11 +874,17 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     label: 'perfil',
     // The third root, and the one declared rule 1 actually names. In the
     // shell, because that is the only way it renders.
+    //
+    // **Both doors, because a configured build draws both.** A returning
+    // player's way in used to be a text link three screens deep; a second
+    // button here is a second thing the touch-target sweep has to measure, and
+    // this screen scrolls, so overflow would never have caught it.
     build: () => AppShell(
       child: ProfileScreen(
         accountState: AccountState.none,
         onOpenSettings: () {},
         onCreateAccount: () {},
+        onSignIn: () {},
         figures: registryProfileFigures,
         historyState: HistoryState.noAccount,
       ),

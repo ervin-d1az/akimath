@@ -1,5 +1,6 @@
 import 'package:akimath_app/api/auth_client.dart';
 import 'package:akimath_app/api/me.dart';
+import 'package:akimath_app/api/me_result.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/features/auth/ui/auth_flow.dart';
 import 'package:flutter/material.dart';
@@ -115,14 +116,28 @@ void main() {
   LinkedAccount? linked;
   bool gaveUp = false;
 
+  /// How many times the flow asked the AkiMath server who the token belongs to.
+  ///
+  /// **The create path must never ask.** It resolved a band on the first
+  /// screen, so a lookup there would be a second answer to a settled question —
+  /// and the count is what lets a test say so rather than assume it.
+  int meLookups = 0;
+
+  Future<MeResult> lookUpMe(String accessToken) async {
+    meLookups += 1;
+    return const MeNoPlayer();
+  }
+
   Future<void> pumpFlow(WidgetTester tester, {String? born}) async {
     linked = null;
     gaveUp = false;
+    meLookups = 0;
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: AuthFlow(
             auth: provider,
+            whoAmI: lookUpMe,
             callbackUrl: 'akimath://verified',
             today: DateTime.utc(2026, 8, 19),
             onLinked: (LinkedAccount account) => linked = account,
@@ -211,6 +226,11 @@ void main() {
     expect(linked!.accessToken, 'header.payload.signature');
     expect(linked!.email, 'alguien@ejemplo.com');
     expect(linked!.ageBand, AgeBand.adult);
+    // **The create path never asks the server for a band.** It has one, from
+    // the gate, and a lookup here would be a second answer to a settled
+    // question — the sign-in door asks precisely because it has no gate behind
+    // it.
+    expect(meLookups, 0);
   });
 
   testWidgets(
@@ -567,6 +587,7 @@ void main() {
       home: Scaffold(
         body: AuthFlow(
           auth: provider,
+          whoAmI: lookUpMe,
           callbackUrl: 'https://auth.example/neondb/auth',
           today: DateTime.utc(2026, 8, 19),
           onLinked: (LinkedAccount account) => linked = account,

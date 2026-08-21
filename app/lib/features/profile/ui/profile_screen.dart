@@ -50,6 +50,7 @@ class ProfileScreen extends StatelessWidget {
     this.accountEmail,
     this.entries = const <HistoryEntry>[],
     this.onCreateAccount,
+    this.onSignIn,
     this.onRetryAccount,
     this.onRetryHistory,
   });
@@ -79,6 +80,15 @@ class ProfileScreen extends StatelessWidget {
 
   /// Offered only where the build has endpoints to reach (DR-P2).
   final VoidCallback? onCreateAccount;
+
+  /// The returning player's door, beside the new player's.
+  ///
+  /// **Two errands, two controls.** The only way into `1.1 Iniciar sesión` used
+  /// to be a text link at the bottom of `1.2 Crear cuenta`, past the age gate —
+  /// so coming back to an account meant being asked when you were born. Drawn
+  /// as the secondary weight because exactly one control on a screen is *the*
+  /// action, and for a signed-out profile that is still making an account.
+  final VoidCallback? onSignIn;
 
   /// Offered only where retrying could change the answer.
   final VoidCallback? onRetryAccount;
@@ -117,13 +127,8 @@ class ProfileScreen extends StatelessWidget {
                 onRetry: onRetryAccount,
               ),
             ),
-          ] else if (onCreateAccount != null) ...<Widget>[
-            const SizedBox(height: BrandShape.space3),
-            BrandButton.primary(
-              label: 'Crear cuenta',
-              onPressed: onCreateAccount!,
-            ),
-          ],
+          ] else
+            ..._doors(),
           const SizedBox(height: BrandShape.space4),
           _headlinePair(),
           const SizedBox(height: BrandShape.space2),
@@ -140,6 +145,26 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// The two ways in, for a device with no session.
+  ///
+  /// Each is drawn only where its caller hands a callback, the same rule every
+  /// other optional control on this screen follows: one that cannot act reads
+  /// as broken rather than as unbuilt (DR-P2).
+  List<Widget> _doors() {
+    final VoidCallback? create = onCreateAccount;
+    final VoidCallback? signIn = onSignIn;
+    return <Widget>[
+      if (create != null) ...<Widget>[
+        const SizedBox(height: BrandShape.space3),
+        BrandButton.primary(label: 'Crear cuenta', onPressed: create),
+      ],
+      if (signIn != null) ...<Widget>[
+        SizedBox(height: create == null ? BrandShape.space3 : BrandShape.space2),
+        BrandButton.secondary(label: 'Ya tengo cuenta', onPressed: signIn),
+      ],
+    ];
   }
 
   Widget _identity(String? email) => Row(
