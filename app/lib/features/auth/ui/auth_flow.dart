@@ -20,11 +20,18 @@ class LinkedAccount {
     required this.accessToken,
     required this.ageBand,
     required this.email,
+    required this.provider,
   });
 
   final String accessToken;
   final AgeBand ageBand;
   final String email;
+
+  /// The credential the token was derived from — what survives a relaunch.
+  ///
+  /// An access token is minted per request and expires in minutes, so it is
+  /// the wrong thing to keep. This is what a launch re-derives one from.
+  final AuthSession provider;
 }
 
 /// Which door the flow opens on.
@@ -145,6 +152,9 @@ class _AuthFlowState extends State<AuthFlow> {
   /// as the gate is on screen, and it is what tells [_resolved] to finish
   /// rather than open the sign-up form.
   String? _pendingToken;
+
+  /// The cookie behind [_pendingToken], held for the same stretch.
+  AuthSession? _pendingProvider;
   String _email = '';
   String? _problem;
   bool _busy = false;
@@ -214,6 +224,7 @@ class _AuthFlowState extends State<AuthFlow> {
         // 0002 says a child's device never gets a session, and that has to be
         // true of the door that already has one.
         _pendingToken = null;
+        _pendingProvider = null;
         // **Consent replaces the trail rather than extending it**, so
         // `req-age-gate`'s "no path from here reaches 1.2" is true by
         // construction — there is nothing behind consent to go back to, and
@@ -233,10 +244,11 @@ class _AuthFlowState extends State<AuthFlow> {
         _trail.add(_Step.create);
       }
     });
-    if (signedIn != null) {
+    final AuthSession? held = _pendingProvider;
+    if (signedIn != null && held != null) {
       // The gate was the last thing missing: the account is already signed in
       // and this is the band its link will carry.
-      _handOver(signedIn, band);
+      _handOver(signedIn, band, held);
     }
   }
 
@@ -400,11 +412,11 @@ class _AuthFlowState extends State<AuthFlow> {
 
     final AgeBand? resolved = _band;
     if (resolved == null) {
-      await _bandTheServerAlreadyHas(token.value);
+      await _bandTheServerAlreadyHas(token.value, session);
       return;
     }
     setState(() => _busy = false);
-    _handOver(token.value, resolved);
+    _handOver(token.value, resolved, session);
   }
 
   /// The sign-in door's band, asked of the one place that knows it.
@@ -412,7 +424,10 @@ class _AuthFlowState extends State<AuthFlow> {
   /// `GET /me` answers `players.age_band` itself, so a returning player is
   /// routed the way the server already routes them — read, never guessed. The
   /// gate is reached only when there is no player to read it off.
-  Future<void> _bandTheServerAlreadyHas(String accessToken) async {
+  Future<void> _bandTheServerAlreadyHas(
+    String accessToken,
+    AuthSession provider,
+  ) async {
     final MeResult who = await widget.whoAmI(accessToken);
     if (!mounted) {
       return;
@@ -420,7 +435,7 @@ class _AuthFlowState extends State<AuthFlow> {
     switch (who) {
       case MeFound(:final Me me):
         setState(() => _busy = false);
-        _handOver(accessToken, me.ageBand);
+        _handOver(accessToken, me.ageBand, provider);
       case MeNoPlayer():
         // `DELETE /me` leaves the account standing, so this is where an erased
         // player comes back to. A link needs a band and nothing on the server
@@ -429,6 +444,7 @@ class _AuthFlowState extends State<AuthFlow> {
         setState(() {
           _busy = false;
           _pendingToken = accessToken;
+          _pendingProvider = provider;
           _trail.add(_Step.age);
         });
       case MeRejected():
@@ -449,8 +465,14 @@ class _AuthFlowState extends State<AuthFlow> {
     }
   }
 
-  void _handOver(String accessToken, AgeBand band) => widget.onLinked(
-        LinkedAccount(accessToken: accessToken, ageBand: band, email: _email),
+  void _handOver(String accessToken, AgeBand band, AuthSession provider) =>
+      widget.onLinked(
+        LinkedAccount(
+          accessToken: accessToken,
+          ageBand: band,
+          email: _email,
+          provider: provider,
+        ),
       );
 
   /// A failure as something a person can read, or null if it was not one.

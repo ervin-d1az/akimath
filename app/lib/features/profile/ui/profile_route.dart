@@ -436,6 +436,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
               email: account.email,
               accessToken: account.accessToken,
               ageBand: account.ageBand,
+              provider: account.provider,
             ));
             Navigator.of(context).pop();
             // The linking follows from the session existing — see

@@ -3,72 +3,9 @@ import 'dart:io';
 
 import 'package:meta/meta.dart';
 
-/// A call that succeeded and returned nothing worth carrying.
-@immutable
-final class Accepted {
-  const Accepted();
-}
+import 'auth_result.dart';
 
-/// A Neon Auth session, as the thing needed to ask for a token.
-///
-/// **A cookie, because that is what the provider issues.** Better Auth's
-/// `bearer` plugin would let the session travel in a header, and it is not in
-/// `plugin_configs` — so the session is a `Set-Cookie` value that has to be
-/// carried back. Held opaquely: nothing here parses it, and it is never logged.
-@immutable
-final class AuthSession {
-  const AuthSession(this.cookie);
-
-  /// The cookie header value to send back, verbatim.
-  final String cookie;
-
-  @override
-  String toString() => 'AuthSession(<redacted>)';
-}
-
-/// What an auth call came back as.
-@immutable
-sealed class AuthResult<T> {
-  const AuthResult();
-}
-
-/// The provider did what was asked.
-@immutable
-final class AuthOk<T> extends AuthResult<T> {
-  const AuthOk(this.value);
-  final T value;
-}
-
-/// The provider said no, for a reason a person can act on.
-///
-/// A wrong code, an address already taken, a password too short. `code` is the
-/// provider's own machine-readable tag where it sent one.
-@immutable
-final class AuthRefused<T> extends AuthResult<T> {
-  const AuthRefused({
-    required this.status,
-    required this.code,
-    required this.message,
-  });
-  final int status;
-  final String code;
-  final String message;
-}
-
-/// An answer arrived and was not one this client can read.
-@immutable
-final class AuthFailed<T> extends AuthResult<T> {
-  const AuthFailed({required this.status, required this.reason});
-  final int status;
-  final String reason;
-}
-
-/// No answer arrived at all.
-@immutable
-final class AuthUnreachable<T> extends AuthResult<T> {
-  const AuthUnreachable(this.reason);
-  final String reason;
-}
+export 'auth_result.dart';
 
 /// The calls the account flow makes, as a seam.
 ///
