@@ -254,12 +254,16 @@ credit.
   edit — a `.gitignore` tweak, a formatting sweep, a refactor the change did not need — into a
   commit that describes something else.
 
-- **GIT-3** MUST: **`dev` is the working branch and pushing to it is authorized.** `main` is
-  protected by a GitHub ruleset: no direct push, no force-push, no deletion — it is reached only by
-  a pull request from `dev`. Feature branches are optional here and are cut from `dev`, never from
-  another feature branch. The diff base for any review or audit is **`origin/dev`**, stated
-  explicitly: `origin/HEAD` resolves to `origin/main`, which lags `dev`, so a default base blames
-  commits already on `dev` on the change under review.
+- **GIT-3** MUST: **`main` is the trunk.** It is protected by the `protect-main` ruleset — no
+  direct push, no force-push, no deletion — and is reached only by a pull request from a branch cut
+  from `main`, never from another feature branch. The diff base for any review or audit is
+  **`origin/main`**, stated explicitly rather than left to `origin/HEAD`.
+
+  **`dev` is not the working branch and has not been since 2026-08-17**, when it stopped at pull
+  request #6. Everything since — #7 through #108 — merged into `main`, which is 155 commits ahead
+  and differs in 656 files, and `dev` is a strict ancestor holding nothing `main` does not. This
+  rule said the opposite until 2026-08-26; a review that took `origin/dev` as its base read those
+  155 commits as the change under it.
 
 ## PROC — Process
 
@@ -279,6 +283,7 @@ credit.
     cd app               && flutter test
     cd packages/server   && npm run verify      # tsc --noEmit && vitest run
     cd packages/contract && npm run verify      # tsc --noEmit && vitest run
+    cd packages/core     && npm run verify      # tsc --noEmit && vitest run
     ```
 
     `--fatal-infos` is not decoration: these are the commands `.claude/hooks/verify-gate.sh` runs
@@ -288,9 +293,9 @@ credit.
     (The hook and CI spell the TypeScript half as `npm run typecheck` then `npm test`, which is
     exactly what `npm run verify` chains — same two checks, one script.)
     The rulebook, the hook and CI must name one set of commands; if they ever diverge, reconcile
-    them in the same session (PROC-6). The baseline is **zero**: the Flutter suite, 3 TypeScript
-    tests in `packages/server` and 189 in `packages/contract` all pass and every analyzer reports
-    clean, so there is no pre-existing noise to hide a new failure in. Green before, green after,
+    them in the same session (PROC-6). The baseline is **zero**: as of 2026-08-26 the Flutter suite is 3275,
+    `packages/server` 325 of 454 (129 skip without a Postgres), `packages/contract` 248 and
+    `packages/core` 340, all passing, and every analyzer reports clean, so there is no pre-existing noise to hide a new failure in. Green before, green after,
     stated with the counts.
   - **Tier 1b — SHOULD, when the change is in the pure core: show the tests bite.** A green suite
     that would stay green with the logic inverted is not evidence.

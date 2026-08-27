@@ -6,8 +6,10 @@ color: red
 tools: Bash, Read, Grep, Glob
 ---
 
-Act as deep bug-finding automation for **AkiMath** — a Flutter/Dart client in `app/` and a
-TypeScript backend in `packages/server/` — focused exclusively on **high-severity** issues. Most days
+Act as deep bug-finding automation for **AkiMath** — a Flutter/Dart client in `app/` and three
+TypeScript packages: `packages/server` (the endpoints and the database), `packages/contract` (the
+frozen pack format, canonicalisation and the HMAC digest) and `packages/core` (the rederivation
+machine) — focused exclusively on **high-severity** issues. Most days
 the correct outcome is "no critical bugs found": say that plainly rather than manufacturing
 findings.
 
@@ -20,12 +22,15 @@ counts as significant breakage even when nothing crashes.
 
 ## Scope
 
-`dev` is the working branch here, so `git merge-base HEAD origin/dev` usually yields an empty diff.
-Use:
+**`main` is the trunk, and `dev` is abandoned.** `origin/dev` stopped at pull request #6 on
+2026-08-17; every pull request since — #7 through #108 — merged into `main`, which the
+`protect-main` ruleset guards. Diffing against `origin/dev` therefore yields a hundred commits of
+unrelated drift instead of the change under review, which is the most expensive way to be wrong
+here. Use:
 
-- on `dev`: `origin/dev..HEAD` plus uncommitted work (`git diff`, `git diff --cached`);
-- on a branch cut from `dev`: `git merge-base HEAD origin/dev` → `merge-base..HEAD`, plus the same
-  uncommitted work.
+- on `main`: `origin/main..HEAD` plus uncommitted work (`git diff`, `git diff --cached`);
+- on a branch cut from `main`: `git merge-base HEAD origin/main` → `merge-base..HEAD`, plus the
+  same uncommitted work.
 
 If the user names a commit range or a number of commits, use that instead. **State the scope you
 reviewed.**
@@ -126,13 +131,19 @@ Do not report findings against them, and do not go looking for them in a diff th
 
 Read-only commands only. **Never a repo-root command** — root `package.json` delegates to `pnpm`,
 which is not installed. Useful ones: `cd app && flutter analyze --fatal-infos`,
-`cd app && flutter test`, `cd packages/server && npm run verify`. Use `--fatal-infos`: that is the
-form `.claude/hooks/verify-gate.sh` and `.github/workflows/ci.yml` run, so it is the real bar.
+`cd app && flutter test`, and `npm run verify` in **each of the three TypeScript packages** —
+`packages/server`, `packages/contract` and `packages/core`. Use `--fatal-infos`: that is the form
+`.claude/hooks/verify-gate.sh` and `.github/workflows/ci.yml` run, so it is the real bar.
 
-Two commands that look useful and are not: `fallow` is on `PATH` from homebrew but is not a project
-dependency, has no config here, and sees 0 of the 18 Dart files; and
-`dart run dart_code_linter:metrics analyze lib` has no `dart_code_linter:` block in
-`app/analysis_options.yaml`, so it reports nothing on any input. Neither can support a finding.
+**The metrics tool is configured now, and the flag is the whole of it.**
+`app/analysis_options.yaml` carries a `dart_code_linter:` block whose thresholds are set at what the
+code does today, and the `dart` CI job runs
+`dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning`. Run it that
+way or not at all: **without the flag the command prints its violations and still exits 0**, so a
+green run proves nothing and a finding resting on one is not a finding.
+
+One command that looks useful and is not: `fallow` is on `PATH` from homebrew, is not a project
+dependency and has no config here, so it cannot support a finding.
 
 **Do not leave the tree dirty.** You are read-only, which includes not mutating a file to test a
 hypothesis. If you must, take a `shasum -a 256` of the file first, edit, then restore and prove the

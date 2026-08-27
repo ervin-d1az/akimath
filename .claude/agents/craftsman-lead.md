@@ -41,7 +41,7 @@ work item (ARCHITECTURE.md §9 phase, or a direct request)
   → [BUG HUNT]  craftsman-bug-hunter — high-severity correctness only
   → [EVIDENCE]  the committed suites + static analysis, then the tier the change deserves
   → ⏸ HUMAN ASKS to land
-  → [LAND]      craftsman-engineer commits; push to `dev` only when asked
+  → [LAND]      craftsman-engineer commits; push the branch only when asked
   → [ARCHIVE]   /opsx:archive, only after the pull request has merged
 ```
 
@@ -140,8 +140,9 @@ commands, with the flags exactly as written:
 
 | Stack | Commands | Green today |
 |---|---|---|
-| Dart | `cd app && flutter analyze --fatal-infos` · `cd app && flutter test` | 0 issues · 34/34 |
-| TypeScript | `cd packages/server && npm run verify` (`tsc --noEmit` + `vitest run`) | 0 errors · 3/3 |
+| Dart | `cd app && flutter analyze --fatal-infos` · `cd app && flutter test` | 0 issues · 3275 |
+| Dart | `cd app && dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning` | 0 violations |
+| TypeScript | `npm run verify` (`tsc --noEmit` + `vitest run`) in **each of the three packages touched** | 0 errors · 325/454 server, 248 contract, 340 core |
 
 **These are the enforced commands, not a suggestion.** `.claude/hooks/verify-gate.sh` is registered
 in `.claude/settings.json` as a `PreToolUse` hook on `Bash`: it runs `flutter analyze --fatal-infos`,
@@ -150,9 +151,11 @@ which blocks the tool call. `.github/workflows/ci.yml` runs the same set. An eng
 plain `flutter analyze` will be blocked by the hook and not know why — so require the flag in the
 evidence, not just in the gate.
 
-`dart run dart_code_linter:metrics analyze lib` is **not evidence and must not be accepted as
-such**: `app/analysis_options.yaml` has no `dart_code_linter:` block, so the tool has no rules
-enabled and exits 0 on deliberately awful code. `ci.yml` omits it for the same measured reason.
+`dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning` **is**
+evidence and CI enforces it: `app/analysis_options.yaml` carries the `dart_code_linter:` block and
+`ci.yml` runs that exact command. Require the flag in the evidence the same way you require
+`--fatal-infos` — without it the command prints its violations and exits 0, so a ledger citing the
+bare form is claiming a gate that cannot fail, and that is the thing to reject.
 
 **The baseline here is zero, on every one of those.** That makes tier 1 stricter than a
 baseline-aware typecheck, not looser: any nonzero count is a regression introduced by this change,
@@ -163,9 +166,9 @@ figures above.
 **Tier 1b — prove the tests actually bite.** A green suite that would stay green with the logic
 inverted is not evidence.
 
-- *TypeScript:* `cd packages/server && npm run mutation` (Stryker; `break: 70`, scoring 100.00
-  today) and `cd packages/server && npm run dry` (jscpd, 0 clones). Report the score and the
-  surviving mutants.
+- *TypeScript:* `npm run mutation` (Stryker; `break: 70`) and `npm run dry` (jscpd, 0 clones) in
+  the package that changed — `packages/server` scores 98.92 and `packages/contract` 91.71. Report
+  the score and the surviving mutants.
 - *Dart:* there is **no configured mutation harness** — `mutation_test` is a dev dependency but the
   rules XML that would define its test commands does not exist. Do not invent the command. Until it
   exists, the substitute is a **falsification step**, and it edits versioned production code, so

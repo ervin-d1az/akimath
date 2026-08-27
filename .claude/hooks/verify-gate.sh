@@ -47,11 +47,13 @@ set -uo pipefail
 # fired on any packages/ path but only ever ran packages/server, so a
 # contract-only change was gated by nothing at all.
 #
-# `dart run dart_code_linter:metrics` is in neither place. With no
-# `dart_code_linter:` block in app/analysis_options.yaml it reports nothing at
-# all — verified against a file written to be awful — and forcing thresholds on
-# the command line lights up four pre-existing files. See the comment in
-# .github/workflows/ci.yml.
+# `dart run dart_code_linter:metrics` is in CI and deliberately not here.
+# app/analysis_options.yaml carries the `dart_code_linter:` block now and
+# .github/workflows/ci.yml runs the command with
+# --set-exit-on-violation-level=warning, which is what makes it bite: without
+# that flag it prints its violations and still exits 0. It stays out of this
+# hook because this hook runs per commit and that step is CI's. This paragraph
+# claimed the opposite until 2026-08-26.
 #
 # BASELINE — why "inherited findings" cannot block here
 # ----------------------------------------------------
@@ -77,9 +79,13 @@ set -uo pipefail
 #
 # ENVIRONMENT
 # -----------
-#   AKIMATH_GATE_BASE      integration branch used when the current branch has
-#                          no upstream. Default origin/dev. Set in
-#                          .claude/settings.json.
+#   AKIMATH_GATE_BASE      trunk used to scope the change when the current
+#                          branch has no upstream. Default origin/main. Set in
+#                          .claude/settings.json. It was origin/dev until
+#                          2026-08-26, which stopped being the trunk at pull
+#                          request #6 on 2026-08-17 — against that base every
+#                          branch looks like 656 changed files, so the gate
+#                          could never scope itself to the change under it.
 #   AKIMATH_COMMIT_EMAIL   required git commit identity. Default
 #                          geineryodan@gmail.com.
 #   AKIMATH_FLUTTER_BIN    absolute path to flutter, when PATH does not carry it.
@@ -94,7 +100,7 @@ set -uo pipefail
 #                          whole packages/contract suite is 0.8s) so it can only
 #                          ever fire on a hang, never on a slow machine.
 
-BASE_REF="${AKIMATH_GATE_BASE:-origin/dev}"
+BASE_REF="${AKIMATH_GATE_BASE:-origin/main}"
 REQUIRED_EMAIL="${AKIMATH_COMMIT_EMAIL:-geineryodan@gmail.com}"
 TIMEOUT_SECONDS="${AKIMATH_GATE_TIMEOUT:-600}"
 # Seconds between the polite SIGTERM and the SIGKILL, so a runner that traps
