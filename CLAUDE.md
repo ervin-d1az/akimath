@@ -19,11 +19,26 @@ child-directed app have to do" — a materially different question with a differ
 Where a comment or a document says "a child", ask whether it means *the player* or specifically
 *the under-13 case*. Much of the prose written before this clarification says the first and means
 the second. Before adding *any* dependency, check whether it phones
-home; if it does, it does not go in. Today that constraint holds by construction — `app/`
-ships `flutter`, `cupertino_icons`, `meta` and `shared_preferences` at runtime — the last
-added 2026-08-16 with its audit recorded in `dependency_allowlist_test.dart` itself — `packages/server` has no
-`dependencies` key at all, and `packages/contract` has exactly one: `zod`, pinned to an
-exact `4.4.3` because the pack determinism gate is byte-for-byte.
+home; if it does, it does not go in. Today that constraint holds by construction, and the four
+shipping sets are — audited 2026-08-27, each against its own manifest and its own lock file:
+
+- `app/` ships **five** at runtime: `flutter`, `cupertino_icons`, `meta`, `shared_preferences`
+  (added 2026-08-16) and `crypto` (added 2026-08-20 for the offline HMAC verifier), the last two
+  with their audits recorded in `dependency_allowlist_test.dart` itself. The **transitive runtime
+  closure is 28 packages**, all Flutter-team or Dart-team; the only ones exposing a network API are
+  the SDK itself (`flutter`, `sky_engine`, `web`), which is where `app/lib/api/`'s `dart:io` client
+  gets its socket. No plugin in that closure references one.
+- `packages/core` has **no `dependencies` key at all** — the zero-dependency package.
+- `packages/server` has **six**: four third-party, pinned exactly (`pg`, `hono`,
+  `@hono/node-server`, `jose`), plus the first-party `@akimath/core` and `@akimath/contract`
+  linked by `file:` path. Its transitive runtime tree is **17 third-party packages**, thirteen of
+  them `pg`'s.
+- `packages/contract` has exactly one: `zod`, pinned to an exact `4.4.3` because the pack
+  determinism gate is byte-for-byte, and bringing nothing transitively.
+
+**The gate is each package's `dependency-allowlist` test, and all four bite** — proven by
+falsification rather than assumed, since a list compared only against itself is green by
+construction.
 
 **Code, identifiers, comments and docs are in English.** Only end-user-visible text is in
 es-MX.

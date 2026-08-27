@@ -53,10 +53,16 @@ dependencies:
   crypto: ^3.0.7
 
 dev_dependencies:
-  # Dev only, and deliberately so: it carries `InMemorySharedPreferencesAsync`,
-  # the backend that lets `PrefsDayLogStore` be tested against the **real**
-  # SharedPreferencesAsync API rather than mocked out. It does not ship, which
-  # is why `dependency_allowlist_test` scopes itself to runtime dependencies.
+  # Declared here for `InMemorySharedPreferencesAsync`, the backend that lets
+  # `PrefsDayLogStore` be tested against the **real** SharedPreferencesAsync API
+  # rather than mocked out.
+  #
+  # It is *not* net-new to the shipping set, but not because it "does not ship"
+  # — measured 2026-08-27, it is inside the runtime closure already, pulled in
+  # transitively by `shared_preferences` and audited as part of it. Declaring it
+  # here adds a dev-time entry point to a package the app already carries, which
+  # is why `dependency_allowlist_test` — scoped to the `dependencies:` block —
+  # correctly leaves it alone.
   shared_preferences_platform_interface: ^2.4.0
 
   flutter_test:
