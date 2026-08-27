@@ -5,6 +5,24 @@
 The system SHALL parse each frozen puzzle payload it claims to support, SHALL refuse each rejection
 row, and SHALL report how many kinds it reads.
 
+#### Scenario: A golden payload is read
+
+- **WHEN** the frozen golden for a supported kind is parsed
+- **THEN** it yields the board, cages and solution the fixture declares
+  → `app/test/content/model/puzzle_fixture_test.dart`
+
+#### Scenario: A rejection row is read
+
+- **WHEN** the frozen rejection row for a supported kind is parsed
+- **THEN** it is refused, so the two stacks cannot disagree about what is a valid board
+  → `app/test/content/model/puzzle_fixture_test.dart`
+
+#### Scenario: A kind this build cannot draw
+
+- **WHEN** a pack carries a puzzle kind the app has no renderer for
+- **THEN** it is refused where the pack is read, not halfway into a board
+  → `app/test/content/model/puzzle_fixture_test.dart`
+
 #### Scenario: Killer is read
 
 - **WHEN** the frozen Killer golden is parsed
