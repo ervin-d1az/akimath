@@ -132,7 +132,7 @@ open, and until it is answered nothing has been shared with one.
 | Email address | Typed by the user when creating an account | Sign-in, and the deletion-confirmation link | **Survives our erasure path** — see below | **2 accounts**, both verified |
 | Password hash | Derived from a password the user chooses | Sign-in | Same as the email — held by the identity provider | **2 accounts** |
 | Account display name | Typed at sign-up because the identity provider requires a value | Nothing. We never display it, never send it to another player, and our own `players` table has no column for it | Same as the email | **2 accounts** |
-| Session IP address and user-agent | Recorded automatically by the identity provider for every session | Nothing we asked for — see the note below | Until the session row is removed | **7 sessions** |
+| Session IP address and user-agent | Recorded automatically by the identity provider for every session | Nothing we asked for — see the note below | **No period we set.** Our retention job does not touch these rows. The session itself expires 7 days after sign-in; whether the row is then deleted or merely invalidated is the provider's behaviour and **we have not verified which** | **7 sessions**, none yet expired |
 | `attempts` — one row per exercise answered: which item, what was typed, whether it was right, when | The player's own play | Adaptive difficulty and the player's own progress view | **400 days** — see Q-A7 | **0 rows** |
 | `user_skills` — a numeric skill rating per topic | Computed from attempts | Choosing the next exercise's difficulty | Until deletion | **0 rows** |
 | `diag_events` — a row noting which misconception an error matched | Computed from attempts | To improve the explanations the app gives | **30 days** — see Q-A7 | **0 rows** |
@@ -150,7 +150,10 @@ this section said on 2026-08-16:
   `docs/adr/0002`. **The mitigation is structural rather than a setting: a device that resolves to
   the under-13 band never obtains a session at all**, so no under-13 IP address is ever recorded —
   unlinked play is entirely offline and linking is an adult's act. We would value your view on
-  whether that is sufficient, and it is part of what Q-A3 and Q-A4 are really asking.
+  whether that is sufficient, and it is part of what Q-A3 and Q-A4 are really asking. **It is also
+  the one datum here with no retention period of ours**: Q-A7's two figures cover attempts and
+  diagnosis events, and the retention job sweeps only our own tables. Whether these rows need a
+  period, and whose job it is to set one, is a question we did not know to ask on 2026-08-16.
 - **Correction — our erasure path does not erase everything above.** `DELETE /me` removes the
   `players` row and everything that references it — attempts, issued items, offline packs, skill
   ratings and diagnosis events — and this is verified by a test that counts the rows in each table
@@ -231,9 +234,15 @@ an adult is a field we then have to protect and delete. **We do not want to coll
 government identification, a payment instrument, or a signature** unless you tell us one is required.
 
 > **Default encoded:** none. The plan deliberately leaves this open rather than guessing, because a
-> guess here is a schema we would have to change.
-> **What changes:** columns in the schema, and a screen that has not been designed yet — so an answer
-> now costs nothing and an answer later costs a migration.
+> guess here is a schema we would have to change. That is still the position: **no consent-evidence
+> column exists**, and none will until you tell us what one should hold.
+> **What changes, corrected:** the 2026-08-16 version said an answer now cost nothing and an answer
+> later cost a migration. The schema froze on 2026-08-17, so **there is no "now" left — every answer
+> to this question costs a forward-only migration.** That is an argument for answering it sooner
+> rather than an argument that it has stopped mattering, since the columns are still unwritten and
+> nothing has been guessed into them. The screen also exists already
+> (`tutor_consent_screen.dart`) and **collects nothing**: it tells a below-threshold player that an
+> account needs a parent's permission and that play continues on the phone. See Q-A11.
 > **Premise we could not verify:** §5, line 5 — the existence and wording of the verification duty
 > this question assumes. If no such evidence must be retained, the answer is "collect nothing" and
 > the columns never exist.
@@ -296,9 +305,10 @@ regardless.
 
 ### Q-A6 · Do we owe the child a copy of their data, and in what form?
 
-The app has one function on its privacy screen: **`Pedir mi archivo`** — "request my file". We do not
-know whether the *acceso* right obliges us to provide an export at all for this kind of data, and if
-it does:
+The app's privacy screen names one function: **`Pedir mi archivo`** — "request my file". It is drawn
+and deliberately inert: a card with no button and copy saying the file cannot be assembled yet, so
+the screen promises nothing it cannot do. We do not know whether the *acceso* right obliges us to
+provide an export at all for this kind of data, and if it does:
 
 1. **In what form?** A machine-readable file? A human-readable summary? The child's answered
    exercises are the bulk of it and are not meaningful to a person outside the app.
@@ -309,8 +319,12 @@ it does:
 > requires — recorded as a default, not decided.
 > **What changes:** if no export is owed, one feature disappears. If one is owed, it acquires a
 > deadline and a format.
-> **Related:** deletion is already built and is not in question — it is available in the app and from
-> a public web page that requires no install, and it erases everything in §2.1.
+> **Related, and corrected — deletion is *partly* built, and it is in question.** It is available
+> inside the app and it erases the `players` row and everything referencing it. It does **not** erase
+> the identity-provider account, so the email address, the password hash and the account name survive
+> it; and the public web page that requires no install does not exist yet. §2.1's last two notes
+> carry the detail. Whether what we erase today is a complete answer to an *acceso* or *cancelación*
+> request is part of what we are asking.
 
 ---
 
@@ -337,21 +351,35 @@ progress; the 30 is a debugging window.
 
 ---
 
-### Q-A8 · The email provider will receive children's — and parents' — email addresses. What does that require?
+### Q-A8 · Who else holds this data, and what does each of them require?
 
-Account sign-in and the deletion-confirmation link both need transactional email. That provider is
-the **only** external company that will ever hold any personal data of ours, and we have not chosen
-one yet — deliberately, because the choice has a legal dimension we would rather take advice on than
-make on price.
+**Corrected, because the 2026-08-16 version of this question named the wrong company.** It said the
+transactional email provider would be "the only external company that will ever hold any personal
+data of ours". That was wrong even as a plan and is plainly wrong now. Today there are two external
+relationships and neither is an email provider:
 
-1. What must the contract with that provider contain?
-2. **Nearly every provider in this market is hosted in the United States or the European Union.** What
-   does that make of the transfer, and what must the privacy notice say about it?
-3. Does any of this change when the address belongs to a child rather than to a parent?
-4. Is there a reason to prefer a Mexican provider that we are not seeing?
+- **The database host.** Every datum in §2.1 sits in one hosted Postgres database run by a
+  third-party provider. It is not a copy sent to a processor; it is where the data lives.
+- **The identity provider**, which is a managed authentication service running inside that same
+  database. It holds the email address, the password hash, the account name and a session row per
+  sign-in carrying an IP address and a user-agent. We do not control the last of those — see §2.1.
 
-> **Default encoded:** none. No provider chosen.
-> **What changes:** a vendor decision and a paragraph of the notice.
+**No transactional email provider has been chosen**, deliberately, because the choice has a legal
+dimension we would rather take advice on than make on price. It is still needed for the
+deletion-confirmation link, which is why the question stays open rather than closing.
+
+1. What must the contract with each of these contain, and does the database host need the same
+   instrument as a processor that receives a copy?
+2. **Nearly every provider in this market is hosted in the United States or the European Union**, and
+   ours is. What does that make of the transfer, and what must the privacy notice say about it?
+3. Does any of this change when the address belongs to a child rather than to an adult? Note that
+   under the design as built it cannot: a device in the under-13 band is never offered an account, so
+   no under-13 address is collected at all — see Q-A11.
+4. Is there a reason to prefer a Mexican provider, for any of the three, that we are not seeing?
+
+> **Default encoded:** none for email — no provider chosen. The database host and the identity
+> provider are chosen and in use, which makes those two a review rather than a decision.
+> **What changes:** a vendor decision, possibly two contracts, and a paragraph of the notice.
 
 ---
 
@@ -360,11 +388,13 @@ make on price.
 The account-creation screen carries the line *"Al crearla aceptas los términos y el aviso de
 privacidad."* Those two documents will be web pages, and tapping them opens the phone's browser. We
 deliberately rejected showing them in an embedded browser inside the app, because that amounts to
-putting an unrestricted browser inside a child-directed app.
+putting an unrestricted browser in front of whoever is holding the phone, and children hold it.
 
-Google Play's Families policy restricts what a child-directed app may do when it sends a user out of
-the app. **Does opening a legal document in the browser require a parental gate** — the "ask an adult
-to solve this" interstitial — **or are legal documents exempt?**
+Google Play's Families policy restricts what an app in that programme may do when it sends a user out
+of the app. **Two questions, and the first is new since §2's audience correction: does that policy
+reach a general-audience app that admits children, or only one declared child-directed?** And if it
+reaches us, **does opening a legal document in the browser require a parental gate** — the "ask an
+adult to solve this" interstitial — **or are legal documents exempt?**
 
 > **Default encoded:** no gate.
 > **What changes:** one interstitial screen. This is the cheapest question in the list and we ask it
@@ -390,14 +420,18 @@ inventory is unusually short and a template would describe collection we do not 
 
 ---
 
-### Q-A11 · Please price the alternative that removes the question
+### Q-A11 · We adopted the alternative. Does it carry obligations anyway?
 
-Before you answer Q-A1 through Q-A5, we would like this option costed, because it may make most of
-them moot:
+**This question used to ask you to price an option. It is not an option any more — it is what the app
+does**, decided on 2026-08-19 in `docs/adr/0002` and built. That changes what we need from you, so
+the question is restated rather than left as a costing exercise.
 
-> **Below the consent threshold, offer no account at all.** The child plays as a guest with
-> synchronisation switched off. There is no email address, no account and no server record; the
-> exercises answered are written to the phone's own storage and never transmitted.
+> **Below the consent threshold, no account is offered at all.** A player in the under-13 band
+> reaches a screen that says, in as many words, that creating an account needs a parent's or
+> guardian's permission and that in the meantime their challenges stay on this phone and nothing is
+> sent. There is no email address, no account and no server record. Guest synchronisation was removed
+> outright rather than switched off, so there is no path by which an unlinked device reaches the
+> server — which is also why no under-13 IP address is ever recorded (§2.1).
 
 **We do not know whether that puts us outside the regime, and we are not assuming it does.** The
 question, stated as neutrally as we can:
@@ -409,15 +443,17 @@ question, stated as neutrally as we can:
    who never creates an account?
 3. Does a privacy notice have to be shown to someone who plays entirely offline and gives us nothing?
 
-**This is more urgent than its position in the list suggests.** The first playable version of the app
-works exactly this way — offline, no account, no server — and it is scheduled to exist *before* the
-schema this consult unblocks. **If local-only processing carries obligations, they attach to that
-build**, and we would need to know before it reaches anyone rather than after.
+**This is more urgent than its position in the list suggests, and more urgent than it was.** It was
+written as a warning about a build that did not exist yet. That build exists, it is what an under-13
+gets today, and **if local-only processing carries obligations they already attach.** Nobody outside
+this household has the app — §7 says so and says on whose word — so there is time; there is no longer
+a margin.
 
-We are not asking you to recommend the option as a permanent design. It costs the under-13 audience
-their progress across devices and their adaptive difficulty — most of what the product does — so
-whether to adopt it is a business decision. But if it is legally clean, it is worth knowing what we
-are buying with the complexity of the alternative.
+We are not asking you to recommend the design as permanent. It costs the under-13 audience their
+progress across devices and their adaptive difficulty — most of what the product does — so whether it
+stays is a business decision. What we need from you is the other half: if it is legally clean, it is
+worth knowing what we would be buying by building the consent machinery instead, and if it is not
+clean, we need to know what a device that never contacts us still owes.
 
 ---
 
@@ -451,7 +487,7 @@ conclusions, and we are aware that a non-lawyer reading statutes is how confiden
 | 7 | The amended US **COPPA Rule** was published **22 April 2025**, took effect **23 June 2025**, and full compliance was required by **22 April 2026** — a date now past. It requires a written retention policy stating purposes, business need and deletion timeframe, **incorporated into the privacy notice itself rather than linked**. | **Verified.** Relevant only as the voluntary floor described in Q-A7 — we do not launch in the US. |
 | 8 | **Google Play Age Signals API**: worldwide by end of 2026, age ranges not birth dates, off by default, parent-controlled via Family Link. | **Verified** against Google's developer blog, July 2026. Underlies Q-A5. |
 | 9 | **Apple Declared Age Range API**: parent-set range, shared only with permission, no birth date, already expanding beyond the US. | **Verified** against Apple Developer news, 2026. Underlies Q-A5. |
-| 10 | **Google Play Families policy** applies to us in every market because the app is child-directed, independently of which data-protection statute governs. | **Assumed.** Underlies Q-A9. |
+| 10 | **Google Play Families policy** applies to us in every market, independently of which data-protection statute governs. | **Assumed, and its premise changed.** This line was written on the basis that the app is child-directed; §2 records that it is not — it is general-audience and children play it. Whether that takes us out of the Families programme, or whether appealing to children puts us in it regardless of how we declare, is now itself an open question. Underlies Q-A9. |
 
 **Sources consulted**
 
