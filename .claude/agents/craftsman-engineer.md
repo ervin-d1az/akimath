@@ -48,9 +48,11 @@ not memory, not inference:
   `brand_colors_test.dart`, `aki_spec_test.dart` and `wordmark_test.dart` encode brand invariants as
   assertions. If your change makes one fail, you have either found a real conflict for the human or
   you are about to break the brand — never "update the test so it passes".
-- **Do not assume infrastructure that does not exist.** There is no database, no Neon project, no
-  server running anywhere, no `packages/core`, no `packages/contract`, no `contract/openapi.json`.
-  `ARCHITECTURE.md` describes them as *planned*. If your slice needs one, that is a scope
+- **Do not assume infrastructure that does not exist — and check, because most of it now does.**
+  `packages/core`, `packages/contract` and `contract/openapi.json` are on disk; the Neon project is
+  provisioned with every migration applied and the server answers eight of the nine contracted
+  operations. What is still absent is a deployment: nothing is running anywhere but a local port.
+  CLAUDE.md's "What exists today" is the list to read, and it is kept current. If your slice needs one, that is a scope
   question for the human, not something to scaffold on the way past.
 - **Two things that do exist and that agents keep missing.** `.github/workflows/ci.yml` runs on
   every push and PR to `dev` and `main`: `changes`, `secrets` (gitleaks), `dart`
@@ -133,7 +135,8 @@ invent a fourth.
 
 1. **Tier 1 — the committed suite, always, for every stack you touched.** Copy these flags exactly:
    - Dart: `cd app && flutter analyze --fatal-infos` and `cd app && flutter test`.
-   - TypeScript: `cd packages/server && npm run verify` (`tsc --noEmit` then `vitest run`).
+   - TypeScript: `npm run verify` (`tsc --noEmit` then `vitest run`) in **each of the three
+     packages you touched** — `cd packages/server`, `cd packages/contract`, `cd packages/core`.
    - **These are the same commands the commit hook and CI run** (Phase 5). Reporting a plain
      `flutter analyze` is not tier 1 here: `--fatal-infos` is strictly stricter, and the hook will
      block a commit your evidence said was green.
@@ -143,12 +146,13 @@ invent a fourth.
      `.github/workflows/ci.yml` runs exactly that command. Measured: **without the flag it prints
      its violations and still exits 0**, even with `--fatal-warnings` — so the bare form is the
      green-by-construction trap, not the tool.
-   - **The baseline is zero on all of them** — 0 analyzer issues, 34/34 Dart tests and 3/3
-     TypeScript tests green as of today. Any nonzero count is yours. Report the actual numbers you
+   - **The baseline is zero on all of them** — 0 analyzer issues, and green as of 2026-08-26 at
+     3275 Dart tests, 325 of 454 in `packages/server` (129 skip without a Postgres), 248 in
+     `packages/contract` and 340 in `packages/core`. Any nonzero count is yours. Report the actual numbers you
      saw, and the test count must go **up** with your change.
 2. **Tier 1b — show the tests bite.**
-   - TypeScript: `cd packages/server && npm run mutation` (Stryker, `break: 70`; it scores 100.00
-     today) and `cd packages/server && npm run dry` (jscpd, 0 clones today). Report the score and
+   - TypeScript: `npm run mutation` (Stryker, `break: 70`) and `npm run dry` (jscpd, 0 clones) in
+     the package you changed — `packages/server` scores 98.92 and `packages/contract` 91.71. Report the score and
      name any surviving mutant.
    - Dart: there is **no configured mutation harness** — `mutation_test` is a dev dependency but the
      rules XML defining its test commands does not exist, so do not write that command as if it ran.

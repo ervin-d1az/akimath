@@ -140,8 +140,9 @@ commands, with the flags exactly as written:
 
 | Stack | Commands | Green today |
 |---|---|---|
-| Dart | `cd app && flutter analyze --fatal-infos` · `cd app && flutter test` | 0 issues · 34/34 |
-| TypeScript | `cd packages/server && npm run verify` (`tsc --noEmit` + `vitest run`) | 0 errors · 3/3 |
+| Dart | `cd app && flutter analyze --fatal-infos` · `cd app && flutter test` | 0 issues · 3275 |
+| Dart | `cd app && dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning` | 0 violations |
+| TypeScript | `npm run verify` (`tsc --noEmit` + `vitest run`) in **each of the three packages touched** | 0 errors · 325/454 server, 248 contract, 340 core |
 
 **These are the enforced commands, not a suggestion.** `.claude/hooks/verify-gate.sh` is registered
 in `.claude/settings.json` as a `PreToolUse` hook on `Bash`: it runs `flutter analyze --fatal-infos`,
@@ -165,9 +166,9 @@ figures above.
 **Tier 1b — prove the tests actually bite.** A green suite that would stay green with the logic
 inverted is not evidence.
 
-- *TypeScript:* `cd packages/server && npm run mutation` (Stryker; `break: 70`, scoring 100.00
-  today) and `cd packages/server && npm run dry` (jscpd, 0 clones). Report the score and the
-  surviving mutants.
+- *TypeScript:* `npm run mutation` (Stryker; `break: 70`) and `npm run dry` (jscpd, 0 clones) in
+  the package that changed — `packages/server` scores 98.92 and `packages/contract` 91.71. Report
+  the score and the surviving mutants.
 - *Dart:* there is **no configured mutation harness** — `mutation_test` is a dev dependency but the
   rules XML that would define its test commands does not exist. Do not invent the command. Until it
   exists, the substitute is a **falsification step**, and it edits versioned production code, so

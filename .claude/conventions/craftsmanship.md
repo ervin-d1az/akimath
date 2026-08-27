@@ -293,9 +293,9 @@ credit.
     (The hook and CI spell the TypeScript half as `npm run typecheck` then `npm test`, which is
     exactly what `npm run verify` chains — same two checks, one script.)
     The rulebook, the hook and CI must name one set of commands; if they ever diverge, reconcile
-    them in the same session (PROC-6). The baseline is **zero**: the Flutter suite, 3 TypeScript
-    tests in `packages/server` and 189 in `packages/contract` all pass and every analyzer reports
-    clean, so there is no pre-existing noise to hide a new failure in. Green before, green after,
+    them in the same session (PROC-6). The baseline is **zero**: as of 2026-08-26 the Flutter suite is 3275,
+    `packages/server` 325 of 454 (129 skip without a Postgres), `packages/contract` 248 and
+    `packages/core` 340, all passing, and every analyzer reports clean, so there is no pre-existing noise to hide a new failure in. Green before, green after,
     stated with the counts.
   - **Tier 1b — SHOULD, when the change is in the pure core: show the tests bite.** A green suite
     that would stay green with the logic inverted is not evidence.
