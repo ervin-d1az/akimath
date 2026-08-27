@@ -41,6 +41,7 @@ rules:
   specs:
     - Every scenario must be verifiable by a test that will be committed. If you cannot name the test, the scenario is not a requirement yet.
     - Write scenarios against observable behaviour, never against implementation detail.
+    - A scenario covering player-facing copy pins the fact the copy claims, not the string it spells. Copy no input can make true is a defect (LANG-2), and a scenario that only names the string cannot catch one.
   design:
     - Only write this when a decision has real alternatives worth recording. Cite ARCHITECTURE.md rather than restating it.
     - Say which side of the PURE boundary each new module sits on, and why.

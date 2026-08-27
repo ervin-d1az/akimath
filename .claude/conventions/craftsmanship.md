@@ -4,7 +4,7 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Thirty-one rule IDs — counting `FUN-1a` as the carve-out it
+This book starts small on purpose. Thirty-two rule IDs — counting `FUN-1a` as the carve-out it
 is rather than as a rule — every one of them describing code that is already on disk today, not
 a pattern we hope to have. It grows by **PROC-6** and no other way.
 
@@ -158,6 +158,27 @@ The one structural pattern the repo already commits to, on both sides of the sta
   *"Sin conexión no es un error del usuario: va en amarillo"* is the reason a decision was taken, and
   paraphrasing a source into English loses the ability to check it against the source. Quoting is not
   writing the comment in Spanish.
+
+- **LANG-2** MUST: **player-facing copy that asserts a fact is checkable against the policy that
+  produces it, and a caption no input can make true is a defect.** CMT-2 says a comment stating
+  behaviour the code does not have is a defect and is fixed with the code; this is the same rule
+  one audience further out, and it is the more serious half — a false comment misleads the next
+  author, a false caption misleads a child, who has no `grep`. Found in
+  `req-streak-lost-caption`: `4.13 Racha perdida` captioned its left counter **`AYER`**, and
+  `StreakState.broken` requires `streakLength` to return 0, which requires the day log to hold
+  neither today *nor yesterday* — so the run that screen reports on always ended two or more days
+  ago and the caption was false on **every reachable input**, not on an edge case. On the test
+  simulator it labelled 2026-08-21 as *yesterday* on 2026-08-26.
+
+  Two obligations. **The test asserts the claim, not the string** — see PROC-11's sixth bullet,
+  which is this incident from the testing side. **And the design does not settle it**: the
+  archived plan records the design as drawing `AYER 13 → HOY 1`, so the drawn screen and the state
+  machine disagreed and *the state machine was right*. Where a design document asserts a fact the
+  policy contradicts, the policy wins, the departure is written down at the call site with its
+  reason, and the design is reported back — a screen is not permitted to say a false thing because
+  a document said it first. This is the same reading as *"say the true half rather than approximate
+  the whole"*, which `openspec/specs/states/spec.md` already applies to the rating on that very
+  screen.
 
 ## DEP — Dependencies & the audience
 
@@ -449,6 +470,16 @@ credit.
     highest rating to the highest skill id and the two orders disagree. **Whenever a test pins a
     choice between two columns, two keys or two orderings, the fixture must make the alternatives
     produce different output** — otherwise the test documents an intention it cannot enforce.
+
+  - **A `find.text` that pins player-facing copy without pinning its truth.** The string form of
+    the first bullet, and the one that let a false statement reach a child.
+    `streak_screens_test.dart` asserted `expect(find.text('AYER'), findsOneWidget)` on
+    `4.13 Racha perdida` — which passes for *any* caption whatsoever, so it could not tell a true
+    one from a false one, and the caption was false on every reachable input (LANG-2). The remedy
+    is to make the test walk the chain the screen is reached through and assert the *relationship*:
+    a pure sweep over `streakStateFor` pinning that `broken` implies the newest recorded day is
+    older than yesterday, and a screen test that establishes that state before it reads the
+    caption. A test that pins copy and nothing else documents the spelling, not the claim.
 
   The remedy is the same in every case: **state the mutation the test would catch, then make it.**
   When a test is the record of a defect that shipped, PROC-5's tier-1b falsification is not optional
