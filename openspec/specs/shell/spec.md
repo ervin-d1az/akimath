@@ -70,20 +70,29 @@ row for one that does not.
 
 Every figure on the profile SHALL come from a device fact or an implemented
 endpoint. Where the design draws one that neither can produce, the screen SHALL
-omit it rather than approximate it, and where another screen already draws it,
-the profile SHALL NOT draw it a second time.
+omit it rather than approximate it.
 
-#### Scenario: No rating and no aggregate figures
+#### Scenario: No rating and no weekly delta
 
 - **WHEN** `Perfil` is drawn for a linked account
-- **THEN** it shows no rating, no weekly delta, no accuracy and no mean time,
-  because each is F4 or needs an aggregate no endpoint answers
+- **THEN** it shows no rating and no weekly delta. F4 landed and
+  `GET /me/standing` is implemented, but it answers a rating **per skill** and no
+  single number over a list of Glicko ratings is a fact about a player, so the
+  slot stays empty rather than being averaged into existence; and
+  `HistoryEntry.ratingDelta` comes back null, so nothing can say how one moved
 
-#### Scenario: History is not drawn twice
+#### Scenario: Accuracy and mean time are the device's own
+
+- **WHEN** the player has answered something on this device
+- **THEN** `ACIERTOS` and `PROMEDIO` are drawn from the record `features/stats/`
+  keeps of what was actually answered, which needs no server at all — and both
+  are absent rather than `0` over no answers at all
+
+#### Scenario: One screen reads the history feed
 
 - **WHEN** `Perfil` is drawn
-- **THEN** it carries no history section, because `Avance` already reads
-  `GET /me/history` and two screens over one feed can disagree
+- **THEN** it is the only screen over `GET /me/history` — `Avance` was absorbed
+  into it, so the two screens that could disagree over one feed are now one
 
 #### Scenario: The way out stays with the address
 
@@ -140,10 +149,10 @@ display numeral over a unit line, with the run carrying the highlight fill.
 The bar SHALL draw one tab per root that has a destination, and none for a
 tab the design names but nobody has drawn.
 
-#### Scenario: Two roots today
+#### Scenario: Three roots today
 
 - **WHEN** the shell is drawn
-- **THEN** the bar shows `Inicio` and `Perfil` and nothing else
+- **THEN** the bar shows `Inicio`, `Mapa` and `Perfil` and nothing else
 
 #### Scenario: No tab is drawn for a root nobody has designed
 
@@ -151,10 +160,12 @@ tab the design names but nobody has drawn.
 - **THEN** there is no `Avance` tab, because no document draws a progress screen
   and what ours showed is `4.1`'s
 
-#### Scenario: The next root needs no change here
+#### Scenario: A new root needs no change here
 
-- **WHEN** a skills map is added to the roots that exist
-- **THEN** the bar draws three, with no edit to the rule that decides them
+- **WHEN** the skills map was added to the roots that exist
+- **THEN** the bar drew three, with no edit to the rule that decides them —
+  `visibleTabs` has still never been edited across none → two → three → two →
+  three
 
 ### Requirement: Aki appears where the rules say she does
 
