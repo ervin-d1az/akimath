@@ -184,4 +184,14 @@ Future<void> _verify(DeviceState state) async {
     isEmpty,
     reason: 'a journal from an earlier run is still on the device',
   );
+  // **This one is read back because it steers what the other suites measure.**
+  // The handset carried `text_size` at step 1 and `reduce_motion` on, so every
+  // Tier 2 run before this change was measuring layout at a text size nobody
+  // chose. `PreferenceValues.putInt` swallows its failures like every other
+  // adapter here, so a write that did not land would put that back invisibly.
+  expect(
+    await const PrefsAccessibilitySettingsStore().read(),
+    AccessibilitySettings.defaults,
+    reason: 'the accessibility settings did not reach the device',
+  );
 }
