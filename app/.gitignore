@@ -33,6 +33,12 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# mutation_test's report. The documented command routes it to tmp/, which the
+# root .gitignore already covers; this catches the run that forgets `-o`, whose
+# default output directory is the working directory.
+/mutation-test-report/
+/mutation-test-report.*
+
 # Symbolication related
 app.*.symbols
 

@@ -38,10 +38,24 @@ flutter run -d web-server --web-port=8787
 Quality gates beyond the analyzer:
 
 ```sh
-dart run dart_code_linter:metrics analyze lib     # complexity and structure
-dart run mutation_test                            # mutation coverage
+dart run dart_code_linter:metrics analyze lib \
+  --set-exit-on-violation-level=warning           # complexity and structure
 npx jscpd lib --formats-exts dart:dart            # duplication
+
+# Mutation — do not run this bare. Bare, it infers `flutter test` (the whole
+# suite, 37s) and mutates all 216 files in lib/: 4,176 mutants, about 43 hours.
+# `mutation_test.xml` scopes it to one directory of pure policy and pins the
+# test command to that same directory's tests. It exits non-zero below the
+# threshold in that file, so it is a gate rather than a report.
+dart run mutation_test -f md -o tmp/mutation mutation_test.xml
 ```
+
+The mutation run is the deeper pass, not the everyday gate — 1m32s for 39
+mutants over `lib/features/round/policy/`, scoring 92.31% with three survivors
+that are equivalent mutants. Adding a directory to it is two edits made
+together: the sources into `<files>`, that directory's test path into the
+`<command>`. Mutating code the listed tests do not exercise scores the scope,
+not the tests.
 
 ## Brand rules the code enforces
 

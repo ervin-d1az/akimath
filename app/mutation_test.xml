@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Dart mutation config — tier 1b on the Flutter side. Run from app/:
+
+    dart run mutation_test -f md -o tmp/mutation mutation_test.xml
+
+  Measured 2026-08-26 on an M-series laptop: 39 mutants, 1m32s wall
+  (~2.4s per mutant), 36 detected, 3 survivors, all three equivalent.
+  Pass `-o` or the report lands in the working directory.
+
+  ## The builtin rules stay on, and that is the whole reason this is an input
+  ## document rather than a --rules file
+
+  `--rules` *disables* the builtin rule set unless `-b` is also passed. A
+  hand-written rule set here would therefore be a weaker tier than having no
+  file at all — a config that mutates `+` into `-` and calls itself evidence.
+  Passing this file as a plain input document keeps `mutation_test -g`'s rules
+  and adds the four things below that the builtins cannot know: which files,
+  which tests, what counts as a pass, and what is not worth mutating.
+
+  ## What was actually wrong with running it bare
+
+  Not that it was green by construction. Bare, the tool reads pubspec.yaml,
+  correctly infers `flutter test` — the *whole* suite — attaches a 60s timeout
+  it does not mention, and points the builtin rules at all of lib/. Measured:
+  4,176 mutants over 216 files, and 37s for one full-suite run. That is roughly
+  43 hours, sequential, and it is a gate nobody can afford to be blocked by.
+
+  Worse, the 60s inferred timeout sits 23s above a 37s baseline. A timeout
+  counts as an **undetected** mutation, not a detected one: `undetected` is
+  `totalRuns - totalFound`, and a timeout increments only the first. So on a
+  loaded machine the bare run does not fail loudly — it reports a worse score
+  and never says why.
+
+  ## Scope: the mutation set and the test command name the same directory
+
+  Widening one without the other is how this config becomes a lie. Mutate a
+  file no listed test exercises and every mutant survives for a reason that has
+  nothing to do with the tests; run tests broader than what is mutated and each
+  mutant costs more for identical signal. Adding a directory here is two edits,
+  always together: its sources into <files>, its test path into <command>.
+
+  ## If a run is interrupted
+
+  The tool mutates the source file in place and rewrites the original when the
+  file is done, so a killed run leaves a mutated .dart on disk. `git status` will
+  show it; `git checkout app/lib` restores it.
+-->
+<mutations version="1.2">
+
+  <files>
+    <!-- Pure policy: a function of its arguments, no Canvas, no clock, no IO,
+         and one test file each. This is where a survivor means a missing
+         assertion rather than an untestable seam. -->
+    <file>lib/features/round/policy/answer_draft.dart</file>
+    <file>lib/features/round/policy/diagnose.dart</file>
+    <file>lib/features/round/policy/grading.dart</file>
+    <file>lib/features/round/policy/prompt_layout.dart</file>
+    <file>lib/features/round/policy/series_plan.dart</file>
+    <file>lib/features/round/policy/streak_policy.dart</file>
+  </files>
+
+  <commands>
+    <!-- Only the tests covering the files above. The full suite per mutant
+         would multiply a 92-second run by about twenty-four for no new signal.
+
+         The timeout is explicit and generous because the default is neither:
+         120s against a ~2s baseline leaves room for a mutant that makes a loop
+         run long, without letting one run forever, and without a slow machine
+         quietly converting a detected mutant into a survivor. -->
+    <command group="test" expected-return="0" working-directory="."
+      timeout="120">flutter test test/features/round/policy</command>
+  </commands>
+
+  <exclude>
+    <!-- `assert` is a debug-only contract. Mutating one changes behaviour a
+         release build does not have, and the suite runs under the same asserts,
+         so a mutated assert measures the assert rather than the tests. -->
+    <regex pattern="assert\(.*?\);" dotAll="true"/>
+  </exclude>
+
+  <!-- The gate, and it is a real one: `mutation_test` exits non-zero when the
+       detected fraction falls below `failure`. Verified rather than assumed —
+       the same run scored 92.31% and exited 255 against failure="100", and 0
+       against the 92 below. The metrics tool next door needed
+       `--set-exit-on-violation-level` to stop exiting 0 on its own findings;
+       this tool needs no flag, which is worth knowing before someone adds one.
+
+       92 is what this directory scores today, so the next mutant to survive is
+       a decision somebody makes on purpose: 39 mutants means one new survivor
+       drops the run to 89.74% and fails. It ratchets up as the tests get
+       sharper and never down to accommodate them.
+
+       That last sentence has teeth when the file list grows. 92 is derived from
+       *these six files*; adding a directory changes the denominator, and a new
+       directory scoring 85% makes lowering `failure` to 85 look like
+       bookkeeping. It is not — it un-ratchets round/policy by seven points in
+       one edit. Re-derive `failure` from the new combined run, and only upward:
+       a directory that cannot clear the standing number is a directory whose
+       tests are not ready to be in here yet. -->
+
+  <threshold failure="92">
+    <rating over="100" name="A"/>
+    <rating over="92" name="B"/>
+    <rating over="80" name="C"/>
+    <rating over="60" name="D"/>
+    <rating over="40" name="E"/>
+    <rating over="0" name="F"/>
+  </threshold>
+
+</mutations>
