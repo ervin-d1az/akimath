@@ -3,8 +3,10 @@ schema: spec-driven
 # Shown to the AI whenever it creates a planning artifact. Keep it pointing at
 # files rather than restating them — a copy here goes stale silently.
 context: |
-  AkiMath — math challenges in Mexican Spanish. Flutter client under `app/`,
-  TypeScript backend under `packages/server/`, one repository.
+  AkiMath — math challenges in Mexican Spanish. One repository: a Flutter client
+  under `app/` and three TypeScript packages — `packages/server` (the endpoints
+  and the database), `packages/contract` (the frozen pack format, canonicalisation
+  and the HMAC digest) and `packages/core` (the rederivation machine).
 
   READ BEFORE PLANNING ANYTHING:
   - `CLAUDE.md` — how to work here. It wins over every other document.
@@ -27,11 +29,22 @@ context: |
   seed. Two precedents already on disk: `app/lib/design/brand/spec/` and
   `packages/server/src/routing.ts`.
 
-  What exists today: the brand layer and Aki's character sheet, tested and
-  green, and `packages/contract` — the frozen offline pack format, with its
-  artifacts committed under `contract/`. What does not: `packages/core`, any database,
-  any auth, any real endpoint, any deployment. Do not write a proposal that
-  assumes otherwise.
+  What exists today: read CLAUDE.md's "What exists today" section, which is kept
+  current and is the answer. In outline — the app is playable end to end, all six
+  stimulus families and all five puzzle formats draw and grade, `packages/core`
+  and `packages/contract` are on disk with their artifacts committed under
+  `contract/`, the Neon database is provisioned with every migration applied, and
+  the server implements eight of the nine contracted operations. Phases F0 through
+  F7 all have code behind them.
+
+  What does not exist: `GET /items/next`, which is the one operation still
+  answering 501; F8, which is Rive and which nothing has touched; and **any
+  deployment at all** — nothing runs anywhere but a local port, there is no deploy
+  workflow, and a proposal that needs a served URL has to say who provisions it.
+
+  This block said the opposite until 2026-08-26 — that there was no `packages/core`,
+  no database, no auth and no real endpoint — and every plan written against it
+  started from a repository that had not existed for weeks.
 
 rules:
   proposal:
