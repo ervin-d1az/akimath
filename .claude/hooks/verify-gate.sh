@@ -7,7 +7,11 @@ set -uo pipefail
 # ones that matter and they are preserved verbatim:
 #
 #   * fail OPEN (exit 0 + one stderr notice) on a runtime error — a missing
-#     toolchain, an uninstalled dependency tree, a runner that cannot start;
+#     toolchain, an uninstalled dependency tree, a runner that cannot start.
+#     **This half is switched off as of 2026-08-27**: AKIMATH_GATE_REQUIRED is
+#     set in .claude/settings.json, so every one of those blocks instead. The
+#     mechanism below is unchanged and the flag can be removed to get it back;
+#     read the ENVIRONMENT entry for what it reaches and what it does not;
 #   * fail CLOSED (exit 2) on a negative verdict — a real analyzer or test
 #     failure, a wrong commit identity, a forbidden trailer;
 #   * never block on findings inherited from the base (see "Baseline" below).
@@ -90,15 +94,93 @@ set -uo pipefail
 #                          geineryodan@gmail.com.
 #   AKIMATH_FLUTTER_BIN    absolute path to flutter, when PATH does not carry it.
 #   AKIMATH_NPM_BIN        absolute path to npm, when PATH does not carry it.
-#   AKIMATH_GATE_REQUIRED  when set, a missing toolchain blocks instead of
-#                          failing open. Turn it on once the environment is
-#                          settled.
+#                          Neither is set, and neither needs to be: a hook does
+#                          not source a shell profile, it inherits Claude Code's
+#                          own environment, and that PATH was read off the
+#                          running process on 2026-08-27 — it carries
+#                          /Users/ervin/develop/flutter/bin and the nvm bin
+#                          directory that owns npm. The nvm half is the one that
+#                          could plausibly have been missing, and is not. These
+#                          two belong in .claude/settings.local.json when a
+#                          machine does need them; they are absolute paths, so
+#                          they never belong in this committed settings.json.
+#   AKIMATH_GATE_REQUIRED  set to 1 in .claude/settings.json since 2026-08-27,
+#                          which is what turns every fail_open() into a block:
+#                          flutter or npm unresolvable, a package's node_modules
+#                          missing, a check directory absent, a runner exiting
+#                          126/127. It was documented for weeks as something to
+#                          turn on "once the environment is settled" and was
+#                          never set, which left the gate reporting green for
+#                          the one reason it must never report green.
+#                          **Two fail-open exits it does not reach**, and the
+#                          first of them on purpose: the `jq` guard and a failed
+#                          `cd` into PROJECT_DIR both exit 0 further up, before
+#                          fail_open exists. jq has to stay that way — without it
+#                          the payload cannot be parsed, so the gate cannot tell
+#                          a `git commit` from an `ls`, and blocking there would
+#                          block every Bash call in the session rather than a
+#                          commit. So "a missing toolchain blocks" is true of
+#                          flutter and npm and is deliberately untrue of jq.
+#                          **The cost, which is a prerequisite and not a
+#                          surprise**: a subagent worktree is a fresh checkout
+#                          and carries no packages/*/node_modules, so wherever
+#                          this hook does fire, a commit from a worktree that
+#                          touches packages/** or contract/** blocks until
+#                          `npm ci` has run in the package the change lands in.
+#                          That is the intended reading — those suites were
+#                          never running there — but it is work somebody now has
+#                          to do rather than skip silently. It is also moot in
+#                          the sessions described below, where the hook does not
+#                          run at all.
+#                          Worth knowing when reading a "silent" gate: Claude
+#                          Code surfaces a hook's stderr to the agent only on
+#                          exit 2, so a fail-open notice and a clean pass look
+#                          identical from inside a session. Blocking is the only
+#                          state that can speak for itself.
 #   AKIMATH_GATE_DEBUG     when set, log the commands the gate skipped.
 #   AKIMATH_GATE_TIMEOUT   seconds any single check may run before it is killed
 #                          and the commit is blocked. Default 600 — an order of
 #                          magnitude above anything this gate runs today (the
 #                          whole packages/contract suite is 0.8s) so it can only
 #                          ever fire on a hang, never on a slow machine.
+#
+# MEASURED 2026-08-27, AND NOT FIXED HERE — THIS HOOK DOES NOT RUN IN A SUBAGENT
+# WORKTREE
+# -----------------------------------------------------------------------------
+# The flag above closes the fail-open hole. It cannot close a hole one level up.
+# Inside a worktree-isolated subagent session (the Agent tool's `isolation:
+# worktree`), the PreToolUse hook never executes at all. Measured, not inferred:
+# an unconditional `date >> <file>` was put on the first line of this script and
+# the file was never created across several Bash tool calls, and two commands
+# this script blocks on when run by hand — one carrying a Co-Authored-By
+# trailer — passed straight through. The settings `env` block does reach those
+# sessions: `printenv AKIMATH_GATE_BASE` answers origin/main there, so the
+# settings file is being read.
+#
+# WHY it does not run was not measured, and there are two candidates. The one
+# with direct evidence is the hook's own command line, `bash
+# "$CLAUDE_PROJECT_DIR"/.claude/hooks/verify-gate.sh`: `printenv
+# CLAUDE_PROJECT_DIR` answers nothing in a worktree session, and an unset one
+# expands to `bash /.claude/hooks/verify-gate.sh`, which is not found, exits 127
+# and is reported as a non-blocking hook error while the tool call proceeds —
+# every observation above, with the `hooks` block working perfectly. That would
+# be a one-line fix here, and note the `dirname "${BASH_SOURCE[0]}"/../..`
+# fallback further down cannot help: it runs inside a script that was never
+# located. The weakness of that candidate, stated so nobody chases it as fact:
+# CLAUDE_PROJECT_DIR is set for hook commands specifically, so its absence from
+# a Bash tool subprocess is suggestive and not proof. The other candidate is
+# that the `hooks` block simply does not apply to these sessions. They cannot be
+# told apart from inside one, because a settings change is not reloaded
+# mid-session. Check it from a main session instead: `echo git commit
+# Co-Authored-By: x` blocks if this hook fires there.
+#
+# Either candidate, and not fail-open, explains an agent reporting
+# "the hook produced no output at all". Note that no output is also exactly what
+# a clean pass looks like, so the report on its own distinguishes nothing. What
+# is verified either way: a worktree agent's commits are not gated, so the pull
+# request and .github/workflows/ci.yml are the only checks those commits meet.
+# Whether the same is true of the main interactive session was not measured and
+# is not claimed. Fixing it is out of this change's scope.
 
 BASE_REF="${AKIMATH_GATE_BASE:-origin/main}"
 REQUIRED_EMAIL="${AKIMATH_COMMIT_EMAIL:-geineryodan@gmail.com}"
