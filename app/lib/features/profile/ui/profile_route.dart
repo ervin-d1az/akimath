@@ -573,7 +573,11 @@ class _ProfileRouteState extends State<ProfileRoute> {
   /// because there is no single number to pass: `GET /me/standing` answers one
   /// **per skill**, an unrated player is the ordinary case, and this client
   /// cannot so much as name a skill. A weekly move is not passed because
-  /// `HistoryEntry.ratingDelta` is null — `+ 36 esta semana` had no source at
+  /// `HistoryEntry.ratingDelta` is a movement per *session* and per *skill*
+  /// rather than per week: a week of them summed adds independent scales, and
+  /// the two kinds that report null — a session spanning two skills, a session
+  /// that only calibrated — would drop out of the sum instead of counting as
+  /// nothing. `+ 36 esta semana` still has no source at
   /// all. Both stay absent rather than becoming a plausible average or a `± 0`,
   /// which is the same rule that makes `HISTORIAL` disappear when there is
   /// nothing true to say.

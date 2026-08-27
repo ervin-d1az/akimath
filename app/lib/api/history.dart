@@ -35,9 +35,11 @@ T _read<T>(Map<String, Object?> json, String field) {
 ///
 /// **`ratingDelta` is nullable and stays nullable.** The schema marks it
 /// required *and* nullable, which is not the same as optional: the field is
-/// always there and its value is sometimes nothing. Rating is F4, so today it
-/// is always nothing — and a client that defaulted a missing one to zero would
-/// draw "±0" where the truth is "we do not know yet".
+/// always there and its value is sometimes nothing. F4 landed, so it is usually
+/// a number — and it is still nothing for a session that spanned two skills and
+/// for one that only calibrated, the two kinds no single figure is a fact
+/// about. A client that defaulted one of those to zero would draw "±0" where
+/// the truth is "nothing measured you".
 @immutable
 class HistoryEntry {
   const HistoryEntry({
