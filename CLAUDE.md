@@ -745,6 +745,15 @@ is those 155 commits of noise rather than the change. `main` itself is protected
 pull request from a branch, which is how every change since #6 has landed. Nothing is committed or
 pushed unless you were asked to.
 
+**A pull request is squashed, so its title is the commit subject on `main`** — it takes the same
+conventional prefix as any other subject, lowercase, no ticket id, no scope in parentheses
+(`fix: the commit gate scopes itself against the trunk that exists`). That was not being applied:
+of the twelve subjects before the rule landed, ten had no prefix and the two that did carried the
+parentheses the rulebook bans. The body follows `.github/PULL_REQUEST_TEMPLATE.md`, which GitHub
+fills the box with automatically — what lands, why, **the evidence tier with its numbers**, what
+the change deliberately does not do, and what has to happen after it merges. Delete a section with
+nothing true to say; an empty heading reads as covered. Both halves are GIT-4 in the rulebook.
+
 ## Decided
 
 **Auth is Neon Auth, and nothing syncs until an account exists** —

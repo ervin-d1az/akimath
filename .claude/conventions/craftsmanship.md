@@ -254,6 +254,21 @@ credit.
   edit — a `.gitignore` tweak, a formatting sweep, a refactor the change did not need — into a
   commit that describes something else.
 
+- **GIT-4** MUST: **a pull request has a title that obeys GIT-2 and a body that follows
+  `.github/PULL_REQUEST_TEMPLATE.md`.** Merges here are squashes, so the title box *is* the commit
+  subject that lands on `main` — the same conventional prefix, the same short lowercase
+  description, the same ban on a ticket id and on a scope in parentheses. This is not a second
+  convention, it is GIT-2 reaching the one subject nobody was reading it against: of the twelve
+  subjects on `main` before this rule, ten carried no prefix at all and the two that did —
+  `fix(app):`, `feat(app):` — carried the parentheses GIT-2 bans by name.
+
+  The template is the repository's one shape for a body, and its sections are the ones this
+  project argues from: what lands, why, **the evidence tier with its numbers**, what the change
+  deliberately does not do, and what has to happen after it merges. Delete a section that has
+  nothing true to say — an empty heading reads as covered, which is the same defect as a gate that
+  cannot fail. GitHub fills the box from the template automatically; a body that ignored it is a
+  review finding, not a style note.
+
 - **GIT-3** MUST: **`main` is the trunk.** It is protected by the `protect-main` ruleset — no
   direct push, no force-push, no deletion — and is reached only by a pull request from a branch cut
   from `main`, never from another feature branch. The diff base for any review or audit is

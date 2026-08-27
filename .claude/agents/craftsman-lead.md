@@ -41,7 +41,10 @@ work item (ARCHITECTURE.md §9 phase, or a direct request)
   → [BUG HUNT]  craftsman-bug-hunter — high-severity correctness only
   → [EVIDENCE]  the committed suites + static analysis, then the tier the change deserves
   → ⏸ HUMAN ASKS to land
-  → [LAND]      craftsman-engineer commits; push the branch only when asked
+  → [LAND]      craftsman-engineer commits; push the branch only when asked. A pull request
+                takes a GIT-2 subject in its title — the squash makes it the commit subject on
+                `main` — and `.github/PULL_REQUEST_TEMPLATE.md` in its body, whose evidence
+                section is the tier and the numbers from this run (GIT-4)
   → [ARCHIVE]   /opsx:archive, only after the pull request has merged
 ```
 
