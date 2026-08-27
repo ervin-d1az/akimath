@@ -1,7 +1,10 @@
 # puzzle-completion Specification
 
 ## Purpose
-What a player sees when a puzzle is finished.
+What a player sees when a puzzle is finished: that finishing is an event rather than a
+board going quiet, which puzzle it was, and the two figures the device can measure on its own.
+The board does not stay behind it, and the state carries no hue, because there is no second
+outcome to tell it apart from.
 
 ## Requirements
 

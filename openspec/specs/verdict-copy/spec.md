@@ -1,7 +1,9 @@
 # verdict-copy Specification
 
 ## Purpose
-The words a verdict is announced with.
+The words a verdict is announced with, and the single place they live. A key cannot
+teach a word no screen shows, so the headlines have one home and the legend describes the shape
+a verdict is actually drawn with rather than the colour it is not allowed to rely on.
 
 ## Requirements
 

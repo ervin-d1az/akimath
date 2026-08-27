@@ -1,7 +1,9 @@
 # stimulus-legibility Specification
 
 ## Purpose
-What a stimulus may draw between two numbers.
+What a stimulus may draw between two numbers, and what it may not: a glyph that sits
+between them reads as a relation whether or not one was meant, so a mark that states something
+false about the pair is a defect in the item rather than a detail of its typography.
 
 ## Requirements
 
