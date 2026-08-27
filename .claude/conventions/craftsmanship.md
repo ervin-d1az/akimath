@@ -254,6 +254,33 @@ credit.
   edit — a `.gitignore` tweak, a formatting sweep, a refactor the change did not need — into a
   commit that describes something else.
 
+- **GIT-5** MUST: **a branch is named after the change it carries**, and where OpenSpec has a
+  change the branch name **is** its id, character for character. That is already the practice — 
+  `f3-router`, `f6-a-week-of-each`, `ci-pg-client-install-is-bounded` and `docs-email-signup-is-open`
+  are each a branch and a change directory with the same name — it had simply never been written
+  down, which is why it drifts.
+
+  The id itself is `<token>-<kebab-summary>`: the token is the **phase** (`f0`…`f8`, and `f1-5` for
+  the half-phase that exists) when the work belongs to one, and otherwise a **conventional type** —
+  `fix`, `docs`, `chore`, `test`, `refactor`, `ci`, `feat` — the same vocabulary GIT-2 uses for a
+  subject. Lowercase, hyphens, English. Nothing else: **no date, no author, no ticket id** (there is
+  no tracker), and no `spec-` prefix in front of a change id that already has a token — a proposal
+  for `f3-deletion-web` is branched as `f3-deletion-web`, because the branch and the change are the
+  same unit of work seen from two directories.
+
+  The summary says what the change *does*, in the voice a subject would use: `f3-link-carries-the-band`,
+  not `f3-band-changes`. Long is better than cryptic — `fix-chevron-reads-as-greater-than` earns
+  every character.
+
+  **English is not decoration here**: a change id is an identifier, so LANG-1 governs it. Three
+  archived changes are in Spanish — `f7-estados-de-racha`, `f7-perfil-absorbe-avance`,
+  `f7-perfil-es-la-raiz` — and they are the reason this clause is explicit. They stay as they are;
+  renaming an archived change would break the record.
+
+  Branches a tool creates for itself — `worktree-agent-*` from an isolated subagent — are never
+  pushed and are deleted with their worktree. `.gitignore` covers the directory; nothing covers the
+  branch, so that is a discipline rather than a gate.
+
 - **GIT-4** MUST: **a pull request has a title that obeys GIT-2 and a body that follows
   `.github/PULL_REQUEST_TEMPLATE.md`.** Merges here are squashes, so the title box *is* the commit
   subject that lands on `main` — the same conventional prefix, the same short lowercase

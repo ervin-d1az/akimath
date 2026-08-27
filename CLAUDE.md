@@ -745,6 +745,14 @@ is those 155 commits of noise rather than the change. `main` itself is protected
 pull request from a branch, which is how every change since #6 has landed. Nothing is committed or
 pushed unless you were asked to.
 
+**A branch is named after the change it carries**, and where OpenSpec has a change the branch name
+*is* its id — `f3-router` is a branch and a change directory with the same name. The id is
+`<token>-<kebab-summary>`, the token being the phase (`f0`…`f8`) when the work belongs to one and a
+conventional type (`fix`, `docs`, `chore`, `test`, `refactor`, `ci`, `feat`) when it does not.
+Lowercase, hyphens, **English** — a change id is an identifier, so LANG-1 governs it, and the three
+Spanish ids in the archive are the reason that is spelled out. No date, no author, no ticket id, and
+no `spec-` in front of an id that already has a token. GIT-5 in the rulebook.
+
 **A pull request is squashed, so its title is the commit subject on `main`** — it takes the same
 conventional prefix as any other subject, lowercase, no ticket id, no scope in parentheses
 (`fix: the commit gate scopes itself against the trunk that exists`). That was not being applied:
