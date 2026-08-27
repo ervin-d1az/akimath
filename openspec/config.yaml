@@ -71,9 +71,13 @@ operations:
       - Write the failing test first and see it fail. "It compiles" is not evidence.
       - Run the full suite for the stack you touched before marking a task done.
       - Commit in small logical pieces, never with a Co-Authored-By trailer.
-      - A pull request title is the squashed commit subject: conventional prefix, lowercase,
-        no ticket id, no scope in parentheses. Its body follows
-        `.github/PULL_REQUEST_TEMPLATE.md`, evidence tier and numbers included.
+      # Quoted for the same reason as the bullet under `tasks` above — the colon-space
+      # after "subject" makes YAML read the bullet as a mapping key, which invalidates the
+      # list and takes the whole file with it. This one was not quoted when it landed on
+      # 2026-08-26, and every rule in this file was silently unread until it was.
+      - "A pull request title is the squashed commit subject: conventional prefix,
+        lowercase, no ticket id, no scope in parentheses. Its body follows
+        `.github/PULL_REQUEST_TEMPLATE.md`, evidence tier and numbers included."
       - Branch off `main` and push the branch. Never push to `main` — it is protected and
         takes pull requests only. `dev` is not the working branch and has not been since
         pull request #6 on 2026-08-17.
