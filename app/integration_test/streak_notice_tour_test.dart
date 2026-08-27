@@ -80,6 +80,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(StreakLostScreen), findsOneWidget);
 
+    // **The caption, against a real seeded log on a real device.** The run
+    // above ends three days before `now`, which is the only kind of log that
+    // reaches this screen: `broken` needs the log to hold neither today nor
+    // yesterday. `AYER` was drawn here for six days and was false every one of
+    // them (LANG-2). Asserted at this level and not only in the widget test
+    // because the day log is genuine here — seeded through the store the app
+    // really reads, not handed to a constructor.
+    expect(find.text('ANTES'), findsOneWidget);
+    expect(find.text('HOY'), findsOneWidget);
+    expect(find.text('AYER'), findsNothing);
+    expect(find.text('13'), findsOneWidget);
+
     // The record is on disk now. A relaunch — a fresh widget over the same
     // preferences — must go straight to the home.
     expect(await const PrefsStreakNoticeStore().lostShownOn(), isNotNull);
