@@ -447,7 +447,7 @@ credit.
   `app/test/architecture/pure_boundary_test.dart` are the two forms this takes today. The same
   applies to a path-filtered scan: report how many files it walked, and fail at zero.
 - **PROC-11** MUST: **an assertion that holds for any input is not a test.** Green that carries no
-  information is worse than a gap, because a gap is visible. Four instances, all in this repository,
+  information is worse than a gap, because a gap is visible. Six instances, all in this repository,
   all found by review rather than by the suite:
   - **An `expect` whose sides are algebraically equal.** `round_screen_test.dart` asserted
     `text.width * (slot.width / text.width) <= slot.width + 0.5`, which reduces to
