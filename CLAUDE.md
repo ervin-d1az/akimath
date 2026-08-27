@@ -78,22 +78,20 @@ the offline pack format and its OpenAPI half.
   sizes, the counter chip and the baseline meter — and the two verdict screens, `03 Acierto` and
   `04 Error`, which show time and streak and **no rating**: F2 has no server, so nothing on them is
   a figure sync could later contradict. `features/shell/` is the frame: cream, a banner slot, and a
-  **bottom bar with three roots** — `Inicio`, `Avance` and `Ajustes`. `visibleTabs` returns nothing
-  while one root exists, so the bar was absent by rule rather than by omission; it appeared when
-  preferences did and grew when `Avance` landed, both times without the policy being touched.
-  **`features/progress/` is `Avance`**, and it has two halves that fail independently: the figures
-  the device knows — days practised, the current run, moved out of Ajustes because what a player
-  has done is not a setting — and the history the server knows, from `GET /me/history`. **The
-  `HISTORIAL` section is absent when there is nothing true to say** — no account, or no sessions —
-  because nothing in the app sends an attempt yet, so a heading there would stay empty however much
-  a player played and the line under it would be a promise the product cannot keep. Same reading as
-  the toggles Ajustes does not draw (DR-P2). The three states somebody has to act on do get the
-  section, and a banner; a refused session gets no retry, because asking twice with a dead token
-  gets the same refusal. **No rating, and accuracy is the device's own.** F4 landed and
-  `ratingDelta` is a real figure now, but `GET /me/standing` answers a rating **per skill** and no
-  single number over a list of Glicko ratings is a fact about a player, so the slot stays empty
-  rather than being averaged into existence; accuracy comes from the record `features/stats/` keeps
-  of what was actually answered, which needs no server at all. The
+  **bottom bar with three roots** — `Inicio`, `Mapa` and `Perfil`. `visibleTabs` returns nothing
+  while one root exists, so the bar was absent by rule rather than by omission.
+  **`features/progress/` is deleted; `Perfil` holds what `Avance` showed** (below), in two halves
+  that fail independently: the figures the device knows — days practised and the current run,
+  moved out of Ajustes because what a player has done is not a setting — and the history the
+  server knows, from `GET /me/history`. The three history states somebody has to act on get the
+  `HISTORIAL` section and a banner; a refused session gets no retry, because asking twice with a
+  dead token gets the same refusal, and the silence elsewhere is the same reading as the toggles
+  Ajustes does not draw (DR-P2). **No rating, and accuracy is the device's own.** F4 landed and
+  `ratingDelta` is a real figure now — null only for a session that spanned two skills and for one
+  that only calibrated — but `GET /me/standing` answers a rating **per skill** and no single number
+  over a list of Glicko ratings is a fact about a player, so the slot stays empty rather than being
+  averaged into existence; accuracy comes from the record `features/stats/` keeps of what was
+  actually answered, which needs no server at all. The
   session that makes any of it possible is held by `RootScaffold` — two roots have to agree about
   whether there is an account, and their common ancestor is the only place that can hold it. In
   memory only; `LinkedSession.toString` does not carry the token, because `toString` reaches logs
@@ -147,14 +145,15 @@ the offline pack format and its OpenAPI half.
   out, and a test pins `Accesibilidad` absent so it turns red the day that row lands. **The nav
   fork is deleted** — all four marks are transcribed, every tab has its own, and the
   house-as-fallback that once made two tabs share a mark is gone as well as caught.
-  **`Avance` absorbed into it, and the bar is two tabs.** No document draws a progress screen;
+  **`Avance` absorbed into it, and `Mapa` got its door after.** No document draws a progress screen;
   every figure that root held is one `4.1` puts under the identity, and splitting them left two
   half-empty screens where the design has one full one. Perfil now draws the identity, the
   headline pair — a white `DÍAS` card at `flex 1.3` beside a **yellow** `RACHA` at `flex 1`,
   because the filled card is the one the screen is about — and `HISTORIAL`, absent when there is
   nothing true to say. **`AppTab.progress` stays in the enum**: rule 1 names it a home and nobody
   has drawn one, which is a different fact from it not existing, and `rootsPresentToday` is the
-  list that moves. `visibleTabs` has still never been edited across none → two → three → two.
+  list that moves — nothing in `visibleTabs` has changed on any of the four occasions: none, two,
+  three, two, three.
   **A key's fill says what pressing it does** — `KeyRole` in the pure layout, the colour in
   the adapter; all three pads were white, and the design draws digits white, the operator strip
   accent, backspace quiet and submit the action green. Exactly one key on a pad is green, and a
