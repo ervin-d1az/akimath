@@ -66,8 +66,8 @@ contract/                 the frozen artifacts: 3 schemas, 37 fixtures, canon.go
 docs/adr/                 ADR 0001 decides the Dart API client; older decisions live in ARCHITECTURE.md
 ```
 
-`app/lib/api/` now exists and holds one operation. `packages/contract` holds the offline pack
-format and its OpenAPI half.
+`app/lib/api/` now exists and holds seven of the contract's operations. `packages/contract` holds
+the offline pack format and its OpenAPI half.
 
 ## What exists today
 
@@ -89,8 +89,11 @@ format and its OpenAPI half.
   a player played and the line under it would be a promise the product cannot keep. Same reading as
   the toggles Ajustes does not draw (DR-P2). The three states somebody has to act on do get the
   section, and a banner; a refused session gets no retry, because asking twice with a dead token
-  gets the same refusal. **No rating and no accuracy**: both are F4
-  and `ratingDelta` comes back null, and a screen printing `±0` would be inventing a figure. The
+  gets the same refusal. **No rating, and accuracy is the device's own.** F4 landed and
+  `ratingDelta` is a real figure now, but `GET /me/standing` answers a rating **per skill** and no
+  single number over a list of Glicko ratings is a fact about a player, so the slot stays empty
+  rather than being averaged into existence; accuracy comes from the record `features/stats/` keeps
+  of what was actually answered, which needs no server at all. The
   session that makes any of it possible is held by `RootScaffold` — two roots have to agree about
   whether there is an account, and their common ancestor is the only place that can hold it. In
   memory only; `LinkedSession.toString` does not carry the token, because `toString` reaches logs
@@ -105,7 +108,7 @@ format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **2238 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **3275 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **The streak can say it is about to go, and that it went.** `streakLength` has answered *how
@@ -245,16 +248,17 @@ format and its OpenAPI half.
   each puzzle from the home and comes back, reporting *5 shipped → 5 kinds reachable*. That gate
   exists because the home once held `pack.puzzles.first` behind an `is! KenKenPuzzle` guard, and
   four of the five formats were unreachable with every suite green.
-- **A scaffold, plus the frozen schema.** `packages/server` routes one endpoint, `GET /health`,
-  through a pure `route()` function, and now also holds the database:
+- **No longer a scaffold, plus the frozen schema.** `packages/server` routes the contract's nine
+  operations — eight to a handler, one to a 501 — and `GET /health` through a pure `route()`
+  function, and now also holds the database:
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
-  append-only) plus five forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
+  append-only) plus seven forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **360 tests, green, 98.92% mutation
-  score, 0 clones.** Four runtime dependencies, each pinned exactly with its DEP-1 audit in
-  `test/dependency-allowlist.test.ts`: `pg`, `hono` + `@hono/node-server` (which own the socket —
-  Hono's *router* is deliberately unused, so `CONTRACTED_OPERATIONS` stays where the parity gate
-  can read it), and `jose`.
+  30-day figures) and the committed `schema.sql` snapshot. **449 tests — 320 green and 129 skipped
+  for want of a Postgres — 98.92% mutation score, 0 clones.** Four runtime dependencies, each
+  pinned exactly with its DEP-1 audit in `test/dependency-allowlist.test.ts`: `pg`, `hono` +
+  `@hono/node-server` (which own the socket — Hono's *router* is deliberately unused, so
+  `CONTRACTED_OPERATIONS` stays where the parity gate can read it), and `jose`.
   **It can tell who is asking.** `src/session.ts` reads the `Authorization` header (PURE, three
   cases — absent, malformed, bearer), `src/auth-config.ts` derives the issuer and JWKS URL from
   `NEON_AUTH_BASE_URL` (PURE; a missing or plaintext one **refuses startup** rather than turning
@@ -274,13 +278,19 @@ format and its OpenAPI half.
   reads as broken authentication rather than as a missing variable.
   **`PORT` defaults to 3000**, and `.env.local` overrides it to 8787 on this machine, which is what
   the app's `--dart-define=AKIMATH_API_BASE_URL` points at.
-  **`npm run retention` still cannot run**: `RETENTION_DATABASE_URL` is deliberately its own
-  credential for the `retention_job` role rather than a borrow of the request path's, and nobody
-  has minted that password. A different kind of blocker from a missing flag.
-  **Seven endpoints are implemented.** Three are the account's whole life — `GET /me` reads the
+  **`npm run retention` cannot run here**, which is a different statement from not running at
+  all: it runs nightly in Actions — `.github/workflows/retention.yml`, the step *Delete what has
+  expired*, gated on `vars.RETENTION_ENABLED == 'true'` and green every night for the last eight —
+  from a `RETENTION_DATABASE_URL` that is deliberately its own credential for the `retention_job`
+  role rather than a borrow of the request path's. That secret is CI's and only CI's:
+  `packages/server/.env.local` holds `MIGRATE_DATABASE_URL`, `DATABASE_URL`, `NEON_AUTH_BASE_URL`
+  and `PORT`, and no `RETENTION_DATABASE_URL`, so the command typed on this machine has nothing to
+  connect as. A different kind of blocker from a missing flag.
+  **Eight endpoints are implemented.** Three are the account's whole life — `GET /me` reads the
   profile, `POST /players/link` creates it, `DELETE /me` erases it — three are the offline loop,
-  `POST /packs` issuing, `GET /packs/{packId}` fetching again and `POST /attempts` grading, and
-  `GET /me/history` reads back what the loop wrote. Each verifies the
+  `POST /packs` issuing, `GET /packs/{packId}` fetching again and `POST /attempts` grading, and two
+  read back what the loop wrote: `GET /me/history` a session at a time and `GET /me/standing` the
+  rating those sessions moved. Each verifies the
   token and connects through `src/adapters/request-database.ts`, which opens a transaction and
   `SET LOCAL ROLE`s into a role that is never the owner. `GET /me` answers the frozen `Me` shape,
   or **404 and not 401** when the account has no player yet. `POST /players/link` takes the
@@ -289,7 +299,7 @@ format and its OpenAPI half.
   `route()` returns *an answer* or *whose handler should produce one*, so the surface stays where
   the parity gate reads it, and `IMPLEMENTED_OPERATIONS` is the contract's 501 list inverted,
   checked in both directions — an endpoint stops advertising itself as unbuilt in the same diff
-  that builds it. The other two — `GET /items/next` and `GET /me/standing` — still answer **501**.
+  that builds it. The one left over — `GET /items/next` — still answers **501**.
   **Erasure is the one handler that does not run as `app_request`.** That role holds DELETE on no
   table, which is what makes the append-only-attempts invariant structural; `DELETE /me` goes
   through `inErasureRole` (`SET LOCAL ROLE retention_job`) and deletes one `players` row, and the
@@ -355,14 +365,17 @@ format and its OpenAPI half.
   `packages/contract` so the pack builder and the server make one decision about shape and
   spelling — that is the bug from #50 and a second copy is how it returns.
   **`GET /me/history` is a session at a time.** The frozen shape asks for a `score` and a `title`
-  and neither means anything about one answered item. `ratingDelta` is **null** because rating is
-  F4 and a number would be invented; `kind` is always `series`, because a puzzle leaves no row in
-  any table so nothing can report one. A session spanning two skills is **not** named after
-  either — `min(skill_id)` would call it whichever sorts first, which is not a fact about the
-  session. `@akimath/core`'s `skillName()` is where a skill gets a name, since `skill_id` is a
-  `smallint` in five tables and a name in none of them. The operation declares no parameters, so
-  `HISTORY_LIMIT` is the server's cap and it is stated in `src/history.ts` rather than buried in
-  the query.
+  and neither means anything about one answered item. `ratingDelta` is the movement the rating
+  engine recorded for that session at the moment both ends of the subtraction existed, never
+  recomputed here, and it is **null** for the two kinds of session no single figure is a fact
+  about — one that spanned two skills, where two ratings moved by different amounts, and one that
+  only calibrated, where nothing measured the player and `0` already means *held*. `kind` is always
+  `series`, because a puzzle leaves no row in any table so nothing can report one. A session
+  spanning two skills is **not** named after either — `min(skill_id)` would call it whichever sorts
+  first, which is not a fact about the session. `@akimath/core`'s `skillName()` is where a skill
+  gets a name, since `skill_id` is a `smallint` in five tables and a name in none of them. The
+  operation declares no parameters, so `HISTORY_LIMIT` is the server's cap and it is stated in
+  `src/history.ts` rather than buried in the query.
   **The retention job sweeps what issuance leaves.** `runRetention` used to delete `diag_events`
   and `attempts` and keep every pack for ever; issuance turned that from theoretical into live. It
   now sweeps `offline_packs` past their window and `issued_items` too — last, and behind a
@@ -398,18 +411,18 @@ format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 102 of the 360 report as skipped rather than passing quietly.
+  run; leave it unset and 129 of the 449 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
   schemas, one golden fixture and one rejection row per stimulus and puzzle kind, their
-  recorded normalisations, and `canon.golden.json`. 189 tests, green, 91.71% mutation score,
+  recorded normalisations, and `canon.golden.json`. 248 tests, green, 91.71% mutation score,
   0 clones. **Zod 4.4.3 is the repository's first runtime dependency**, pinned exactly
   because the determinism gate is byte-for-byte.
-- **Does not exist.** Two of the nine contracted endpoints — `GET /items/next`, which needs an
-  issuance policy, and `GET /me/standing`, which needs a rating — no dev environment, no deploy, and
-  no deployed *application*. **The database is provisioned**: a Neon project (`akimath`,
-  `aws-us-east-1`, PostgreSQL 18.4) with both migrations applied, its connection strings in
+- **Does not exist.** One of the nine contracted endpoints — `GET /items/next`, which needs an
+  issuance policy — no dev environment, no deploy, and no deployed *application*. **The database is
+  provisioned**: a Neon project (`akimath`,
+  `aws-us-east-1`, PostgreSQL 18.4) with all eight migrations applied, its connection strings in
   `packages/server/.env.local`, which is gitignored. `MIGRATE_DATABASE_URL` is the direct string and
   `DATABASE_URL` the pooled one; **`TEST_DATABASE_URL` is deliberately not set there**, because the
   harness drops and recreates the public schema on every run. **The pack builder is written**: `packages/core`'s
@@ -474,8 +487,13 @@ format and its OpenAPI half.
   `^6.0.3`. **The root scripts do not run.** Use the per-stack commands below.
 
 Work is tracked by the phase vocabulary in ARCHITECTURE.md §9 (`F0`…`F8`). There is no
-ticket tracker. F0 through F2 are done and **F6's five puzzle formats are all playable**; the
-server side is still at the scaffold, so the next phase with code behind it is **F3**.
+ticket tracker. **The phases have not been walked in order, and F0 through F7 all have code on
+disk**: F0 through F2 are done, F3's server answers eight of the nine contracted endpoints, F4's
+rating measures a player against the difficulty classes other players have met, F5's map of topics
+is computed from the pack, **F6's five puzzle formats are all playable**, and F7's profile, its
+settings stack and its edge states are drawn. **F8 is the only one nothing has touched** — Rive is
+named in ARCHITECTURE.md §9 and in `docs/IMPLEMENTATION-PLAN.md` and appears in no dependency and
+no line of Dart.
 
 ## Commands
 
@@ -718,9 +736,14 @@ back the day something else is written down without one.)*
 
 Commit email is `geineryodan@gmail.com` — verify `git config user.email` before committing.
 
-`dev` is the working branch and **pushing to it is authorized**. `main` is protected by the
+**`main` is the trunk, and `dev` is not the working branch any more.** `dev` stopped at pull
+request #6 on 2026-08-17 and everything since — #7 through #108 — has been merged into `main`, so
+`main` is 155 commits ahead, `origin/dev` holds nothing `main` does not, and 656 files differ
+between them. **Branch off `main` and diff against `main`**: a review taken against `origin/dev`
+is those 155 commits of noise rather than the change. `main` itself is protected by the
 `protect-main` ruleset: no direct push, no force-push, no deletion — it is reached through a
-pull request. Nothing is committed or pushed unless you were asked to.
+pull request from a branch, which is how every change since #6 has landed. Nothing is committed or
+pushed unless you were asked to.
 
 ## Decided
 
