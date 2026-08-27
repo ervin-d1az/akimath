@@ -722,6 +722,22 @@ jobs:
         with:
           node-version: '22'
       - run: npm install -g @fission-ai/openspec@1.9.0
+      # **The config file is inert when it does not parse, and nothing failed.**
+      # `openspec` warns on stderr and carries on with its defaults, so every rule
+      # under `proposal:`, `design:`, `tasks:` and `operations:` can be silently
+      # unread while this job stays green — which is exactly what happened between
+      # 2026-08-26 and the commit that added this step, after an unquoted bullet
+      # with a colon-space invalidated the list it was in. A warning nobody reads
+      # is not a gate.
+      - name: The planning config parses
+        env:
+          OPENSPEC_TELEMETRY: '0'
+        run: |
+          if openspec list --no-interactive 2>&1 | grep -q 'could not parse'; then
+            openspec list --no-interactive 2>&1 | grep 'could not parse' >&2
+            echo "::error::openspec/config.yaml does not parse, so every rule in it is being ignored." >&2
+            exit 1
+          fi
       - name: Validate specs and changes
         env:
           OPENSPEC_TELEMETRY: '0'
