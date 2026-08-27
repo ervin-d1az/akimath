@@ -77,9 +77,13 @@ set -uo pipefail
 #
 # ENVIRONMENT
 # -----------
-#   AKIMATH_GATE_BASE      integration branch used when the current branch has
-#                          no upstream. Default origin/dev. Set in
-#                          .claude/settings.json.
+#   AKIMATH_GATE_BASE      trunk used to scope the change when the current
+#                          branch has no upstream. Default origin/main. Set in
+#                          .claude/settings.json. It was origin/dev until
+#                          2026-08-26, which stopped being the trunk at pull
+#                          request #6 on 2026-08-17 — against that base every
+#                          branch looks like 656 changed files, so the gate
+#                          could never scope itself to the change under it.
 #   AKIMATH_COMMIT_EMAIL   required git commit identity. Default
 #                          geineryodan@gmail.com.
 #   AKIMATH_FLUTTER_BIN    absolute path to flutter, when PATH does not carry it.
@@ -94,7 +98,7 @@ set -uo pipefail
 #                          whole packages/contract suite is 0.8s) so it can only
 #                          ever fire on a hang, never on a slow machine.
 
-BASE_REF="${AKIMATH_GATE_BASE:-origin/dev}"
+BASE_REF="${AKIMATH_GATE_BASE:-origin/main}"
 REQUIRED_EMAIL="${AKIMATH_COMMIT_EMAIL:-geineryodan@gmail.com}"
 TIMEOUT_SECONDS="${AKIMATH_GATE_TIMEOUT:-600}"
 # Seconds between the polite SIGTERM and the SIGKILL, so a runner that traps
