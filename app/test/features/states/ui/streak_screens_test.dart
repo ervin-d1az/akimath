@@ -1,6 +1,8 @@
 import 'package:akimath_app/design/brand/aki.dart';
 import 'package:akimath_app/design/widgets/before_after_counters.dart';
 import 'package:akimath_app/design/widgets/streak_badge.dart';
+import 'package:akimath_app/features/home/policy/broken_run.dart';
+import 'package:akimath_app/features/home/policy/streak_state.dart';
 import 'package:akimath_app/features/states/ui/streak_at_risk_screen.dart';
 import 'package:akimath_app/features/states/ui/streak_lost_screen.dart';
 import 'package:flutter/widgets.dart';
@@ -102,7 +104,7 @@ void main() {
       expect(find.text('LA RACHA'), findsOneWidget);
       expect(find.text('VOLVIÓ A UNO'), findsOneWidget);
       expect(find.byType(BeforeAfterCounters), findsOneWidget);
-      expect(find.text('AYER'), findsOneWidget);
+      expect(find.text('ANTES'), findsOneWidget);
       expect(find.text('HOY'), findsOneWidget);
     });
 
@@ -125,6 +127,44 @@ void main() {
       await tester.tap(find.text('Empezar la de hoy'));
       await tester.pump();
       expect(started, 1);
+    });
+
+    testWidgets('does not caption the ended run as yesterday', (WidgetTester tester) async {
+      // **The claim, not the render.** `find.text(<caption>)` passes for any
+      // string at all, so it cannot tell a true caption from a false one. This
+      // walks the chain the screen is actually reached through and asserts the
+      // relationship: the state is `broken` only where the newest recorded day
+      // is older than yesterday, so whatever the left box is captioned, it is
+      // never yesterday's run. `streak_state_test.dart` holds the same
+      // invariant over a sweep; this one closes it to the drawn caption.
+      final DateTime now = DateTime(2026, 8, 26, 9, 30);
+      final DateTime yesterday = DateTime(2026, 8, 25);
+      final List<DateTime> log = <DateTime>[
+        for (int back = 12; back >= 0; back--) DateTime(2026, 8, 21 - back),
+      ];
+
+      expect(
+        streakStateFor(attemptDays: log, now: now),
+        StreakState.broken,
+        reason: 'the log this screen is reached with',
+      );
+      expect(
+        log.last.isBefore(yesterday),
+        isTrue,
+        reason: 'the newest recorded day is 2026-08-21, two days before '
+            'yesterday — which is why AYER cannot be the caption',
+      );
+
+      await pump(
+        tester,
+        StreakLostScreen(
+          brokenRun: brokenRunLength(attemptDays: log, now: now),
+          onStart: () {},
+        ),
+      );
+
+      expect(find.text('13'), findsOneWidget);
+      expect(find.text('AYER'), findsNothing);
     });
 
     testWidgets('does not scold', (WidgetTester tester) async {

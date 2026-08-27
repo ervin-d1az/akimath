@@ -158,25 +158,47 @@ invent a fourth.
      rules XML defining its test commands does not exist, so do not write that command as if it ran.
      Substitute a **falsification step**. It edits versioned production code, so run it exactly this
      way and never free-hand:
-     1. `shasum -a 256 <file>` and copy the file aside. Record the checksum — it is the proof, not
-        a formality.
+     0. **Commit the change first** (PROC-5 step 0). Every restore below is a restore *to*
+        something, and until the work is committed there is nothing safe to restore to.
+     1. Establish the proof you will use, and **which one depends on whether git tracks the file**:
+        - **Tracked** (the usual case — you are mutating existing production code): nothing to
+          prepare. `git diff --quiet -- <file>` *is* the proof.
+        - **Untracked** (a file this session created and has not committed): `shasum -a 256 <file>`
+          and copy the file aside. Record the checksum.
      2. Invert one assertion or return value, `cd app && flutter test`, and note the **named** test
-        that went red.
-     3. Restore, then **prove the restore**: repeat `shasum -a 256 <file>` and require the same
-        digest (or `diff -q <backup> <file>` reporting identical), **and** `cd app && flutter test`
-        back at the count you recorded in step 1. Paste both into the ledger.
+        that went red. **Red is the runner's exit status `$?`, never a grep over its output** — a
+        pattern matching the failure line is one ANSI escape away from finding nothing, and a
+        check that cannot see red reports a mutation as survived.
+     3. Restore, then **prove the restore** with two things pasted into the ledger: the proof from
+        step 1, **and** `cd app && flutter test` back at the count you recorded.
 
-        **Never `git diff --quiet` for this.** PROC-8: git cannot prove anything about a path it
-        does not track, and that command exits 0 for an untracked file — so the proof is vacuous
-        precisely when the file is new.
+        **Use `git diff --quiet -- <file>` for a tracked file, and the checksum only for an
+        untracked one.** PROC-8 is explicit that the checksum is the *substitute* for the untracked
+        case and not a replacement for git: git cannot prove anything about a path it does not
+        track, so `git diff --quiet` exits 0 for an untracked file whether or not the mutation is
+        still in it — vacuous precisely when the file is new. This instruction said "never
+        `git diff --quiet`" until 2026-08-26, which inverted the rule for the common case; PROC-8
+        names that exact inversion as one somebody had already made by reading only its first
+        sentence.
 
      Skipping step 3 is how a mutation reaches a commit: Phase 5 tells you to stage "the files
      belonging to that change", and the file you mutated is one of them. That has already happened
      in this repo.
-3. **Tier 2 — run the app and look (escalate, do not attempt).** When the change surfaces on screen,
-   the 48px touch area, the shape-not-colour distinction and the absence of blur are judged on a
-   device. That needs an interactive session a subagent cannot hold: hand it back to the main
-   session, naming the screen, the action and the expected result. The real targets are the booted
+3. **Tier 2 — exercise the real thing. Try the non-interactive half before escalating.** When the
+   change surfaces on screen, the 48px touch area, the shape-not-colour distinction and the absence
+   of blur are judged on a device.
+   **`integration_test/` is Tier 2 and a subagent *can* run it** — it is not interactive, and
+   `flutter test` deliberately does not reach it, which is how three of those suites sat broken for
+   weeks. On a booted simulator, `xcrun simctl list devices booted` for the id and then
+   `cd app && flutter test integration_test/<suite>.dart -d <id>` builds and runs the real binary
+   on real hardware. If the suite reaches your screen but asserts nothing about what you changed,
+   **add the assertion there** — that is usually the one place the data is genuine rather than
+   handed to a constructor. Check the device is free first (`ps aux` for `flutter run`,
+   `flutter test`, `xcodebuild`) and never fight another agent for it.
+   *Escalate only the part that genuinely needs a human*: somebody **looking** at the screen and
+   judging that it reads well. Say which half you reached. This instruction said "escalate, do not
+   attempt" until 2026-08-26, and an agent obeying it skipped device evidence it could have
+   produced. The interactive targets are the booted
    iOS simulator (`cd app && flutter run -d "iPhone 17"`) or `cd app && flutter run -d chrome`;
    `-d macos` is not one, because `app/macos/` does not exist.
 

@@ -18,14 +18,14 @@ void main() {
         tester,
         const BeforeAfterCounters(
           before: 13,
-          beforeCaption: 'AYER',
+          beforeCaption: 'ANTES',
           after: 1,
           afterCaption: 'HOY',
         ),
       );
 
       expect(find.text('13'), findsOneWidget);
-      expect(find.text('AYER'), findsOneWidget);
+      expect(find.text('ANTES'), findsOneWidget);
       expect(find.text('1'), findsOneWidget);
       expect(find.text('HOY'), findsOneWidget);
     });
@@ -38,7 +38,7 @@ void main() {
         tester,
         const BeforeAfterCounters(
           before: 13,
-          beforeCaption: 'AYER',
+          beforeCaption: 'ANTES',
           after: 1,
           afterCaption: 'HOY',
         ),
@@ -66,7 +66,7 @@ void main() {
         tester,
         const BeforeAfterCounters(
           before: 13,
-          beforeCaption: 'AYER',
+          beforeCaption: 'ANTES',
           after: 1,
           afterCaption: 'HOY',
         ),
