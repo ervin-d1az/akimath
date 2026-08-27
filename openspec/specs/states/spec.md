@@ -128,9 +128,11 @@ half rather than approximate the whole.
 #### Scenario: No rating appears on the lost screen
 
 - **WHEN** `4.13` is drawn
-- **THEN** its reassurance names what survived without a number, because rating
-  is F4 and `GET /me/standing` answers 501 — the same reading that keeps a
-  rating off the verdict screens
+- **THEN** its reassurance names what survived without a number, because
+  `GET /me/standing` is implemented and answers a rating **per skill** — no
+  single number over a list of Glicko ratings is a fact about a player, so
+  there is nothing here to print. The same reading keeps a rating off
+  `4.1 Perfil`
 
 ### Requirement: req-every-answer-has-a-state · No case falls through
 
