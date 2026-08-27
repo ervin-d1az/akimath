@@ -74,7 +74,21 @@ describe("a script that needs a secret loads the file it is in", () => {
     // A test run that picked up `DATABASE_URL` from a developer's machine would
     // be a test run against Neon. `TEST_DATABASE_URL` is set by hand, and
     // `.env.local` deliberately does not carry it.
-    for (const name of ["test", "typecheck", "verify", "coverage"]) {
+    //
+    // **`test:db` is on this list, not excused from it.** It is the script that
+    // exists to hand the suites a database, so it is the one most tempting to
+    // point at the file where the other connection strings already live — and
+    // the one where doing so would be worst. It gets its URL from
+    // `scripts/local-database.sh`, which refuses any host that is not this
+    // machine.
+    for (const name of [
+      "test",
+      "test:db",
+      "typecheck",
+      "verify",
+      "verify:db",
+      "coverage",
+    ]) {
       expect(manifest.scripts[name] ?? "").not.toContain("--env-file");
     }
   });
