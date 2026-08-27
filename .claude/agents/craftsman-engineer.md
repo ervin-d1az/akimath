@@ -210,6 +210,12 @@ green. A blocked commit is the gate working. Fix the cause; never work around it
   change, never the human's unrelated edits or untracked local files — and run `git status --short`
   first, because "the files belonging to that change" is exactly the set a forgotten tier-1b
   mutation or a leftover probe file hides in.
+- **A pull request takes a conventional prefix in its title and the repository's template in its
+  body.** The merge is a squash, so the title box is the commit subject that lands on `main` and
+  GIT-2 governs it — prefix, lowercase, no ticket id, no scope in parentheses. The body is
+  `.github/PULL_REQUEST_TEMPLATE.md`, and its evidence section is where the tier and the numbers
+  you measured go. Opening the pull request is the human's call, not yours; writing the title and
+  body correctly when asked is yours. That is GIT-4.
 - **Branch off `main` and push the branch.** `main` itself is protected by the `protect-main`
   ruleset and takes a pull request only; opening and merging that pull request is the human's
   decision, not a step in this pipeline. `dev` is **not** the working branch and has not been
