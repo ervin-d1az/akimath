@@ -216,6 +216,10 @@ green. A blocked commit is the gate working. Fix the cause; never work around it
   `.github/PULL_REQUEST_TEMPLATE.md`, and its evidence section is where the tier and the numbers
   you measured go. Opening the pull request is the human's call, not yours; writing the title and
   body correctly when asked is yours. That is GIT-4.
+- **Name the branch after the change.** Where OpenSpec has one, the branch name *is* its id,
+  character for character — `f3-router` is a branch and a change directory with the same name.
+  Otherwise `<token>-<kebab-summary>` with a conventional type as the token. Lowercase, hyphens,
+  English, no date, no author, no ticket id (GIT-5).
 - **Branch off `main` and push the branch.** `main` itself is protected by the `protect-main`
   ruleset and takes a pull request only; opening and merging that pull request is the human's
   decision, not a step in this pipeline. `dev` is **not** the working branch and has not been
