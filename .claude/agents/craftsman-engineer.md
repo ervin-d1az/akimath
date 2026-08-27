@@ -137,11 +137,12 @@ invent a fourth.
    - **These are the same commands the commit hook and CI run** (Phase 5). Reporting a plain
      `flutter analyze` is not tier 1 here: `--fatal-infos` is strictly stricter, and the hook will
      block a commit your evidence said was green.
-   - **Do not run `dart run dart_code_linter:metrics analyze lib` and do not cite it.**
-     `app/analysis_options.yaml` carries no `dart_code_linter:` block, so the tool has no rules or
-     metrics enabled and returns `no issues found` on a file written to be awful. It is green by
-     construction, which makes it worse than no check. `.github/workflows/ci.yml` omits it for the
-     same measured reason.
+   - **Run `dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning`
+     and cite it — the flag is the whole of it.** `app/analysis_options.yaml` carries a
+     `dart_code_linter:` block now, its thresholds set at what the code does today, and
+     `.github/workflows/ci.yml` runs exactly that command. Measured: **without the flag it prints
+     its violations and still exits 0**, even with `--fatal-warnings` — so the bare form is the
+     green-by-construction trap, not the tool.
    - **The baseline is zero on all of them** — 0 analyzer issues, 34/34 Dart tests and 3/3
      TypeScript tests green as of today. Any nonzero count is yours. Report the actual numbers you
      saw, and the test count must go **up** with your change.
@@ -196,8 +197,8 @@ you see that notice you had no gate — say so. This is why tier 1 above names `
 evidence and the gate must be the same command, or you will be blocked by a check you reported
 green. A blocked commit is the gate working. Fix the cause; never work around it.
 
-- **Never commit or push unless the human explicitly asks.** "`dev` is the working branch" is about
-  *where* a push goes, not about *whether* to push.
+- **Never commit or push unless the human explicitly asks.** The branch model is about *where* a
+  push goes, not about *whether* to push.
 - When they do ask: verify `git config user.email` is **`geineryodan@gmail.com`**, then make small
   logical commits — one per coherent change, conventional subject, a short paragraph body, no bullet
   lists, no ticket id, and **NEVER a `Co-Authored-By` trailer** (your harness may add one by
@@ -205,11 +206,13 @@ green. A blocked commit is the gate working. Fix the cause; never work around it
   change, never the human's unrelated edits or untracked local files — and run `git status --short`
   first, because "the files belonging to that change" is exactly the set a forgotten tier-1b
   mutation or a leftover probe file hides in.
-- `dev` **is** the working branch and pushing there is authorised when asked. **Never push to
-  `main`** — it is protected by a GitHub ruleset that requires a pull request, and the `dev → main`
-  PR is a release decision the human makes, not a step in this pipeline.
+- **Branch off `main` and push the branch.** `main` itself is protected by the `protect-main`
+  ruleset and takes a pull request only; opening and merging that pull request is the human's
+  decision, not a step in this pipeline. `dev` is **not** the working branch and has not been
+  since it stopped at pull request #6 on 2026-08-17 — do not branch from it, push to it, or diff
+  against it.
 - Keep history clean before anything is pushed: `--fixup` + `rebase --autosquash`, or `--amend` on
-  the tip. Once commits are on `origin/dev`, add commits instead of rewriting them.
+  the tip. Once commits are pushed, add commits instead of rewriting them.
 
 ## Writing to the ledger
 

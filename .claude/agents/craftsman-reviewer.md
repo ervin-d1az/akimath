@@ -79,7 +79,7 @@ which is not installed. Run, for each stack the diff touches:
 |---|---|---|
 | Dart | `cd app && flutter analyze --fatal-infos` | 0 issues |
 | Dart | `cd app && dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning` | 0 violations |
-| TypeScript | `npm run dry` (jscpd) in **each package the diff touches** — `packages/server`, `packages/contract`, `packages/core` | 0 clones |
+| TypeScript | `cd packages/<name> && npm run dry` (jscpd) in **each package the diff touches** — `server`, `contract`, `core` | 0 clones |
 
 `--fatal-infos` is deliberate: that is the form `.claude/hooks/verify-gate.sh` and
 `.github/workflows/ci.yml` run, so a plain `flutter analyze` would be a weaker check than the one

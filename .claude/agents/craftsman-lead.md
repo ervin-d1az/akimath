@@ -41,7 +41,7 @@ work item (ARCHITECTURE.md §9 phase, or a direct request)
   → [BUG HUNT]  craftsman-bug-hunter — high-severity correctness only
   → [EVIDENCE]  the committed suites + static analysis, then the tier the change deserves
   → ⏸ HUMAN ASKS to land
-  → [LAND]      craftsman-engineer commits; push to `dev` only when asked
+  → [LAND]      craftsman-engineer commits; push the branch only when asked
   → [ARCHIVE]   /opsx:archive, only after the pull request has merged
 ```
 
@@ -150,9 +150,11 @@ which blocks the tool call. `.github/workflows/ci.yml` runs the same set. An eng
 plain `flutter analyze` will be blocked by the hook and not know why — so require the flag in the
 evidence, not just in the gate.
 
-`dart run dart_code_linter:metrics analyze lib` is **not evidence and must not be accepted as
-such**: `app/analysis_options.yaml` has no `dart_code_linter:` block, so the tool has no rules
-enabled and exits 0 on deliberately awful code. `ci.yml` omits it for the same measured reason.
+`dart run dart_code_linter:metrics analyze lib --set-exit-on-violation-level=warning` **is**
+evidence and CI enforces it: `app/analysis_options.yaml` carries the `dart_code_linter:` block and
+`ci.yml` runs that exact command. Require the flag in the evidence the same way you require
+`--fatal-infos` — without it the command prints its violations and exits 0, so a ledger citing the
+bare form is claiming a gate that cannot fail, and that is the thing to reject.
 
 **The baseline here is zero, on every one of those.** That makes tier 1 stricter than a
 baseline-aware typecheck, not looser: any nonzero count is a regression introduced by this change,

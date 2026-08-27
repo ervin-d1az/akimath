@@ -47,11 +47,13 @@ set -uo pipefail
 # fired on any packages/ path but only ever ran packages/server, so a
 # contract-only change was gated by nothing at all.
 #
-# `dart run dart_code_linter:metrics` is in neither place. With no
-# `dart_code_linter:` block in app/analysis_options.yaml it reports nothing at
-# all — verified against a file written to be awful — and forcing thresholds on
-# the command line lights up four pre-existing files. See the comment in
-# .github/workflows/ci.yml.
+# `dart run dart_code_linter:metrics` is in CI and deliberately not here.
+# app/analysis_options.yaml carries the `dart_code_linter:` block now and
+# .github/workflows/ci.yml runs the command with
+# --set-exit-on-violation-level=warning, which is what makes it bite: without
+# that flag it prints its violations and still exits 0. It stays out of this
+# hook because this hook runs per commit and that step is CI's. This paragraph
+# claimed the opposite until 2026-08-26.
 #
 # BASELINE — why "inherited findings" cannot block here
 # ----------------------------------------------------
