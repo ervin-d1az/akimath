@@ -1,5 +1,3 @@
-import 'package:akimath_app/features/home/data/prefs_day_log_store.dart';
-import 'package:akimath_app/features/home/policy/day_log.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/states/data/streak_notice_store.dart';
@@ -9,7 +7,8 @@ import 'package:akimath_app/design/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/device_state.dart';
 
 /// The two streak screens on a real device, reached the way a player reaches
 /// them: by what is on disk and what time it is.
@@ -20,31 +19,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// `shared_preferences` and the real navigator get a player there — and whether
 /// a 46px Darumadrop headline over Aki over a card over two buttons actually
 /// fits a phone.
+///
+/// This was the one suite that already established its own state, and it was the
+/// one suite that passed. `DeviceState.playedRunEnding` is that seeding lifted
+/// into `support/`, where the other five could reach it — and where the run a
+/// case wants is named at the top of the case rather than assembled from two
+/// local closures.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-
-  Future<void> seed(DayLog log) async {
-    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
-    await prefs.clear();
-    await const PrefsDayLogStore().record(log.days.first);
-    for (final DateTime day in log.days.skip(1)) {
-      await const PrefsDayLogStore().record(day);
-    }
-  }
-
-  DayLog runEnding(DateTime last, int length) {
-    DayLog log = DayLog.empty;
-    for (int back = length - 1; back >= 0; back--) {
-      log = log.recording(DateTime(last.year, last.month, last.day - back));
-    }
-    return log;
-  }
 
   testWidgets('a live run and a late hour lands on 4.12, and it leads back',
       (WidgetTester tester) async {
     final DateTime now = DateTime.now();
     final DateTime yesterday = DateTime(now.year, now.month, now.day - 1);
-    await seed(runEnding(yesterday, 13));
+    await establish(DeviceState.playedRunEnding(yesterday, length: 13));
 
     // The device's own hour is whatever it is, so the moment is handed in —
     // the same seam the unit tests use, and the reason `now` is a parameter.
@@ -69,7 +57,12 @@ void main() {
   testWidgets('a broken run lands on 4.13, and the page turns once',
       (WidgetTester tester) async {
     final DateTime now = DateTime.now();
-    await seed(runEnding(DateTime(now.year, now.month, now.day - 3), 13));
+    await establish(
+      DeviceState.playedRunEnding(
+        DateTime(now.year, now.month, now.day - 3),
+        length: 13,
+      ),
+    );
 
     Widget app() => MaterialApp(
           theme: AkiMathTheme.build(),

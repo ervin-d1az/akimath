@@ -1,11 +1,9 @@
 import 'package:akimath_app/api/endpoints.dart';
-import 'package:akimath_app/design/widgets/keypad.dart';
-import 'package:akimath_app/features/home/ui/home_screen.dart';
-import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
-import 'package:akimath_app/main.dart' as app;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+
+import 'support/launch.dart';
 
 /// The account door, on a real device, up to the last step that cannot be
 /// automated.
@@ -19,40 +17,17 @@ import 'package:integration_test/integration_test.dart';
 /// Skipped when the build has no endpoints: the row is absent by design then,
 /// and a test that fails for that reason would be reporting a build flag rather
 /// than a defect.
-Future<void> _press(WidgetTester tester, String id) async {
-  await tester.tap(find.byWidgetPredicate(
-    (Widget w) => w is KeypadKeyView && w.data.id == id,
-  ));
-  await tester.pump();
-}
-
-Future<void> _reachHome(WidgetTester tester) async {
-  app.main();
-  await tester.pumpAndSettle(const Duration(seconds: 5));
-
-  if (find.byType(WelcomeScreen).evaluate().isNotEmpty) {
-    await tester.tap(find.text('Resolver uno'));
-    await tester.pumpAndSettle();
-    await _press(tester, '1');
-    await _press(tester, '3');
-    await _press(tester, 'submit');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Siguiente'));
-    await tester.pumpAndSettle();
-  }
-
-  for (int i = 0; i < 20 && find.byType(HomeScreen).evaluate().isEmpty; i++) {
-    await tester.pumpAndSettle(const Duration(milliseconds: 300));
-  }
-  expect(find.byType(HomeScreen), findsOneWidget, reason: 'never reached the home');
-}
-
+///
+/// **It asks for a device past the first run, and a cleared one.** This suite is
+/// about the door, not the onboarding — and `TU CUENTA` offering *"Crear
+/// cuenta"* is a claim about a device holding no session and no player id, which
+/// `launchOnTheHome` establishes rather than inherits.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('the account door leads to the age gate and then to the form',
       (WidgetTester tester) async {
-    await _reachHome(tester);
+    await launchOnTheHome(tester);
 
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
@@ -68,7 +43,7 @@ void main() {
     // An adult's date, typed on the 3×4 pad — the system keyboard never takes
     // digits in this app.
     for (final String digit in '14031990'.split('')) {
-      await _press(tester, digit);
+      await pressKey(tester, digit);
     }
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
@@ -84,7 +59,7 @@ void main() {
 
   testWidgets('a child reaches consent, and no path from there reaches the form',
       (WidgetTester tester) async {
-    await _reachHome(tester);
+    await launchOnTheHome(tester);
 
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
@@ -93,7 +68,7 @@ void main() {
 
     // Ten years old on the day the gate is asked.
     for (final String digit in '19082016'.split('')) {
-      await _press(tester, digit);
+      await pressKey(tester, digit);
     }
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
@@ -109,14 +84,14 @@ void main() {
 
   testWidgets('the form refuses a short password without leaving the device',
       (WidgetTester tester) async {
-    await _reachHome(tester);
+    await launchOnTheHome(tester);
 
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
     for (final String digit in '14031990'.split('')) {
-      await _press(tester, digit);
+      await pressKey(tester, digit);
     }
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();

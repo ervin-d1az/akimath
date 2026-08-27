@@ -2,71 +2,32 @@ import 'package:akimath_app/design/icons/brand_icon.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/map/ui/skill_map_screen.dart';
 import 'package:akimath_app/features/shell/ui/nav_bar.dart';
-import 'package:akimath_app/features/onboarding/ui/calibration_intro_screen.dart';
-import 'package:akimath_app/features/onboarding/ui/save_progress_screen.dart';
-import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/preferences/ui/legend_screen.dart';
 import 'package:akimath_app/features/preferences/ui/settings_list_screen.dart';
 import 'package:akimath_app/features/profile/ui/profile_screen.dart';
-import 'package:akimath_app/design/widgets/keypad.dart';
-import 'package:akimath_app/main.dart' as app;
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'support/launch.dart';
+
 /// Walks the shell on a real device: splash, first run, home, all three roots,
 /// and the settings stack above one of them.
+///
+/// **The first run is produced, not hoped for.** This docstring claimed to walk
+/// it while the walk sat behind `if (WelcomeScreen … isNotEmpty)`, and the
+/// simulator carried the completed flag — so the half of the tour this sentence
+/// names had never run. `launchOnAFreshInstall` establishes the state and
+/// asserts each screen of `0.2 → 0.3 → 0.4 → 0.7` on the way past.
+///
+/// It is also what makes the empty-store assertions at the end mean something:
+/// `ACIERTOS`, `PROMEDIO` and `HISTORIAL` are absent here because this device
+/// has answered nothing that counts, which is now true by construction rather
+/// than by whatever the handset was holding.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('a player can reach every root and the stack above one', (WidgetTester tester) async {
-    app.main();
-    await tester.pumpAndSettle(const Duration(seconds: 6));
-
-    if (find.byType(WelcomeScreen).evaluate().isNotEmpty) {
-      await tester.tap(find.text('Resolver uno'));
-      await tester.pumpAndSettle();
-      for (final String id in <String>['1', '3', 'submit']) {
-        await tester.tap(find.byWidgetPredicate(
-          (Widget w) => w is KeypadKeyView && w.data.id == id,
-        ));
-        await tester.pump();
-      }
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Siguiente'));
-      await tester.pumpAndSettle();
-    }
-
-    // **Calibration stands between the first run and the home now** (#97), and
-    // it is skipped rather than played: what this suite is about is the shell,
-    // and ten measured items in front of it would make every failure here a
-    // failure about something else. Guarded, because a device that has already
-    // been through it does not see this screen.
-    if (find.byType(CalibrationIntroScreen).evaluate().isNotEmpty) {
-      await tester.tap(find.text('Saltar por ahora'));
-      await tester.pumpAndSettle();
-    }
-
-    // **And the offer to keep it stands after that** (#98). `Después` is the
-    // honest answer for this suite: it is about the shell with no account, and
-    // the signed-out profile is one of the three roots it walks.
-    if (find.byType(SaveProgressScreen).evaluate().isNotEmpty) {
-      await tester.tap(find.text('Después'));
-      await tester.pumpAndSettle();
-    }
-
-    for (int i = 0; i < 20 && find.byType(HomeScreen).evaluate().isEmpty; i++) {
-      await tester.pumpAndSettle(const Duration(milliseconds: 300));
-    }
-    if (find.byType(HomeScreen).evaluate().isEmpty) {
-      final Iterable<String> onScreen = tester
-          .widgetList<Text>(find.byType(Text))
-          .map((Text t) => t.data ?? '')
-          .where((String s) => s.isNotEmpty);
-      // ignore: avoid_print
-      print('ON SCREEN INSTEAD: ${onScreen.join(" | ")}');
-    }
-    expect(find.byType(HomeScreen), findsOneWidget, reason: 'never reached the home');
+    await launchOnAFreshInstall(tester);
 
     // The bar exists because a second root does.
     expect(find.text('Inicio'), findsOneWidget);
