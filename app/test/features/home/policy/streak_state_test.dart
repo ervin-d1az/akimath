@@ -186,4 +186,76 @@ void main() {
       expect(hoursLeftToday(noon), nextMidnight.difference(noon));
     });
   });
+
+  group('the run 4.13 draws is never yesterday\'s', () {
+    test('broken implies the newest recorded day is older than yesterday', () {
+      // **The invariant behind a caption.** `4.13 Racha perdida` captions its
+      // left counter, and the design's own caption is *AYER* — recorded in
+      // `openspec/changes/archive/2026-08-20-f7-estados-de-racha/proposal.md`
+      // as *"the design draws `AYER 13 → HOY 1`"*. It can never be true:
+      // `broken` requires `streakLength == 0`, which requires the log to hold
+      // neither today nor yesterday. So the run this screen reports on always
+      // ended at least two days ago, and the drawn screen and the policy
+      // disagree — the policy is right.
+      //
+      // A sweep rather than one example, because the claim is *never*, not
+      // *usually*: an example would leave the caption true for some input
+      // nobody enumerated.
+      final DateTime now = DateTime(2026, 8, 26);
+      final DateTime yesterday = DateTime(2026, 8, 25);
+
+      int brokenCases = 0;
+      for (int gap = 0; gap <= 30; gap++) {
+        for (final int length in <int>[1, 2, 13, 90]) {
+          for (final int hour in <int>[0, 9, 18, 23]) {
+            final DateTime last =
+                DateTime(now.year, now.month, now.day - gap);
+            final List<DateTime> days = run(last: last, length: length);
+            final DateTime moment =
+                DateTime(now.year, now.month, now.day, hour);
+            if (streakStateFor(attemptDays: days, now: moment) !=
+                StreakState.broken) {
+              continue;
+            }
+            brokenCases++;
+            expect(
+              last.isBefore(yesterday),
+              isTrue,
+              reason: 'gap $gap, length $length, hour $hour: the state is '
+                  'broken, so the run it reports ended before yesterday',
+            );
+          }
+        }
+      }
+
+      // PROC-10: a sweep that reached no broken case would assert nothing and
+      // still pass. 29 gaps past yesterday, four lengths, four hours.
+      expect(brokenCases, 464);
+    });
+
+    test('the gap where broken begins is two days, not one', () {
+      // Brackets the boundary the caption turns on. At gap 1 the newest day is
+      // yesterday and the run is still alive, so 4.13 is unreachable; at gap 2
+      // it is broken and the run ended the day before yesterday. A change that
+      // let `broken` fire on a yesterday log would make *AYER* true again —
+      // and would fail here first.
+      final DateTime now = DateTime(2026, 8, 26, 20);
+
+      expect(
+        streakStateFor(
+          attemptDays: run(last: DateTime(2026, 8, 25), length: 13),
+          now: now,
+        ),
+        StreakState.atRisk,
+        reason: 'yesterday keeps the run alive',
+      );
+      expect(
+        streakStateFor(
+          attemptDays: run(last: DateTime(2026, 8, 24), length: 13),
+          now: now,
+        ),
+        StreakState.broken,
+      );
+    });
+  });
 }
