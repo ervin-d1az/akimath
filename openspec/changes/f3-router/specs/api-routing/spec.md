@@ -116,8 +116,6 @@ count.
   gate that finds no operations would otherwise pass by finding nothing
   → `packages/server/test/contract-parity.test.ts`
 
-## MODIFIED Requirements
-
 ### Requirement: req-openapi-declares-405 · The contract declares the transport error it can return
 
 The emitted contract SHALL declare `405` alongside the existing shared error responses.

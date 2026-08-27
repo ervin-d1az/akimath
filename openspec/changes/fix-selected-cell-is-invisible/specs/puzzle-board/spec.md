@@ -2,7 +2,7 @@
 
 How a board shows the player which cell they are on.
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-the-selected-cell-is-visible · The player can see where they are
 

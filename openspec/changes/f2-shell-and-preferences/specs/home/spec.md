@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-home-shows-the-week · The streak is legible, not a bare number
 

@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-home-offers-the-puzzle · `PUZZLE DEL DÍA` returns
 

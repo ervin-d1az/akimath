@@ -1,8 +1,12 @@
 ## Purpose
 
-What the integration job is allowed to depend on.
+What the integration job is allowed to depend on, and how it is bounded when a
+dependency misbehaves: the tools it takes from its own service container rather
+than from a network install, so a major version matches by construction and no
+external mirror sits on the critical path, and the timeout each step fails
+inside so a hang names itself instead of consuming the job's whole budget.
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-a-matching-pg-dump · The dump client matches the server
 

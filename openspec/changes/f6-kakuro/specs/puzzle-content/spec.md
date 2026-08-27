@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-puzzle-reader-sees-what-a-reader-can-see · The gate says which faults belong to whom
 

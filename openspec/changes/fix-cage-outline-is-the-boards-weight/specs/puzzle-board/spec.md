@@ -2,7 +2,7 @@
 
 How a puzzle board draws its three levels of structure.
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-weight-belongs-to-the-object · Only the board gets the thick outline
 

@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-puzzle-words-must-be-present · A word that is not in the grid is refused
 

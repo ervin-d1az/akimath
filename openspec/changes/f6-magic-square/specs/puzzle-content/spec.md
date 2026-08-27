@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-puzzle-playable-on-the-pad · A board nobody can enter values into is refused
 

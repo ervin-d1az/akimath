@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-board-domain-is-declared · A board says what a cell may hold
 

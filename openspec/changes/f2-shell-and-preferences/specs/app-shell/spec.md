@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-shell-draws-the-bar · The shell renders the bar it has always accepted
 

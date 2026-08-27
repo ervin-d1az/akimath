@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: req-builder-carries-puzzles · A pack may hold boards, and they are authored
 
