@@ -76,6 +76,12 @@ operations:
       # after "subject" makes YAML read the bullet as a mapping key, which invalidates the
       # list and takes the whole file with it. This one was not quoted when it landed on
       # 2026-08-26, and every rule in this file was silently unread until it was.
+      # Quoted for the same reason as the bullets around it — a colon-space in an
+      # unquoted bullet invalidates the list and takes the whole file with it.
+      - "A branch is named after its change: where this change has an OpenSpec id, the
+        branch name is that id, character for character. Otherwise <token>-<kebab-summary>
+        with a conventional type as the token. Lowercase, hyphens, English, no date, no
+        author, no ticket id."
       - "A pull request title is the squashed commit subject: conventional prefix,
         lowercase, no ticket id, no scope in parentheses. Its body follows
         `.github/PULL_REQUEST_TEMPLATE.md`, evidence tier and numbers included."
