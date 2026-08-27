@@ -32,8 +32,9 @@ const ProfileFigures drawn = ProfileFigures(
 /// A player who has practised and answered: what the shipping build draws.
 ///
 /// **No rating and no weekly move**, because neither has a single number behind
-/// it — `GET /me/standing` answers a rating per skill and `ratingDelta` is
-/// null. Accuracy and mean time are real, from the record of what was answered.
+/// it — `GET /me/standing` answers a rating per skill, and `ratingDelta` is a
+/// session's movement on one skill's scale rather than a week's total.
+/// Accuracy and mean time are real, from the record of what was answered.
 const ProfileFigures played = ProfileFigures(
   daysPractised: 13,
   streakDays: 5,
@@ -283,8 +284,9 @@ void main() {
 
     testWidgets('a session row reports no rating, however the headline reads',
         (WidgetTester tester) async {
-      // `ratingDelta` is null for every entry a server without rating can
-      // produce. The headline may be showing an invented figure; a row is a
+      // `ratingDelta` is a real figure since F4, and still null for a session
+      // that spanned two skills or only calibrated, which is what this entry
+      // carries. The headline may be showing an invented figure; a row is a
       // record of something that happened, and inventing one of those is a
       // different act.
       await pump(

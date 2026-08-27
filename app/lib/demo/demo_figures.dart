@@ -19,7 +19,9 @@ import '../design/widgets/spec/mastery_level.dart';
 /// same screen. Accuracy and mean time now come from the record
 /// `features/stats/` keeps, `RETOS` was already the series cursor's, and the
 /// two rating figures are drawn by nothing: `GET /me/standing` answers a rating
-/// per skill rather than one number, and `HistoryEntry.ratingDelta` is null.
+/// per skill rather than one number, and `HistoryEntry.ratingDelta` is a real
+/// figure now but a *session's* movement — null for a session that spanned two
+/// skills and for one that only calibrated — and never a week's.
 /// The constants went with the callers, which is what this file is for.
 ///
 /// Values are taken from the design documents so the screens match what was
@@ -42,9 +44,14 @@ abstract final class DemoFigures {
   /// is deleted; this one is not, because `2.5` still draws it.
   ///
   /// It has no source and is not merely waiting for one. Rating never runs in
-  /// Dart, and the server's per-session `ratingDelta` in `GET /me/history` is
-  /// null — `GET /me/standing` reads real ratings now, but it answers a
-  /// standing per skill and never a move.
+  /// Dart, and the server's per-session `ratingDelta` in `GET /me/history` is a
+  /// real movement now but the wrong one to reach for here: it is read back
+  /// from a session the server already holds, and `2.5` draws the instant a
+  /// series ends on a device that played it offline. `GET /me/history` is
+  /// asked by the profile route and by nobody else. Even after a sync the
+  /// answer can be nothing — a session that spanned two skills, or one that
+  /// only calibrated, reports null — and `GET /me/standing` answers a standing
+  /// per skill and never a move.
   static const int seriesRatingDelta = 12;
 
   /// `2.5`'s `QUÉ MEJORÓ` bars.

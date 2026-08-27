@@ -1433,7 +1433,8 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
 ///
 /// **Every figure here is one the device produces**, which it was not before:
 /// the rating and the weekly move are gone, because `GET /me/standing` answers
-/// a rating *per skill* and `ratingDelta` is null, and the accuracy and the
+/// a rating *per skill* and `ratingDelta` is a session's movement rather than a
+/// week's, and the accuracy and the
 /// mean time are what the answer record adds up to. This is the three-tile row
 /// the gates most need to walk — it is the shape that overflows first — and it
 /// is now also the shape a real phone shows.

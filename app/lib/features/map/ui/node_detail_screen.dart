@@ -31,8 +31,11 @@ import 'mastery_skin.dart';
 ///
 /// What is left is real: the topic, what it asks, the ladder step reached out
 /// of the ladder the pack offers, and the topic the map arrives from. **No
-/// rating** — F4, and `ratingDelta` comes back null, so a number here is one
-/// sync could later contradict.
+/// rating** — F4 landed and `ratingDelta` is a real figure, but it is *one
+/// session's* movement and this screen is *a topic*: sessions added up across a
+/// topic are not a standing, and the per-skill standing that is one,
+/// `GET /me/standing`, is asked for by nobody on this path. A number here is
+/// still one sync could later contradict.
 class NodeDetailScreen extends StatelessWidget {
   const NodeDetailScreen({
     super.key,

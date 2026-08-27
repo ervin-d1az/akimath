@@ -39,7 +39,8 @@ import '../policy/profile_readout.dart';
 /// run and the count of challenges were always the device's. A rating is handed
 /// over by nobody — `GET /me/standing` answers one *per skill* and there is no
 /// single number to print — and a weekly move by nobody either, since
-/// `ratingDelta` is null. Both are simply not drawn, the same rule that makes
+/// `ratingDelta` is one session's movement on one skill's scale and a week is
+/// not the sum of them. Both are simply not drawn, the same rule that makes
 /// `HISTORIAL` disappear when there is nothing true to say.
 ///
 /// **Aki appears once, inside the avatar tile.** Declared rule 5 names her
@@ -420,11 +421,14 @@ class ProfileScreen extends StatelessWidget {
 
   /// One session: what it was, how it went, and when.
   ///
-  /// **No rating column, whatever the headline says.** `ratingDelta` is null
-  /// for every entry a server without rating can produce. A headline figure the
-  /// product cannot compute is a placeholder on a screen; a rating printed
-  /// against a session that happened would be a record of something that did
-  /// not.
+  /// **No rating column, whatever the headline says.** F4 made `ratingDelta` a
+  /// real figure and a row still does not print it: it is null for a session
+  /// that spanned two skills and for one that only calibrated, so a column
+  /// would be blank on exactly the sessions a mixed pack produces, and nothing
+  /// has decided what a row should read there. A headline figure the product
+  /// cannot compute is a placeholder on a screen; a `± 0` printed against a
+  /// session nothing measured would be a record of something that did not
+  /// happen.
   Widget _row(HistoryEntry entry) => CandySurface(
     borderRadius: BrandShape.radiusPill,
     shadowOffset: BrandShape.shadowPill,

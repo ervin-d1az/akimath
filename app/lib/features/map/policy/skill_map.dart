@@ -23,9 +23,11 @@
 ///   takes the higher; before it did, the one button whose whole purpose is to
 ///   advance a topic was structurally incapable of advancing it.
 ///
-/// There is deliberately **no rating and no accuracy here**. Both are F4, the
-/// server returns a null `ratingDelta`, and a percentage invented on this
-/// screen would be a figure sync could later contradict.
+/// There is deliberately **no rating and no accuracy here**. This policy is
+/// computed from the pack and reads nothing the server holds; `ratingDelta` is
+/// a real figure since F4, but it is one session's movement rather than a
+/// topic's standing, and a percentage invented on this screen would be a figure
+/// sync could later contradict.
 library;
 
 import 'package:meta/meta.dart';

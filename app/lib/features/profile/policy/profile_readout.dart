@@ -61,8 +61,12 @@ final class ProfileFigures {
   /// How much the rating moved this week. Null when there is no rating, and
   /// null on its own when there is one and nobody can say how it moved.
   ///
-  /// Nothing can say it today: `HistoryEntry.ratingDelta` comes back null, so
-  /// `+ 36 esta semana` had no source at all — not a weak one, none.
+  /// Nothing can say it today. `HistoryEntry.ratingDelta` is a real figure
+  /// since F4, but it is *one session's* movement on *one skill's* scale:
+  /// adding a week of them together adds independent scales, and the two kinds
+  /// that report null — a session that spanned two skills, a session that only
+  /// calibrated — would silently drop out of the sum rather than be counted as
+  /// nothing. `+ 36 esta semana` still has no source at all.
   final int? ratingThisWeek;
 
   /// A whole percent, or null over no answers at all.
