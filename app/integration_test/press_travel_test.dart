@@ -1,13 +1,12 @@
 import 'package:akimath_app/design/tokens/tokens.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/design/widgets/pressable_surface.dart';
-import 'package:akimath_app/features/home/ui/home_screen.dart';
-import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
-import 'package:akimath_app/main.dart' as app;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+
+import 'support/launch.dart';
 
 /// A key travels into its own shadow — **in the app that ships**.
 ///
@@ -26,23 +25,23 @@ import 'package:integration_test/integration_test.dart';
 /// happen on the device* — measured, in logical pixels, off the painted
 /// decoration. It does not answer *does it read as sinking rather than
 /// sliding*, which is a human judgement and stays a human's.
-Future<void> _reachTheKeypad(WidgetTester tester) async {
-  app.main();
-  await tester.pumpAndSettle(const Duration(seconds: 6));
+///
+/// **One pad, chosen, not two discovered.** This helper used to branch on
+/// whichever screen the handset opened: a welcome meant the teaching item's pad
+/// and anything else meant the round's, so which keypad the measurement came
+/// off was a property of the simulator rather than of the test. It asks for a
+/// returning player now and always measures the round's pad, which is the one a
+/// player spends a series on.
+Future<void> _reachTheRoundKeypad(WidgetTester tester) async {
+  await launchOnTheHome(tester);
 
-  if (find.byType(WelcomeScreen).evaluate().isNotEmpty) {
-    await tester.tap(find.text('Resolver uno'));
-    await tester.pumpAndSettle();
-    return;
-  }
-
-  for (int i = 0; i < 20 && find.byType(HomeScreen).evaluate().isEmpty; i++) {
-    await tester.pumpAndSettle(const Duration(milliseconds: 300));
-  }
+  await tester.ensureVisible(find.text('Empezar la serie'));
+  await tester.pumpAndSettle();
   await tester.tap(find.text('Empezar la serie'));
   for (int i = 0; i < 20 && find.byType(RoundScreen).evaluate().isEmpty; i++) {
     await tester.pumpAndSettle(const Duration(milliseconds: 300));
   }
+  expect(find.byType(RoundScreen), findsOneWidget, reason: 'the series never opened');
 }
 
 /// The painted decoration of one key, by the digit on its face.
@@ -83,7 +82,7 @@ void main() {
 
   testWidgets('a key sinks into its own shadow while it is held, on the device',
       (WidgetTester tester) async {
-    await _reachTheKeypad(tester);
+    await _reachTheRoundKeypad(tester);
 
     final Finder pad = find.byWidgetPredicate(
       (Widget w) => w is KeypadKeyView && w.data.id == '7',
@@ -130,7 +129,7 @@ void main() {
     // becomes unavailable. `IgnorePointer` above it is what stops the press
     // arriving. The widget's own comment claimed the surface was absent; it
     // never was, and this is what found the two out of step.
-    await _reachTheKeypad(tester);
+    await _reachTheRoundKeypad(tester);
 
     final Finder unavailable = find.byWidgetPredicate(
       (Widget w) => w is KeypadKeyView && !w.available,
