@@ -15,6 +15,7 @@ import 'package:akimath_app/features/states/ui/offline_screen.dart';
 import 'package:akimath_app/features/states/ui/server_error_screen.dart';
 import 'package:akimath_app/features/states/policy/topic_suggestion.dart';
 import 'package:akimath_app/features/states/ui/skill_mastered_screen.dart';
+import 'package:akimath_app/features/states/ui/streak_lost_screen.dart';
 import 'package:akimath_app/features/states/ui/topic_exhausted_screen.dart';
 import 'package:akimath_app/features/splash/splash_screen.dart';
 import 'package:akimath_app/content/model/item.dart';
@@ -1309,6 +1310,34 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
         onOpenTopic: _nothing,
         onOpenPuzzle: _nothing,
         onSwitch: _nothing,
+      ),
+    ),
+  ),
+  // --- the streak notice 4.13 (f7-estados-de-racha) ---
+  // **Registered late, and that is a finding in itself.** `4.12` and `4.13`
+  // both landed with `f7-estados-de-racha` and neither was ever added here, so
+  // no gate had ever measured either: not the hard-shadow sweep, not overflow
+  // at textScaler 1.3, not the 48px floor. BRD-2e names this exact failure —
+  // *register the new state's screen before believing it fits*.
+  //
+  // **`4.12 Racha en riesgo` is deliberately still absent**, because
+  // registering it is a red build rather than a gap: measured on this branch,
+  // it overflows at textScaler 1.3 at both viewports and puts a press under
+  // the 48px floor there. That is a real defect in a screen this change does
+  // not touch, and its fix is a layout decision, so it is reported rather than
+  // bundled in here (GIT-2). Register it in the change that fixes it.
+  //
+  // Not wrapped in `AppShell`: `HomeRoute` pushes this full-screen over the
+  // home through `pushSession`, so the frame it really gets is
+  // `fullScreenSession`'s cream `Scaffold` and `SafeArea` — modelled here so
+  // the gate measures the surface the player sees, bar included by its absence.
+  RegisteredScreen(
+    // A two-digit run, so the counter box is drawn at its widest.
+    label: 'estado · 4.13 racha perdida',
+    build: () => Scaffold(
+      backgroundColor: BrandColors.cream,
+      body: SafeArea(
+        child: StreakLostScreen(brokenRun: 13, onStart: _nothing),
       ),
     ),
   ),
