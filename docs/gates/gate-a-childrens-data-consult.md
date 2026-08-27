@@ -2,7 +2,8 @@
 
 **For:** a lawyer specialised in personal-data protection in Mexico, with children's data experience.
 **From:** Ervin Diaz, AkiMath.
-**Opened:** 2026-08-16.
+**Opened:** 2026-08-16. **Corrected against the running system:** 2026-08-26 — §7 says what changed
+and §1 says what it cost.
 **What we need back:** a short written answer per numbered question, cited by number. Not a memo.
 Eleven questions, each with the answer we have assumed written underneath it — several may be
 confirmable in a sentence.
@@ -15,83 +16,152 @@ too.
 
 ---
 
-## 1 · Why this is time-boxed
+## 1 · Why this was time-boxed, and what the box already cost
 
-The database schema freezes in the next phase of work and does not get edited afterwards — after
-that point a column is added by a new forward-only migration, never by changing the one that made it.
-Four of the eleven questions below — Q-A1, Q-A2, Q-A3 and Q-A7 — decide a column, a constraint or a
-named constant in that schema. The rest decide a screen, a vendor or a document, all of which are
-cheaper to change later.
+**Written 2026-08-16, when the box still had time in it. It does not. §7 carries the dates and the
+evidence; this section is corrected here rather than left to be discovered halfway down.**
 
-Concretely: this consult blocks one change (`f1-schema-freeze`), which blocks every change in phase
-F3 — the server, the sync path, the deletion path and the app-store compliance artifacts. It is the
-only thing on the project's critical path whose input comes from outside the codebase.
+The database schema **froze on 2026-08-17** and is not edited afterwards — a column is now added by a
+new forward-only migration, never by changing the one that made it. Eight migrations are applied to a
+live database. Four of the eleven questions below — Q-A1, Q-A2, Q-A3 and Q-A7 — still decide a
+column, a constraint or a named constant in that schema, and that is still why they are worth
+answering. What changed is that they now decide it against rows that exist rather than against a
+drawing.
 
-**A useful turnaround is two to three weeks.** Nothing is on fire; there is no launch date. We would
-rather wait for a correct answer than build on a guess, which is why the questions are written to be
-answerable without reading any code.
+Concretely, and this is the correction that matters: this consult was written to block
+`f1-schema-freeze`, which was to block every change in phase F3 — the server, the sync path, the
+deletion path and the app-store compliance artifacts. **It blocked none of them.**
+`f1-schema-freeze` merged on 2026-08-17 and nine F3 changes have merged since, all of them on the
+defaults this document records. The two that carry this document's remaining obligations have not
+merged: the public deletion page (`f3-deletion-web`) and the app-store compliance artifacts
+(`f3-store-artifacts`). So the consult is not in front of the work any more; it is behind it, and the
+questions below are now questions about a system rather than about a plan.
+
+**A useful turnaround is still two to three weeks.** Nothing is on fire: there is no launch date, no
+store submission and no distribution of any kind, and §7 states precisely whose data the running
+system holds and which part of that we take on our own word rather than read off the system. We would
+rather wait for a correct answer than build further on a guess, which is why the questions are
+written to be answerable without reading any code.
 
 ---
 
 ## 2 · The product, in the detail that matters here
 
-**AkiMath** is a mobile app (iOS and Android) that gives a child adaptive arithmetic challenges in
-Mexican Spanish, with a dog called Aki as the mascot. Markets for the first version: **Mexico and
-Spanish-speaking Latin America. No United States launch.** The audience explicitly includes children
-under 13.
+**AkiMath** is a mobile app (iOS and Android) that gives adaptive arithmetic challenges in Mexican
+Spanish, with a dog called Aki as the mascot. Markets for the first version: **Mexico and
+Spanish-speaking Latin America. No United States launch.**
 
-**One thing to be clear about before you read further: almost none of this is built yet.** There is
-no database, no server, no account system and no published app. Everything in §2.1 describes a
-schema that has been designed and is about to be frozen — not a system that is running and holding
-anyone's data today. That is precisely why we are asking now: we can still change a column for the
-cost of a sentence. Where this document says a setting "is switched off" or a column "does not
-exist", read it as *designed that way and not yet deployed*.
+### The audience, corrected — and this correction changes the question we are asking
+
+This brief was written on **2026-08-16** and described a child-directed app. On **2026-08-17**, one
+day later, the product decision was clarified and recorded in `ARCHITECTURE.md` §1: **the product is
+for adults, and children can play it too.** It is a general-audience app. Its copy is not written in
+a register for children.
+
+Read both halves, because neither one on its own is our position:
+
+- **Not child-directed.** Where this document says "a child" it often means "a player"; where it
+  means specifically the under-13 case, that is the case it means.
+- **Every protection an under-13 needs still holds, unconditionally.** A mixed audience is governed
+  by its youngest member. Nothing was relaxed by the clarification. `players.age_band` exists to be
+  the routing decision that sends a player into those protections or not — it is resolved before the
+  device obtains any session, and it is not a compliance residual.
+
+**So the question we are putting to you is "what does a general-audience app that owes child
+protections have to do", not "what does a child-directed app have to do".** We believe those have
+materially different answers, and where your answer turns on that distinction we would rather be
+told so explicitly. Where a question below is still phrased in the child-directed register, it is the
+phrasing that is stale, not the protection it asks about.
+
+### What is built, as of 2026-08-26
+
+**The 2026-08-16 version of this section said "almost none of this is built yet — there is no
+database, no server, no account system and no published app". Three of those four are no longer
+true.** §7 carries the dates, the counts and the evidence, and is not repeated here. The short
+version:
+
+- The schema is **frozen and applied to a live hosted database**; the server implements eight of its
+  nine operations; accounts exist. One player row and three offline packs are stored. Attempts,
+  skill ratings and diagnosis events are all **empty** — nobody has played through the server.
+- The app is **not distributed**: no store submission, no test build, no deployment of the server
+  itself. **No published app** is the one clause of the original four that still holds.
+- Read §2.1 below as a description of what the running system does, not of what is designed. Where
+  it says a value exists, it exists.
 
 What the app is *not*, because each absence removes a category of obligation and you should not have
 to ask:
 
 - **No advertising, of any kind.** No ad SDK, no ad network, no sponsored content.
 - **No third-party analytics, no crash reporting, no attribution SDK, no A/B testing service.** This
-  is enforced in the codebase, not merely intended: the app ships with three runtime dependencies,
-  none of which makes a network call.
+  is enforced in the codebase, not merely intended: besides Flutter itself the app ships four runtime
+  packages — `cupertino_icons`, `meta`, `shared_preferences` and `crypto` — none of which makes a
+  network call, and a test refuses a fifth. The only code that opens a socket is our own.
 - **No social features.** No chat, no friends, no sharing, no user-generated content, no leaderboard.
-- **No display name and no username.** The database has no column for one. A child never types a name
-  and no other user ever sees anything a child produced.
+- **No display name shown to anyone, and no username** — but **the identity provider's account does
+  carry a name field and it is populated**, which the 2026-08-16 version of this section denied. It
+  is never displayed, never sent to another player, and our own `players` table still has no column
+  for it. See §2.1.
 - **No photos, no camera, no microphone, no location, no contacts, no device advertising identifier.**
-- **No push-notification service.** Reminders are scheduled locally on the device, so there is no
-  push token and no messaging provider.
+- **No push-notification service.** There is no push token and no messaging provider.
 - **No payments in the first version.**
-- **Offline first.** The first playable version has no server at all. The child plays against a file
-  bundled in the app; nothing leaves the phone.
+- **Offline first, and still true — with one correction.** A device with no account plays entirely
+  against a file bundled in the app and nothing leaves the phone. Once an account exists the device
+  fetches a pack from our server and later sends back what was answered; the answers to those items
+  are graded against a digest, so the server can confirm or deny a guess without ever being told the
+  authored answer.
 
-The app is therefore intentionally close to collecting nothing. The questions below are almost all
-about the small amount it does collect once accounts exist, and about the paperwork that accompanies
-it.
+The app is therefore still intentionally close to collecting nothing. The questions below are almost
+all about the small amount it does collect now that accounts exist, and about the paperwork that
+accompanies it.
 
 ### 2.1 What is collected, in full
 
-This is the complete inventory as designed. Nothing else is planned.
+This is the complete inventory. Nothing else is collected and nothing else is planned. **The
+"Existing today" column is counted from the live database on 2026-08-26** — see §7.
 
-| Datum | Where it comes from | Why | Retained | Shared with |
+Everything below sits in one hosted Postgres database run by a third-party database provider. Two
+schemas in it: our own tables, and the identity provider's, which is managed Better Auth running
+inside that same database. That provider is not a separate company holding a copy; it is a managed
+service over the same store. **No transactional email provider has been chosen** — Q-A8 is still
+open, and until it is answered nothing has been shared with one.
+
+| Datum | Where it comes from | Why | Retained | Existing today |
 |---|---|---|---|---|
-| `player_id` — a random UUID | Generated on the device at first launch | The only identifier for a player's progress; it is not derived from the device or the person | Until deletion | Nobody |
-| `age_band` — one of a small set of ranges | Derived on the device from a date the user enters; **the date itself is discarded and never transmitted** | To route the consent flow and to know which protections apply | Until deletion | Nobody |
-| Email address | Typed by the user when creating an account | Sign-in, and the deletion-confirmation link | Until deletion | The transactional email provider — see Q-A8 |
-| Password hash | Derived from a password the user chooses | Sign-in | Until deletion | Nobody |
-| `attempts` — one row per exercise answered: which item, what was typed, whether it was right, when | The child's own play | Adaptive difficulty and the child's own progress view | **400 days** — see Q-A7 | Nobody |
-| `user_skills` — a numeric skill rating per topic | Computed from attempts | Choosing the next exercise's difficulty | Until deletion | Nobody |
-| `diag_events` — a row noting which misconception an error matched | Computed from attempts | To improve the explanations the app gives | **30 days** — see Q-A7 | Nobody |
-| `offline_packs` — which exercises were downloaded for offline play | The server | To re-verify offline answers when the device reconnects | Until expiry or deletion | Nobody |
+| `player_id` — a random UUID | Generated on the device at first launch | The only identifier for a player's progress; it is not derived from the device or the person | Until deletion | **1 row** |
+| `age_band` — one of a small set of ranges | Derived on the device from a date the user enters; **the date itself is discarded and never transmitted** | To route the consent flow and to know which protections apply | Until deletion | **1 row**, `adult` |
+| Email address | Typed by the user when creating an account | Sign-in, and the deletion-confirmation link | **Survives our erasure path** — see below | **2 accounts**, both verified |
+| Password hash | Derived from a password the user chooses | Sign-in | Same as the email — held by the identity provider | **2 accounts** |
+| Account display name | Typed at sign-up because the identity provider requires a value | Nothing. We never display it, never send it to another player, and our own `players` table has no column for it | Same as the email | **2 accounts** |
+| Session IP address and user-agent | Recorded automatically by the identity provider for every session | Nothing we asked for — see the note below | Until the session row is removed | **7 sessions** |
+| `attempts` — one row per exercise answered: which item, what was typed, whether it was right, when | The player's own play | Adaptive difficulty and the player's own progress view | **400 days** — see Q-A7 | **0 rows** |
+| `user_skills` — a numeric skill rating per topic | Computed from attempts | Choosing the next exercise's difficulty | Until deletion | **0 rows** |
+| `diag_events` — a row noting which misconception an error matched | Computed from attempts | To improve the explanations the app gives | **30 days** — see Q-A7 | **0 rows** |
+| `offline_packs` — which exercises were downloaded for offline play | The server | To re-verify offline answers when the device reconnects | Until expiry or deletion | **3 rows** |
 
-Two deliberate design choices worth naming, because they narrow the questions:
+Four things worth naming, because they narrow the questions — and two of them are corrections to what
+this section said on 2026-08-16:
 
-- **The child's own answers are never sent to other players and never leave our own database.** There
-  is no path by which one child's data reaches another.
-- **IP address and user-agent logging is switched off** in the authentication library, which persists
-  both by default.
-
-Everything above is deleted by a single erasure path, available both inside the app and from a public
-web page that works without installing the app.
+- **A player's own answers are never sent to other players and never leave our own database.** There
+  is no path by which one player's data reaches another. Unchanged and still true.
+- **Correction — IP address and user-agent are recorded, not switched off.** The 2026-08-16 version
+  of this section said logging was disabled in the authentication library. It cannot be: the setting
+  is not configurable in the managed service, and every session row carries both. All seven sessions
+  in the database today have both populated. This was found on 2026-08-19 and is written up in
+  `docs/adr/0002`. **The mitigation is structural rather than a setting: a device that resolves to
+  the under-13 band never obtains a session at all**, so no under-13 IP address is ever recorded —
+  unlinked play is entirely offline and linking is an adult's act. We would value your view on
+  whether that is sufficient, and it is part of what Q-A3 and Q-A4 are really asking.
+- **Correction — our erasure path does not erase everything above.** `DELETE /me` removes the
+  `players` row and everything that references it — attempts, issued items, offline packs, skill
+  ratings and diagnosis events — and this is verified by a test that counts the rows in each table
+  rather than trusting the schema. **It does not delete the identity-provider account**: the email
+  address, the password hash and the display name survive it, and removing those is a separate act at
+  the provider. That scope is written into the frozen API contract itself rather than left to be
+  inferred. Whether that is an acceptable answer to an *acceso* or *cancelación* request is squarely
+  a question for you, and it is the sharpest edge in this document.
+- **The public deletion page does not exist yet.** Erasure is available inside the app. The page that
+  works without installing the app is designed and unbuilt (`f3-deletion-web`), which also means the
+  retention figures in Q-A7 are published nowhere user-facing today.
 
 ---
 
@@ -398,19 +468,32 @@ conclusions, and we are aware that a non-lawyer reading statutes is how confiden
 
 For our own tracking. Counsel does not need this section.
 
-| Question | Becomes | In |
-|---|---|---|
-| Q-A1 threshold | one named constant | `f1-schema-freeze`, `f3-auth-screens` |
-| Q-A2 bands | the `age_band` enumerated type | `f1-schema-freeze` |
-| Q-A3 consent evidence | columns, and a screen not yet designed | `f1-schema-freeze`, design request DR-7 |
-| Q-A4 assurance mechanism | the age-gate screen and `req-age-gate` | `f3-auth-screens` |
-| Q-A5 platform age signal | where the band comes from; possibly a dependency, which needs its own review | `f3-auth-screens`, `f3-store-artifacts` |
-| Q-A6 export right | one feature kept, dropped, or given a deadline | `f7-profile-settings`, design request DR-P3 |
-| Q-A7 retention | two numbers in `retention.ts`; text placement on the public page | `f1-schema-freeze`, `f3-deletion-web` |
-| Q-A8 email provider | a vendor and a contract | `f3-deletion-web` |
-| Q-A9 parental gate | one interstitial, or nothing | `req-legal-reachable` |
-| Q-A10 notice and terms | two published documents, plus their URLs in the compliance inventory | `f3-store-artifacts` |
-| Q-A11 the alternative | a product decision, taken by Ervin with this input — **and, if local-only processing carries obligations, a constraint on the offline build that ships before F1** | `f2-core-loop` |
+**Read the last column first.** Most of this was built while the gate was deferred, on the defaults
+recorded above — which is the fact §7 exists to record and is not restated here. **Shipped** means
+merged and, where it touches the database, applied to the live one. A shipped row does not mean the
+question is closed; it means the answer now changes something that exists rather than something
+drawn.
+
+| Question | Becomes | In | Status, 2026-08-26 |
+|---|---|---|---|
+| Q-A1 threshold | one named constant | `f1-schema-freeze`, the auth screens | **Shipped.** `AgeGate.consentAge = 13`, in one place, still a one-line change |
+| Q-A2 bands | the `age_band` values | `f1-schema-freeze` | **Shipped and frozen.** A `CHECK` constraint, with one live row using it |
+| Q-A3 consent evidence | columns, and a screen not yet designed | `f1-schema-freeze`, design request DR-7 | **Columns not built** — deliberately, since the answer decides them. The screen exists and collects nothing; see the note below |
+| Q-A4 assurance mechanism | the age-gate screen and `req-age-gate` | the auth screens | **Shipped.** Neutral date entry, reduced to a band on the device, the date discarded |
+| Q-A5 platform age signal | where the band comes from; possibly a dependency, which needs its own review | the auth screens, `f3-store-artifacts` | **Not started.** No platform age API is called and no dependency for one has been added |
+| Q-A6 export right | one feature kept, dropped, or given a deadline | the profile settings, design request DR-P3 | **Drawn and deliberately inert.** `Pedir mi archivo` is a card with no button and copy saying the file cannot be built yet |
+| Q-A7 retention | two numbers in `retention.ts`; text placement on the public page | `f1-schema-freeze`, `f3-deletion-web` | **Half shipped.** The job runs nightly on 400 and 30; the figures appear on no user-facing surface |
+| Q-A8 email provider | a vendor and a contract | `f3-deletion-web` | **Not started.** No provider chosen, and none is needed until the deletion page exists |
+| Q-A9 parental gate | one interstitial, or nothing | `req-legal-reachable` | **Not built** — nor are the two documents it would stand in front of |
+| Q-A10 notice and terms | two published documents, plus their URLs in the compliance inventory | `f3-store-artifacts` | **Not started** |
+| Q-A11 the alternative | a product decision, taken by Ervin with this input | ADR 0002, the tutor-consent screen | **Already adopted.** See the note below |
+
+**Q-A11 stopped being a hypothetical on 2026-08-19.** ADR 0002 removed guest synchronisation
+altogether, and the screen a below-threshold band reaches offers no account and says so in as many
+words: play continues on this phone and nothing is sent. The option this document asks you to *price*
+is the option the app now *implements* — so the useful question is no longer "what would this cost
+us" but "we have built it; does it carry obligations anyway", which is Q-A11's own first sub-question
+and now its whole point.
 
 ---
 
