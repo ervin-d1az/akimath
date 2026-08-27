@@ -149,10 +149,10 @@ display numeral over a unit line, with the run carrying the highlight fill.
 The bar SHALL draw one tab per root that has a destination, and none for a
 tab the design names but nobody has drawn.
 
-#### Scenario: Two roots today
+#### Scenario: Three roots today
 
 - **WHEN** the shell is drawn
-- **THEN** the bar shows `Inicio` and `Perfil` and nothing else
+- **THEN** the bar shows `Inicio`, `Mapa` and `Perfil` and nothing else
 
 #### Scenario: No tab is drawn for a root nobody has designed
 
@@ -160,10 +160,12 @@ tab the design names but nobody has drawn.
 - **THEN** there is no `Avance` tab, because no document draws a progress screen
   and what ours showed is `4.1`'s
 
-#### Scenario: The next root needs no change here
+#### Scenario: A new root needs no change here
 
-- **WHEN** a skills map is added to the roots that exist
-- **THEN** the bar draws three, with no edit to the rule that decides them
+- **WHEN** the skills map was added to the roots that exist
+- **THEN** the bar drew three, with no edit to the rule that decides them —
+  `visibleTabs` has still never been edited across none → two → three → two →
+  three
 
 ### Requirement: Aki appears where the rules say she does
 
