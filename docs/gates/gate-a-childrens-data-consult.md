@@ -195,17 +195,21 @@ whole under-18 population rather than only the under-13 one.
 
 ### Q-A2 · Are these the right age bands?
 
-The app stores a band, never a birth date. The default set is:
+The app stores a band, never a birth date. These are the three values, quoted from the column that
+exists — `players.age_band`, frozen on 2026-08-17:
 
 ```
-under_13 · 13_17 · 18_plus
+under_13 · 13_17 · adult
 ```
 
 **Is this set adequate, and does it need to be finer?** If, for example, an obligation attaches at 14
 or 16, the set needs a boundary there.
 
-> **Default encoded:** three bands as above.
-> **What changes:** an enumerated type in the database and one screen's options.
+> **Default encoded:** three bands as above, with boundaries at 13 and 18.
+> **What changes:** a `CHECK` constraint in the database and one screen's options. It is deliberately
+> a `CHECK` rather than an enumerated type: replacing a `CHECK` is one forward-only statement, while
+> an enumerated value can never be removed once it exists. Today one live row uses `adult`, so a
+> change to the set also means moving that row — a cost, but a small and knowable one.
 > **Note:** both mobile platforms are converging on four bands — under 13, 13–15, 16–17, 18+ — see
 > Q-A5. If there is no legal reason to prefer three, matching the platforms may be free.
 
@@ -601,10 +605,10 @@ system is doing**, offered so counsel is answering about a system that runs rath
 **Deferring is no longer free, which is the part that changed quietly.** The 2026-08-16 note ended
 "nothing needs unpicking later — the threshold is one named constant, the bands are one enumerated
 type". The threshold is still one named constant. The bands are now a `CHECK` constraint inside a
-frozen, forward-only migration with a live row using one of them, so changing them costs a new
-migration and a data migration rather than an edit. One correction while we are here: the frozen
-schema spells the third band `adult`, not `18_plus` as Q-A2 shows. The boundaries are the ones Q-A2
-states — only the label differs — and the question Q-A2 asks is unaffected.
+frozen, forward-only migration with a live row using one of them, so changing them costs a migration
+and the moving of that row rather than an edit. Not expensive — a `CHECK` was chosen over an
+enumerated type precisely so it stays cheap to replace, and Q-A2 now says so — but no longer nothing,
+and it grows with every row added from here.
 
 Until counsel answers, the plan's recorded defaults still stand as defaults and are still labelled as
 such wherever they appear, which is what §5's disclaimer was written to make possible. The difference
