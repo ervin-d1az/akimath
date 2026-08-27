@@ -28,3 +28,8 @@ tmp/
 # Claude Code. .claude/ itself is versioned on purpose — the agents, the hooks
 # and settings.json are part of the project. Only the per-machine layer is not.
 .claude/settings.local.json
+# Subagent worktrees. The Agent tool cuts one per isolated agent and leaves it
+# behind; each is an embedded git repository, so a `git add -A` commits a gitlink
+# per worktree, every one of which clones as an empty directory. That happened
+# once, on 2026-08-26.
+.claude/worktrees/
