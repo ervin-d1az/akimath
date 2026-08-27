@@ -175,8 +175,8 @@ the offline pack format and its OpenAPI half.
   carries is the thing the journal needs. `AttemptSync` records on every answer without touching
   the network and flushes when there is a session — including when the session *arrives*, since a
   player links on the profile tab while `IndexedStack` keeps the home alive. **A pack survives a
-  relaunch**: the device stores the id and nothing else, and `GET /packs/{packId}` — the client's
-  ninth operation — rebuilds it byte for byte, so a fetch is the same pack rather than a row per
+  relaunch**: the device stores the id and nothing else, and `GET /packs/{packId}` — one of the seven
+  operations the Dart client calls — rebuilds it byte for byte, so a fetch is the same pack rather than a row per
   launch per player. `packRefresh` is pure and holds the three branches; **a 404 is the one answer
   that means issue a new one**, while refused, broken or unreachable mint nothing. The id is
   written *before* the pack is adopted, or a device would play one it had not recorded.
@@ -254,7 +254,7 @@ the offline pack format and its OpenAPI half.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only) plus seven forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **449 tests — 320 green and 129 skipped
+  30-day figures) and the committed `schema.sql` snapshot. **454 tests — 325 green and 129 skipped
   for want of a Postgres — 98.92% mutation score, 0 clones.** Four runtime dependencies, each
   pinned exactly with its DEP-1 audit in `test/dependency-allowlist.test.ts`: `pg`, `hono` +
   `@hono/node-server` (which own the socket — Hono's *router* is deliberately unused, so
@@ -347,9 +347,9 @@ the offline pack format and its OpenAPI half.
   `GET /packs/{packId}` fetched a pack by an id and nothing minted one, so `offline_packs` could
   only ever be empty and a pack attempt could never reach `POST /attempts`. Issuing takes no body —
   the player comes from the session — and no `Idempotency-Key`, because issuing is not idempotent
-  by nature and a second pack is harmless. **Every item is template-generated**, and that is a
-  constraint rather than a simplification: an authored item carries no template reference, so
-  `(packId, index)` could not address it and nothing could grade it. `src/packs.ts` builds the pack
+  by nature and a second pack is harmless. **Every item was template-generated once, and none is now**: migration 0005
+  made an authored item addressable by digest, the generator went, and what is issued is a copy of
+  the shipped pack — eighty authored items whose every manifest entry is a digest. `src/packs.ts` builds the pack
   and its manifest *together and in the same order* — one list seen from the two ends of the
   offline loop — and `test/issue-pack.test.ts` closes it for real: issue, rederive the answer from
   the row the server wrote, sync it, and watch it come back `ok: true`. **What is issued is a copy of the pack the app
@@ -411,7 +411,7 @@ the offline pack format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 129 of the 449 report as skipped rather than passing quietly.
+  run; leave it unset and 129 of the 454 report as skipped rather than passing quietly.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
