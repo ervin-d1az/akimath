@@ -416,6 +416,13 @@ For our own tracking. Counsel does not need this section.
 
 ## 7 · Status
 
+**Reopened by the fourth tripwire — recorded 2026-08-26.** The deferral written on 2026-08-16 is kept
+below word for word, because it is the reason every default in this document is labelled as a default
+and because what it asserted is exactly what stopped being true. Its premise has expired. The risk it
+was protecting against has not yet arrived. Both halves matter and neither one is the other.
+
+### The deferral, as recorded on 2026-08-16
+
 **Deferred, deliberately — Ervin, 2026-08-16.** The app is for personal use for now. It is not
 distributed, not in a store, and collects nothing from anyone: the first playable build has no
 account, no network and no database at all (decision #2). Nothing in §2.1 exists as a running system,
@@ -429,21 +436,106 @@ build you can play.
 
 - The app reaches **any child who is not in this household** — a niece, a nephew, a friend's kid, a
   classroom. That is the real line, and it is crossed by handing someone a phone, not by publishing.
-- A **TestFlight or Play internal-test build** goes to anyone outside the household.
-- **Any store submission**, even unlisted.
+  → **Not crossed**, as of 2026-08-26.
+- A **TestFlight or Play internal-test build** goes to anyone outside the household. → **Not
+  crossed** — no build has been distributed and `f3-store-artifacts` has not run.
+- **Any store submission**, even unlisted. → **Not crossed.**
 - **The server exists and holds a real person's row** — the moment `f1-schema-freeze` runs against a
-  database that is not throwaway.
+  database that is not throwaway. → **MET.** The freeze ran against this database on 2026-08-17; the
+  first real person's row appeared on 2026-08-21.
 
-Until then the plan's recorded defaults stand as defaults and are labelled as such wherever they
-appear, which is what §5's disclaimer was written to make possible. Nothing needs unpicking later —
-the threshold is one named constant, the bands are one enumerated type.
+### What changed, verified against the running system on 2026-08-26
+
+**§1, §2 and §2.1 are superseded on this point and should be read as they stood on 2026-08-16.** §1
+says the schema "freezes in the next phase of work" — it froze, on 2026-08-17 — and that this consult
+"blocks one change (`f1-schema-freeze`), which blocks every change in phase F3". §2 says in bold that
+"almost none of this is built yet" and that "there is no database, no server, no account system and
+no published app"; §2.1 presents its inventory "as designed". Where any of them disagrees with this
+section, this section is later and this section is correct. The one clause of §2 that still holds
+without qualification is **no published app**.
+
+Taking the deferral's own clauses one at a time:
+
+- **"no database at all"** — eight migrations are applied to the project's hosted Postgres database:
+  the first two on 2026-08-17, the remaining six on 2026-08-21. `f1-schema-freeze` is merged and
+  archived, and what that database is running is the schema it froze plus six forward-only
+  migrations on top of it — which is the regime this document was written to get ahead of.
+- **"no account"** — the authentication provider's tables in that same database hold **two accounts,
+  each with a verified email address**, and seven sessions, all created on 2026-08-21. An email
+  address is the one datum in §2.1 that reaches a third party at all — Q-A8 — and it now exists.
+  Eight of the nine operations in `contract/openapi.json` have handlers, `POST /players/link`,
+  `GET /me` and `DELETE /me` among them, so the account path and the erasure path are both written
+  code rather than a plan.
+- **"no network"** — the app opens sockets, in `app/lib/api/api_client.dart`. It fails closed rather
+  than open: both endpoints are `--dart-define` values and are empty in any build nobody configured.
+  But the path exists and a configured build takes it.
+- **"Nothing in §2.1 exists as a running system"** — partly false, and the split is the useful part.
+  `player_id`, `age_band` and `offline_packs` exist: **one `players` row**, band `adult`, created
+  2026-08-21 and linked to an account, and **three `offline_packs` rows**, none of them yet expired.
+  `attempts`, `user_skills` and `diag_events` are **all zero**. Nobody has answered a single exercise
+  through the server.
+- **"there is no processing to be compliant about"** — storing is processing, and there is now a
+  scheduled deletion machinery on top of it. `.github/workflows/retention.yml` has run against that
+  database and succeeded on nine consecutive nights, 2026-08-18 to 2026-08-26, under its own
+  `retention_job` role — a role that exists in the database and holds DELETE on seven tables and
+  nothing else. **It has never deleted anything**, because nothing has reached either deadline: there
+  are no attempts and no diagnosis events at all, and the oldest offline pack expires 2026-09-20.
+  Decision #3's 400 days and 30 days are no longer a recorded default; they are a job that runs and
+  has so far had nothing to do. That posture is worth stating plainly for Q-A7 — the machinery is
+  live and has not yet fired once.
+- **"and every F3 change sit behind the same fact"** — nine F3 changes have merged and been archived:
+  the server foundation, the session verification, the account link, the logging path and the app's
+  API client. The two that have **not** run are `f3-deletion-web` and `f3-store-artifacts` — so
+  §2.1's closing promise, that everything it lists "is deleted by a single erasure path, available
+  both inside the app and from a public web page that works without installing the app", is the half
+  still unbuilt while the database holds a row. `DELETE /me` exists; the public page does not.
+- **"for personal use for now"** — **this clause still stands, and it is the only one that does.**
+
+### The judgement, stated exactly
+
+The fourth tripwire is met on its own words. The server exists; it holds a real person's row; the
+database is not throwaway, and the project has already said so itself in refusing to point the test
+harness at it. That is the tripwire, met, and this section is the record of it.
+
+What is **not** crossed is the first tripwire, and the first tripwire is the one that describes the
+harm. No child outside this household has reached the app. The single `players` row carries the
+`adult` band and was created the same afternoon the schema went up; both accounts are Ervin's own.
+**That last point is the one claim in this section taken on Ervin's word rather than read off the
+system** — the repository can show that two verified addresses exist and cannot show whose they are.
+Marked here the way §5 marks its assumptions, because it is the sentence the rest of this judgement
+rests on.
+
+So, precisely: not "we are non-compliant", and not "nothing has changed". The rationale for deferring
+has expired while the risk it deferred has not yet arrived. What would make this urgent is short and
+specific — any of the first three tripwires, all still uncrossed — and the first of them is crossed
+by handing someone a configured build, not by publishing. What prevents that today is that nobody has
+done it: there is no deployment, no store artifacts, and no distribution of any kind. That is absence
+by omission, not by design. The shape of the exposure, said in one line: **the data sits with a
+third-party database host, while the server process that reads it has only ever run on a development
+machine.** The storage is real and off-premises; the service is not yet anywhere. **None of the above is a legal conclusion; it is a statement of what the
+system is doing**, offered so counsel is answering about a system that runs rather than one on paper.
+
+**Deferring is no longer free, which is the part that changed quietly.** The 2026-08-16 note ended
+"nothing needs unpicking later — the threshold is one named constant, the bands are one enumerated
+type". The threshold is still one named constant. The bands are now a `CHECK` constraint inside a
+frozen, forward-only migration with a live row using one of them, so changing them costs a new
+migration and a data migration rather than an edit. One correction while we are here: the frozen
+schema spells the third band `adult`, not `18_plus` as Q-A2 shows. The boundaries are the ones Q-A2
+states — only the label differs — and the question Q-A2 asks is unaffected.
+
+Until counsel answers, the plan's recorded defaults still stand as defaults and are still labelled as
+such wherever they appear, which is what §5's disclaimer was written to make possible. The difference
+is that they are now defaults a running system has already adopted.
 
 - [x] Brief written — 2026-08-16
 - [x] Deferred — 2026-08-16, personal use, tripwires above
+- [x] Tripwire 4 met — the server holds a real person's row as of 2026-08-21; recorded here 2026-08-26
 - [ ] Counsel engaged
 - [ ] Consult held
 - [ ] Answers recorded below
-- [ ] `f1-schema-freeze` unblocked
+- [ ] `f1-schema-freeze` — **not unblocked; it ran without this gate.** Merged 2026-08-17 and applied
+  to a live database the same day, on this document's recorded defaults. Q-A1, Q-A2, Q-A3 and Q-A7
+  now change a frozen schema and a row in it rather than an unwritten one.
 
 ### Answers
 
