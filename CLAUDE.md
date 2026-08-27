@@ -254,7 +254,14 @@ the offline pack format and its OpenAPI half.
   append-only) plus seven forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
   30-day figures) and the committed `schema.sql` snapshot. **454 tests — 325 green and 129 skipped
-  for want of a Postgres — 98.92% mutation score, 0 clones.** Four runtime dependencies, each
+  for want of a Postgres — 97.00% mutation score with those 129 skipped, 0 clones.** That figure
+  is stable — four runs over one unchanged tree agreed file by file, unlike `packages/contract`
+  below — and it is down from the 98.92% previously recorded against a smaller `src/`.
+  **The two are not
+  straightforwardly comparable**: nothing records whether that one was taken against a database,
+  and the single biggest drag on this one is `packs.ts` at 44.00%, whose `issue-pack` and
+  `offline-packs` suites are both skipped here. The rating work itself is not the drop —
+  `rating.ts` and `standing.ts` are 100%. Four runtime dependencies, each
   pinned exactly with its DEP-1 audit in `test/dependency-allowlist.test.ts`: `pg`, `hono` +
   `@hono/node-server` (which own the socket — Hono's *router* is deliberately unused, so
   `CONTRACTED_OPERATIONS` stays where the parity gate can read it), and `jose`.
@@ -415,8 +422,18 @@ the offline pack format and its OpenAPI half.
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
   schemas, one golden fixture and one rejection row per stimulus and puzzle kind, their
-  recorded normalisations, and `canon.golden.json`. 248 tests, green, 91.71% mutation score,
-  0 clones. **Zod 4.4.3 is the repository's first runtime dependency**, pinned exactly
+  recorded normalisations, and `canon.golden.json`. 248 tests, green, 0 clones, and a mutation
+  score of **91.15% to 91.85% — the figure is not reproducible**. Four runs over one unchanged
+  tree gave 91.15, 91.50, 91.85 and 91.15, the two 91.15s with an identical per-file breakdown; so
+  the 91.71% previously recorded sits inside the band and nothing here can be said to have moved.
+  Quote a range for this package, not a number, until whatever drifts is found.
+  **`npm run mutation` cannot produce any of them as configured**: `test/digest-golden.test.ts`
+  reads `contract/fixtures/` by walking three directories up from its own file, and Stryker's
+  sandbox is one level deeper than the package, so the initial test run dies on a missing fixture.
+  That has been true since the test landed in #86, which is after 91.71% was recorded. The runs
+  above put the sandbox where the test's relative path still resolves —
+  `npx stryker run --tempDirName ../../tmp`, `tmp/` at the root being gitignored already.
+  **Zod 4.4.3 is the repository's first runtime dependency**, pinned exactly
   because the determinism gate is byte-for-byte.
 - **Does not exist.** One of the nine contracted endpoints — `GET /items/next`, which needs an
   issuance policy — no dev environment, no deploy, and no deployed *application*. **The database is
