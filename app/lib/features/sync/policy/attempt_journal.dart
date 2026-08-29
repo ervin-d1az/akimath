@@ -67,8 +67,8 @@ class JournalledAttempt {
   /// on purpose: one is storage this app owns and the other is a frozen
   /// contract, and letting a stored row be a wire row makes a schema change a
   /// migration of everybody's phone.
-  AttemptSubmission toSubmission() => AttemptSubmission(
-        packRef: PackRef(packId: packId, index: index),
+  AttemptSubmission toSubmission() => AttemptSubmission.forPackItem(
+        ref: PackRef(packId: packId, index: index),
         sessionId: sessionId,
         answer: answer,
         at: at,

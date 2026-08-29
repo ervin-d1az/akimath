@@ -112,8 +112,8 @@ class AttemptSync {
       accessToken: accessToken,
       attempts: <AttemptSubmission>[
         for (final JournalledAttempt held in sending)
-          AttemptSubmission(
-            packRef: PackRef(packId: held.packId, index: held.index),
+          AttemptSubmission.forPackItem(
+            ref: PackRef(packId: held.packId, index: held.index),
             sessionId: held.sessionId,
             answer: held.answer,
             at: held.at,

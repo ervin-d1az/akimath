@@ -8,8 +8,8 @@ const String _item = '018f4e3c-0000-7000-8000-0000000000c3';
 void main() {
   group('an attempt names exactly one source', () {
     test('a pack item, by pack and position', () {
-      final AttemptSubmission attempt = AttemptSubmission(
-        packRef: const PackRef(packId: _pack, index: 3),
+      final AttemptSubmission attempt = AttemptSubmission.forPackItem(
+        ref: const PackRef(packId: _pack, index: 3),
         sessionId: _session,
         answer: '13',
         at: DateTime.utc(2026, 8, 19, 9, 15),
@@ -26,7 +26,7 @@ void main() {
     });
 
     test('or an item the server issued', () {
-      final AttemptSubmission attempt = AttemptSubmission(
+      final AttemptSubmission attempt = AttemptSubmission.forIssuedItem(
         itemId: _item,
         sessionId: _session,
         answer: '13',
@@ -38,36 +38,49 @@ void main() {
       expect(attempt.toJson().containsKey('packRef'), isFalse);
     });
 
-    test('and never neither or both', () {
-      // Refused on the device rather than sent and refused by the server: a
-      // 400 a player waits for is worse than a batch that never leaves.
-      expect(
-        () => AttemptSubmission(
-          sessionId: _session,
-          answer: '1',
-          at: DateTime.utc(2026),
-          elapsed: Duration.zero,
-        ),
-        throwsA(isA<AssertionError>()),
+    test('and never neither or both, in the build a player runs', () {
+      // **The compiler is the enforcement, and this is what is left to assert
+      // at runtime.** Naming neither source or both is unwritable: the
+      // generative constructor is private to `sync.dart` and the two public
+      // doors each set the other field themselves. That half cannot be a
+      // `test`, because the code expressing it does not compile — see the
+      // ledger's falsification, which is a build failure rather than a red
+      // case. What is checkable here is that each door leaves exactly one
+      // source on the wire, which is the property the private constructor
+      // exists to guarantee.
+      //
+      // It used to be an `assert`, and `flutter build --release` strips those:
+      // every test saw a refusal no shipping binary made, and a batch naming
+      // both comes back a 400, which `journalAfter` reads as a batch there is
+      // no point resending — up to two hundred answers deleted in silence.
+      final AttemptSubmission byPack = AttemptSubmission.forPackItem(
+        ref: const PackRef(packId: _pack, index: 0),
+        sessionId: _session,
+        answer: '1',
+        at: DateTime.utc(2026),
+        elapsed: Duration.zero,
       );
-      expect(
-        () => AttemptSubmission(
-          itemId: _item,
-          packRef: const PackRef(packId: _pack, index: 0),
-          sessionId: _session,
-          answer: '1',
-          at: DateTime.utc(2026),
-          elapsed: Duration.zero,
-        ),
-        throwsA(isA<AssertionError>()),
+      expect(byPack.packRef, isNotNull);
+      expect(byPack.itemId, isNull);
+      expect(byPack.toJson().containsKey('itemId'), isFalse);
+
+      final AttemptSubmission byIssued = AttemptSubmission.forIssuedItem(
+        itemId: _item,
+        sessionId: _session,
+        answer: '1',
+        at: DateTime.utc(2026),
+        elapsed: Duration.zero,
       );
+      expect(byIssued.itemId, isNotNull);
+      expect(byIssued.packRef, isNull);
+      expect(byIssued.toJson().containsKey('packRef'), isFalse);
     });
 
     test('and it carries no verdict, because there is nowhere to put one', () {
       // §4's invariant. The server grades; a field here asserting the answer
       // was right is the thing the frozen schema refuses to have.
-      final Map<String, Object?> body = AttemptSubmission(
-        packRef: const PackRef(packId: _pack, index: 0),
+      final Map<String, Object?> body = AttemptSubmission.forPackItem(
+        ref: const PackRef(packId: _pack, index: 0),
         sessionId: _session,
         answer: '13',
         at: DateTime.utc(2026),
@@ -81,8 +94,8 @@ void main() {
 
     test('time on task is milliseconds, and never negative', () {
       expect(
-        AttemptSubmission(
-          packRef: const PackRef(packId: _pack, index: 0),
+        AttemptSubmission.forPackItem(
+          ref: const PackRef(packId: _pack, index: 0),
           sessionId: _session,
           answer: '1',
           at: DateTime.utc(2026),
@@ -91,8 +104,8 @@ void main() {
         67000,
       );
       expect(
-        () => AttemptSubmission(
-          packRef: const PackRef(packId: _pack, index: 0),
+        () => AttemptSubmission.forPackItem(
+          ref: const PackRef(packId: _pack, index: 0),
           sessionId: _session,
           answer: '1',
           at: DateTime.utc(2026),
@@ -105,8 +118,8 @@ void main() {
     test('the instant is UTC on the wire whatever the device says', () {
       // The server pins `date-time` to a literal `Z`. A local instant would
       // round-trip to different bytes and the two would stop agreeing.
-      final Map<String, Object?> body = AttemptSubmission(
-        packRef: const PackRef(packId: _pack, index: 0),
+      final Map<String, Object?> body = AttemptSubmission.forPackItem(
+        ref: const PackRef(packId: _pack, index: 0),
         sessionId: _session,
         answer: '1',
         at: DateTime.utc(2026, 8, 19, 9, 15).toLocal(),

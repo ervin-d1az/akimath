@@ -265,11 +265,19 @@ void main() {
     final Map<String, Object?> properties =
         schema['properties']! as Map<String, Object?>;
 
-    Map<String, Object?> sent({bool byPack = true}) => AttemptSubmission(
-      itemId: byPack ? null : '018f4e3c-0000-7000-8000-0000000000c3',
-      packRef: byPack
-          ? const PackRef(packId: '018f4e3c-0000-7000-8000-0000000000c1', index: 0)
-          : null,
+    // One function per source rather than one taking a flag: the two
+    // constructions are now two constructors, and a boolean selecting between
+    // them would be the one shape FUN-2 bans.
+    Map<String, Object?> sentByPack() => AttemptSubmission.forPackItem(
+      ref: const PackRef(packId: '018f4e3c-0000-7000-8000-0000000000c1', index: 0),
+      sessionId: '018f4e3c-0000-7000-8000-0000000000c2',
+      answer: '13',
+      at: DateTime.utc(2026, 8, 19, 9, 15),
+      elapsed: const Duration(milliseconds: 4200),
+    ).toJson();
+
+    Map<String, Object?> sentByIssuedItem() => AttemptSubmission.forIssuedItem(
+      itemId: '018f4e3c-0000-7000-8000-0000000000c3',
       sessionId: '018f4e3c-0000-7000-8000-0000000000c2',
       answer: '13',
       at: DateTime.utc(2026, 8, 19, 9, 15),
@@ -285,8 +293,8 @@ void main() {
 
     test('it sends every field the schema requires', () {
       for (final Map<String, Object?> body in <Map<String, Object?>>[
-        sent(),
-        sent(byPack: false),
+        sentByPack(),
+        sentByIssuedItem(),
       ]) {
         expect(body.keys.toSet(), containsAll(required));
       }
@@ -296,8 +304,8 @@ void main() {
       // `additionalProperties: false` means the server refuses one, so a field
       // here that is not there is a batch that comes back a 400.
       for (final Map<String, Object?> body in <Map<String, Object?>>[
-        sent(),
-        sent(byPack: false),
+        sentByPack(),
+        sentByIssuedItem(),
       ]) {
         expect(properties.keys.toSet(), containsAll(body.keys));
       }
@@ -309,8 +317,8 @@ void main() {
       // and in two enforcements. This is the client's.
       expect(required, isNot(contains('itemId')));
       expect(required, isNot(contains('packRef')));
-      expect(sent().containsKey('itemId'), isFalse);
-      expect(sent(byPack: false).containsKey('packRef'), isFalse);
+      expect(sentByPack().containsKey('itemId'), isFalse);
+      expect(sentByIssuedItem().containsKey('packRef'), isFalse);
 
       final Map<String, Object?> operation =
           ((contract['paths']! as Map<String, Object?>)['/attempts']!
@@ -324,7 +332,7 @@ void main() {
 
       expect(elapsed['minimum'], 0);
       expect(elapsed['maximum'], isA<int>());
-      expect(sent()['elapsedMs'], lessThanOrEqualTo(elapsed['maximum']! as int));
+      expect(sentByPack()['elapsedMs'], lessThanOrEqualTo(elapsed['maximum']! as int));
     });
   });
 
