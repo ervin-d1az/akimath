@@ -150,8 +150,11 @@ The one structural pattern the repo already commits to, on both sides of the sta
 
 - **LANG-1** MUST: code, identifiers, file names, comments, doc comments, test names, commit
   messages and documentation are in **English**. Only strings the player reads are in **Mexican
-  Spanish**, and they read as a person talking to a child, not as a system reporting
-  (`'Se me desenroscó la cola. Ya vuelve.'`). There is no i18n layer yet, so player-facing Spanish
+  Spanish**, and they read as a person talking, not as a system reporting
+  (`'Se me desenroscó la cola. Ya vuelve.'`). **Not a register for children** — the warmth in that
+  example is Aki's voice, not the reader's age, and this clause said *"to a child"* until
+  2026-08-29 even though the product had stopped being child-directed on 2026-08-17 and stopped
+  admitting children at all on 2026-08-29 (ADR 0004). There is no i18n layer yet, so player-facing Spanish
   sits inline in the widget that shows it; when a layer arrives this rule gains a clause under
   PROC-6. **A verbatim quotation of a Spanish design document, or of player-facing copy, may stand
   inside an English comment** provided the rationale around it is in English — `banner_visual.dart`'s
@@ -163,7 +166,7 @@ The one structural pattern the repo already commits to, on both sides of the sta
   produces it, and a caption no input can make true is a defect.** CMT-2 says a comment stating
   behaviour the code does not have is a defect and is fixed with the code; this is the same rule
   one audience further out, and it is the more serious half — a false comment misleads the next
-  author, a false caption misleads a child, who has no `grep`. Found in
+  author, a false caption misleads a player, who has no `grep`. Found in
   `req-streak-lost-caption`: `4.13 Racha perdida` captioned its left counter **`AYER`**, and
   `StreakState.broken` requires `streakLength` to return 0, which requires the day log to hold
   neither today *nor yesterday* — so the run that screen reports on always ended two or more days
@@ -520,7 +523,7 @@ credit.
     produce different output** — otherwise the test documents an intention it cannot enforce.
 
   - **A `find.text` that pins player-facing copy without pinning its truth.** The string form of
-    the first bullet, and the one that let a false statement reach a child.
+    the first bullet, and the one that let a false statement reach a player.
     `streak_screens_test.dart` asserted `expect(find.text('AYER'), findsOneWidget)` on
     `4.13 Racha perdida` — which passes for *any* caption whatsoever, so it could not tell a true
     one from a false one, and the caption was false on every reachable input (LANG-2). The remedy
