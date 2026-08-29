@@ -124,9 +124,17 @@ one author produces one-sided reports:
   in the spec layer. Check where the logic lives before counting anything.
 - **A route or a screen widget legitimately composes.** The question is never length; it is whether
   it *decides* as well as composes, and whether two unrelated actors would edit it.
-- **Test files are code.** A gate that cannot fail, a test that asserts a render rather than a
-  claim, or an assertion block that never executes is a design defect of the first order in this
-  project, because here the suite is the evidence.
+- **Test files are code — TEST-1, and it is a rule now rather than a sentiment.** A gate that
+  cannot fail, a test that asserts a render rather than a claim, or an assertion block that never
+  executes is a design defect of the first order in this project, because here the suite is the
+  evidence. Audit the tests of a module as you audit its source, and report a test defect at the
+  cost it carries: a test that cannot fail costs the whole invariant it claims to hold.
+- **The four A's — TEST-2.** Arrange, Act, Assert, **Annihilate**. Four things worth looking for
+  specifically, because each has bitten this repository: a test that *discovers* its state instead
+  of establishing it, so its assertions may never run; more than one act in a case, which makes a
+  failure ambiguous; an assertion on the render rather than on the claim; and a missing fourth A —
+  a database, a simulator's preferences, an environment variable or a mutated source file left
+  behind. The 453 leaked `akimath_test_w*` databases are the standing example.
 
 ## Phase 4 — what a finding must contain
 

@@ -104,6 +104,18 @@ The rest of the design bar:
 3. Write the smallest implementation that makes it pass.
 4. Re-run and refactor with the suite green.
 
+**Every test you write has four parts, not three — TEST-2, the four A's.** Arrange the state the
+test needs rather than discovering it; act once; assert the *claim* and not the render; and
+**annihilate** what the test created so the next one starts where this began. The fourth is the one
+that gets dropped, and it is not only files — a database, a simulator's preferences, an environment
+variable, a source file you mutated during a falsification. Where the framework owns it —
+`tearDown`, `addTearDown`, `afterEach` — use it, because cleanup that only runs when the assertions
+pass is not cleanup.
+
+**And TEST-1: the test is production code, not the receipt for it.** The bar it has to clear is not
+"green" but "would go red if the defect came back". A test that would survive the bug it is named
+for is not covering it.
+
 **Tests are committed here.** They are the project's primary evidence, not a local scratchpad.
 
 Where things go:

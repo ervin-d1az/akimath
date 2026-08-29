@@ -183,6 +183,51 @@ The one structural pattern the repo already commits to, on both sides of the sta
   the whole"*, which `openspec/specs/states/spec.md` already applies to the rating on that very
   screen.
 
+## TEST — Tests are code
+
+- **TEST-1** MUST: **a test is production code.** It is named, reviewed, refactored and held to the
+  rules in this file like anything else, and it is the deliverable rather than the receipt — PROC-1
+  already says a behaviour change with no test in its commit is incomplete. What TEST-1 adds is the
+  other direction: **a test that cannot fail is a defect of the first order here**, because in this
+  project the suite *is* the evidence, and a green suite that proves nothing is worse than no suite,
+  which at least does not lie. This is not theoretical. Found in one week: a reviewer diffing against
+  a branch abandoned at pull request #6; `dart_code_linter` exiting 0 without its flag; a CI guard
+  whose command failed on an unknown option before it read the file it guarded; `packages/contract`
+  with no dependency allowlist at all; `expect(solved, 0)` that was `expect(0, 0)`, in a case named
+  *"a key pressed while it is open does nothing"* that never pressed a key; the *"the answer never
+  travels"* test pinned on a code path with no production callers; and a first-run branch that no
+  integration suite had ever executed. **When a test starts really running, treat what it says as
+  the finding, not as an inconvenience.**
+
+- **TEST-2** MUST: **the four A's — Arrange, Act, Assert, Annihilate**, in that order, and the
+  fourth is the one that gets dropped. Arrange the state the test needs; act once; assert on what
+  the act produced; **annihilate what the test created, so the next test starts where this one
+  began.** The first three are Bill Wake's 2001 pattern, popularised by Kent Beck's *Test Driven
+  Development: By Example*; the fourth step is usually called teardown in the literature and
+  **Annihilate is this project's name for it**, chosen because "teardown" sounds optional and this
+  is not.
+
+  Read the A's as obligations rather than as three comment headers:
+
+  - **Arrange means establish, not discover.** A test that branches on the state it finds is a test
+    whose assertions may never run. Six integration suites gated their first-run walk on
+    `if (find.byType(WelcomeScreen)...isNotEmpty)` against a device carrying `onboarding_complete`,
+    so that whole half executed in none of them while all six reported green.
+  - **Act once.** Two acts in one case make a failure ambiguous about which one caused it.
+  - **Assert the claim, not the render.** `expect(find.text('AYER'), findsOneWidget)` passes for any
+    string; what it should pin is that the run being labelled cannot be yesterday's. A test that
+    would survive the defect it is named for is not covering it.
+  - **Annihilate what you made.** Not only files: a database, a simulator's preferences, an
+    environment variable, a mutated source file during a falsification. Two live violations sit in
+    this repository as the reason this clause is explicit — the vitest harness has left **453**
+    `akimath_test_w*` databases on the local cluster and drops none, and a Tier 2 run overwrote a
+    simulator's `akimath.day_log.v1` without capturing what was there first. PROC-8 is this rule
+    applied to one case: prove the restore, and not with `git diff --quiet` on a path git does not
+    track.
+
+  Where a framework owns the fourth A — `tearDown`, `afterEach`, `addTearDown` — use it, because a
+  cleanup that only runs when the assertions pass is not cleanup.
+
 ## DEP — Dependencies & what they send
 
 - **DEP-1** NEVER add a dependency that sends data off the device — analytics, ads, attribution,
