@@ -1,4 +1,23 @@
-# Gate A — consult brief: children's data protection
+# Gate A — consult brief: children's data protection — SUPERSEDED
+
+> **Superseded on 2026-08-29 by [`gate-a-adult-data-consult.md`](gate-a-adult-data-consult.md).
+> Do not send this document to counsel.**
+>
+> The product became **adults-only** on 2026-08-29 — no account for anyone under the eligibility
+> line — which retired two of the eleven questions below outright (Q-A3, parental-consent evidence,
+> and Q-A9, the parental gate), changed the shape of the other nine, and created two the successor
+> asks instead. The successor's §2 is the question-by-question accounting; its §1 states the one
+> thing that did **not** change, which is that a minor can still install the app and play it
+> offline, because nothing gates play.
+>
+> **This file is kept whole and unedited below**, and it is kept for a reason rather than out of
+> tidiness. Its §7 argues that the 2026-08-16 text is worth preserving word for word "because it is
+> the reason every default in this document is labelled as a default" — and that is still true one
+> supersession later. `players.age_band` is a frozen `CHECK` constraint carrying `under_13` and
+> `13_17` **because of the text below**, and anyone asking why those values exist is asking about
+> this document, not about its successor.
+>
+> Nothing below has been re-verified since 2026-08-26, and nothing in it is legal advice.
 
 > **DO NOT SEND — 2026-08-29.** [ADR 0004](../adr/0004-the-game-is-for-adults.md) makes AkiMath
 > adults-only, which changes the question this brief asks. It narrows to a residual adult-data
