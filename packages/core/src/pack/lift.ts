@@ -44,11 +44,17 @@ export function readAuthoredFile(text: string): readonly unknown[] {
  * correct typographic mark, and `ARITHMETIC_OPERATORS` froze the ASCII hyphen.
  * `stimulus_reader.dart` translates the other way for the same reason; the two
  * are a pair and neither is complete alone.
+ *
+ * **U+002D is deliberately not a key.** This is a table of marks, and the
+ * hyphen is a name — the contract's name for subtraction, which is why it
+ * appears on the right. Accepting it on the left as well was tolerance the
+ * app does not share: `arithmetic_glyphs.dart` refuses it, so a build that
+ * took it would emit a pack from an authored file the app cannot read, which
+ * is the same format admitting different content at each of its two doors.
  */
 const OPERATORS: Readonly<Record<string, string>> = {
   "+": "+",
   "−": "-",
-  "-": "-",
   "×": "×",
   "÷": "÷",
 };

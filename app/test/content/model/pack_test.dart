@@ -328,12 +328,14 @@ void main() {
     });
   });
 
-  group('a pack cannot smuggle in a token the compositor refuses', () {
-    test('an operator the compositor cannot draw is refused at parse', () {
-      // OperatorNode.of throws on a solidus. Without validation here that throw
-      // happened in build, mid-round, when the item's turn came — past the
-      // point where "content is validated where it is read" is true, and shown
-      // to a child as a red screen.
+  group('a pack cannot smuggle in a mark the vocabulary does not name', () {
+    test('a solidus is refused at parse, not mid-round', () {
+      // Refused now because it is outside `arithmeticGlyphs`; it used to be
+      // refused because `OperatorNode.of` threw on it, an inline fraction
+      // being something the compositor cannot express rather than something
+      // it declines. Either way the throw belongs here and not in `build`,
+      // mid-round, when the item's turn came — past the point where "content
+      // is validated where it is read" is true.
       expect(
         () => Pack.fromJson(
           _packJson(
@@ -372,6 +374,63 @@ void main() {
           ),
           returnsNormally,
           reason: '"$glyph" was refused',
+        );
+      }
+    });
+
+    test('an ASCII hyphen is refused where a minus sign was meant', () {
+      // `ARITHMETIC_OPERATORS` froze U+002D as the *name* of subtraction, and
+      // `stimulus_reader` translates that name to U+2212 before anything is
+      // drawn. An authored prompt carries no name — it carries the glyph — so
+      // the hyphen arriving here is a mark outside the drawn vocabulary, and
+      // the same item would draw U+2212 if it came back from the server.
+      expect(
+        () => Pack.fromJson(
+          _packJson(
+            items: <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'hyphen',
+                'ladder_step': 1,
+                'answer': '1',
+                'prompt': <Map<String, dynamic>>[
+                  <String, dynamic>{'kind': 'text', 'value': '5'},
+                  <String, dynamic>{'kind': 'operator', 'glyph': '-'},
+                  <String, dynamic>{'kind': 'text', 'value': '4'},
+                  <String, dynamic>{'kind': 'operator', 'glyph': '='},
+                ],
+              },
+            ],
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a mark the vocabulary does not name is refused, drawable or not', () {
+      // The compositor draws whatever it is handed, so asking it was asking
+      // the wrong question. U+22C5 is the sharp case: Darumadrop has no glyph
+      // for it, so it falls back to another font while `GlyphMeasure` still
+      // measures a Darumadrop box — the mismatch `math_node.dart` records for
+      // `=`. U+00B1 and `%` are the blunt case: the font draws them happily
+      // and they are still not arithmetic this app poses.
+      for (final String glyph in <String>['\u22C5', '\u00B1', '%', 'x']) {
+        expect(
+          () => Pack.fromJson(
+            _packJson(
+              items: <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'bad',
+                  'ladder_step': 1,
+                  'answer': '1',
+                  'prompt': <Map<String, dynamic>>[
+                    <String, dynamic>{'kind': 'operator', 'glyph': glyph},
+                  ],
+                },
+              ],
+            ),
+          ),
+          throwsA(isA<FormatException>()),
+          reason: '"$glyph" was accepted',
         );
       }
     });

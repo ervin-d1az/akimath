@@ -6,18 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('a prompt becomes a node tree', () {
     test('each token kind maps to its node', () {
-      const Item item = Item(
-        id: 'i',
-        stimulus: ArithmeticStimulus(<PromptToken>[
-          PromptToken.fraction(numerator: '3', denominator: '4'),
-          PromptToken.operator('+'),
-          PromptToken.text('1'),
-        ]),
-        answer: PlainAnswer('7/4'),
-        ladderStep: 1,
-      );
-
-      final RowNode row = nodeFor(item) as RowNode;
+      final RowNode row = nodeForTokens(<PromptToken>[
+        const PromptToken.fraction(numerator: '3', denominator: '4'),
+        const PromptToken.operator('+'),
+        const PromptToken.text('1'),
+      ]) as RowNode;
 
       expect(row.children, hasLength(3));
       expect(row.children[0], isA<FractionNode>());
@@ -32,36 +25,23 @@ void main() {
       // blur, overflow and text decoration rather than tree shape. A swapped
       // numerator would have rendered a different question with every test
       // green.
-      const Item item = Item(
-        id: 'i',
-        stimulus: ArithmeticStimulus(<PromptToken>[
-          PromptToken.fraction(numerator: '3', denominator: '4'),
-        ]),
-        answer: PlainAnswer('3/4'),
-        ladderStep: 1,
-      );
-
-      final FractionNode fraction =
-          (nodeFor(item) as RowNode).children.single as FractionNode;
+      final FractionNode fraction = (nodeForTokens(<PromptToken>[
+        const PromptToken.fraction(numerator: '3', denominator: '4'),
+      ]) as RowNode)
+          .children
+          .single as FractionNode;
 
       expect((fraction.numerator as NumeralNode).digits, '3');
       expect((fraction.denominator as NumeralNode).digits, '4');
     });
 
     test('the token order is preserved', () {
-      const Item item = Item(
-        id: 'i',
-        stimulus: ArithmeticStimulus(<PromptToken>[
-          PromptToken.text('9'),
-          PromptToken.operator('−'),
-          PromptToken.text('4'),
-          PromptToken.operator('='),
-        ]),
-        answer: PlainAnswer('5'),
-        ladderStep: 1,
-      );
-
-      final RowNode row = nodeFor(item) as RowNode;
+      final RowNode row = nodeForTokens(<PromptToken>[
+        const PromptToken.text('9'),
+        const PromptToken.operator('−'),
+        const PromptToken.text('4'),
+        const PromptToken.operator('='),
+      ]) as RowNode;
 
       expect((row.children[0] as NumeralNode).digits, '9');
       expect((row.children[1] as OperatorNode).glyph, '−');
@@ -70,31 +50,24 @@ void main() {
     });
 
     test('an operator defaults to the face D7 gives it', () {
-      const Item item = Item(
-        id: 'i',
-        stimulus: ArithmeticStimulus(<PromptToken>[
-          PromptToken.operator('+'),
-          PromptToken.operator('='),
-        ]),
-        answer: PlainAnswer('1'),
-        ladderStep: 1,
-      );
-
-      final RowNode row = nodeFor(item) as RowNode;
+      final RowNode row = nodeForTokens(<PromptToken>[
+        const PromptToken.operator('+'),
+        const PromptToken.operator('='),
+      ]) as RowNode;
 
       expect((row.children[0] as OperatorNode).face, MathFace.display);
       expect((row.children[1] as OperatorNode).face, MathFace.textHeavy);
     });
 
     test('a solidus in a prompt is refused rather than drawn inline', () {
-      const Item item = Item(
-        id: 'i',
-        stimulus: ArithmeticStimulus(<PromptToken>[PromptToken.operator('/')]),
-        answer: PlainAnswer('1'),
-        ladderStep: 1,
+      // Reachable only from a prompt built in code: `Pack.fromJson` refuses a
+      // solidus at load now, and so does `stimulus_reader`. This is the floor
+      // under both — the compositor has no way to express an inline fraction,
+      // so it declines rather than drawing something else.
+      expect(
+        () => nodeForTokens(<PromptToken>[const PromptToken.operator('/')]),
+        throwsA(isA<ArgumentError>()),
       );
-
-      expect(() => nodeFor(item), throwsA(isA<ArgumentError>()));
     });
   });
 }

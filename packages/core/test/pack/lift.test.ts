@@ -72,18 +72,20 @@ describe("an authored arithmetic item becomes a frozen envelope", () => {
     expect(payloadOf(lift(minus))["operator"]).toBe("-");
   });
 
-  it("accepts the ASCII hyphen as well as the minus sign", () => {
-    // Both spellings map to the frozen `-`. Only U+2212 was exercised, so
-    // emptying the ASCII entry of the table changed nothing.
-    for (const glyph of ["-", "−"]) {
-      const item = { ...authored, answer: "1", prompt: [
-        { kind: "text", value: "9" },
-        { kind: "operator", glyph },
-        { kind: "text", value: "8" },
-        { kind: "operator", glyph: "=" },
-      ] };
-      expect(payloadOf(lift(item))["operator"]).toBe("-");
-    }
+  it("refuses the ASCII hyphen, which is a name and not a mark", () => {
+    // This used to accept both spellings and map them to the frozen `-`. The
+    // app's authored reader refuses U+002D — an authored prompt carries the
+    // glyph it draws, and the hyphen is the contract's *name* for subtraction
+    // rather than the mark. Accepting it here would let `npm run build:pack`
+    // succeed on a file the app cannot read: the same format, two doors,
+    // disagreeing about what may go through.
+    const item = { ...authored, answer: "1", prompt: [
+      { kind: "text", value: "9" },
+      { kind: "operator", glyph: "-" },
+      { kind: "text", value: "8" },
+      { kind: "operator", glyph: "=" },
+    ] };
+    expect(() => lift(item)).toThrow(TypeError);
   });
 
   it("carries the answer as a digest and never in the clear", () => {

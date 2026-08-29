@@ -26,8 +26,8 @@ import 'verdict/verdict_screen.dart';
 /// become is `AnswerDraft`, and whether an answer is right is `grade`. This
 /// widget holds the current index and the current draft and nothing else, which
 /// is what keeps all three testable without pumping a screen. Turning a prompt
-/// into a node tree is `nodeFor`, and it lives in `policy/` for the same reason
-/// the other two do.
+/// into a node tree is `nodeForTokens`, and it lives in `policy/` for the same
+/// reason the other two do.
 ///
 /// It takes its items rather than fetching them. `HomeRoute` is the adapter
 /// that reads the bundled pack and pushes this screen, so nothing here touches

@@ -1,3 +1,4 @@
+import 'package:akimath_app/content/model/arithmetic_glyphs.dart';
 import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/content/model/pack.dart';
 import 'package:akimath_app/content/pack_reader.dart';
@@ -68,6 +69,43 @@ void main() {
         expect(entry.value, greaterThanOrEqualTo(seriesLength * 2),
             reason: '${entry.key} has only ${entry.value} items');
       }
+    });
+  });
+
+  group('every mark the shipped pack draws is one the vocabulary names', () {
+    test('no expression in it draws a mark outside arithmeticGlyphs', () {
+      // `Pack.fromJson` refuses one now, so this cannot fail while the reader
+      // is intact — which is the point. It is the gate that says the *shipped
+      // asset* is correct by construction rather than by author discipline,
+      // and it turns red if the refusal is ever loosened. The asset was right
+      // by discipline until this change: all five of its subtractions spell
+      // U+2212, and nothing made them.
+      final Map<String, int> marks = <String, int>{};
+      for (final Item item in pack.items) {
+        if (item.stimulus case ArithmeticStimulus(
+              :final List<PromptToken> prompt
+            )) {
+          for (final PromptToken token in prompt) {
+            if (token case OperatorToken(:final String glyph)) {
+              marks[glyph] = (marks[glyph] ?? 0) + 1;
+            }
+          }
+        }
+      }
+
+      expect(marks, isNotEmpty, reason: 'no operator was swept, so this gate '
+          'asserted nothing');
+      for (final MapEntry<String, int> mark in marks.entries) {
+        expect(
+          arithmeticGlyphs,
+          contains(mark.key),
+          reason: '"${mark.key}" (U+${mark.key.runes.first.toRadixString(16)}) '
+              'is drawn ${mark.value} times and is not in the vocabulary',
+        );
+      }
+      // ignore: avoid_print
+      print('  pack operators · ${marks.values.reduce((int a, int b) => a + b)}'
+          ' marks over ${marks.length} distinct → all in the vocabulary');
     });
   });
 
