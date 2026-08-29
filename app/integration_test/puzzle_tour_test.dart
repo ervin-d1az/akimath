@@ -1,4 +1,5 @@
 import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/design/painting/cage_edge_painter.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_board_view.dart';
@@ -114,6 +115,7 @@ void main() {
         await tester.pumpAndSettle(const Duration(milliseconds: 300));
       }
       expect(_onABoard(), isTrue, reason: '$name did not open');
+      _expectItsConstraintsDrawn(tester, name);
 
       // **Out through `Salir`, not `pageBack`.** A puzzle is pushed
       // full-screen with no navigation affordance — that is the design — so
@@ -134,6 +136,64 @@ void main() {
       expect(find.byType(HomeScreen), findsOneWidget, reason: 'stuck after $name');
     }
   });
+}
+
+/// The board is showing what its format asks of the player.
+///
+/// **`_onABoard` says a screen opened; this says its constraints reached it.**
+/// A format wired up wrongly draws a grid and nothing else, opens from the home
+/// and comes back — which is what the widget-level *five kinds reachable* gate
+/// cannot see either. Each assertion is on a mark only that format's
+/// constraints produce: a cage outline is a painter no other format installs,
+/// and a Kakuro's clue carries an arrow no cell value has.
+///
+/// **The magic square is asked for every one of its targets, not one of them.**
+/// This said the target is `n(n² + 1) / 2` and therefore larger than any cell —
+/// **which is false of the shipped boards**, whose lines carry their own totals
+/// rather than the classic constant: the day's are `[9, 20, 16]`, and a `9` on
+/// a board whose cells hold 1 to `size²` could be a given. Six numbers all
+/// present at once is something only the margin draws. Measured with a probe
+/// over the shipped pack rather than reasoned about a second time.
+///
+/// **Switched over the leaves**, so a sixth format is a compile error in the
+/// tour as well as in `boardConstraints` — the same construction, held at the
+/// one place where the puzzle is the shipped pack's rather than a fixture's.
+void _expectItsConstraintsDrawn(WidgetTester tester, String name) {
+  final Finder screen = find.byType(PuzzleScreen);
+  if (screen.evaluate().isEmpty) {
+    // The sopa de letras is letters and a word list; it has no board and asks
+    // nothing of one.
+    expect(find.byType(WordSearchScreen), findsOneWidget, reason: name);
+    return;
+  }
+  final Finder board = find.byType(PuzzleBoardView);
+  Finder onBoard(String text) =>
+      find.descendant(of: board, matching: find.text(text));
+  final Finder cageOutlines = find.descendant(
+    of: board,
+    matching: find.byWidgetPredicate(
+      (Widget w) => w is CustomPaint && w.foregroundPainter is CageEdgePainter,
+    ),
+  );
+
+  switch (tester.widget<PuzzleScreen>(screen).puzzle) {
+    case KenKenPuzzle():
+      expect(cageOutlines, findsWidgets, reason: '$name drew no cage');
+    case KillerPuzzle():
+      expect(cageOutlines, findsWidgets, reason: '$name drew no cage');
+    case MagicSquarePuzzle(
+        :final List<int> rowTargets,
+        :final List<int> columnTargets,
+      ):
+      for (final int total in <int>[...rowTargets, ...columnTargets]) {
+        expect(onBoard('$total'), findsWidgets,
+            reason: '$name is missing the line total $total');
+      }
+    case KakuroPuzzle(:final List<Run> runs):
+      final Run run = runs.first;
+      expect(onBoard('${run.sum}${run.isAcross ? '→' : '↓'}'), findsWidgets,
+          reason: '$name drew no clue');
+  }
 }
 
 /// Whether a board of either kind is on screen.

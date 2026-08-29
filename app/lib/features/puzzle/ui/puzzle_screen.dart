@@ -7,6 +7,7 @@ import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/icon_button_tile.dart';
 import '../../../design/widgets/keypad.dart';
 import '../../../design/widgets/spec/keypad_layout.dart';
+import '../policy/board_constraints.dart';
 import '../policy/pause.dart';
 import '../policy/puzzle_entry.dart';
 import '../policy/reference_card.dart';
@@ -165,25 +166,17 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
     );
   }
 
+  /// The board, asked for rather than assembled.
+  ///
+  /// This was four `switch` expressions ending in `_ => const <…>[]`, so the
+  /// screen named three formats to build one widget and a fourth format's
+  /// constraints were whatever fell through. `boardConstraints` is exhaustive
+  /// over the sealed hierarchy, which is what turns the sixth format from a
+  /// bare grid into a compile error (`docs/solid/puzzle.md`, finding 1).
   Widget _board() {
     return PuzzleBoardView(
       entry: _entry,
-      cages: switch (widget.puzzle) {
-        final CagedPuzzle caged => caged.cages,
-        _ => const <Cage>[],
-      },
-      rowTargets: switch (widget.puzzle) {
-        MagicSquarePuzzle(:final List<int> rowTargets) => rowTargets,
-        _ => const <int>[],
-      },
-      columnTargets: switch (widget.puzzle) {
-        MagicSquarePuzzle(:final List<int> columnTargets) => columnTargets,
-        _ => const <int>[],
-      },
-      runs: switch (widget.puzzle) {
-        KakuroPuzzle(:final List<Run> runs) => runs,
-        _ => const <Run>[],
-      },
+      constraints: boardConstraints(widget.puzzle),
       onTapCell: (Cell cell) => _apply(_entry.select(cell)),
     );
   }
