@@ -6,9 +6,9 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { createApp, createHandlers } from "../src/adapters/http-server.js";
 import { createLogger } from "../src/adapters/logger.js";
 import { createRequestDatabase, type RequestDatabase } from "../src/adapters/request-database.js";
-import { readShippedPacks } from "../src/adapters/shipped-packs.js";
 import type { Caller } from "../src/routing.js";
 import { authoredAnswers } from "./support/authored.js";
+import { shippedPackNamed } from "./support/shipped.js";
 import { describeWithDatabase, freshDatabase, type TestDatabase } from "./support/database.js";
 
 const ACCOUNT = "6f2b1c8d-0000-4000-8000-00000000ab01";
@@ -20,7 +20,8 @@ describeWithDatabase("POST /packs, against a real database", () => {
   let db: TestDatabase;
   let requests: RequestDatabase;
 
-  const shipped = readShippedPacks().get("starter")!.pack;
+  const starter = shippedPackNamed("starter");
+  const shipped = starter.pack;
   /** The plaintext answers the built pack only ever carries as digests. */
   const answers = authoredAnswers();
 
@@ -108,9 +109,11 @@ describeWithDatabase("POST /packs, against a real database", () => {
       [body.packId],
     );
     expect(row.rows[0]?.player_id).toBe(PLAYER);
-    // **A name, not the body.** 158 KB per issuance, identical for every
-    // player, is a table that grows and says nothing new each time.
-    expect(row.rows[0]?.content_id).toBe("starter");
+    // **A name and a digest, not the body.** 158 KB per issuance, identical
+    // for every player, is a table that grows and says nothing new each time —
+    // and a name alone would follow the artifact wherever an edit took it.
+    expect(row.rows[0]?.content_id).toBe(starter.id);
+    expect(row.rows[0]?.content_id).toMatch(/^starter@[0-9a-f]{64}$/u);
     expect(row.rows[0]?.item_refs).toHaveLength(shipped.items.length);
     expect(row.rows[0]?.item_refs[0]?.kind).toBe("digest");
     expect(row.rows[0]?.pack_salt.length).toBe(16);

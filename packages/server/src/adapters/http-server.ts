@@ -122,11 +122,15 @@ const PLATFORM: HandlerEnvironment = {
 };
 
 /**
- * Which shipped pack a new issuance is a copy of.
+ * Which shipped pack a new issuance is a copy of, by **name**.
  *
  * One today. When there are several, choosing between them is a product
  * decision — and it is the same decision as "which pack does this player need
  * next", which is rating's, which is F4.
+ *
+ * A name and not a content id: issuance always wants the current version, and
+ * the id the row records pins the artifact so a *re-fetch* cannot silently get
+ * a different one. `contentIdFor` in `packs.ts` carries that argument.
  */
 const ISSUED_CONTENT = "starter";
 
@@ -270,6 +274,12 @@ export function createHandlers(
         // writes one and it always issues a copy. A row without one would be a
         // pack this build cannot describe, and it is answered the same way as
         // content the build no longer ships.
+        //
+        // **The id pins the artifact's bytes**, so content edited under an
+        // outstanding pack is that same fact rather than a silent swap: the
+        // stored id resolves to nothing and the answer is the 404 below. The
+        // client's own reading of a 404 here is to ask for a new pack
+        // (`pack_refresh.dart`), which is the graceful half of this.
         const content =
           stored.contentId === null
             ? undefined
@@ -305,7 +315,11 @@ export function createHandlers(
         // generated subtractions. `issuedPack` still exists and still works;
         // nothing should prefer it while there is one template family, and
         // 0005 is what made the better pack gradeable at all.
-        const content = environment.shippedPacks().get(ISSUED_CONTENT);
+        // Keyed by the versioned content id, so issuance — the one caller that
+        // starts from a name — asks for whichever version is current.
+        const content = [...environment.shippedPacks().values()].find(
+          (shipped) => shipped.name === ISSUED_CONTENT,
+        );
         if (content === undefined) {
           // Unreachable while the build ships one, and thrown rather than
           // answered: a server with no content is not a client's problem.

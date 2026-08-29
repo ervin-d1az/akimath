@@ -1,7 +1,10 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
 import { parsePack, type Pack } from "@akimath/contract";
+
+import { contentIdFor } from "../packs.js";
 
 /**
  * The packs this build can issue, read once.
@@ -21,29 +24,51 @@ import { parsePack, type Pack } from "@akimath/contract";
  * at the first player who asks for one.
  */
 export interface ShippedPack {
-  /** What `offline_packs.content_id` records. Short, stable, and content's. */
+  /**
+   * What `offline_packs.content_id` records: the name and the artifact's bytes.
+   *
+   * **Versioned, because a name is not an identity.** `contentIdFor` carries
+   * the whole argument; the short version is that a row naming `starter`
+   * followed the artifact wherever an edit took it, and the wrong verdicts that
+   * produced land in an append-only table.
+   */
   readonly id: string;
+  /** Which content this is, across every version of it. Chosen at issuance. */
+  readonly name: string;
   readonly pack: Pack;
 }
 
 /** The one pack this build ships. A list, because there will be more. */
-const SHIPPED: readonly { readonly id: string; readonly specifier: string }[] = [
-  { id: "starter", specifier: "@akimath/core/pack/starter.json" },
+const SHIPPED: readonly { readonly name: string; readonly specifier: string }[] = [
+  { name: "starter", specifier: "@akimath/core/pack/starter.json" },
 ];
 
+/**
+ * Keyed by the **versioned id**, which is what a stored row holds.
+ *
+ * `getOfflinePack` and the rating's `stepInContent` both look content up by
+ * exactly the string the row recorded, so a build whose artifact has moved
+ * finds nothing — which is the branch both already had for content this build
+ * no longer ships. Issuance is the one caller that starts from a name, and it
+ * asks for the current version of one.
+ */
 export function readShippedPacks(): ReadonlyMap<string, ShippedPack> {
   const resolve = createRequire(import.meta.url).resolve;
   const packs = new Map<string, ShippedPack>();
 
-  for (const { id, specifier } of SHIPPED) {
-    const parsed = parsePack(JSON.parse(readFileSync(resolve(specifier), "utf8")));
+  for (const { name, specifier } of SHIPPED) {
+    // The bytes as read, hashed before anything interprets them: bytes that are
+    // equal parse equal, so this can only ever be too strict, never too loose.
+    const bytes = readFileSync(resolve(specifier));
+    const parsed = parsePack(JSON.parse(bytes.toString("utf8")));
     if (!parsed.ok) {
       // Thrown at startup, deliberately. A pack the client would refuse is a
       // build that should not serve, and finding out at the first request
       // means finding out in front of a player.
-      throw new Error(`the shipped pack "${id}" is not a pack: ${parsed.tag}`);
+      throw new Error(`the shipped pack "${name}" is not a pack: ${parsed.tag}`);
     }
-    packs.set(id, { id, pack: parsed.pack });
+    const id = contentIdFor(name, createHash("sha256").update(bytes).digest("hex"));
+    packs.set(id, { id, name, pack: parsed.pack });
   }
   return packs;
 }

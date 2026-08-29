@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { createApp, createHandlers } from "../src/adapters/http-server.js";
 import { createLogger } from "../src/adapters/logger.js";
 import { createRequestDatabase, type RequestDatabase } from "../src/adapters/request-database.js";
-import { readShippedPacks } from "../src/adapters/shipped-packs.js";
+import { shippedPackNamed } from "./support/shipped.js";
 import type { Caller } from "../src/routing.js";
 import { authoredAnswers } from "./support/authored.js";
 import { describeWithDatabase, freshDatabase, type TestDatabase } from "./support/database.js";
@@ -30,7 +30,7 @@ describeWithDatabase("the rating, from answering to GET /me/standing", () => {
   let db: TestDatabase;
   let requests: RequestDatabase;
 
-  const shipped = readShippedPacks().get("starter")!.pack;
+  const shipped = shippedPackNamed("starter").pack;
   const answers = authoredAnswers();
 
   /**
