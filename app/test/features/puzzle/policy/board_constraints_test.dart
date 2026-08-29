@@ -147,12 +147,17 @@ void main() {
       final List<BoardPuzzle> formats = _everyFormat();
       expect(formats, isNotEmpty, reason: 'a sweep over nothing sweeps nothing');
 
+      int showing = 0;
       for (final BoardPuzzle puzzle in formats) {
         final BoardConstraints shown = boardConstraints(puzzle);
+        final bool showsSomething = shown.cages.isNotEmpty ||
+            shown.runs.isNotEmpty ||
+            shown.hasLineTargets;
+        if (showsSomething) {
+          showing++;
+        }
         expect(
-          shown.cages.isNotEmpty ||
-              shown.runs.isNotEmpty ||
-              shown.hasLineTargets,
+          showsSomething,
           isTrue,
           reason: '${puzzle.runtimeType} shows no constraint at all',
         );
@@ -160,7 +165,7 @@ void main() {
 
       // ignore: avoid_print
       print('  board constraints · ${formats.length} formats swept → '
-          '${formats.length} show a constraint');
+          '$showing show a constraint');
     });
   });
 }
