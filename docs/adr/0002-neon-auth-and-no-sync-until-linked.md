@@ -2,6 +2,16 @@
 
 **Status:** Accepted — 2026-08-19, decided from the `akimath` Neon project's own configuration.
 
+> **Not superseded by [ADR 0004](0004-the-game-is-for-adults.md), 2026-08-29 — its scope widened.**
+> 0004 made the product adults-only, and 0004 §*Consequences* 3 gives the reason this record stands
+> untouched: every element of the argument below survives — no anonymous plugin, unconfigurable IP
+> tracking, 1.4.18 inside the advisory's range — and only *who* the structure protects changes. It
+> kept sessions away from under-13s who were being **routed**; it now keeps them away from every
+> minor who is being **refused**. The GHSA invariant is unaffected: magic-link and email-OTP stay
+> off while the managed version is below 1.6.22. Where the prose below says a child, read a minor —
+> including the amendment's *"an app whose audience includes children"*, which is left verbatim
+> because it is the reason the sign-up method changed on the day it did.
+
 ---
 
 ## Context
