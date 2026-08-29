@@ -3,6 +3,11 @@
 Audited at `653a17b` on `main`, read-only, 2026-08-27. Scope: `routing.ts`, the eight implemented
 operations, `adapters/`, the retention job and the CLI wiring.
 
+**Finding 2 and the `asOwner` half of finding 3 were fixed on 2026-08-29** and carry a note saying
+how; everything else below still describes the code, including finding 1, which is the headline
+and is untouched. Read the notes before acting on either — neither remedy is the one the finding
+directed, and both say why.
+
 ## Verdict
 
 This module is in good shape, and unusually so: the pure/IO split is real rather than aspirational,
@@ -75,6 +80,17 @@ which its own comment says is rating's, i.e. F4's.
 
 ### 2 — `content_id` names content that can change under an already-issued pack, and the wrong verdict it produces is unrepairable
 
+> **Fixed 2026-08-29**, and the hazard was constructed before it was: a two-item
+> reorder, a re-fetch, a right answer recorded `is_correct=false`. The remedy is
+> not the one directed below and is cheaper — `contentIdFor` in `src/packs.ts`
+> folds the digest into the id itself (`starter@<sha256 of the file>`), so
+> `content_id` still holds one `text` value and there is **no migration**. A
+> stale id resolves to nothing, which is the `content === undefined` branch this
+> finding pointed at. `test/pack-content-is-pinned.test.ts` keeps it, along with
+> the two facts that make the fix safe rather than merely strict: an attempt
+> earned against the body a device still holds syncs correctly, and the rating
+> is told the difficulty is unknown rather than handed the new content's.
+
 **Principle.** Not a SOLID letter — this is *unknown unknowns* in Ousterhout's sense: you cannot
 tell, from anywhere in either package, what else you must change when you edit an authored item.
 
@@ -111,6 +127,24 @@ from artifacts that can differ — which is this finding.
 whose bytes no longer match is the same fact.
 
 ### 3 — the "only these files may do X" pattern is the right pattern, and two things it should cover are outside it
+
+> **The `asOwner` half is fixed 2026-08-29; the `POLICY` half is not, and is
+> still open.** `asOwner` moved off `RequestDatabase` onto
+> `PooledRequestDatabase`, which only the factory returns, so the call this
+> finding names no longer compiles; and `test/one-way-to-erase.test.ts` now
+> names the one file under `src/` allowed to say it, because a type is one edit
+> from being widened and vitest does not typecheck. Falsified both ways: with
+> `deleteMe` switched to `asOwner` the old assertion fires too, and with
+> `inErasureRole` left alone and a *different* handler switched, the old
+> assertions stay green and only the new one fires — which is this finding's own
+> scenario, reproduced.
+>
+> **The first remedy directed below is declined, with a reason.** Building the
+> observation in the test support from the same connection string opens a
+> *fresh* connection, where `current_user` is the owner whether or not `SET
+> LOCAL ROLE` leaked — the leak test would then hold for any input (PROC-11).
+> Borrowing from the same pool is the load-bearing part, and that is now written
+> at the declaration so the next reader does not tidy it away.
 
 **Principle.** ISP at the component level, and PROC-10's "a gate whose input list silently reaches
 zero" applied one step out: a gate whose *subject* list silently omits a member.
