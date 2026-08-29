@@ -78,7 +78,7 @@ packages/core/            @akimath/core — the rederivation machine. ZERO runti
                           no ambient IO; the one adapter writes the golden artifacts
 contract/                 the frozen artifacts: 3 schemas, 37 fixtures, canon.golden.json,
                           openapi.json (OpenAPI 3.0.3, emitted, byte-diffed and oasdiff'd)
-docs/adr/                 0001 decides the Dart API client, 0002 the auth; older ones in ARCHITECTURE.md
+docs/adr/                 ADR 0001 decides the Dart API client, 0002 auth and sync; older ones in ARCHITECTURE.md
 ```
 
 `app/lib/api/` now exists and holds seven of the contract's operations. `packages/contract` holds
