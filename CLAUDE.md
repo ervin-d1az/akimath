@@ -146,8 +146,13 @@ the offline pack format and its OpenAPI half.
   the same characters. The parser supports `M L H V C S A Z` and **throws on anything else** — a
   quiet skip draws two thirds of a glyph on a screen with a green suite, which the first version
   did. `size` is the **height**, because `mapsTo` is 30×24 and squaring it distorts the arrow.
-  Still forked and still counted: `nav_glyph_spec.dart`'s three marks, whose replacement changes
-  what the fork's own comparison test means. The character sheet draws the whole set, because a
+  The bottom bar's four marks retired a named fork. `nav_glyph_spec.dart` hand-drew three of them
+  while the digests were shut, and it was tolerable only because it said so: its own doc comment
+  named itself a fork and a counter held the exception to three, so it could not quietly grow a
+  fourth. The digests opened, the real `0 0 26 26` paths are in hand, and drawing by eye when the
+  data exists became the mistake that file apologised for — so it went, in #80, and
+  `brand_glyph.dart` records the retirement where the four names now live. The character sheet
+  draws the whole set, because a
   parser test can say the geometry lands inside its viewBox and cannot say the flame looks like a
   flame.
   **`Perfil` is the profile home and `Ajustes` is the stack above it.** Declared rule 1 names the
