@@ -111,6 +111,18 @@ The rest of the design bar:
 3. Write the smallest implementation that makes it pass.
 4. Re-run and refactor with the suite green.
 
+**Every test you write has four parts, not three — TEST-2, the four A's.** Arrange the state the
+test needs rather than discovering it; act once; assert the *claim* and not the render; and
+**annihilate** what the test created so the next one starts where this began. The fourth is the one
+that gets dropped, and it is not only files — a database, a simulator's preferences, an environment
+variable, a source file you mutated during a falsification. Where the framework owns it —
+`tearDown`, `addTearDown`, `afterEach` — use it, because cleanup that only runs when the assertions
+pass is not cleanup.
+
+**And TEST-1: the test is production code, not the receipt for it.** The bar it has to clear is not
+"green" but "would go red if the defect came back". A test that would survive the bug it is named
+for is not covering it.
+
 **Tests are committed here.** They are the project's primary evidence, not a local scratchpad.
 
 Where things go:
@@ -259,8 +271,13 @@ green. A blocked commit is the gate working. Fix the cause; never work around it
   decision, not a step in this pipeline. `dev` is **not** the working branch and has not been
   since it stopped at pull request #6 on 2026-08-17 — do not branch from it, push to it, or diff
   against it.
-- Keep history clean before anything is pushed: `--fixup` + `rebase --autosquash`, or `--amend` on
+- Keep history clean before anything is pushed: `--fixup` + **`git rebase --autosquash main`**, or
+  `--amend` on
   the tip. Once commits are pushed, add commits instead of rewriting them.
+
+  **Name the base.** `rebase --autosquash` with no base is the trap: an agent reaching for
+  `--root` to make it work rewrote all 301 commits and detached its branch from `main`. It was
+  caught and repaired, and this line is why it will not be reached for again.
 
 ## Writing to the ledger
 
