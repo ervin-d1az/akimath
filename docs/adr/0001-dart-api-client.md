@@ -1,6 +1,16 @@
 # 1. The Dart API client is hand-written
 
-**Status:** Accepted — 2026-08-16, produced by change `f0-dart-client-spike` (phase F0, Spike A).
+**Status:** **Superseded by [ADR 0003](0003-the-dart-client-crossed-its-threshold.md)** on
+2026-08-28 — accepted 2026-08-16, produced by change `f0-dart-client-spike` (phase F0, Spike A).
+
+**Read 0003 before acting on anything below.** Two of the four supersede conditions at the foot of
+*Consequences* fired and were answered: the client passed 600 lines (1944 raw / 1236 code) and the
+envelope machinery passed the endpoints (508 : 245). **The decision itself was reaffirmed** — the
+client is still hand-written and `swagger_dart_code_generator` is still rejected, its objections
+re-verified against a package that has published nothing since. 0003 also settles which endpoint
+count the threshold meant and replaces all four conditions with triggers that bear on the answer.
+Everything below is unedited and stays the record of what was measured on 2026-08-16; the threshold
+it ends with is retired and no longer live.
 
 This is the first ADR in this repository and mints the convention every later one follows: a
 zero-padded four-digit sequence, a kebab-case subject, one decision per file, never renumbered.
