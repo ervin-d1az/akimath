@@ -4,12 +4,12 @@ import '../../../api/auth_client.dart';
 import '../../../api/me.dart';
 import '../../../api/me_result.dart';
 import '../policy/age_gate.dart';
+import 'adults_only_screen.dart';
 import 'age_gate_screen.dart';
 import 'create_account_screen.dart';
 import 'new_password_screen.dart';
 import 'recover_password_screen.dart';
 import 'sign_in_screen.dart';
-import 'tutor_consent_screen.dart';
 import 'verify_email_screen.dart';
 
 /// What the flow produced: an account, verified, with the token the AkiMath
@@ -48,22 +48,27 @@ enum AuthEntry {
   signIn,
 }
 
-/// The account flow, `req-age-gate` first where a gate is what is needed.
+/// The account flow, the gate first where a gate is what is needed
+/// (`req-no-account-without-a-declaration`).
 ///
 /// **The gate is structural, not a check.** No path reaches
-/// `CreateAccountScreen` without a band, because the field holding it is what
-/// selects the screen, and nothing below the threshold gets past
-/// `TutorConsentScreen`.
+/// `CreateAccountScreen` without an eligible band, because the field holding it
+/// is what selects the screen, and nothing below the threshold gets past
+/// `AdultsOnlyScreen`.
 ///
 /// **Signing in resolves a band a second honest way.** `LinkedAccount.ageBand`
-/// is required because `players.age_band` is the routing decision that sends a
-/// player into child protections, and for a returning player the server already
-/// holds it: `GET /me` answers that column. So [AuthEntry.signIn] asks the
-/// server rather than the player, and falls back to the gate in the one case
-/// where the server has nothing to say — an account with no player, which
-/// `DELETE /me` leaves behind because it erases the player and not the Neon
-/// Auth account. **No band is ever defaulted**; CLAUDE.md is explicit that it is
-/// not a decision to make with a `?? adult`.
+/// is required because `players.age_band` is what the device declared, and for
+/// a returning player the server already holds it: `GET /me` answers that
+/// column. So [AuthEntry.signIn] asks the server rather than the player, and
+/// falls back to the gate in the one case where the server has nothing to say —
+/// an account with no player, which `DELETE /me` leaves behind because it
+/// erases the player and not the Neon Auth account. **No band is ever
+/// defaulted**; a `?? adult` is not a decision this app is allowed to make.
+///
+/// **Both sources are judged, and by the same function.** ADR 0004 makes the
+/// product adults-only, so a band below the threshold ends the flow whether it
+/// came off the gate or off the server — `_refuse` is the one place either
+/// reaches, and `AgeGate.next` is the one thing that decides.
 ///
 /// The order is the provider's: sign up, ask for a code (the provider sends none
 /// on sign-up), verify, then `GET /token` for the JWT. Each step's failure is a
@@ -120,7 +125,7 @@ class AuthFlow extends StatefulWidget {
   State<AuthFlow> createState() => _AuthFlowState();
 }
 
-enum _Step { age, consent, create, signIn, recover, newPassword, verify }
+enum _Step { age, refused, create, signIn, recover, newPassword, verify }
 
 class _AuthFlowState extends State<AuthFlow> {
   /// The steps behind the one on screen, oldest first.
@@ -214,25 +219,9 @@ class _AuthFlowState extends State<AuthFlow> {
     });
   }
 
-  void _resolved(AgeBand band, AgeGateRoute route) {
-    if (route == AgeGateRoute.tutorConsent) {
-      setState(() {
-        _band = band;
-        _problem = null;
-        // **A session in hand is dropped here.** Somebody who signed in and
-        // then answered under 13 does not leave this flow with a token: ADR
-        // 0002 says a child's device never gets a session, and that has to be
-        // true of the door that already has one.
-        _pendingToken = null;
-        _pendingProvider = null;
-        // **Consent replaces the trail rather than extending it**, so
-        // `req-age-gate`'s "no path from here reaches 1.2" is true by
-        // construction — there is nothing behind consent to go back to, and
-        // the one control it draws leaves the flow.
-        _trail
-          ..clear()
-          ..add(_Step.consent);
-      });
+  void _resolved(AgeBand band, AgeGateOutcome outcome) {
+    if (outcome == AgeGateOutcome.refused) {
+      _refuse();
       return;
     }
 
@@ -250,6 +239,35 @@ class _AuthFlowState extends State<AuthFlow> {
       // and this is the band its link will carry.
       _handOver(signedIn, band, held);
     }
+  }
+
+  /// The end of the flow for anyone the product is not for (ADR 0004).
+  ///
+  /// **One place, because there are two sources of a band.** The gate resolves
+  /// one from a date, and the sign-in door reads one off `GET /me`; both arrive
+  /// here through `AgeGate.next`, so the two cannot answer the same fact
+  /// differently.
+  ///
+  /// **A session in hand is dropped.** Somebody who signed in and turns out to
+  /// be a minor does not leave this flow with a token — the provider granted
+  /// one and we cannot withdraw it, but nothing here carries it onward, so no
+  /// link request is made and the shell never learns of an account.
+  ///
+  /// **The refusal replaces the trail rather than extending it**, so
+  /// `req-no-account-without-a-declaration`'s *no path from here reaches the
+  /// form* is true by construction: there is nothing behind it to go back to,
+  /// and the one control it draws leaves the flow.
+  void _refuse() {
+    setState(() {
+      _busy = false;
+      _band = null;
+      _problem = null;
+      _pendingToken = null;
+      _pendingProvider = null;
+      _trail
+        ..clear()
+        ..add(_Step.refused);
+    });
   }
 
   Future<void> _create(String email, String password) async {
@@ -422,8 +440,14 @@ class _AuthFlowState extends State<AuthFlow> {
   /// The sign-in door's band, asked of the one place that knows it.
   ///
   /// `GET /me` answers `players.age_band` itself, so a returning player is
-  /// routed the way the server already routes them — read, never guessed. The
+  /// judged on the band the server already holds — read, never guessed. The
   /// gate is reached only when there is no player to read it off.
+  ///
+  /// **The band is judged here too, by the same function.** This is the second
+  /// source of a band in the app, and before ADR 0004 it was the only one that
+  /// could produce a minor's without the gate having been asked. A `13_17` row
+  /// is reachable rather than hypothetical: that band reached the account form
+  /// until this change, and the frozen `CHECK` still permits it.
   Future<void> _bandTheServerAlreadyHas(
     String accessToken,
     AuthSession provider,
@@ -434,6 +458,10 @@ class _AuthFlowState extends State<AuthFlow> {
     }
     switch (who) {
       case MeFound(:final Me me):
+        if (AgeGate.next(me.ageBand) == AgeGateOutcome.refused) {
+          _refuse();
+          return;
+        }
         setState(() => _busy = false);
         _handOver(accessToken, me.ageBand, provider);
       case MeNoPlayer():
@@ -496,7 +524,7 @@ class _AuthFlowState extends State<AuthFlow> {
       onResolved: _resolved,
       onBack: _back,
     ),
-    _Step.consent => TutorConsentScreen(onBack: widget.onGaveUp),
+    _Step.refused => AdultsOnlyScreen(onBack: widget.onGaveUp),
     _Step.create => CreateAccountScreen(
       onSubmit: _create,
       busy: _busy,

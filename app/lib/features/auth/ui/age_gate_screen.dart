@@ -10,11 +10,15 @@ import '../../../design/widgets/spec/keypad_layout.dart';
 import '../policy/age_gate.dart';
 import '../policy/digit_entry.dart';
 
-/// The gate in front of every door that reaches the server (`req-age-gate`).
+/// The gate in front of every door that reaches the server
+/// (`req-no-account-without-a-declaration`).
 ///
-/// **A neutral date, not a leading question.** "¿Eres mayor de 13?" tells the
+/// **A neutral date, not a leading question.** "¿Eres mayor de edad?" tells the
 /// player which answer opens the door, so it collects a preference rather than
-/// a fact. A date does not.
+/// a fact. A date does not. That matters more after ADR 0004 than it did
+/// before: the answer below the threshold is now a refusal rather than a
+/// consolation, so the incentive to type a different year is larger and the
+/// question must not say which year that is.
 ///
 /// **The date is reduced here and never kept.** `AgeGate.bandFor` returns a
 /// band, this screen hands the band to its caller, and the digits go out of
@@ -40,7 +44,7 @@ class AgeGateScreen extends StatefulWidget {
 
   /// Read once at the edge and passed in, so the policy stays clock-free.
   final DateTime today;
-  final void Function(AgeBand band, AgeGateRoute route) onResolved;
+  final void Function(AgeBand band, AgeGateOutcome outcome) onResolved;
 
   /// Leaves the flow. The gate is its first step, so there is nothing behind it.
   final VoidCallback onBack;

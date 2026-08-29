@@ -2,6 +2,8 @@ import 'package:akimath_app/api/auth_client.dart';
 import 'package:akimath_app/api/me.dart';
 import 'package:akimath_app/api/me_result.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/features/auth/policy/adults_only_copy.dart';
+import 'package:akimath_app/features/auth/ui/adults_only_screen.dart';
 import 'package:akimath_app/features/auth/ui/auth_flow.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -123,21 +125,34 @@ void main() {
   /// and the count is what lets a test say so rather than assume it.
   int meLookups = 0;
 
+  /// What `GET /me` answers, for the sign-in door that asks it.
+  ///
+  /// Settable because the band it carries is the **second source of a band** in
+  /// this flow — a returning player's comes off the server, not off the gate —
+  /// and ADR 0004 has to reach both.
+  MeResult meAnswer = const MeNoPlayer();
+
   Future<MeResult> lookUpMe(String accessToken) async {
     meLookups += 1;
-    return const MeNoPlayer();
+    return meAnswer;
   }
 
-  Future<void> pumpFlow(WidgetTester tester, {String? born}) async {
+  Future<void> pumpFlow(
+    WidgetTester tester, {
+    String? born,
+    AuthEntry entry = AuthEntry.createAccount,
+  }) async {
     linked = null;
     gaveUp = false;
     meLookups = 0;
+    meAnswer = const MeNoPlayer();
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: AuthFlow(
             auth: provider,
             whoAmI: lookUpMe,
+            entry: entry,
             callbackUrl: 'akimath://verified',
             today: DateTime.utc(2026, 8, 19),
             onLinked: (LinkedAccount account) => linked = account,
@@ -154,29 +169,46 @@ void main() {
   }
 
   testWidgets(
-    'the age gate stands in front, and a child never reaches the form',
+    'the age gate stands in front, and a minor never reaches the form',
     (WidgetTester tester) async {
       provider = _Provider();
       await pumpFlow(tester, born: '19082016'); // 10 years old
 
-      expect(find.text('Sigue jugando'), findsOneWidget);
+      expect(find.byType(AdultsOnlyScreen), findsOneWidget);
       expect(find.text('Crear cuenta'), findsNothing);
 
-      // `req-age-gate`: no path from here reaches the form.
-      await tester.tap(find.text('Volver a los retos'));
+      // `req-no-account-without-a-declaration`: no path from here reaches the
+      // form. The trail is cleared on the way in, so the one control leaves the
+      // flow rather than stepping back into the gate.
+      await tester.tap(find.text(adultsOnlyDoorLabel));
       await tester.pumpAndSettle();
       expect(gaveUp, isTrue);
+      expect(find.text('Crear cuenta'), findsNothing);
     },
   );
+
+  testWidgets('a seventeen-year-old is refused, and that band used to pass', (
+    WidgetTester tester,
+  ) async {
+    // **The live behaviour ADR 0004 changes.** `13_17` reached the account form
+    // before this decision, created an account and synced. It does not now, and
+    // this is the case that says so rather than leaving it to the policy test.
+    provider = _Provider();
+    await pumpFlow(tester, born: '20082008'); // turns 18 tomorrow
+
+    expect(find.byType(AdultsOnlyScreen), findsOneWidget);
+    expect(find.byKey(const Key('create-account-email')), findsNothing);
+    expect(linked, isNull);
+  });
 
   testWidgets('a band at the threshold reaches the form', (
     WidgetTester tester,
   ) async {
     provider = _Provider();
-    await pumpFlow(tester, born: '19082013'); // 13 exactly, today
+    await pumpFlow(tester, born: '19082008'); // 18 exactly, today
 
     expect(find.text('Crear cuenta'), findsWidgets);
-    expect(find.text('Sigue jugando'), findsNothing);
+    expect(find.byType(AdultsOnlyScreen), findsNothing);
   });
 
   testWidgets('an impossible date is refused without leaving the gate', (
@@ -442,6 +474,44 @@ void main() {
     expect(linked!.email, 'alguien@ejemplo.com');
     expect(linked!.ageBand, AgeBand.adult);
     expect(linked!.accessToken, 'header.payload.signature');
+  });
+
+  testWidgets('a band the server already stores is refused the same way',
+      (WidgetTester tester) async {
+    // **The second source of a band, and the one that is easy to miss.** A
+    // returning player's band comes off `GET /me`, never off the gate — so a
+    // gate that refused and a sign-in door that did not would be one fact
+    // producing opposite answers depending on which side of the wire it was
+    // read from. Both go through `AgeGate.next`, which is why there is one
+    // decision here rather than two.
+    //
+    // **Reachable rather than hypothetical**: `13_17` reached the account form
+    // before ADR 0004, so rows carrying it exist and the frozen `CHECK` still
+    // permits them (this change narrows nothing under `packages/`).
+    //
+    // Entered through the sign-in door, which is the only way to reach this
+    // path: the create door resolves a band on the gate first, and a band in
+    // hand is never asked of the server a second time.
+    provider = _Provider();
+    await pumpFlow(tester, entry: AuthEntry.signIn);
+    meAnswer = MeFound(Me(
+      playerId: '8f14e45f-ceea-4167-a5b0-9c0e2f3a1b2c',
+      ageBand: AgeBand.thirteenToSeventeen,
+      createdAt: DateTime.utc(2026, 8, 1),
+    ));
+
+    await tester.enterText(
+        find.byKey(const Key('sign-in-email')), 'alguien@ejemplo.com');
+    await tester.enterText(
+        find.byKey(const Key('sign-in-password')), 'una-contra-larga');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AdultsOnlyScreen), findsOneWidget);
+    // **The session in hand is dropped.** The provider granted one — we cannot
+    // stop it — but nothing this app holds carries it onward, so no link
+    // request is made and the shell never learns of an account.
+    expect(linked, isNull);
   });
 
   testWidgets('a refused sign-in stays put, in the provider\'s words',

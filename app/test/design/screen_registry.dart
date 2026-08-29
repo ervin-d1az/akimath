@@ -1,11 +1,11 @@
 import 'package:akimath_app/api/me.dart';
 import 'package:akimath_app/features/auth/policy/age_gate.dart';
+import 'package:akimath_app/features/auth/ui/adults_only_screen.dart';
 import 'package:akimath_app/features/auth/ui/age_gate_screen.dart';
 import 'package:akimath_app/features/auth/ui/create_account_screen.dart';
 import 'package:akimath_app/features/auth/ui/new_password_screen.dart';
 import 'package:akimath_app/features/auth/ui/recover_password_screen.dart';
 import 'package:akimath_app/features/auth/ui/sign_in_screen.dart';
-import 'package:akimath_app/features/auth/ui/tutor_consent_screen.dart';
 import 'package:akimath_app/features/auth/ui/verify_email_screen.dart';
 import 'package:akimath_app/features/character_sheet/character_sheet_screen.dart';
 import 'package:akimath_app/features/states/policy/account_state.dart';
@@ -333,14 +333,14 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     build: () => AppShell(
       child: AgeGateScreen(
         today: DateTime.utc(2026, 8, 19),
-        onResolved: (AgeBand band, AgeGateRoute route) {},
+        onResolved: (AgeBand band, AgeGateOutcome outcome) {},
         onBack: () {},
       ),
     ),
   ),
   RegisteredScreen(
-    label: 'tutor consent',
-    build: () => AppShell(child: TutorConsentScreen(onBack: () {})),
+    label: 'adults only',
+    build: () => AppShell(child: AdultsOnlyScreen(onBack: () {})),
   ),
   RegisteredScreen(
     label: 'create account',
