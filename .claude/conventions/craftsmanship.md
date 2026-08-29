@@ -550,6 +550,27 @@ credit.
   `Future` created in `initState` — each captures its inputs, and each keeps handing back the
   first ones for ever. Grep for the capture, not for the symptom.
 
+- **PROC-14** MUST: **read the exception before you name the defect.** `flutter_test` fails a case
+  when *any* rendering exception is thrown during layout, whatever that case asserts — so one
+  overflow turns every gate that pumps the screen red at once, each under its own name. A failing
+  case called *"nothing under 48px"* is therefore **not** evidence of a press under 48 px; it is
+  evidence that something went wrong while the screen was laid out, and the exception says which.
+
+  Measured here, on `4.12 Racha en riesgo`. It was reported as two defects — an overflow *and* a
+  BRD-2d violation at two viewports — and the second was recorded in `screen_registry.dart` as the
+  reason the screen was left unregistered. There was one defect: a horizontal `RenderFlex` overflow
+  in `StreakBadge`. Probing the same four viewports measured every press at 354×110, 354×69,
+  366×110 and 366×69 — nothing within 60 px of the floor — and fixing the overflow turned all four
+  cases green with no press having moved. The wrong half of that report is the half that had
+  outlived its session, in a comment, arguing against measuring the screen at all.
+
+  The remedy is cheap and it is the one that was skipped: when a gate goes red, read what the
+  runner printed above the case name, and where the failure is derived rather than direct, **verify
+  the derived claim independently** — a throwaway probe that swallows the exception with
+  `tester.takeException()` and prints what the gate would have measured takes one run. Cite the
+  exception's own words in whatever you write down, the way an `excused` entry has to (`BRD-2e`),
+  so the next reader can tell a measurement from an inference.
+
 - **PROC-12** MUST: **the change satisfies its approved delta spec.** `CLAUDE.md` makes the
   `#### Scenario:` blocks under `openspec/changes/<id>/specs/**` the acceptance criteria, and each one
   names the test file that must cover it with a `→`. A scenario with no covering test, a `→` pointing
