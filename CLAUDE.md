@@ -156,8 +156,11 @@ the offline pack format and its OpenAPI half.
   am is the root, what the app does is the stack — and the stack pushes onto the **tab's own
   navigator** (`TabStack`) so the bar stays underneath, which is what the group badge over 4.1–4.7
   says. `RootScaffold`'s `PopScope` lets a system back pop the tab before the app closes. The list
-  holds **two rows, because two destinations exist**; the other four are absent rather than greyed
-  out, and a test pins `Accesibilidad` absent so it turns red the day that row lands. **The nav
+  holds **five of the design's six rows, plus one it does not draw** — `Cómo se leen los retos`,
+  which is in no document and so sits after everything that is. `Ayuda` is the one still absent,
+  because there is nowhere for it to go: absent rather than greyed out, since a control that
+  cannot act reads as broken rather than as unbuilt and a player cannot tell *not yet* from *not
+  for you* (DR-P2). A test pins `Ayuda` absent so it turns red the day somebody draws it. **The nav
   fork is deleted** — all four marks are transcribed, every tab has its own, and the
   house-as-fallback that once made two tabs share a mark is gone as well as caught.
   **`Avance` absorbed into it, and `Mapa` got its door after.** No document draws a progress screen;
