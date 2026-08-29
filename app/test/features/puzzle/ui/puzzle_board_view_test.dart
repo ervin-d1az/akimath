@@ -1,4 +1,5 @@
 import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/features/puzzle/policy/board_constraints.dart';
 import 'package:akimath_app/features/puzzle/policy/puzzle_entry.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_board_view.dart';
 import 'package:flutter/material.dart';
@@ -48,7 +49,8 @@ Future<PuzzleEntry> _pump(
             width: 330,
             child: PuzzleBoardView(
               entry: current,
-              cages: cages ?? _oneCage(current.board.size),
+              constraints:
+                  BoardConstraints.cages(cages ?? _oneCage(current.board.size)),
               onTapCell: (Cell cell) => current = current.select(cell),
             ),
           ),
@@ -281,12 +283,13 @@ void main() {
                 width: 330,
                 child: PuzzleBoardView(
                   entry: PuzzleEntry.of(_board()),
-                  cages: const <Cage>[],
                   // Six distinct numbers, though a real magic square's are
                   // all the same — a repeated target is indistinguishable from
                   // a target drawn twice, which is the failure this is for.
-                  rowTargets: const <int>[11, 12, 13],
-                  columnTargets: const <int>[21, 22, 23],
+                  constraints: const BoardConstraints.lineTargets(
+                    rowTargets: <int>[11, 12, 13],
+                    columnTargets: <int>[21, 22, 23],
+                  ),
                   onTapCell: (Cell cell) {},
                 ),
               ),
@@ -320,10 +323,12 @@ void main() {
                   width: 330,
                   child: PuzzleBoardView(
                     entry: PuzzleEntry.of(_board()),
-                    cages: const <Cage>[],
-                    rowTargets: withTargets ? const <int>[11, 12, 13] : const <int>[],
-                    columnTargets:
-                        withTargets ? const <int>[21, 22, 23] : const <int>[],
+                    constraints: withTargets
+                        ? const BoardConstraints.lineTargets(
+                            rowTargets: <int>[11, 12, 13],
+                            columnTargets: <int>[21, 22, 23],
+                          )
+                        : const BoardConstraints.cages(<Cage>[]),
                     onTapCell: (Cell cell) {},
                   ),
                 ),
@@ -358,8 +363,7 @@ void main() {
                 width: 330,
                 child: PuzzleBoardView(
                   entry: PuzzleEntry.of(_board()),
-                  cages: const <Cage>[],
-                  runs: runs,
+                  constraints: BoardConstraints.runs(runs),
                   onTapCell: (Cell cell) {},
                 ),
               ),
@@ -420,7 +424,7 @@ void main() {
                 builder: (BuildContext context, StateSetter setState) =>
                     PuzzleBoardView(
                   entry: entry,
-                  cages: _oneCage(3),
+                  constraints: BoardConstraints.cages(_oneCage(3)),
                   onTapCell: (Cell cell) =>
                       setState(() => entry = entry.select(cell)),
                 ),
@@ -450,7 +454,7 @@ void main() {
                 builder: (BuildContext context, StateSetter setState) =>
                     PuzzleBoardView(
                   entry: entry,
-                  cages: _oneCage(3),
+                  constraints: BoardConstraints.cages(_oneCage(3)),
                   onTapCell: (Cell cell) =>
                       setState(() => entry = entry.select(cell)),
                 ),

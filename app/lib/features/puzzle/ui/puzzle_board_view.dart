@@ -7,6 +7,7 @@ import '../../../design/painting/spec/dash_spec.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/puzzle_cell_visual.dart';
+import '../policy/board_constraints.dart';
 import '../policy/puzzle_entry.dart';
 
 /// The grid: cells, cage outlines and the targets they carry.
@@ -24,33 +25,27 @@ class PuzzleBoardView extends StatelessWidget {
   const PuzzleBoardView({
     super.key,
     required this.entry,
-    required this.cages,
+    required this.constraints,
     required this.onTapCell,
-    this.rowTargets = const <int>[],
-    this.columnTargets = const <int>[],
-    this.runs = const <Run>[],
   });
 
   final PuzzleEntry entry;
 
-  /// The cages to outline, each with the target it asks for.
-  final List<Cage> cages;
+  /// What this format puts on the board — cages, line totals or run sums.
+  ///
+  /// **One argument, decided once**, by `boardConstraints`. It was four lists
+  /// assembled at the call site from four wildcard switches, which is how a
+  /// format could be drawn with its constraints missing and nothing say so.
+  final BoardConstraints constraints;
 
   final ValueChanged<Cell> onTapCell;
 
-  /// What each line must total, for the formats that ask. Empty for caged
-  /// boards, which draw no margin at all — so a magic square and a KenKen show
-  /// the same grid at the same size, and only one has labels beside it.
-  final List<int> rowTargets;
-  final List<int> columnTargets;
-
-  /// The runs whose sums are clued on the board. Empty for every format but
-  /// Kakuro.
-  final List<Run> runs;
-
   @override
   Widget build(BuildContext context) {
-    if (rowTargets.isEmpty && columnTargets.isEmpty) {
+    // Only the formats with totals to show make room for them, so a magic
+    // square and a KenKen draw the same grid at the same size and only one has
+    // labels beside it.
+    if (!constraints.hasLineTargets) {
       return _grid();
     }
     // The margin is space *around* an unchanged square: `cellRect` is untouched
@@ -67,13 +62,13 @@ class PuzzleBoardView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               Expanded(child: _grid()),
-              _margin(rowTargets, vertical: true),
+              _margin(constraints.rowTargets, vertical: true),
             ],
           ),
         ),
         Row(
           children: <Widget>[
-            Expanded(child: _margin(columnTargets, vertical: false)),
+            Expanded(child: _margin(constraints.columnTargets, vertical: false)),
             const SizedBox(width: _marginExtent),
           ],
         ),
@@ -136,11 +131,15 @@ class PuzzleBoardView extends StatelessWidget {
     // rule `cellRect` follows, so the two cannot disagree about how big a cell
     // is.
     return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-          final double side = constraints.biggest.shortestSide;
+      // **`available`, not `constraints`.** The board's own constraints are
+      // the format's, and a `BoxConstraints` called the same thing shadows
+      // them — which is what the analyzer said the first time this was
+      // written.
+      builder: (BuildContext context, BoxConstraints available) {
+          final double side = available.biggest.shortestSide;
           final Rect box = Rect.fromLTWH(0, 0, side, side);
           final Map<Cell, Cage> cageOf = <Cell, Cage>{
-            for (final Cage cage in cages)
+            for (final Cage cage in constraints.cages)
               for (final Cell cell in cage.cells) cell: cage,
           };
 
@@ -171,7 +170,7 @@ class PuzzleBoardView extends StatelessWidget {
   ({String? across, String? down}) _cluesAt(Cell cell) {
     String? across;
     String? down;
-    for (final Run run in runs) {
+    for (final Run run in constraints.runs) {
       if (run.cells.first != cell) {
         continue;
       }
