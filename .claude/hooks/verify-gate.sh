@@ -123,15 +123,19 @@ set -uo pipefail
 #                          flutter and npm and is deliberately untrue of jq.
 #                          **The cost, which is a prerequisite and not a
 #                          surprise**: a subagent worktree is a fresh checkout
-#                          and carries no packages/*/node_modules, so wherever
-#                          this hook does fire, a commit from a worktree that
-#                          touches packages/** or contract/** blocks until
-#                          `npm ci` has run in the package the change lands in.
-#                          That is the intended reading — those suites were
-#                          never running there — but it is work somebody now has
-#                          to do rather than skip silently. It is also moot in
-#                          the sessions described below, where the hook does not
-#                          run at all.
+#                          and carries no packages/*/node_modules, so a commit
+#                          from a worktree that touches packages/** or
+#                          contract/** blocks until `npm ci` has run in the
+#                          package the change lands in. That is the intended
+#                          reading — those suites were never running there — but
+#                          it is work somebody now has to do rather than skip
+#                          silently. It became live rather than theoretical on
+#                          2026-08-28, when the gate started reading the
+#                          worktree; the note that used to end here called it
+#                          moot because the hook was believed not to run at all,
+#                          and it does. Note packages/core resolves zod through
+#                          packages/contract's tree, so a core-only change needs
+#                          `npm ci` in both.
 #                          Worth knowing when reading a "silent" gate: Claude
 #                          Code surfaces a hook's stderr to the agent only on
 #                          exit 2, so a fail-open notice and a clean pass look
@@ -144,43 +148,58 @@ set -uo pipefail
 #                          whole packages/contract suite is 0.8s) so it can only
 #                          ever fire on a hang, never on a slow machine.
 #
-# MEASURED 2026-08-27, AND NOT FIXED HERE — THIS HOOK DOES NOT RUN IN A SUBAGENT
-# WORKTREE
+# MEASURED 2026-08-28 — THE HOOK RUNS EVERYWHERE; IT WAS CHECKING THE WRONG TREE
 # -----------------------------------------------------------------------------
-# The flag above closes the fail-open hole. It cannot close a hole one level up.
-# Inside a worktree-isolated subagent session (the Agent tool's `isolation:
-# worktree`), the PreToolUse hook never executes at all. Measured, not inferred:
-# an unconditional `date >> <file>` was put on the first line of this script and
-# the file was never created across several Bash tool calls, and two commands
-# this script blocks on when run by hand — one carrying a Co-Authored-By
-# trailer — passed straight through. The settings `env` block does reach those
-# sessions: `printenv AKIMATH_GATE_BASE` answers origin/main there, so the
-# settings file is being read.
+# This heading previously read "THIS HOOK DOES NOT RUN IN A SUBAGENT WORKTREE"
+# and every sentence under it was wrong. The correction is kept at length,
+# because the mistake is cheap to make again and the probe that caused it looks
+# convincing.
 #
-# WHY it does not run was not measured, and there are two candidates. The one
-# with direct evidence is the hook's own command line, `bash
-# "$CLAUDE_PROJECT_DIR"/.claude/hooks/verify-gate.sh`: `printenv
-# CLAUDE_PROJECT_DIR` answers nothing in a worktree session, and an unset one
-# expands to `bash /.claude/hooks/verify-gate.sh`, which is not found, exits 127
-# and is reported as a non-blocking hook error while the tool call proceeds —
-# every observation above, with the `hooks` block working perfectly. That would
-# be a one-line fix here, and note the `dirname "${BASH_SOURCE[0]}"/../..`
-# fallback further down cannot help: it runs inside a script that was never
-# located. The weakness of that candidate, stated so nobody chases it as fact:
-# CLAUDE_PROJECT_DIR is set for hook commands specifically, so its absence from
-# a Bash tool subprocess is suggestive and not proof. The other candidate is
-# that the `hooks` block simply does not apply to these sessions. They cannot be
-# told apart from inside one, because a settings change is not reloaded
-# mid-session. Check it from a main session instead: `echo git commit
-# Co-Authored-By: x` blocks if this hook fires there.
+# What is true, run inside a worktree-isolated subagent session (the Agent tool's
+# `isolation: worktree`) on 2026-08-28:
 #
-# Either candidate, and not fail-open, explains an agent reporting
-# "the hook produced no output at all". Note that no output is also exactly what
-# a clean pass looks like, so the report on its own distinguishes nothing. What
-# is verified either way: a worktree agent's commits are not gated, so the pull
-# request and .github/workflows/ci.yml are the only checks those commits meet.
-# Whether the same is true of the main interactive session was not measured and
-# is not claimed. Fixing it is out of this change's scope.
+#   echo git commit Co-Authored-By: probe
+#   → PreToolUse:Bash hook error: [bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/…]:
+#     verify-gate: BLOCKED — the command carries a Co-Authored-By trailer.
+#
+# The hook fires, the command line resolves, and CLAUDE_PROJECT_DIR *is*
+# populated for hook subprocesses. Nothing about the invocation was ever broken,
+# so .claude/settings.json is unchanged.
+#
+# THE PROBE THAT MISLED, named so it is not re-run as evidence: `printenv
+# CLAUDE_PROJECT_DIR` from a **Bash tool** call. It answers nothing — and it also
+# answers nothing in a plain `claude -p` session where this hook demonstrably
+# works. Measured side by side in a scratch repository whose hook logged its own
+# environment: the hook subprocess saw CLAUDE_PROJECT_DIR set to the project
+# directory, and the Bash tool subprocess in that same session saw it unset. The
+# variable is delivered to hooks and not to tools, so a Bash tool can never
+# report on it. The earlier `date >> <file>` probe fails for the neighbouring
+# reason below: it instrumented the worktree's copy of this script, and the copy
+# that runs is the shared checkout's.
+#
+# THE REAL DEFECT, and what the block above this one fixes. PROJECT_DIR was
+# taken from CLAUDE_PROJECT_DIR, which in a worktree-isolated subagent holds the
+# **shared checkout** and not the worktree the agent is committing to. So the
+# gate cd'd into a tree the agent had not touched, found it clean, reported
+# "nothing to check" and exited 0. That is worse than not running: it is
+# indistinguishable from a pass, and Claude Code surfaces a hook's stderr only on
+# exit 2, so nothing in the session could say otherwise.
+#
+# Isolated by a single-variable run, one untracked packages/contract file in the
+# worktree and AKIMATH_GATE_REQUIRED set, driving this script through its real
+# interface (the PreToolUse payload on stdin):
+#
+#   CLAUDE_PROJECT_DIR=<shared checkout> → exit 0, silent          (the defect)
+#   CLAUDE_PROJECT_DIR=<worktree>        → exit 2, node_modules    (the capability)
+#
+# Same tree, same command, opposite verdicts. The payload's own `cwd` field is
+# what tells the two apart, and it is now what the gate reads.
+#
+# STILL TRUE AND WORTH KNOWING: this loader resolves the script through
+# CLAUDE_PROJECT_DIR, so a worktree agent runs the **shared checkout's** copy of
+# this file. An edit here therefore does not reach worktree agents until it is
+# merged into the trunk — which is also why instrumenting a worktree's copy
+# proves nothing.
 
 BASE_REF="${AKIMATH_GATE_BASE:-origin/main}"
 REQUIRED_EMAIL="${AKIMATH_COMMIT_EMAIL:-geineryodan@gmail.com}"
@@ -255,7 +274,33 @@ if [ "$GIT_WRITE" -eq 0 ]; then
   exit 0
 fi
 
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-}"
+# --- Which tree ------------------------------------------------------------
+# The tree to check is the one the tool call is being made in, which the payload
+# names as `cwd`. It is NOT $CLAUDE_PROJECT_DIR: in a worktree-isolated subagent
+# that variable holds the *shared checkout*, so the gate used to scan a tree the
+# agent was not committing to — see "MEASURED 2026-08-28" above for the two runs
+# that separate the two.
+#
+# `--show-toplevel` is what makes this right rather than merely different: from
+# a linked worktree it answers that worktree's root, from a subdirectory of the
+# main checkout it answers the repo root, and from outside any repository it
+# answers nothing and exits 128. So the main session is unchanged, the worktree
+# case becomes correct, and a Bash call made outside a repository falls through
+# to the two fallbacks below.
+#
+# $CLAUDE_PROJECT_DIR stays as the second choice rather than being deleted: it
+# is populated for hook subprocesses and it is what still locates *this script*
+# from settings.json. The BASH_SOURCE fallback is the third, for a hook invoked
+# with neither.
+
+PAYLOAD_CWD="$(jq -r '.cwd // empty' <<<"$INPUT")"
+PROJECT_DIR=""
+if [ -n "$PAYLOAD_CWD" ]; then
+  PROJECT_DIR="$(git -C "$PAYLOAD_CWD" rev-parse --show-toplevel 2>/dev/null || true)"
+fi
+if [ -z "$PROJECT_DIR" ]; then
+  PROJECT_DIR="${CLAUDE_PROJECT_DIR:-}"
+fi
 if [ -z "$PROJECT_DIR" ]; then
   PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 fi
@@ -263,6 +308,9 @@ cd "$PROJECT_DIR" || {
   echo "verify-gate: cannot enter $PROJECT_DIR, skipping." >&2
   exit 0
 }
+if [ -n "${AKIMATH_GATE_DEBUG:-}" ]; then
+  echo "verify-gate: checking $PROJECT_DIR" >&2
+fi
 
 block() {
   printf 'verify-gate: BLOCKED — %s\n' "$1" >&2
