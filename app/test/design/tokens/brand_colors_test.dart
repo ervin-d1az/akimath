@@ -63,12 +63,17 @@ void main() {
       () {
     // Asserted numerically on purpose: 0x2E is also the ink's own blue byte,
     // so an eyeballed `0x2E1C1A2E` reads as correct whichever byte moved.
-    expect((BrandColors.hairline.a * 255).round(), 46);
+    //
+    // **Against `gridHairline`, which is the token both boards draw.** It used
+    // to read a byte-identical `hairline` that nothing painted, so this test
+    // certified a copy: dropping the board's own alpha to the card rule's left
+    // the entire suite green.
+    expect((BrandColors.gridHairline.a * 255).round(), 46);
     expect((BrandColors.rule.a * 255).round(), 41);
-    expect(BrandColors.hairline, isNot(BrandColors.rule));
+    expect(BrandColors.gridHairline, isNot(BrandColors.rule));
 
     for (final Color divider in <Color>[
-      BrandColors.hairline,
+      BrandColors.gridHairline,
       BrandColors.rule,
     ]) {
       expect(divider.r, BrandColors.ink.r);
