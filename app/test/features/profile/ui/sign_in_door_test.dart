@@ -3,6 +3,7 @@ import 'package:akimath_app/api/me.dart';
 import 'package:akimath_app/api/me_result.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/features/account/policy/session.dart';
+import 'package:akimath_app/features/auth/ui/adults_only_screen.dart';
 import 'package:akimath_app/features/auth/ui/age_gate_screen.dart';
 import 'package:akimath_app/features/auth/ui/create_account_screen.dart';
 import 'package:akimath_app/features/auth/ui/sign_in_screen.dart';
@@ -20,11 +21,15 @@ import 'package:flutter_test/flutter_test.dart';
 /// find"* and *"I feel like it's very hidden"*.
 ///
 /// The band is what made that door defensible: `LinkedAccount.ageBand` is
-/// required, `players.age_band` is the routing decision that sends a player
-/// into child protections, and only the gate resolves one. Signing in resolves
-/// it a second honest way — `GET /me` reports the band the server already
-/// stores — so the gate is needed only where a link is, which is the one thing
-/// these tests pin.
+/// required, `players.age_band` is what the device declared, and only the gate
+/// resolves one. Signing in resolves it a second honest way — `GET /me` reports
+/// the band the server already stores — so the gate is needed only where a link
+/// is, which is one of the two things these tests pin.
+///
+/// **The other is that both sources are judged.** After ADR 0004 the band is no
+/// longer a route into child protections or out of them; it is an eligibility
+/// declaration, and a band below adulthood ends the flow whichever side of the
+/// wire it was read from.
 class _Provider implements AuthApi {
   _Provider();
 
@@ -190,9 +195,23 @@ Future<void> _signIn(WidgetTester tester) async {
 void main() {
   final Me linkedPlayer = Me(
     playerId: '8f14e45f-ceea-4167-a5b0-9c0e2f3a1b2c',
-    // **Not `adult`.** A test whose expected band is the one a `?? adult`
-    // would produce stays green through exactly the bug the band exists to
-    // prevent.
+    // **`adult` now, and the sensitivity it used to provide moved.** This was
+    // `13_17` so that a `?? adult` default could not satisfy the assertion;
+    // after ADR 0004 a minor's band is refused, so a fixture carrying one
+    // would refuse every test that shares it. The two cases below carry the
+    // guard instead — each of them fails if a band is ever defaulted, because
+    // each expects a *refusal* that `adult` does not produce.
+    ageBand: AgeBand.adult,
+    createdAt: DateTime.utc(2026, 8, 1),
+  );
+
+  /// A row the server still holds and this build will not link.
+  ///
+  /// **Reachable rather than hypothetical.** `13_17` reached the account form
+  /// until ADR 0004, so rows carrying it exist, and this change narrows nothing
+  /// under `packages/` — the frozen `CHECK` still permits the value.
+  final Me minorPlayer = Me(
+    playerId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
     ageBand: AgeBand.thirteenToSeventeen,
     createdAt: DateTime.utc(2026, 8, 1),
   );
@@ -251,11 +270,38 @@ void main() {
 
     expect(find.byType(SignInScreen), findsNothing, reason: 'the flow is still open');
     expect(find.byType(AgeGateScreen), findsNothing, reason: 'it asked anyway');
-    expect(handedOver?.ageBand, AgeBand.thirteenToSeventeen,
+    expect(handedOver?.ageBand, AgeBand.adult,
         reason: 'the band did not come from the server');
     // The shell learned about it, which is the only way the profile can show
     // the account without a relaunch.
     expect(find.text('ana@correo.mx'), findsWidgets);
+  });
+
+  testWidgets('a returning player the server records as a minor is refused',
+      (WidgetTester tester) async {
+    // **The second source of a band, judged by the same function as the first.**
+    // ADR 0004 refuses a minor at the gate; a band read off `GET /me` is the
+    // same declaration recorded earlier, so letting it through would be one
+    // fact producing opposite answers depending on which side of the wire it
+    // was read from.
+    LinkedSession? handedOver;
+    await _pump(
+      tester,
+      auth: _Provider(),
+      whoAmI: (String token) async => MeFound(minorPlayer),
+      onSession: (LinkedSession? session) => handedOver = session,
+    );
+
+    await tester.tap(find.text('Ya tengo cuenta'));
+    await tester.pumpAndSettle();
+    await _signIn(tester);
+
+    expect(find.byType(AdultsOnlyScreen), findsOneWidget);
+    // **Nothing was handed over**, so the shell holds no session, no link
+    // request is made and the profile does not show the address. The provider
+    // granted a session and we cannot withdraw it; what this asserts is that
+    // nothing in this app carries it onward.
+    expect(handedOver, isNull);
   });
 
   testWidgets('and the gate it never saw still decides the band it links under',
@@ -274,8 +320,41 @@ void main() {
     await tester.pumpAndSettle();
     await _signIn(tester);
 
-    // 14 years old on the day this test pins, so the gate resolves the one band
-    // neither the server nor a default would have produced.
+    for (final String digit in '14031990'.split('')) {
+      await tester.tap(find.byWidgetPredicate(
+        (Widget w) => w is KeypadKeyView && w.data.id == digit,
+      ));
+      await tester.pump();
+    }
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+
+    expect(handedOver?.ageBand, AgeBand.adult);
+    expect(find.byType(CreateAccountScreen), findsNothing,
+        reason: 'the account already exists; the gate was only for the band');
+  });
+
+  testWidgets('and a minor answering that gate is refused, account or not',
+      (WidgetTester tester) async {
+    // **The case a `?? adult` cannot pass**, which is the guard `linkedPlayer`
+    // used to carry with a `13_17` fixture. A band that was defaulted rather
+    // than resolved would hand a session over here; a resolved one refuses.
+    //
+    // It is also the reachable half of `DELETE /me`'s aftermath: the account
+    // survives erasure, so somebody who erased and came back is asked again,
+    // and the answer they give now is the one that decides.
+    LinkedSession? handedOver;
+    await _pump(
+      tester,
+      auth: _Provider(),
+      whoAmI: (String token) async => const MeNoPlayer(),
+      onSession: (LinkedSession? session) => handedOver = session,
+    );
+
+    await tester.tap(find.text('Ya tengo cuenta'));
+    await tester.pumpAndSettle();
+    await _signIn(tester);
+
     for (final String digit in '20082011'.split('')) {
       await tester.tap(find.byWidgetPredicate(
         (Widget w) => w is KeypadKeyView && w.data.id == digit,
@@ -285,9 +364,8 @@ void main() {
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
 
-    expect(handedOver?.ageBand, AgeBand.thirteenToSeventeen);
-    expect(find.byType(CreateAccountScreen), findsNothing,
-        reason: 'the account already exists; the gate was only for the band');
+    expect(find.byType(AdultsOnlyScreen), findsOneWidget);
+    expect(handedOver, isNull);
   });
 
   testWidgets('an account with no player is asked, because a link needs a band',

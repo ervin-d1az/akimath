@@ -1,4 +1,6 @@
 import 'package:akimath_app/api/endpoints.dart';
+import 'package:akimath_app/features/auth/policy/adults_only_copy.dart';
+import 'package:akimath_app/features/auth/ui/adults_only_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -19,7 +21,7 @@ import 'support/launch.dart';
 /// than a defect.
 ///
 /// **It asks for a device past the first run, and a cleared one.** This suite is
-/// about the door, not the onboarding — and `TU CUENTA` offering *"Crear
+/// about the door, not the onboarding — and the profile offering *"Crear
 /// cuenta"* is a claim about a device holding no session and no player id, which
 /// `launchOnTheHome` establishes rather than inherits.
 void main() {
@@ -32,7 +34,14 @@ void main() {
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
 
-    expect(find.text('TU CUENTA'), findsOneWidget);
+    // **The door, not a heading.** This read `expect(find.text('TU CUENTA'),
+    // findsOneWidget)` and no screen in `lib/` has ever drawn those words since
+    // `Perfil` absorbed `Avance` and the account section lost its eyebrow — so
+    // this case could not pass, and nothing said so because `flutter test` does
+    // not reach `integration_test/`. What the line was for is the claim that a
+    // device holding no session is offered a way to make an account, and the
+    // door below is that claim.
+    expect(find.text('Crear cuenta'), findsOneWidget);
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
 
@@ -57,7 +66,7 @@ void main() {
     expect(find.textContaining('Google'), findsNothing);
   }, skip: !Endpoints.configured);
 
-  testWidgets('a child reaches consent, and no path from there reaches the form',
+  testWidgets('a minor is refused, and no path from there reaches the form',
       (WidgetTester tester) async {
     await launchOnTheHome(tester);
 
@@ -66,20 +75,27 @@ void main() {
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
 
-    // Ten years old on the day the gate is asked.
-    for (final String digit in '19082016'.split('')) {
+    // **A date, not an age, and it has to stay a minor's.** This suite reads
+    // the real clock — `ProfileRoute` passes `DateTime.now()` into the flow —
+    // so a date pinned to the boundary is a minor for one run and an adult for
+    // the next. Born 19/08/2011: fifteen today, still `13_17` until 2029, and
+    // `13_17` is the band that reached this form and synced until ADR 0004.
+    // Ten years old would exercise the arm that was already closed.
+    for (final String digit in '19082011'.split('')) {
       await pressKey(tester, digit);
     }
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Sigue jugando'), findsOneWidget);
+    expect(find.byType(AdultsOnlyScreen), findsOneWidget);
     expect(find.byKey(const Key('create-account-email')), findsNothing);
 
-    // The one way on is backwards.
-    await tester.tap(find.text('Volver a los retos'));
+    // The one way on is out of the flow. The trail is cleared on the way in, so
+    // there is nothing behind the refusal to step back into.
+    await tester.tap(find.text(adultsOnlyDoorLabel));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('create-account-email')), findsNothing);
+    expect(find.byType(AdultsOnlyScreen), findsNothing);
   }, skip: !Endpoints.configured);
 
   testWidgets('the form refuses a short password without leaving the device',

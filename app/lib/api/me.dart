@@ -2,13 +2,19 @@ import 'package:meta/meta.dart';
 
 import 'instant.dart';
 
-/// The band a player was routed into, as a closed union.
+/// The band a player declared, as a closed union.
 ///
 /// **An enum and not a string**, so a `switch` over it is exhaustive: a band
 /// added server-side becomes a compile error here rather than falling through a
-/// `default` nobody looked at. `CLAUDE.md` calls the band "the routing decision
-/// that sends a player into child protections or not" — that is not a decision
-/// to make with a `?? adult`.
+/// `default` nobody looked at. The band is what the device answered about its
+/// own eligibility — never something to settle with a `?? adult`.
+///
+/// **Three members, one of which this build can produce.** ADR 0004 makes the
+/// product adults-only and the age gate refuses everything below `adult`, so
+/// nothing here mints another. The other two stay because the frozen contract
+/// and the `players` `CHECK` still name them — they go dead by construction
+/// rather than by being narrowed — and because rows and stored sessions
+/// carrying `13_17` predate the decision and still have to be readable.
 enum AgeBand {
   under13('under_13'),
   thirteenToSeventeen('13_17'),

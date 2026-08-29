@@ -16,15 +16,30 @@ import 'package:flutter_test/flutter_test.dart';
 /// had an account with no player, `GET /me` answered 404 for ever, and every
 /// operation built on top of it was unreachable. The account section drew
 /// *"Cuenta lista. Falta vincular un jugador"* and there was no way to.
+///
+/// **The band is `13_17` deliberately, and it is not the one this build's gate
+/// can produce.** It is a *probe*: the claim under test is that whatever band
+/// the session holds is the band the request carries, and after ADR 0004 an
+/// `adult` fixture would be satisfied by a `?? adult` default as well as by the
+/// real thing (PROC-11's fifth bullet). `13_17` is also the one non-adult value
+/// a real session could historically hold — it reached the account form until
+/// ADR 0004 and the frozen `CHECK` still permits it — so this is a reachable
+/// state rather than an invented one.
+///
+/// **What this file does *not* assert is that such a session should link**, and
+/// that is a residual rather than a decision. `ProfileRoute` passes a band
+/// through; the judging is `AuthFlow`'s, where both sources of a band meet
+/// `AgeGate.next`. A session restored from disk on a device that linked as
+/// `13_17` before this change reaches here without passing that gate.
 const LinkedSession _session = LinkedSession(
   email: 'alguien@ejemplo.com',
   accessToken: 'a.bearer.token',
-  ageBand: AgeBand.under13,
+  ageBand: AgeBand.thirteenToSeventeen,
 );
 
 Me _me() => Me(
   playerId: '018f4e3c-0000-7000-8000-0000000000b1',
-  ageBand: AgeBand.under13,
+  ageBand: AgeBand.thirteenToSeventeen,
   createdAt: DateTime.utc(2026, 8, 19),
 );
 
@@ -68,17 +83,18 @@ void main() {
     expect(find.text('Crear cuenta'), findsOneWidget);
   });
 
-  testWidgets('with one it links, carrying the band the gate resolved',
+  testWidgets('with one it links, carrying the band the session holds',
       (WidgetTester tester) async {
-    // The band is not read off the account: linking is an adult's act but the
-    // player need not be an adult, and taking `adult` off the credential would
-    // route a child out of their own protections.
+    // **The band is the session's, never the credential's and never a
+    // default.** A `?? adult` here would be the app asserting an age nobody
+    // declared, which is the one thing the field exists to prevent — and it is
+    // what the non-adult probe above makes visible.
     await pump(tester, session: _session);
     await tester.pumpAndSettle();
 
     expect(asked, hasLength(1));
     expect(asked.single.token, 'a.bearer.token');
-    expect(asked.single.band, AgeBand.under13);
+    expect(asked.single.band, AgeBand.thirteenToSeventeen);
     expect(isPlayerId(asked.single.playerId), isTrue);
   });
 

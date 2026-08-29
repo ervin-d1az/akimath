@@ -24,13 +24,21 @@ class LinkedSession {
 
   final String email;
 
-  /// The band the age gate resolved before the account was made.
+  /// The band the age gate resolved before the account was made, or the one
+  /// `GET /me` reported for an account that already had a player.
   ///
-  /// **Carried, because linking needs it and only the gate knows it.**
-  /// `players.age_band` is NOT NULL with no default and it is not read off the
-  /// account: linking is an adult's act but the player need not be an adult,
-  /// and taking `adult` off the credential would route a child out of their own
-  /// protections — the one mistake the band exists to prevent.
+  /// **Carried, because linking needs it and the credential does not hold it.**
+  /// `players.age_band` is NOT NULL with no default, and taking `adult` off the
+  /// credential would be the app asserting an age nobody declared — the one
+  /// mistake the field exists to prevent.
+  ///
+  /// **After ADR 0004 a session this build creates can only hold `adult`**, on
+  /// both paths: `AuthFlow` puts every band through `AgeGate.next` and ends the
+  /// flow rather than building a session for anything below adulthood. The type
+  /// still admits three because the frozen contract and the `CHECK` still name
+  /// three — they go dead by construction rather than by being narrowed — and
+  /// because a `13_17` value can still arrive from `data/session_store.dart` on
+  /// a device that linked before this change.
   final AgeBand ageBand;
 
   /// The provider's JWT. Never rendered, never logged, never persisted.
@@ -93,11 +101,20 @@ class LinkedSession {
 /// arrangement where *being signed in* survives the app being killed.
 ///
 /// **The band is here because linking still needs it and the credential does
-/// not carry it.** It is the routing decision that sends a player into child
-/// protections, and per ADR 0002 a device that resolved [AgeBand.under13] never
-/// obtains a session at all — the age gate sends it to tutor consent, which
-/// creates no account — so a value written here can only ever be `13_17` or
-/// `adult`.
+/// not carry it.** Per ADR 0002 a device that the gate refuses never obtains a
+/// session at all, and after ADR 0004 the gate refuses every band below
+/// adulthood — so a value **this build** writes here can only ever be `adult`.
+///
+/// **Read is not the same as written, and that is the whole reason this note
+/// exists.** Until ADR 0004, `13_17` reached the account form, linked and was
+/// stored; `shared_preferences` survives an upgrade, so a device that ran an
+/// older build can hand one back on the next launch. `AgeBand.fromWire` still
+/// parses all three deliberately: refusing a value the frozen contract names
+/// would turn a real device's stored session into a `FormatException` on
+/// launch, which is a worse answer than reading it. What happens to such a
+/// session after it is read is an open question ADR 0004 §Open does not settle
+/// — today it is restored and linked, because the eligibility gate lives in
+/// `AuthFlow` and a relaunch does not pass through it.
 @immutable
 class StoredSession {
   const StoredSession({
