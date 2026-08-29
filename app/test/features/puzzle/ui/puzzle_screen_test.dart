@@ -35,7 +35,15 @@ KenKenPuzzle _puzzle() => KenKenPuzzle(
       ],
     );
 
-Future<int> _pump(WidgetTester tester, {VoidCallback? onClose}) async {
+/// Pumps the screen and hands back **a reading of the solve counter**, not a
+/// copy of it.
+///
+/// It returned a bare `int` until 2026-08-29 — a snapshot taken before the test
+/// had touched anything, so it was always zero and every `expect(solved, …)`
+/// downstream of it was `expect(0, 0)` (PROC-11). A closure is read at the
+/// moment it is called, which is the shape `word_search_screen_test.dart`'s
+/// `_pumpCountingPractice` already had.
+Future<int Function()> _pump(WidgetTester tester, {VoidCallback? onClose}) async {
   int solved = 0;
   tester.view
     ..physicalSize = const Size(390, 844)
@@ -52,7 +60,7 @@ Future<int> _pump(WidgetTester tester, {VoidCallback? onClose}) async {
     ),
   );
   await tester.pumpAndSettle();
-  return solved;
+  return () => solved;
 }
 
 Future<void> _press(WidgetTester tester, String id) async {
@@ -261,17 +269,7 @@ void main() {
   group('finishing', () {
     testWidgets('solving the last cell reports it once',
         (WidgetTester tester) async {
-      int solved = 0;
-      tester.view
-        ..physicalSize = const Size(390, 844)
-        ..devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: PuzzleScreen(puzzle: _puzzle(), onSolved: () => solved++),
-        ),
-      );
-      await tester.pumpAndSettle();
+      final int Function() solved = await _pump(tester);
 
       for (int row = 0; row < 3; row++) {
         for (int col = 0; col < 3; col++) {
@@ -280,28 +278,18 @@ void main() {
         }
       }
 
-      expect(solved, 1);
+      expect(solved(), 1);
 
       // And typing again does not report a second time — a callback firing on
       // every keystroke after completion would push a verdict per digit.
       await _tapCell(tester, 0, 0);
       await _press(tester, '1');
-      expect(solved, 1);
+      expect(solved(), 1);
     });
 
     testWidgets('a full but wrong board reports nothing',
         (WidgetTester tester) async {
-      int solved = 0;
-      tester.view
-        ..physicalSize = const Size(390, 844)
-        ..devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: PuzzleScreen(puzzle: _puzzle(), onSolved: () => solved++),
-        ),
-      );
-      await tester.pumpAndSettle();
+      final int Function() solved = await _pump(tester);
 
       for (int row = 0; row < 3; row++) {
         for (int col = 0; col < 3; col++) {
@@ -311,7 +299,7 @@ void main() {
         }
       }
 
-      expect(solved, 0);
+      expect(solved(), 0);
     });
   });
 
@@ -354,17 +342,30 @@ void main() {
       expect(find.byType(KeypadKeyView), findsNothing);
     });
 
-    testWidgets('and a key pressed while it is open does nothing, because '
-        'there is no key', (WidgetTester tester) async {
-      int solved = 0;
-      solved = await _pump(tester);
+    // **Named for what it checks**, which is not what it was called.
+    //
+    // It read *"a key pressed while it is open does nothing"* and pressed no
+    // key — it could not: nothing is mounted to press, which is the whole
+    // claim. What stood in for the behaviour was `expect(solved, 0)` over an
+    // `int` the harness had snapshotted at zero, so the line held for every
+    // input and the name advertised a behavioural check nobody had written
+    // (PROC-11, twice over).
+    //
+    // The absence assertion carries the load, and it is enough: it goes red
+    // both when the `if (!_rulesOpen)` guard is removed **and** when a pad is
+    // left mounted with its keys merely disabled, because a disabled key is
+    // still a `KeypadKeyView`. Adding a press back is not available — a tap
+    // needs a target — and a tap-if-present would be the same vacuous line in
+    // a different shape.
+    testWidgets('and with a cell selected, opening it leaves no key at all',
+        (WidgetTester tester) async {
+      await _pump(tester);
       await _tapCell(tester, 0, 0);
       await tester.tap(_labelled('Cómo se juega'));
       await tester.pumpAndSettle();
 
       expect(find.byWidgetPredicate((Widget w) => w is KeypadKeyView),
           findsNothing);
-      expect(solved, 0);
     });
   });
 
