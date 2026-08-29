@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
   createRequestDatabase,
-  type RequestDatabase,
+  type PooledRequestDatabase,
 } from "../src/adapters/request-database.js";
 import {
   describeWithDatabase,
@@ -15,7 +15,7 @@ const PLAYER = "018f4e3c-0000-7000-8000-0000000000a1";
 
 describeWithDatabase("the request path connects as app_request", () => {
   let db: TestDatabase;
-  let requests: RequestDatabase;
+  let requests: PooledRequestDatabase;
 
   beforeEach(async () => {
     db = await freshDatabase();
@@ -103,7 +103,7 @@ describeWithDatabase("the request path connects as app_request", () => {
 
 describeWithDatabase("and the erasure path connects as retention_job", () => {
   let db: TestDatabase;
-  let requests: RequestDatabase;
+  let requests: PooledRequestDatabase;
 
   beforeEach(async () => {
     db = await freshDatabase();

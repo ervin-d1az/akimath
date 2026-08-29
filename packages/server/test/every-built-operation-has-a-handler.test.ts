@@ -25,7 +25,6 @@ import type { RequestDatabase } from "../src/adapters/request-database.js";
 const NEVER_CONNECTED = {
   inRequestRole: () => Promise.reject(new Error("the handler map must not query")),
   inErasureRole: () => Promise.reject(new Error("the handler map must not query")),
-  asOwner: () => Promise.reject(new Error("the handler map must not query")),
   close: () => Promise.resolve(),
 } as unknown as RequestDatabase;
 

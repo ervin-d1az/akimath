@@ -35,18 +35,43 @@ export interface RequestDatabase {
    * failing build, not a code review someone might skip.
    */
   readonly inErasureRole: <T>(work: (client: pg.PoolClient) => Promise<T>) => Promise<T>;
-  /**
-   * Runs `work` as the connecting role, with no transaction.
-   *
-   * **Not for handlers.** It exists so a test can ask what a pooled connection
-   * looks like *after* `inRequestRole` has finished with it, which is the only
-   * way to show the role did not leak. Nothing under `src/` calls it.
-   */
-  readonly asOwner: <T>(work: (client: pg.PoolClient) => Promise<T>) => Promise<T>;
   readonly close: () => Promise<void>;
 }
 
-export function createRequestDatabase(connectionString: string): RequestDatabase {
+/**
+ * What the factory actually returns, and what **no handler is given**.
+ *
+ * `asOwner` used to sit on `RequestDatabase` itself, and that made it a second,
+ * unnamed door past *the request path holds no DELETE*: the owner holds DELETE
+ * on every table, where `retention_job` holds it only on the ones it was
+ * granted, so the unsanctioned door was the wider of the two.
+ * `database.asOwner((client) => deletePlayerForAccount(client, id))` from a
+ * handler moved neither assertion in `test/one-way-to-erase.test.ts` —
+ * `inErasureRole` still appeared in two files and `DELETE FROM` in one.
+ *
+ * Two things now stop it, deliberately not one: `createHandlers` takes the
+ * narrow interface, so that call does not compile, and
+ * `test/one-way-to-erase.test.ts` names the single file under `src/` allowed to
+ * say `asOwner`, so widening the field type back is a failing build rather than
+ * a review somebody might skip. The same shape as `inErasureRole` above.
+ */
+export interface PooledRequestDatabase extends RequestDatabase {
+  /**
+   * Runs `work` as the connecting role, with no transaction.
+   *
+   * **Not for handlers, and it is the pool's own behaviour it exposes.** It
+   * exists so a test can ask what a pooled connection looks like *after*
+   * `inRequestRole` has finished with it, which is the only way to show the
+   * role did not leak. Rebuilding it in the test support from the same
+   * connection string — the tidier-looking fix — would open a *fresh*
+   * connection, where `current_user` is the owner whether or not `SET LOCAL
+   * ROLE` leaked: an assertion that holds for any input (PROC-11). Borrowing
+   * from this pool is the load-bearing part.
+   */
+  readonly asOwner: <T>(work: (client: pg.PoolClient) => Promise<T>) => Promise<T>;
+}
+
+export function createRequestDatabase(connectionString: string): PooledRequestDatabase {
   const pool = new pg.Pool({ connectionString });
 
   const borrow = async <T>(work: (client: pg.PoolClient) => Promise<T>): Promise<T> => {
