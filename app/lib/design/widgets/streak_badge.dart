@@ -49,7 +49,23 @@ class StreakBadge extends StatelessWidget {
             const SizedBox(width: BrandShape.space2),
             Text('$days', style: BrandText.numeral(30)),
             const SizedBox(width: BrandShape.space2),
-            Text(_unit, style: BrandText.action(size: 14)),
+            // **The unit gives way, and nothing else does.** At textScaler 1.3
+            // the row wants more than `4.12` has to give it — measured at 39 px
+            // over on the design phone — and a `Row` at `mainAxisSize.min`
+            // has no way to say so except by overflowing. The flame is a fixed
+            // glyph and the figure is what the screen is about, so the phrase
+            // is the only part that can wrap, and `Flexible` is what lets it.
+            //
+            // Wrapped, never ellipsised and never scaled down: `días en…`
+            // loses the sentence, and shrinking the type spends exactly the
+            // size the reader asked for. `offline_screen.dart`'s pill is the
+            // same `CandySurface` + `Row` + `BrandIcon` + `Text` composition
+            // and already resolves it this way.
+            //
+            // Inert at 1.0 — a loose `Flexible` changes nothing while the
+            // child fits, which is what keeps the drawn instance the drawn
+            // instance. `streak_badge_test.dart` holds both halves.
+            Flexible(child: Text(_unit, style: BrandText.action(size: 14))),
           ],
         ),
       ),
