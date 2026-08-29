@@ -94,10 +94,16 @@ describe("the package's public surface", () => {
         "parseStimulus",
         "renderCanonicalAnswer",
         "requireStoredCanonical",
-  // Shape and spelling, decided together. Two callers derive a stored answer —
-  // the pack builder and the server issuing a pack — and computing them
-  // separately is the bug that made every generated item ungradeable.
+  // Shape and spelling, decided together, behind two doors for the two inputs
+  // a caller can hold. **Three callers derive a stored answer**, and this said
+  // two — naming the server *issuing* a pack, which copies a pre-built artifact
+  // and derives nothing. The three that exist: `packages/core`'s `build.ts`
+  // (a template's exact rational) and `lift.ts` (an authored item's canonical
+  // string), and `packages/server`'s `gradeAnswer` (a rederived item's). The
+  // two string-holding ones used to decide it by hand, which is the bug that
+  // made every generated item ungradeable, returned.
   "storedAnswer",
+  "storedAnswerOf",
       ].sort(),
     );
 

@@ -1,4 +1,4 @@
-import { answerDigest, requireStoredCanonical, type Item } from "@akimath/contract";
+import { answerDigest, storedAnswerOf, type Item } from "@akimath/contract";
 
 /**
  * An authored item, lifted into the frozen envelope.
@@ -108,12 +108,15 @@ export function liftAuthored(authored: unknown, options: LiftOptions): Item {
       : arithmeticFrom(raw.prompt ?? [], id);
 
   const answer = raw.answer ?? "";
-  const canonical = requireStoredCanonical(answer);
-  if (!canonical.ok) {
+  // Shape and spelling from the one decision. This read the raw field for a
+  // `/` — a second implementation of `storedAnswer`, agreeing by coincidence,
+  // which is the state #50 shipped from. It validates, so the refusal is the same.
+  const stored = storedAnswerOf(answer);
+  if (!stored.ok) {
     // Content is validated where it is read. A digest over a non-canonical
     // answer grades a right answer wrong, on a device, with nothing reporting
     // an error — which is exactly what the app's own reader refuses too.
-    throw new TypeError(`item "${id}": answer "${answer}" is not storage-canonical (${canonical.tag})`);
+    throw new TypeError(`item "${id}": answer "${answer}" is not storage-canonical (${stored.tag})`);
   }
 
   return {
@@ -124,8 +127,8 @@ export function liftAuthored(authored: unknown, options: LiftOptions): Item {
     keypad: "item",
     stimulus: stimulus as Item["stimulus"],
     answer: {
-      shape: answer.includes("/") ? "fraction" : "integer",
-      digest: answerDigest(options.packSalt, canonical.value),
+      shape: stored.value.shape,
+      digest: answerDigest(options.packSalt, stored.value.canonical),
     },
     // Authored content, filled in by the diagnosis pass. Nullable in the frozen
     // format precisely so the copy is not a prerequisite for a valid pack.

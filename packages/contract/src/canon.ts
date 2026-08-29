@@ -182,9 +182,18 @@ export function requireStoredCanonical(stored: string): CanonResult {
  * ungradeable, and the guard that drops a distractor equal to the right answer
  * silently stopped firing, because it compares strings.
  *
- * Anything that turns a `(numerator, denominator)` into a stored answer calls
- * this — the builder, and the server when it issues a pack — so the two cannot
- * disagree again.
+ * **Two doors, one decision.** `storedAnswer` is for a caller holding an exact
+ * `(numerator, denominator)` — `packages/core`'s template builder. `storedAnswerOf`
+ * is for a caller holding a canonical *string* — `packages/core`'s authored-item
+ * lifter, and `packages/server` grading a rederived item. Both compose the pair
+ * below and neither lets a caller take half of it.
+ *
+ * The three callers are named because the gate that holds them to it can be
+ * read: `packages/core/test/one-way-to-spell-an-answer.test.ts` and its sibling
+ * in `packages/server`. They exist because for a while the sentence here said
+ * "anything that turns a `(numerator, denominator)` into a stored answer calls
+ * this" and named a consumer that did not exist, while two of the three real
+ * ones made the decision by hand.
  */
 export interface StoredAnswer {
   readonly shape: AnswerShape;
@@ -192,8 +201,62 @@ export interface StoredAnswer {
   readonly canonical: string;
 }
 
+export interface StoredAnswerRead {
+  readonly ok: true;
+  readonly value: StoredAnswer;
+}
+
+export type StoredAnswerResult = StoredAnswerRead | AnswerRejected;
+
+/**
+ * The decision itself: **an answer is a fraction exactly when it is written
+ * with a denominator.**
+ *
+ * The shape is *derived from* the spelling rather than computed beside it,
+ * which is the structural half of #50's fix. Computing them separately is what
+ * let a whole answer of −9 be digested as `-9/1` under a field saying
+ * `integer`; a shape that is a function of the string cannot come apart from
+ * it however either door is called.
+ *
+ * **A search for the separator is exact here, not a heuristic.** Both callers
+ * hand in a string this module has either rendered or validated, and
+ * `CANONICAL_SHAPE` admits `/` in one position only — between the numerator and
+ * the denominator. Re-running that regex to read its third group would buy
+ * nothing and cost a null arm no input can reach: written that way, Stryker
+ * survived the mutant that deletes the arm, and the arm folded "not canonical
+ * at all" into "integer", which is the quiet-wrong this whole function exists
+ * to remove.
+ */
+function storedAs(canonical: string): StoredAnswer {
+  return { shape: canonical.includes("/") ? "fraction" : "integer", canonical };
+}
+
 export function storedAnswer(numerator: bigint, denominator: bigint): StoredAnswer {
-  return denominator === 1n
-    ? { shape: "integer", canonical: renderCanonicalAnswer(numerator) }
-    : { shape: "fraction", canonical: renderCanonicalAnswer(numerator, denominator) };
+  return storedAs(
+    denominator === 1n
+      ? renderCanonicalAnswer(numerator)
+      : renderCanonicalAnswer(numerator, denominator),
+  );
+}
+
+/**
+ * The same decision for a caller who already holds the spelling — pack content,
+ * or an answer read back off an artifact.
+ *
+ * **It validates rather than trusting**, so it is the safe composite all the
+ * way through: `requireStoredCanonical` first, and its rejection tag travels
+ * out unchanged, so a caller keeps whatever it already said about `not_canonical`
+ * or `zero_denominator`. Handing back a `StoredAnswer` for a string that is not
+ * storage-canonical would put a second sharp tool beside the safe one, which is
+ * the shape of problem this function exists to remove.
+ *
+ * **`4/1` stays a fraction.** It is canonical input to `canonicalize`, so a pack
+ * may state it, and folding it to an integer here would silently restate an
+ * authored answer and move its digest. That is `renderCanonicalAnswer`'s stance
+ * one level up — the shape is the content's decision and the spelling is this
+ * module's. No authored answer is spelled that way today.
+ */
+export function storedAnswerOf(stored: string): StoredAnswerResult {
+  const canonical: CanonResult = requireStoredCanonical(stored);
+  return canonical.ok ? { ok: true, value: storedAs(canonical.value) } : canonical;
 }

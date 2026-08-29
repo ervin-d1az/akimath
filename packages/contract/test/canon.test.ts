@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { readFixture } from "./fixture-files.js";
 import {
   storedAnswer,
+  storedAnswerOf,
   canonicalize,
   CHAR_MAP,
   renderCanonicalAnswer,
@@ -228,6 +229,62 @@ describe("a stored answer decides its shape and its spelling together", () => {
     expect(storedAnswer(5n, 4n)).toEqual({ shape: "fraction", canonical: "5/4" });
     expect(storedAnswer(4n, 8n)).toEqual({ shape: "fraction", canonical: "4/8" });
     expect(storedAnswer(-3n, 2n)).toEqual({ shape: "fraction", canonical: "-3/2" });
+  });
+
+  it("and the two doors are one decision", () => {
+    // The property that makes a second door safe: whichever a caller holds —
+    // the exact pair or the spelling — it gets the same answer. Over a grid
+    // rather than examples, because the three implementations this replaced
+    // agreed on every example anybody had written down.
+    for (const numerator of [-9n, -3n, -1n, 0n, 1n, 4n, 5n, 42n]) {
+      for (const denominator of [-2n, -1n, 1n, 2n, 4n, 5n, 7n, 12n]) {
+        const fromPair = storedAnswer(numerator, denominator);
+        const fromSpelling = storedAnswerOf(fromPair.canonical);
+        expect(fromSpelling.ok, fromPair.canonical).toBe(true);
+        expect(fromSpelling.ok && fromSpelling.value, `${numerator}/${denominator}`).toEqual(fromPair);
+      }
+    }
+  });
+
+  it("and a spelling a pack may state but the pair cannot produce keeps its denominator", () => {
+    // `storedAnswer` can never produce `4/1` — `denominator === 1n` renders a
+    // whole number — so it is the one string where the doors could have been
+    // made to disagree. Folding it would restate an authored answer.
+    //
+    // Nothing refuses it, which is the half worth pinning: `4/1` is #50's own
+    // string one sign away, and "the lifter was safe because validation caught
+    // this" is a false reading of a real guard.
+    expect(requireStoredCanonical("4/1")).toEqual({ ok: true, value: "4/1" });
+    expect(storedAnswerOf("4/1")).toEqual({ ok: true, value: { shape: "fraction", canonical: "4/1" } });
+    expect(storedAnswer(4n, 1n)).toEqual({ shape: "integer", canonical: "4" });
+  });
+
+  it("and over the shared vector set it refuses exactly what storage refuses", () => {
+    // Swept over `CANON_INPUTS` rather than rows chosen by hand, because a
+    // hand-chosen row is chosen by whoever already believes the answer: the
+    // first draft asserted `2/4` was refused, and it is canonical. The tag
+    // travels out unchanged, so a caller keeps what it already said (PROC-11).
+    let accepted = 0;
+    let refused = 0;
+    for (const raw of CANON_INPUTS) {
+      const stored = requireStoredCanonical(raw);
+      const paired = storedAnswerOf(raw);
+      if (!stored.ok) {
+        refused += 1;
+        expect(paired, JSON.stringify(raw)).toEqual({ ok: false, tag: stored.tag });
+        continue;
+      }
+      accepted += 1;
+      expect(paired, JSON.stringify(raw)).toEqual({
+        ok: true,
+        value: { shape: stored.value.includes("/") ? "fraction" : "integer", canonical: stored.value },
+      });
+    }
+    // PROC-11: a sweep that fell down one arm proves only that arm, and a
+    // sweep over an empty list proves nothing at all.
+    expect(accepted).toBeGreaterThan(0);
+    expect(refused).toBeGreaterThan(0);
+    console.log(`  storedAnswerOf · ${accepted} accepted, ${refused} refused over CANON_INPUTS`);
   });
 
   it("and what it writes is what a keypad produces", () => {
