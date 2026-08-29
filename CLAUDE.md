@@ -78,7 +78,7 @@ packages/core/            @akimath/core — the rederivation machine. ZERO runti
                           no ambient IO; the one adapter writes the golden artifacts
 contract/                 the frozen artifacts: 3 schemas, 37 fixtures, canon.golden.json,
                           openapi.json (OpenAPI 3.0.3, emitted, byte-diffed and oasdiff'd)
-docs/adr/                 ADR 0001 decides the Dart API client; older decisions live in ARCHITECTURE.md
+docs/adr/                 0001 decides the Dart API client, 0002 the auth; older ones in ARCHITECTURE.md
 ```
 
 `app/lib/api/` now exists and holds seven of the contract's operations. `packages/contract` holds
@@ -121,7 +121,7 @@ the offline pack format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **3275 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **3291 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **The streak can say it is about to go, and that it went.** `streakLength` has answered *how
@@ -445,7 +445,7 @@ the offline pack format and its OpenAPI half.
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the
   schemas, one golden fixture and one rejection row per stimulus and puzzle kind, their
-  recorded normalisations, and `canon.golden.json`. 248 tests, green, 0 clones, and a mutation
+  recorded normalisations, and `canon.golden.json`. 257 tests, green, 0 clones, and a mutation
   score of **91.15% to 91.85% — the figure is not reproducible**. Four runs over one unchanged
   tree gave 91.15, 91.50, 91.85 and 91.15, the two 91.15s with an identical per-file breakdown; so
   the 91.71% previously recorded sits inside the band and nothing here can be said to have moved.
@@ -467,7 +467,7 @@ the offline pack format and its OpenAPI half.
   harness drops and recreates the public schema on every run. **The pack builder is written**: `packages/core`'s
   `src/pack/` lifts authored items and template-generated ones into one pack, and
   `npm run build:pack` emits `packages/core/pack/starter.json` — 80 items across six families and
-  5 puzzles, byte-identical on a second run, which is what makes the CI diff mean something.
+  35 boards, byte-identical on a second run, which is what makes the CI diff mean something.
   **Every generated item in it used to be ungradeable** and is not any more: the answer's *shape*
   and the *spelling* the digest was taken over were computed separately, so a whole answer of −9
   was digested as `-9/1` while the field beside it said `integer` — and `canonicalize("-9")` is
@@ -498,7 +498,7 @@ the offline pack format and its OpenAPI half.
   `refForPackItem` return null for every real pack — a 404 indistinguishable from a missing row. **The math compositor is
   built**: `EsMxNumber`, `FractionMetrics`, `MathNode` (pure) and `MathView` + `FractionGlyph`
   (adapters) are landed and tested. Spike B cleared its criterion on 2026-08-16 — see
-  `openspec/changes/f1b-math-compositor/spike-b/`.
+  `openspec/changes/archive/2026-08-26-f1b-math-compositor/spike-b/`.
 - **CI exists, narrowed to the code that exists.** `.github/workflows/ci.yml` runs `changes`,
   `secrets` (gitleaks), `dart` (`flutter analyze --fatal-infos`, `flutter test`), `ts`
   (`npm run typecheck`, `npm test` in `packages/server`), `contract` (the same two in
@@ -685,7 +685,7 @@ is now a red build rather than a precedent: `app/test/architecture/pure_boundary
 walks the import graph transitively — through `export` and `part`, so the tokens barrel cannot
 smuggle `package:flutter/painting.dart` into a pure root — and reports a per-root file count so
 a mistyped root cannot make it vacuously green. Today that bites over `design/**/spec/` and its
-14 files, `features/*/policy/` and its 8, and `content/model/` and its 4 — all three roots are on
+22 files, `features/*/policy/` and its 47, and `content/model/` and its 9 — all three roots are on
 disk now, and the last two flipped from absent to covered when the round landed. **Import the token
 you need, not the barrel:** `tokens.dart` re-exports `brand_typography.dart`, which imports
 `package:flutter/painting.dart`, so a pure module reaching for the barrel fails the gate. The root is a **glob, not a list**, so
@@ -713,21 +713,24 @@ root is free the same way.
   surface. (`test/architecture/no_color_literal_test.dart` scans all of `app/lib/` except
   `design/tokens/` for `Color(0x`, `Color.fromARGB(`, `Color.fromRGBO(` and `Colors.` — the last
   on a word boundary, since `Colors.` is a substring of `BrandColors.`; `Colors.transparent` is
-  the one carve-out. `test/architecture/no_geometry_literal_test.dart` scans `design/widgets/`
-  and `features/` for `Offset(`; `design/brand/` is out of scope as the artwork layer, and radii
-  and border widths are not scanned at all. Both report how many files they scanned and fail at
-  zero.)
+  the one carve-out. `test/architecture/no_geometry_literal_test.dart` scans `design/widgets/`,
+  `design/math/`, `design/painting/` and `features/` for `Offset(`; `design/brand/` is out of
+  scope as the artwork layer, and radii and border widths are not scanned at all. Both report how
+  many files they scanned and fail at zero.)
 
 - **Nothing you can press is under 48 px**, measured on the rendered screen
   rather than asserted about a widget — a `SizedBox(48)` in a `Row` that ran out of room is 31 px
   wide and the constant says nothing about that. `test/design/touch_target_test.dart` walks every
-  registered screen at both viewports and reports the count it swept (today 40 screens, 278
+  registered screen at both viewports and reports the count it swept (today 85 screens, 425
   presses); a screen with nothing to press is legitimate and named in the summary rather than
   failed.
 
 - **Nothing watches you while you work.** `test/design/quiet_while_you_solve_test.dart` walks
-  every solving surface — the item in all six families, `0.3 Primer reto`, and all five boards, 13
-  screens today — and asserts Aki is on none of them and nothing on them reads as a clock. Both
+  every solving surface — the item in all six families, `0.3 Primer reto`, `0.5 Calibración
+  reactivo` and every board, kenken's reference sheet and its pause among them because both are
+  drawn mid-solve, 16 registered screens today — and asserts Aki is on none of them and nothing on
+  them reads as a clock. `puzzle · solved` is not one of the 16: the solving is over there, which
+  is exactly when she is allowed. Both
   halves have their opposite asserted too: she *is* on the verdict screens, in `slip` for a wrong
   answer and `correct` for a right one, and the verdict screen *may* say how long it took. A rule
   that only ever said "absent" would be satisfied by deleting her.
@@ -737,7 +740,7 @@ root is free the same way.
   a shape because that is all there is, which is the same construction as the sync endpoint
   refusing an `ok` field. What the type cannot prevent is a *second* reach: nothing stops a screen
   pairing `Verdict.correct` with `BrandColorRole.success.color`.
-  `test/architecture/verdict_is_not_a_colour_test.dart` scans all 131 files of `lib/` for a file
+  `test/architecture/verdict_is_not_a_colour_test.dart` scans all 216 files of `lib/` for a file
   naming both, and excuses exactly one — `verdict_ring.dart`, which also draws the ring. It strips
   prose first, because the names it reads for appear in explanations of the rule as often as in
   code.
@@ -780,10 +783,10 @@ back the day something else is written down without one.)*
 Commit email is `geineryodan@gmail.com` — verify `git config user.email` before committing.
 
 **`main` is the trunk, and `dev` is not the working branch any more.** `dev` stopped at pull
-request #6 on 2026-08-17 and everything since — #7 through #108 — has been merged into `main`, so
-`main` is 155 commits ahead, `origin/dev` holds nothing `main` does not, and 656 files differ
+request #6 on 2026-08-17 and everything since — #7 onward — has been merged into `main`, so
+`main` is 183 commits ahead, `origin/dev` holds nothing `main` does not, and 881 files differ
 between them. **Branch off `main` and diff against `main`**: a review taken against `origin/dev`
-is those 155 commits of noise rather than the change. `main` itself is protected by the
+is those 183 commits of noise rather than the change. `main` itself is protected by the
 `protect-main` ruleset: no direct push, no force-push, no deletion — it is reached through a
 pull request from a branch, which is how every change since #6 has landed. Nothing is committed or
 pushed unless you were asked to.
