@@ -15,10 +15,19 @@ context: |
   - `ARCHITECTURE.md` — the accepted design decisions and the phase plan in §9.
     A proposal names which phase it belongs to.
 
-  Audience includes children under 13. That is an architectural constraint, not
-  a footnote: no third-party SDK that collects data, no ads, no external
-  analytics. Any new dependency has to be checked for whether it phones home
-  before it is proposed (DEP-1).
+  Audience is adults only — nobody under 18 is an intended user. ADR 0004
+  (`docs/adr/0004-the-game-is-for-adults.md`) reversed a mixed-audience premise
+  on 2026-08-29, and its amendment put the refusal at link time: an under-18 gets
+  no account, while unlinked offline play is untouched and gates nobody. A plan
+  that budgets for children as an audience is a plan for a product that stopped
+  existing.
+
+  No third-party SDK that collects data, no ads, no external analytics. That is
+  still an architectural constraint and still a category refusal rather than a
+  per-dependency question, and it no longer rests on the audience — it rests on
+  supply-chain surface, on the per-version audit cost ADR 0003 measured, and on
+  data minimisation, which adults are owed too. Any new dependency has to be
+  checked for whether it phones home before it is proposed (DEP-1).
 
   Code, identifiers, comments and documents are written in English. Only the
   copy the end user reads is Mexican Spanish.
@@ -44,7 +53,10 @@ context: |
 
   This block said the opposite until 2026-08-26 — that there was no `packages/core`,
   no database, no auth and no real endpoint — and every plan written against it
-  started from a repository that had not existed for weeks.
+  started from a repository that had not existed for weeks. The audience paragraph
+  above was corrected the same way on 2026-08-29, three days later, for a product
+  that had changed the day before. Both corrections are the reason this block is
+  worth re-reading rather than skimming.
 
 rules:
   proposal:

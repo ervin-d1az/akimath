@@ -180,12 +180,18 @@ The one structural pattern the repo already commits to, on both sides of the sta
   the whole"*, which `openspec/specs/states/spec.md` already applies to the rating on that very
   screen.
 
-## DEP — Dependencies & the audience
+## DEP — Dependencies & what they send
 
 - **DEP-1** NEVER add a dependency that sends data off the device — analytics, ads, attribution,
-  crash reporting, remote config, remote fonts, any SDK that "phones home". The audience includes
-  children under 13 and the compliance posture in `ARCHITECTURE.md` §11 is minimization by
-  construction. Before adding *any* dependency, audit what network calls it makes and what it
+  crash reporting, remote config, remote fonts, any SDK that "phones home". **This is a category
+  refusal, not a per-dependency question**, and since 2026-08-29 it is no longer child-derived:
+  ADR 0004 made the product adults-only and its amendment §2 re-grounded the standing "no" on three
+  supports that name no audience — the supply-chain surface of the four closures `CLAUDE.md` counts,
+  the recurring-per-version audit cost ADR 0003 measured, and data minimisation, which adults are
+  owed under the LFPDPPP as much as anyone. **The rule did not move; the sentence under it did**, and
+  that is worth knowing before anyone reopens the category on the strength of a premise that is gone.
+  The compliance posture in `ARCHITECTURE.md` §11 is still minimization by construction.
+  Before adding *any* dependency, audit what network calls it makes and what it
   collects; "it's only a util" is not an audit. **The audit lives in
   `app/test/architecture/dependency_allowlist_test.dart`, beside the allowlist entry, in the same
   change** — not in a pull-request body, which is not greppable, not versioned next to the thing it
