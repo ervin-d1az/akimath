@@ -12,9 +12,20 @@ import 'screen_registry.dart';
 /// already got it right is not an invariant — it is a comment with a type.
 ///
 /// **48 logical pixels**, which is the floor both platforms publish and the one
-/// `CLAUDE.md` names. The audience makes it matter more than usual: the product
-/// is for adults *and* children can play, and a child's aim is worse than an
-/// adult's, on a phone that is often a hand-me-down.
+/// `CLAUDE.md` names — Material publishes 48 dp and Apple 44 pt, so this is the
+/// stricter of the two and it stands on the platforms, not on who is playing.
+///
+/// **This paragraph used to stand on the audience instead: the product was for
+/// adults *and* children could play, and a child's aim is worse than an adult's.
+/// ADR 0004 removed that audience on 2026-08-29. The floor did not move, and
+/// nothing here is an argument for moving it.** Three reasons it is stronger
+/// rather than weaker now. A platform minimum is a platform minimum whoever is
+/// holding the phone. Adults are the population that most often raises the
+/// system text size, which is the condition the second viewport below exists to
+/// catch, and the population with a tremor, a cracked screen or a thumb that
+/// misses. And nothing gates play — the refusal is at link time — so a minor may
+/// still be on the other side of the screen with no account. A threshold argued
+/// down because its stated reason changed is the precise move this note refuses.
 ///
 /// **Measured, not asserted about the widget.** A `SizedBox(48)` inside a
 /// `Padding` inside a `Row` that ran out of room is 31 pixels wide on the
@@ -233,7 +244,7 @@ void main() {
       // **Both viewports, and the second is the one worth having.** A press
       // that fits at 1.0 and is squeezed at 1.3 is the ordinary failure: the
       // label grows, the row runs out of room, and the button that gives way is
-      // the one a child has to hit.
+      // the one a player has to hit.
       for (final ScreenViewport viewport in screen.requiredViewports) {
         testWidgets(
             '${screen.label} · ${viewport.label}: nothing under ${_floor.toInt()}px',
