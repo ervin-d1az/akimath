@@ -195,6 +195,17 @@ set -uo pipefail
 # Same tree, same command, opposite verdicts. The payload's own `cwd` field is
 # what tells the two apart, and it is now what the gate reads.
 #
+# THAT THE TWO DIVERGE IS MEASURED, not inferred from the fix working. A scratch
+# repository with a PreToolUse hook that logged its own payload, driven from a
+# nested `isolation: worktree` agent, recorded both fields in the one session:
+#
+#   payload.cwd        = <repo>/.claude/worktrees/agent-aa963e60b3a24d7fd
+#   CLAUDE_PROJECT_DIR = <repo>
+#
+# The tool call happens in the worktree; the variable names the shared checkout.
+# In a plain session the two are equal, which is why the main session sees no
+# change from reading the first instead of the second.
+#
 # STILL TRUE AND WORTH KNOWING: this loader resolves the script through
 # CLAUDE_PROJECT_DIR, so a worktree agent runs the **shared checkout's** copy of
 # this file. An edit here therefore does not reach worktree agents until it is
