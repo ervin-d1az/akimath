@@ -4,9 +4,14 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Thirty-two rule IDs — counting `FUN-1a` as the carve-out it
+This book starts small on purpose. Thirty-six rule IDs — counting `FUN-1a` as the carve-out it
 is rather than as a rule — every one of them describing code that is already on disk today, not
 a pattern we hope to have. It grows by **PROC-6** and no other way.
+
+**The count is maintained by hand and had drifted to thirty-two**, three behind, which is the
+same shape as a gate that cannot fail: a number nobody checks. It is checkable in one line —
+`grep -cE '^- \*\*[A-Z]+-[0-9]+[a-z]?\*\* ' .claude/conventions/craftsmanship.md` — and whoever
+adds a rule under PROC-6 runs it rather than incrementing what is written.
 
 `CLAUDE.md` at the repo root is the entry point for *how to work here*; this file is the *contract
 the code must satisfy*. Where both cover the same ground this file is the detailed version — and if
@@ -83,6 +88,39 @@ The one structural pattern the repo already commits to, on both sides of the sta
   `import type` are compiler errors already — what the reviewer still checks there is an explicit
   return type on every exported function and `unknown` rather than `any` when a payload is genuinely
   untyped.
+
+- **TYP-2** MUST: **a value type's invariant is a constructor shape, never an `assert` — wherever
+  the illegal state is a combination of fields a constructor can refuse.** Dart
+  strips asserts in release, so a guarantee written that way holds in every test and in no build a
+  player runs — and the tests are then evidence *for the mechanism that is absent*, which is worse
+  than no guarantee at all, because the type's doc comment goes on advertising it. Where two
+  fields must not both be set, or both be null, make the illegal state unconstructible: the
+  generative constructor goes private and one named constructor per legal combination sets the
+  other fields itself. Dart privacy is library-scoped, so a private constructor in a
+  single-file library is a compile error at every call site outside it.
+
+  Measured in `fix-a-batch-cannot-name-two-sources`, on `app/lib/api/sync.dart`.
+  `AttemptSubmission` refused to name neither source or both with
+  `assert((itemId == null) != (packRef == null))` under a doc comment reading *"the constructor
+  refuses to build either"*, and the whole failure path was wired: both or neither is a 400, the
+  client reads a 400 as `SyncMalformed`, and `journalAfter` reads that as a batch there is no point
+  resending — up to two hundred answers deleted with nothing on screen and nothing in a log. It is
+  now `AttemptSubmission.forPackItem` and `AttemptSubmission.forIssuedItem` over a private
+  `AttemptSubmission._`, and naming both no longer compiles.
+
+  **Two consequences for how such a change is tested.** The runtime test that used to
+  `expect(…, throwsA(isA<AssertionError>()))` must be *replaced* rather than deleted — assert each
+  door leaves exactly one source on the object and on the wire — because an invariant that loses
+  its last test on the way to becoming a compile error is a PROC-11 regression even though the type
+  got stronger. And PROC-5's tier-1b falsification for it is a **build failure, not a red case**:
+  write the illegal call, record the compiler's own words and the nonzero exit status, and say in
+  the ledger that no test name is being quoted because there is none to quote.
+
+  **Where the invariant genuinely cannot be a constructor shape, say so at the declaration.** An
+  out-of-range `Duration` is representable whatever the constructor does, so `elapsed`'s bound in
+  that same class is still an assert — and the doc comment now names it as the weaker promise and
+  names the adapter that clamps the value where it is produced. A file holding both kinds of
+  guarantee and distinguishing neither is a CMT-2 defect waiting for its next reader.
 
 ## NAM — Naming
 
