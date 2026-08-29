@@ -94,8 +94,9 @@ function fromTemplate(
   // This computed them separately and the spelling always carried a
   // denominator, so a whole answer of −9 was digested as `-9/1` while
   // `answer.shape` said `integer`. `storedAnswer` is now that decision, in
-  // `packages/contract`, because the server issuing a pack has to make the
-  // same one.
+  // `packages/contract`, because the two other producers — `lift.ts` beside
+  // this file, and the server grading a rederived item — have to make the same
+  // one. Held by `test/one-way-to-spell-an-answer.test.ts`.
   const { shape, canonical } = storedAnswer(
     generated.answer.numerator,
     generated.answer.denominator,

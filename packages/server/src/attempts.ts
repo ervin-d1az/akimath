@@ -1,4 +1,4 @@
-import { answerDigest, canonicalize, renderCanonicalAnswer } from "@akimath/contract";
+import { answerDigest, canonicalize, storedAnswer } from "@akimath/contract";
 import {
   coreRegistry,
   rederive,
@@ -317,14 +317,11 @@ export function gradeAnswer(
   if (!typed.ok) {
     return false;
   }
-  // The same spelling the pack builder uses: a whole answer is whole, not a
-  // fraction over one. See `packages/core`'s `build.ts`, which learned this the
-  // hard way.
-  const expected =
-    generated.answer.denominator === 1n
-      ? renderCanonicalAnswer(generated.answer.numerator)
-      : renderCanonicalAnswer(generated.answer.numerator, generated.answer.denominator);
-  return typed.value === expected;
+  // The same spelling the pack builder uses, by calling the same function
+  // rather than writing it out again — the longhand this replaces agreed by
+  // coincidence. Held by `test/one-way-to-spell-an-answer.test.ts`.
+  const expected = storedAnswer(generated.answer.numerator, generated.answer.denominator);
+  return typed.value === expected.canonical;
 }
 
 /**

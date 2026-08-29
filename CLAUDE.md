@@ -419,7 +419,21 @@ the offline pack format and its OpenAPI half.
   gradeable, only one was worth playing, and code nothing calls is a claim about the server that is
   not true. `storedAnswer` lives in
   `packages/contract` so the pack builder and the server make one decision about shape and
-  spelling — that is the bug from #50 and a second copy is how it returns.
+  spelling — that is the bug from #50 and a second copy is how it returns. **It returned, and it
+  is now a gate rather than a sentence.** The decision had **three** implementations while four
+  comments said it had one: `lift.ts` read the raw field for a `/` and `gradeAnswer` wrote the
+  `denominator === 1n` branch longhand, and every one of those comments named "the server issuing
+  a pack" — which copies a pre-built artifact and derives no answer — so the two real copies were
+  the two nobody would grep for. Measured before the fix, over 81 pairs and the whole of
+  `CANON_INPUTS`, **the three agreed**, so no digest and no artifact moved. There are now two
+  doors for the two inputs a caller can hold — `storedAnswer` for a `(numerator, denominator)`,
+  `storedAnswerOf` for a canonical string, which validates — and the shape is **derived from** the
+  spelling rather than computed beside it, so they cannot come apart. `4/1` stays a fraction:
+  pack content may state it and folding it would restate an authored answer. The fourth copy is a
+  red build now — `one-way-to-spell-an-answer.test.ts` in `packages/core` and `packages/server`
+  walks the AST for two prohibitions, because the halves were copied separately: naming both shape
+  words is deciding a shape by hand, calling `renderCanonicalAnswer` is spelling one. Both went
+  red on `main`, each on the copy its own package held.
   **`GET /me/history` is a session at a time.** The frozen shape asks for a `score` and a `title`
   and neither means anything about one answered item. `ratingDelta` is the movement the rating
   engine recorded for that session at the moment both ends of the subtraction existed, never
