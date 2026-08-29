@@ -12,6 +12,12 @@ the palette boundary is a red build (`no_color_literal_test.dart`), the shadow a
 builds, and where a rule is only a reviewer's read the file usually says so in its own doc comment.
 Four findings below, and it took real looking to get to four.
 
+> **Findings 1 and 4 are fixed** on `fix-a-killer-cage-draws-its-own-dash` (2026-08-29). They are
+> kept below as written, because the record of what was wrong is what makes the fix reviewable, and
+> each carries a resolution note at its end. Findings 2 and 3 stand. **Read finding 1's present
+> tense as the state it audited, not as today's**: a document asserting a live defect that is no
+> longer live is the same defect as a comment claiming behaviour the code does not have (CMT-2).
+
 **The single most expensive thing in the module is that a puzzle cage's appearance has no owner.**
 It is decided in four files across four directories — three of them named for something other than
 puzzles — and the file that was written to be the one place it is decided
@@ -80,6 +86,36 @@ The two costs compound, and the second explains the first: the spec and its call
 widgets take a `CageOutline` chosen by puzzle kind rather than naming a `DashSpec` and a stroke
 width each. `painting/` keeps `dash_spec.dart` and `dashed_border_painter.dart`, which are genuinely
 generic and have callers all over `features/`.
+
+**Resolved (2026-08-29), broadly as directed.** Both files moved under `design/puzzle/` as `spec/`
+and adapter, so the generic painting layer no longer imports the puzzle layer, and the geometry
+gate's roots followed the painter — a file that walks out of a root is a file the gate stops
+seeing. `CageOutline` gained the colour and the stroke and became the one owner; `CageEdgePainter`
+takes an outline and names no appearance of its own.
+
+**Where the fix departed from the direction.** The direction says *"take a `CageOutline` chosen by
+puzzle kind"*, and the choosing did **not** get its own function. `boardConstraints` in
+`features/puzzle/policy/board_constraints.dart` was already an exhaustive switch over the same
+sealed type deciding what a board shows; a second one deciding how its cages look would be two
+functions a sixth format has to be added to with no compiler saying so. The outline is a field on
+`BoardConstraints`, set by `BoardConstraints.cages`, whose initializing formal narrows it to a
+**non-null** `CageOutline` — so *a cage without its outline* is unconstructible rather than
+asserted, and one switch produces both facts. Measured: with a sixth caged leaf on the hierarchy,
+naming it and forgetting the outline is
+`2 positional arguments expected by 'cages', but 1 found`.
+
+Two smaller departures: `board_geometry`'s `cageOutline` **function** was renamed `cageEdges`,
+because one word for both the edge set and the appearance is how the two came to be decided in
+different directories; and `radius`/`inset` were **dropped** rather than moved, along with the
+archived spec's *"neither overlaps the 1.5 px hairline"* assertion, which was arithmetic on them
+and is false of the per-edge model that shipped. Both are written down in the new file's doc
+comment and in `docs/IMPLEMENTATION-PLAN.md`.
+
+The defect was confirmed at the screen before the fix and after it: a `PuzzleScreen` holding a
+`KillerPuzzle` reported `6.0 on / 4.0 off, butt cap`, and reports `2.0 on / 5.0 off, round cap`
+now, with the sibling KenKen assertion passing in both runs. On an iPhone 17 the two boards read as
+long dashes and as dots, and the Killer reference card's *"borde punteado"* is finally a true
+caption.
 
 ---
 
@@ -171,6 +207,11 @@ colour the board actually draws with and that test stays green — the gate read
 uses.
 
 **Direction.** Delete one of the two and point the test at the survivor.
+
+**Resolved (2026-08-29), as directed.** `hairline` is deleted and the test reads `gridHairline`.
+The cost was measured rather than inferred first: with the old test in place, dropping the board's
+own alpha to the card rule's `0x29` left all 3358 tests green, and the same mutation fails that
+test by name now.
 
 ---
 

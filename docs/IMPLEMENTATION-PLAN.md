@@ -907,11 +907,27 @@ pattern.
 - **THEN** its border is 3 px, `BrandColors.pink`, dashed, radius 12, and no solid border is painted
   → `app/test/design/painting/dashed_border_test.dart`
 
-#### Scenario: A cage outline is inset inside the hairline it sits on
-- **WHEN** a KenKen cage and a Killer cage are painted over the same cell block
-- **THEN** the KenKen outline is 2.5 px pink, rx 10, inset 5 px, and the Killer outline is rx 9,
-  inset 6 px, and neither overlaps the 1.5 px hairline beneath it
-  → `app/test/design/painting/dashed_border_test.dart`
+#### Scenario: A cage outline is inset inside the hairline it sits on — **RETRACTED 2026-08-29**
+This scenario described a rounded rectangle drawn around a whole cage, and F6 does not draw one.
+`fix-cage-outline-is-the-boards-weight` replaced that model with a path of **only the sides on the
+boundary**, because a rounded rectangle per cell draws a line through the middle of every
+multi-cell cage — so `radius` and `inset` were figures no painter could read, and they are gone
+from `CageOutline` along with the assertion that used them. Its arithmetic was
+`inset − strokeWidth / 2 > 0.75`; the per-edge painter insets by `strokeWidth / 2` exactly, which
+makes it `0 > 0.75`, and **the cage does cover the hairline on the sides it is on** — correctly, it
+being the heavier of the two lines. The rx/inset figures stay recoverable in
+`openspec/changes/archive/2026-08-26-f0-dashed-border/` and are quoted in
+`app/lib/design/puzzle/spec/cage_outline.dart`, which is where a cage's appearance now lives.
+
+What replaces it is the scenario that was missing, and whose absence let a Killer board draw
+KenKen's dash for weeks with a green suite:
+
+#### Scenario: Each caged format is drawn in its own outline
+- **WHEN** a KenKen board and a Killer board are pumped and their cage painters are read
+- **THEN** the KenKen cage is `6 4` butt-capped and the Killer cage is `2 5` round-capped, both
+  2.5 px pink, and the two are never the same outline
+  → `app/test/features/puzzle/ui/puzzle_screen_test.dart`,
+  `app/test/features/puzzle/policy/board_constraints_test.dart`
 
 ### Requirement: req-no-blur-painters · The no-blur gate covers painters, not only decorations
 The system SHALL assert the absence of `BackdropFilter` and of any non-zero `MaskFilter` in the
