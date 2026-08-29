@@ -67,6 +67,16 @@ whatever the sixth format adds), consumed by `PuzzleBoardView`. The decision mov
 compile error. The model stays data, which is the split `content/model/puzzle.dart` already argues
 for.
 
+**Addressed 2026-08-29, `fix-the-puzzle-gates-can-fail`.** `features/puzzle/policy/board_constraints.dart`
+is that function, switched over the four leaves rather than over `CagedPuzzle`, returning a
+`BoardConstraints` with three named constructors and **no empty one**; `PuzzleBoardView` takes it as
+one argument and asks it `hasLineTargets` instead of asking two lists whether they are empty.
+Measured rather than asserted: a sixth `BoardPuzzle` leaf produced **four** non-exhaustive-switch
+errors before the change and **five** after, the fifth at `board_constraints.dart`. One limit stays
+and is written into the type's doc comment — a sixth format bringing a *new kind* of constraint gets
+an arm and a field, and the view could still ignore that field silently. The sweep in
+`board_constraints_test.dart` covers the other half: no format shows nothing.
+
 ### 2. The two puzzle screens duplicate a shell that was planned to be extracted, and it has already drifted — CCP
 
 `app/lib/features/puzzle/ui/puzzle_screen.dart:128-166` and
@@ -127,6 +137,18 @@ that claims more than the body checks.
 digit with the sheet open and assert the counters did not move. The falsification is stated in
 PROC-5 tier 1b: remove the `if (!_rulesOpen)` guard around the `Keypad` and watch that specific
 test go red.
+
+**Addressed 2026-08-29, `fix-the-puzzle-gates-can-fail`, with one claim above corrected.** The
+Cost paragraph's *"the day someone keeps the pad mounted and merely disables it, this test stays
+green"* is **false**: a disabled key is still a `KeypadKeyView`, so the sibling
+`findsNothing` assertion goes red for a mounted pad whatever state its keys are in — which
+*"a 3x3 offers three digits"* proves by reading `.available` off one. The Direction is
+unachievable for the same reason the case's name was a lie: with nothing mounted there is nothing
+to tap, and a tap-if-present helper would be PROC-11's first bullet in a new shape. What landed
+instead: `_pump` returns `int Function()`, the two `finishing` cases that had hand-rolled a pump
+apiece because it could not now route through it, and the case is renamed *"and with a cell
+selected, opening it leaves no key at all"* — what its body checks. The guard-removal
+falsification was run and that case is one of the two named in the red.
 
 ### 4. The reference sheet's line-to-picture pairing is a cross-stack positional contract with no seam
 
