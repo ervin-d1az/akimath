@@ -1,4 +1,5 @@
 import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/design/puzzle/spec/cage_outline.dart';
 import 'package:akimath_app/features/puzzle/policy/puzzle_entry.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_board_view.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +50,7 @@ Future<PuzzleEntry> _pump(
             child: PuzzleBoardView(
               entry: current,
               cages: cages ?? _oneCage(current.board.size),
+              cageOutline: CageOutline.kenKen,
               onTapCell: (Cell cell) => current = current.select(cell),
             ),
           ),
@@ -421,6 +423,7 @@ void main() {
                     PuzzleBoardView(
                   entry: entry,
                   cages: _oneCage(3),
+                  cageOutline: CageOutline.kenKen,
                   onTapCell: (Cell cell) =>
                       setState(() => entry = entry.select(cell)),
                 ),
@@ -451,6 +454,7 @@ void main() {
                     PuzzleBoardView(
                   entry: entry,
                   cages: _oneCage(3),
+                  cageOutline: CageOutline.kenKen,
                   onTapCell: (Cell cell) =>
                       setState(() => entry = entry.select(cell)),
                 ),

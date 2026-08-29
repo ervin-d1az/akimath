@@ -1,4 +1,5 @@
 import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/design/puzzle/spec/cage_outline.dart';
 import 'package:akimath_app/features/puzzle/policy/reference_card.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,6 +24,13 @@ PuzzleBoard _board() => const PuzzleBoard.caged(
     );
 
 KenKenPuzzle _kenKen(List<String> sheet) => KenKenPuzzle(
+      board: _board(),
+      cages: const <Cage>[],
+      tutorialSteps: const <String>[],
+      referenceSheet: sheet,
+    );
+
+KillerPuzzle _killer(List<String> sheet) => KillerPuzzle(
       board: _board(),
       cages: const <Cage>[],
       tutorialSteps: const <String>[],
@@ -185,6 +193,40 @@ void main() {
           expect(diagram.cage, isNotEmpty);
         }
       }
+    });
+
+    test('draws its cage in an outline, and only when it has a cage', () {
+      // The invariant a `const` constructor could not assert: `isEmpty` is not
+      // a constant expression. A diagram with cells and no outline would draw
+      // nothing; one with an outline and no cells would name a picture that is
+      // not there.
+      expect(allReferenceDiagrams, isNotEmpty);
+
+      for (final ReferenceDiagram diagram in allReferenceDiagrams) {
+        expect(
+          diagram.cage.isEmpty,
+          diagram.cageOutline == null,
+          reason: 'a diagram of ${diagram.cage.length} caged cells names '
+              '${diagram.cageOutline}',
+        );
+      }
+    });
+
+    test('a Killer rule is pictured with the Killer cage, not KenKen\'s', () {
+      // Both cage diagrams drew `DashSpec.kenKenCage`, so the picture beside
+      // Killer's rule taught KenKen's outline.
+      const List<String> sheet = <String>['Llena cada casilla.', 'La jaula dice el resultado.'];
+      final List<CageOutline> kenKen = referenceRows(_kenKen(sheet))
+          .map((ReferenceRow row) => row.diagram?.cageOutline)
+          .whereType<CageOutline>()
+          .toList();
+      final List<CageOutline> killer = referenceRows(_killer(sheet))
+          .map((ReferenceRow row) => row.diagram?.cageOutline)
+          .whereType<CageOutline>()
+          .toList();
+
+      expect(kenKen, <CageOutline>[CageOutline.kenKen]);
+      expect(killer, <CageOutline>[CageOutline.killer]);
     });
 
     test('and the set of them is not empty', () {

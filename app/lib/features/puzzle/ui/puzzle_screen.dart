@@ -7,6 +7,7 @@ import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/icon_button_tile.dart';
 import '../../../design/widgets/keypad.dart';
 import '../../../design/widgets/spec/keypad_layout.dart';
+import '../policy/cage_appearance.dart';
 import '../policy/pause.dart';
 import '../policy/puzzle_entry.dart';
 import '../policy/reference_card.dart';
@@ -166,12 +167,15 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
   }
 
   Widget _board() {
+    // **One call, so the cages and the outline cannot disagree.** They used to
+    // be two decisions: this switch read the cages off any `CagedPuzzle` and
+    // the widget below named the dash itself, so Killer drew KenKen's.
+    final CagePlan plan = cagePlanFor(widget.puzzle);
+
     return PuzzleBoardView(
       entry: _entry,
-      cages: switch (widget.puzzle) {
-        final CagedPuzzle caged => caged.cages,
-        _ => const <Cage>[],
-      },
+      cages: plan.cages,
+      cageOutline: plan.outline,
       rowTargets: switch (widget.puzzle) {
         MagicSquarePuzzle(:final List<int> rowTargets) => rowTargets,
         _ => const <int>[],

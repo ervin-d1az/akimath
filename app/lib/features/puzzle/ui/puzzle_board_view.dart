@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../content/model/puzzle.dart';
+import '../../../design/puzzle/cage_edge_painter.dart';
 import '../../../design/puzzle/spec/board_geometry.dart';
-import '../../../design/painting/cage_edge_painter.dart';
-import '../../../design/painting/spec/dash_spec.dart';
+import '../../../design/puzzle/spec/cage_outline.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/spec/puzzle_cell_visual.dart';
@@ -26,6 +26,7 @@ class PuzzleBoardView extends StatelessWidget {
     required this.entry,
     required this.cages,
     required this.onTapCell,
+    this.cageOutline,
     this.rowTargets = const <int>[],
     this.columnTargets = const <int>[],
     this.runs = const <Run>[],
@@ -35,6 +36,18 @@ class PuzzleBoardView extends StatelessWidget {
 
   /// The cages to outline, each with the target it asks for.
   final List<Cage> cages;
+
+  /// How those cages are drawn. Null exactly when there are none — this widget
+  /// serves five formats and three of them have no cage at all.
+  ///
+  /// **It arrives rather than being chosen here.** Naming a `DashSpec` on this
+  /// line is what made a Killer board draw the KenKen dash: the widget is
+  /// format-agnostic by design and had no way to know which one it was drawing.
+  ///
+  /// The pairing is asserted in `build` rather than on the constructor, which
+  /// is `const` and so may not call `isEmpty`; `cage_appearance_test.dart`
+  /// sweeps all five formats for it at the one place that produces the pair.
+  final CageOutline? cageOutline;
 
   final ValueChanged<Cell> onTapCell;
 
@@ -50,6 +63,17 @@ class PuzzleBoardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // **Here rather than on the constructor**, which is `const` and so may not
+    // call `isEmpty`. A caller that passes cages and forgets the outline gets a
+    // board whose cages silently do not draw — the failure this whole change is
+    // about, one layer down. `cagePlanFor` is the only producer and its sweep
+    // covers every real path; this catches a hand-assembled one in debug.
+    assert(
+      cages.isEmpty == (cageOutline == null),
+      'a cage needs an outline and an outline needs a cage: '
+      '${cages.length} cage(s) against $cageOutline. Ask cagePlanFor for both.',
+    );
+
     if (rowTargets.isEmpty && columnTargets.isEmpty) {
       return _grid();
     }
@@ -199,6 +223,7 @@ class PuzzleBoardView extends StatelessWidget {
         cell: cell,
         entry: entry,
         edges: cage == null ? null : _edgesFor(cage, cell),
+        outline: cageOutline,
         // Only the cage's anchor carries the target, so a five-cell cage shows
         // its sum once rather than five times.
         target: cage != null && _isAnchor(cage, cell) ? _label(cage) : null,
@@ -225,7 +250,7 @@ class PuzzleBoardView extends StatelessWidget {
     final Set<GridCell> cells = <GridCell>{
       for (final Cell c in cage.cells) GridCell(c.row, c.col),
     };
-    for (final CageEdges edges in cageOutline(cells)) {
+    for (final CageEdges edges in cageEdges(cells)) {
       if (edges.cell.row == cell.row && edges.cell.col == cell.col) {
         return edges;
       }
@@ -246,6 +271,7 @@ class _Cell extends StatelessWidget {
     required this.cell,
     required this.entry,
     required this.edges,
+    required this.outline,
     required this.target,
     required this.clues,
     required this.onTap,
@@ -254,6 +280,7 @@ class _Cell extends StatelessWidget {
   final Cell cell;
   final PuzzleEntry entry;
   final CageEdges? edges;
+  final CageOutline? outline;
   final String? target;
 
   /// The run sums this cell begins, along and down.
@@ -272,7 +299,8 @@ class _Cell extends StatelessWidget {
     final bool selected = entry.selected == cell;
     final PuzzleCellVisual visual = resolvePuzzleCell(_kind, selected: selected);
     final int? value = entry.valueAt(cell);
-    final CageEdges? outline = edges;
+    final CageEdges? boundary = edges;
+    final CageOutline? cage = outline;
 
     return GestureDetector(
       onTap: onTap,
@@ -294,15 +322,11 @@ class _Cell extends StatelessWidget {
           // **Dashed pink, not solid ink.** The thick ink outline is the
           // board's, and a cage drawn in it read as a second object stacked on
           // the first — on a board where most cells touch a boundary, that is
-          // most of the grid in the heaviest stroke the app has.
-          foregroundPainter: outline == null
+          // most of the grid in the heaviest stroke the app has. Which dash and
+          // which stroke is `cage_outline.dart`'s to say, not this line's.
+          foregroundPainter: boundary == null || cage == null
               ? null
-              : CageEdgePainter(
-                  edges: outline,
-                  dash: DashSpec.kenKenCage,
-                  color: BrandColors.pink,
-                  strokeWidth: BrandShape.borderWidthCage,
-                ),
+              : CageEdgePainter(edges: boundary, outline: cage),
           child: Stack(
             children: <Widget>[
               if (target != null)

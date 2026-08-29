@@ -2,8 +2,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
-import '../puzzle/spec/board_geometry.dart' show CageEdges;
-import 'spec/dash_spec.dart';
+import '../painting/spec/dash_spec.dart' show DashCap, DashSegment;
+import 'spec/board_geometry.dart' show CageEdges;
+import 'spec/cage_outline.dart';
 
 /// A cage's boundary, dashed, on the sides that are on it.
 ///
@@ -20,20 +21,19 @@ import 'spec/dash_spec.dart';
 /// stroke the app has.
 ///
 /// **Per edge rather than per box**, because a cage is a union of cells and
-/// only its outer sides are on the boundary — which `cageOutline` already
+/// only its outer sides are on the boundary — which `cageEdges` already
 /// works out from set membership.
+///
+/// **It takes an outline, not a pattern and a stroke and a colour.** Naming
+/// those three at the call site is how the Killer board came to draw KenKen's
+/// dash: `CageOutline.killer` existed, described the format correctly, and
+/// neither of the two widgets that paint a cage ever read it. This painter now
+/// holds no appearance of its own — it strokes what `cage_outline.dart` says.
 class CageEdgePainter extends CustomPainter {
-  const CageEdgePainter({
-    required this.edges,
-    required this.dash,
-    required this.color,
-    required this.strokeWidth,
-  });
+  const CageEdgePainter({required this.edges, required this.outline});
 
   final CageEdges edges;
-  final DashSpec dash;
-  final Color color;
-  final double strokeWidth;
+  final CageOutline outline;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -45,7 +45,7 @@ class CageEdgePainter extends CustomPainter {
     // straddling its edge — the convention `Border.all` and
     // `DashedBorderPainter` both follow, and what keeps two adjacent cages from
     // drawing one fat line between them.
-    final double half = strokeWidth / 2;
+    final double half = outline.strokeWidth / 2;
     final double left = half;
     final double top = half;
     final double right = size.width - half;
@@ -74,10 +74,10 @@ class CageEdgePainter extends CustomPainter {
     }
 
     final Paint paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
+      ..color = outline.color
+      ..strokeWidth = outline.strokeWidth
       ..style = PaintingStyle.stroke
-      ..strokeCap = switch (dash.cap) {
+      ..strokeCap = switch (outline.dash.cap) {
         DashCap.butt => StrokeCap.butt,
         DashCap.round => StrokeCap.round,
       };
@@ -87,7 +87,7 @@ class CageEdgePainter extends CustomPainter {
     // happens to end mid-dash.
     for (final ui.PathMetric metric in path.computeMetrics()) {
       for (final DashSegment segment
-          in dash.segments(pathLength: metric.length)) {
+          in outline.dash.segments(pathLength: metric.length)) {
         canvas.drawPath(metric.extractPath(segment.start, segment.end), paint);
       }
     }
@@ -99,7 +99,5 @@ class CageEdgePainter extends CustomPainter {
       oldDelegate.edges.right != edges.right ||
       oldDelegate.edges.bottom != edges.bottom ||
       oldDelegate.edges.left != edges.left ||
-      oldDelegate.dash != dash ||
-      oldDelegate.color != color ||
-      oldDelegate.strokeWidth != strokeWidth;
+      oldDelegate.outline != outline;
 }
