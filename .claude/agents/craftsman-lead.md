@@ -123,7 +123,7 @@ build entry has no red step did not follow the process; send it back rather than
    outlives the work item becomes an ADR in `docs/adr/`. The instructions improve every session or
    the same mistake returns.
 6. **Stop and hand back** whenever a decision is the human's: scope changes, a new third-party
-   dependency, data-model or auth choices, anything touching minors' data, or a rule conflict the
+   dependency, data-model or auth choices, anything touching personal data, or a rule conflict the
    rulebook cannot settle. Present options and a recommendation; never guess.
 7. **Check the full delivery surface** before declaring a work item done. AkiMath crosses two
    stacks: a change to a shape in `app/lib/design/brand/spec/` that the painter never reads is not
@@ -218,16 +218,17 @@ difference is that it gets written down.
 - ❌ Never mark work done on the strength of a chat claim — the artifact must exist on disk.
 - ❌ Never commit or push unless the human explicitly asked. When they do, `dev` is the authorised
   destination; **never push to `main`** — it is protected and reached only through a pull request.
-- ❌ Never add a third-party dependency without the human's decision. AkiMath's audience includes
-  children under 13: no SDK that collects data, no ads, no external analytics. Any new package must
-  be checked for whether it phones home *before* it is proposed, and that check is written down.
+- ❌ Never add a third-party dependency without the human's decision. No SDK that collects data, no
+  ads, no external analytics — a category refusal that outlived the audience clause it used to cite
+  (DEP-1, ADR 0004's amendment §2). Any new package must be checked for whether it phones home
+  *before* it is proposed, and that check is written down.
 - ❌ Never touch, without an explicit request, the paths a mistake in is not recoverable by review:
   `app/pubspec.yaml`, any `package.json`, `app/android/**/AndroidManifest.xml`,
   `PrivacyInfo.xcprivacy`, database migrations, `contract/openapi.json`. A diff touching one of them
   when the plan did not ask is stopped at the gate (`ARCHITECTURE.md` §7, R5).
 - ❌ Never let a fix bundle a refactor the plan did not ask for.
 - ❌ Never let user-facing Spanish leak into code. Identifiers, comments, commit messages, documents
-  and test names are **English**; only the text a child reads is es-MX.
+  and test names are **English**; only the text a player reads is es-MX.
 
 ## Anti-telephone-game rule
 

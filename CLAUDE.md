@@ -4,22 +4,47 @@ Adaptive math challenges in Mexican Spanish, with a dog called Aki. Flutter clie
 TypeScript backend, Postgres on Neon (planned). One repository — see
 [ARCHITECTURE.md](ARCHITECTURE.md) §1 for why.
 
-**The audience is adults, and children can play too** (Mexico and Spanish-speaking LatAm,
-decision #1; clarified 2026-08-17). Read both halves — the product is not child-directed and its
-register should not be, but a **mixed audience is governed by its youngest member**, so every
-protection an under-13 needs is unconditional: no third-party SDK that collects data, no ads, no
-external analytics.
+**The audience is adults, and nobody under 18 is an intended user** (Mexico and
+Spanish-speaking LatAm, decision #1; adults-only since 2026-08-29,
+[ADR 0004](docs/adr/0004-the-game-is-for-adults.md)). Decision #1 is about **markets** and is
+untouched; what moved is the audience, which said *"and children can play too"* from 2026-08-17
+until 0004 reversed it. **The refusal happens at link time and nowhere else** — 0004's amendment
+picked Reading A — so an under-18 gets no account, while anyone who never taps the sign-in door
+installs the app and plays offline for ever, because nothing gates play. **"Adults only" means
+accounts only**, and the reasoning is worth carrying: the legal weight comes from holding data, and
+offline holds nothing on our side.
 
-That distinction is doing work rather than decorating. It is why `players.age_band` exists and is
-resolved before the device obtains any session: the band is the **routing decision** that sends a
-player into child protections or not, not a compliance residual. And it is why Gate A's question is
-"what does a general-audience app owing child protections have to do", not "what does a
-child-directed app have to do" — a materially different question with a different answer.
+That is half the story and the other half is the half that rots. **Adults have data-protection
+rights.** The privacy notice, the deletion path and the 400-and-30-day retention figures all
+survive 0004 untouched, and so does Gate A — **narrowed, not closed**. Its brief is
+`docs/gates/gate-a-adult-data-consult.md`; the children's-data one beside it is superseded and
+carries a *do not send* header, and it is kept because it is the reason several frozen values look
+the way they do.
 
-Where a comment or a document says "a child", ask whether it means *the player* or specifically
-*the under-13 case*. Much of the prose written before this clarification says the first and means
-the second. Before adding *any* dependency, check whether it phones
-home; if it does, it does not go in. Today that constraint holds by construction, and the four
+**`players.age_band` still exists, and it stopped being a routing decision.** It is resolved on the
+device before the device obtains any session — that much is unchanged — but after 0004 there is one
+population, so nothing routes. What the column holds is **the declaration the player made**,
+written once at link time by one `INSERT` that nothing ever `UPDATE`s. It therefore keeps a
+vocabulary it no longer issues: the frozen `CHECK` still names `under_13` and `13_17`,
+**deliberately**, because a refused minor never links and the two values go dead by construction
+rather than by a migration — and deleting them would foreclose the still-open question of whether a
+refusal should be recorded at all. `AgeGate.consentAge` is **still 13 in the code**; it moves to 18
+with the refusal a sibling change is building, and whether 18 is the right line is Gate A's Q-A1.
+
+Where a comment or a document says "a child", ask whether it means *the player*, specifically *the
+under-13 case*, or **a premise that is simply gone**. Two corrections are layered here — 2026-08-17
+said the product is not child-directed, 2026-08-29 said children are not an audience — and most of
+the prose predates both.
+
+**Before adding *any* dependency, check whether it phones home; if it does, it does not go in.**
+That rule is unchanged and its reason is new. It used to stand on *a mixed audience is governed by
+its youngest member*, and that premise went with 0004; the standing refusal of analytics, ads,
+attribution and crash reporting is still a **category** refusal rather than a per-dependency
+question, and it now stands on three grounds no audience clause touches — the supply-chain surface
+of the closures below, ADR 0003's recurring-per-version audit cost, and data minimisation under the
+LFPDPPP, which applies to adults (0004's amendment §2). A rule whose stated reason has died is a
+rule the next person argues away, which is why the reason is written here and not only the rule.
+Today the constraint holds by construction, and the four
 shipping sets are — audited 2026-08-27, each against its own manifest and its own lock file:
 
 - `app/` ships **five** at runtime: `flutter`, `cupertino_icons`, `meta`, `shared_preferences`
@@ -78,8 +103,9 @@ packages/core/            @akimath/core — the rederivation machine. ZERO runti
                           no ambient IO; the one adapter writes the golden artifacts
 contract/                 the frozen artifacts: 3 schemas, 37 fixtures, canon.golden.json,
                           openapi.json (OpenAPI 3.0.3, emitted, byte-diffed and oasdiff'd)
-docs/adr/                 0003 decides the Dart API client, superseding 0001; 0002 auth and sync;
-                          older decisions live in ARCHITECTURE.md
+docs/adr/                 0004 makes the game adults-only; 0003 decides the Dart API client,
+                          superseding 0001; 0002 auth and sync; older decisions live in
+                          ARCHITECTURE.md
 ```
 
 `app/lib/api/` now exists and holds seven of the contract's operations. `packages/contract` holds
@@ -811,13 +837,26 @@ nothing true to say; an empty heading reads as covered. Both halves are GIT-4 in
 
 ## Decided
 
+**The game is for adults, and the age gate refuses instead of routing** —
+`docs/adr/0004-the-game-is-for-adults.md`, decided 2026-08-29, amending `ARCHITECTURE.md` §1's
+audience clarification of 2026-08-17. The opening of this file states what it changed. Its
+amendment of the same day answers two of its four open questions — the refusal happens at **link
+time** (Reading A), and DEP-1 keeps its **category** refusal on three re-grounded supports — plus
+the sequencing note: the `age_band` `CHECK` is **left as it is**, no migration and no contract
+change, because the two minor bands go dead by construction. **Two questions are still open and
+should not be counted as answered**: what an under-18 actually sees, which is a design request now
+on the critical path, and whether a refusal should be recorded anywhere at all. The app-store age
+rating is a third, is in `docs/decisions/OPEN.md`, and is being researched separately.
+
 **Auth is Neon Auth, and nothing syncs until an account exists** —
 `docs/adr/0002-neon-auth-and-no-sync-until-linked.md`, decided 2026-08-19. Neon Auth is managed
 Better Auth with identity in a `neon_auth` schema in our own Postgres and a REST API, so the app
 needs no SDK. It exposes **no anonymous plugin** and **no IP-tracking control**, and every
-session row carries `ipAddress` and `userAgent` — so a child's device never gets a session at
+session row carries `ipAddress` and `userAgent` — so a minor's device never gets a session at
 all. `player_id` is minted on the device, unlinked play is entirely offline, and linking is an
-adult's act and the first server contact. **An account is made with an email and a password**
+adult's act and the first server contact. **0002 is not superseded by 0004** and its scope widened
+rather than narrowed: the structure kept sessions away from under-13s who were being routed, and
+now keeps them away from every minor who is being refused. **An account is made with an email and a password**
 (open sign-up, verification required) — decided 2026-08-19, because the alternative was Google on
 Neon's shared consent screen plus two new Flutter dependencies to run a browser redirect.
 

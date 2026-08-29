@@ -1,17 +1,39 @@
 ## 0. Decisions a session cannot take
 
+> **ANSWERED 2026-08-29 — 0.1, 0.3 and the `age_band` question are settled, and two of them change
+> what is below.** See `docs/adr/0004-the-game-is-for-adults.md`'s *Amendment: the answers*, which
+> is the record; this is the pointer. **0.1 → D3 option 1**, the refusal happens at link time.
+> **0.3 → the category refusal stays**, re-grounded, and it does **not** go to
+> `docs/decisions/OPEN.md` after all — that file is for what nobody has decided and this was
+> decided. **The `age_band` CHECK is left exactly as it is**: no migration `0009`, no narrowing of
+> `AGE_BANDS`, no re-emitted contract, and therefore **neither `allow-protected-edit` nor
+> `allow-breaking-contract`**. That retires **1.1, 1.2, section 3, section 4 and most of 0.6**, and
+> with them the `data-schema`, `api-contract`, `api-client` and `api-transport` delta specs in
+> `specs/`, every one of which is written for a set of one — **do not implement them as they
+> stand.** Section 2's de-duplication of `link.ts`:23 never depended on the narrowing and stands on
+> its own merits. **Section 7 has largely landed elsewhere** — in the documentation sweep of
+> 2026-08-29 that carried ADR 0004's answers into the documents, which is not an OpenSpec change
+> and so has no id to look up. **Done there:** 7.1, 7.3, 7.4, 7.6, 7.7, `CLAUDE.md`'s half of 7.2,
+> and the whole of `ARCHITECTURE.md` beyond §1 that 7.2 defers to. **Left:** 7.5's shipping-code
+> comments under `app/lib`, which that sweep was told not to touch because this change owns them,
+> and 7.8's note to `f3-deletion-web`'s author. **0.2 and 0.5 are still open**, and 0.5 is now recorded as entry 8 in
+> `docs/decisions/OPEN.md`. Nothing below is deleted: a plan whose costing lost is still the record
+> of what the choice cost.
+
 **Nothing below section 1 starts until 0.1 is answered**, because option 3 in `design.md` D3 makes
 sections 3 and 5 wrong rather than merely different. Sections 1 and 2 are safe under all three and
 may start immediately.
 
-- [ ] 0.1 **A human picks where the refusal happens** — link time (D3 option 1), app open (option 2),
+- [x] 0.1 **A human picks where the refusal happens** — *answered 2026-08-29: option 1, link time.* — link time (D3 option 1), app open (option 2),
       or store-only (option 3) — and records the choice beside the sibling ADR.
       Check: the ADR names one of the three, and `tasks.md` section 5 is rewritten if it is option 3.
 - [ ] 0.2 **The design owner draws the under-18 refusal and writes its es-MX copy**, confirmed
       against the raw `.dc.html` rather than a prose digest. This plan invents no Spanish for it.
       Check: a named screen in the design project, or a written statement that option 3 was chosen
       and no screen is needed.
-- [ ] 0.3 **A human answers DEP-1's standing "no"** — does analytics, ads, attribution and crash
+- [x] 0.3 **A human answers DEP-1's standing "no"** — *answered 2026-08-29: it stays a category
+      refusal, re-grounded in ADR 0004's amendment §2, `CLAUDE.md` and DEP-1 itself rather than in
+      `OPEN.md`.* — does analytics, ads, attribution and crash
       reporting stay refused as a category, or go back to being asked per dependency under DEP-1?
       Recorded as a new entry in `docs/decisions/OPEN.md`, in the style of the existing five.
       Check: the entry states what the code does today, why that was the safe interim, and what
@@ -22,7 +44,9 @@ may start immediately.
       Check: `docs/gates/gate-a-childrens-data-consult.md` §2 carries a third dated correction, or a
       successor document exists.
 - [ ] 0.5 **A human declares the app-store age rating.** No document swept states one, so this is a
-      gap rather than an edit.
+      gap rather than an edit. *Still open as of 2026-08-29: Ervin is researching it separately, and
+      the gap itself is now recorded as entry 8 in `docs/decisions/OPEN.md` so it survives the
+      archiving of this plan.*
       Check: the rating is written down somewhere `f3-store-artifacts` can read it.
 - [ ] 0.6 **A human labels the pull request `allow-protected-edit` and `allow-breaking-contract`,
       and runs `npm run migrate` against Neon after it merges.** Recording `0009` in

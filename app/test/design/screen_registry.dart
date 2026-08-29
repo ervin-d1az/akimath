@@ -71,7 +71,13 @@ import 'package:akimath_app/features/map/ui/skill_map_screen.dart';
 ///
 /// One entry per viewport the app promises to survive. The set is short on
 /// purpose: 390×844 is the design viewport every document is drawn against, and
-/// 1.3 is the text size a child's device arrives with more often than not.
+/// 1.3 is the text size a real device arrives at more often than not.
+///
+/// **That last clause said *a child's device* until 2026-08-29**, when ADR 0004
+/// made the product adults-only. The viewport did not move and must not: adults
+/// are the population that most raises the system text size, so the decision
+/// argues for keeping this row rather than against it. See
+/// `touch_target_test.dart`'s header for the same correction made at length.
 enum ScreenViewport {
   designPhone('390×844', Size(390, 844), 1),
   designPhoneLargeText('390×844 · textScaler 1.3', Size(390, 844), 1.3),

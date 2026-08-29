@@ -141,6 +141,9 @@ is ADR 0002's design and is unchanged by anything here. So:
 because A is where the only age question in the app already stands — and puts B to the human in
 §*Open*.
 
+> **Amended 2026-08-29 — the human chose Reading A.** See "Amendment: the answers" at the end of
+> this record. The fork is settled; the refusal screen it needs is not.
+
 **What an under-18 sees is genuinely open.** No design document draws a refusal, `TutorConsentScreen`'s copy
 (*"Para crear una cuenta necesitamos el permiso de tu mamá, tu papá o tu tutor. Mientras tanto tus
 retos se guardan en este teléfono y nada se envía."*) is a promise of a later account and would
@@ -316,6 +319,10 @@ candidates, not as a recommendation:
 **The question in one line, and it is in §*Open* as well: the rule stays — which of these now
 carries it?**
 
+> **Amended 2026-08-29 — answered: candidates 1, 2 and 3, and the rule stays a *category* refusal
+> rather than going back to a per-dependency question.** See "Amendment: the answers" §2 at the end
+> of this record. Candidate 4 is deliberately not enlisted.
+
 ### 5 · What else has to be corrected, and by whom
 
 This change is one ADR file plus **two** pointers — the amendment to `ARCHITECTURE.md` §1, and a
@@ -344,6 +351,12 @@ All of it except the Gate A header is **not** touched here — sibling changes o
 ---
 
 ## Open
+
+> **Amended 2026-08-29 — two of these four are answered and two are not.** See "Amendment: the
+> answers" at the end of this record, which maps the replies onto the questions one by one:
+> **1 is answered** (Reading A), **3 is answered** (DEP-1 stays a category refusal), the sequencing
+> note below is answered (the CHECK is left as it is), and **2 and 4 remain open**. The list below
+> is left verbatim as the record of what was unanswered on the day the decision was taken.
 
 Four questions this decision raises and does not answer. Numbers 1 and 2 gate implementation; 3 is
 governance and is the one with the widest blast radius; 4 is a real fork with no default.
@@ -523,3 +536,136 @@ No code under test was changed by this ADR, so **Tier 1 is unchanged rather than
 change reaches **no evidence tier** — Tier 1b has no logic to falsify and Tier 2 has nothing to
 exercise. That is the honest outcome, not a skipped step, and it is the same one ADR 0001's
 *Evidence* §2 and ADR 0003's *Evidence* §6 record for their own documentation-only changes.
+
+---
+
+## Amendment: the answers — 2026-08-29
+
+**Answered the same day this record was accepted.** That is not a formality worth hiding: the
+questions in §*Open* were put to Ervin as soon as the decision was written down, and four answers
+came back within the day. They are recorded here rather than folded into the sections above,
+because a record that reads as though it never had open questions teaches nobody how the decision
+was actually taken.
+
+**Four answers came back, and §*Open* asks four questions, and they are not the same four.** The
+count is the trap. Read the mapping before reading the answers:
+
+| Asked here | Status now |
+|---|---|
+| **Open 1** · Reading A or Reading B | **Answered — Reading A**, §1 below |
+| **Open 2** · What does an under-18 see? | **Still open.** Reading A is what makes it urgent, not what settles it |
+| **Open 3** · Which ground carries DEP-1 now? | **Answered — the rule stays as a category refusal**, §2 below |
+| **Open 4** · Should a refusal be recorded, and where? | **Still open** — and §3 below is what keeps it answerable |
+| the sequencing note · leave the `age_band` CHECK or narrow it | **Answered — leave it**, §3 below |
+| *(asked nowhere in this record)* · the app-store age rating | **Open**, and being researched separately, §4 below |
+
+So: **two of this record's four questions are answered, the sequencing note is settled, and a
+question this record never asked is now on the books.** Open 2 and Open 4 are untouched and stay
+untouched — nothing below closes them, and a later reader counting to four should count these
+rows instead.
+
+### 1 · Reading A — the refusal happens at link time
+
+**Nobody under 18 gets an account. A minor can install the app and play offline for ever.**
+"Adults only" means accounts only.
+
+The reasoning as accepted: **the legal weight comes from holding data, and offline holds nothing on
+our side.** Reading A removes the exposure the decision was taken to remove, and it does so without
+a screen nobody has designed — §*Decision* 3 measured Reading B's cost as a gate in front of
+`FirstRunGate` and a first impression that is a refusal, and Reading A's as one `switch` arm, one
+constant and one screen's copy.
+
+**The honest objection from §*Decision* 3 survives being chosen over and is not softened here**:
+this makes *accounts* adults-only rather than the *game*. A fourteen-year-old installs it and plays
+every day, on-device, and the store listing still reaches them. What Reading A buys is that we hold
+nothing of theirs; what it does not buy is that they are not playing.
+
+**This sharpens Open 2 rather than closing it.** Reading A is precisely the branch that needs a
+refusal at the gate, so `TutorConsentScreen`'s promise of a later account — *"Mientras tanto tus
+retos se guardan en este teléfono"* — becomes untrue the day the switch arm moves. Under Reading B
+that screen would have been bypassed entirely. The design request is now on the critical path.
+
+### 2 · DEP-1 stays, as a category refusal, on three grounds that were never child-derived
+
+**Analytics, ads, attribution and crash reporting stay refused *as a category*, not case by case.**
+The rule does not change. **Its stated reason does, and that is the whole of this answer** —
+§*Consequences* 4's warning was that a rule whose reason has died gets argued away by the first
+person who notices, and the answer is to re-ground it rather than to let the category quietly go
+back to being per-dependency.
+
+Three of the four candidates in §*Consequences* 4 are adopted, and each stands without an audience
+clause:
+
+1. **Supply-chain surface.** Four third-party runtime dependencies in `packages/server`, one in
+   `packages/contract`, five in `app/` with a 28-package transitive closure, zero in
+   `packages/core`. A small audited closure is a security posture on its own terms.
+2. **The recurring-per-version audit, which is ADR 0003's own argument.** *"Every one of those
+   fourteen is a package somebody has to audit for phoning home, unconditionally, on every version
+   bump, for the life of the product."* 0003 attributed that obligation to the audience clause;
+   the arithmetic never needed it, and it now stands on its own. **0003's sentence has a new owner
+   and its conclusion is unchanged.**
+3. **Data minimisation under the LFPDPPP, which applies to adults.** §*Decision* 2: the obligations
+   did not vanish with the children's-data regime. Data never collected is data never protected,
+   never transferred and never deleted.
+
+The fourth candidate is **not** adopted as a ground, and that is deliberate rather than an
+oversight: `packages/core`'s zero-dependency floor and `zod`'s exact pin are constraints of their
+own, held by the rederivation machine's no-ambient-IO rule and by the byte-for-byte pack
+determinism gate. They were never audience-derived, so they were never at risk, and enlisting them
+as supports for DEP-1 would make one rule look like it was carrying two others.
+
+**Nothing in a gate changes**, as §*Consequences* 4 already established by measurement: the four
+`dependency-allowlist` tests cite no audience and read no predicate about who plays.
+
+### 3 · The `age_band` CHECK is left exactly as it is
+
+**No migration 0009. No contract change. No `allow-protected-edit`, no `allow-breaking-contract`,
+no re-emitted `openapi.json`.** §*Consequences* 1 measured both options and the cheap one is taken.
+
+The reason is the measurement, restated as the decision: **`age_band` is written by exactly one
+`INSERT`, nothing anywhere `UPDATE`s it, and under Reading A a refused minor never links.** So
+`under_13` and `13_17` **go dead by construction** — no row can ever again carry either, whether or
+not anybody deletes the values. Narrowing the CHECK would buy the same guarantee at the price of a
+forward-only migration, a regenerated snapshot, two protected-path labels, four hand-written edits,
+sixteen test files and a re-emitted contract.
+
+**The schema keeps a vocabulary it no longer issues, and that is the point rather than a leftover.**
+§*Consequences* 1 already stated what narrowing would destroy: *"Narrowing the CHECK removes the
+only vocabulary in which a declared band could ever be recorded — which is precisely §3's open
+question about recording a refusal. Deleting the values forecloses it."* **Leaving the CHECK is
+therefore what keeps Open 4 answerable at all.** Whoever answers it inherits a column that can
+still hold the answer.
+
+One consequence for the sibling plan, stated because that plan says the opposite: its *What
+changes* section has `AGE_BANDS` collapsing to `["adult"]` and the pull request carrying
+`allow-breaking-contract`. That half is overruled. The de-duplication it also proposes —
+`link.ts`:23 stops retyping the band set and derives it from `@akimath/contract` — is **not**
+overruled and never depended on the narrowing; it is worth doing on its own, and §*Consequences* 1
+already noted `link.ts` as a cost site tied to no gate.
+
+### 4 · The app-store age rating is open, and somebody owns it
+
+**Ervin is researching it separately, and nothing here invents one.** An adults-only product has a
+rating to declare and this repository contains no passage that declares one — a gap the sibling
+plan found and could not fill, and which this record never asked about, so it enters the books here
+for the first time.
+
+It is recorded as an open decision in `docs/decisions/OPEN.md` rather than as an answer, because
+that file is for exactly this and it survives the archiving of any plan. Two things it is not: it
+is **not** a reason to reach for §*Decision* 3's Reading-B-adjacent "the store declares it and the
+app does not ask" — the sibling plan's D3 already showed that option is unavailable until a rating
+exists, and Reading A is now chosen regardless — and it is **not** blocking anything, because
+Reading A asks in the app whatever the store says.
+
+### What these answers do not touch
+
+- **ADR 0002 is still not superseded**, for the reason §*Consequences* 3 gives. Reading A widens
+  the same structural protection rather than replacing it: a minor still never obtains a session,
+  now because the gate refuses rather than because it routed. The GHSA invariant is unchanged.
+- **Gate A is still narrowed rather than closed**, per §*Consequences* 2, and the brief still
+  carries its **DO NOT SEND** header. Nothing above answers any of Q-A4 through Q-A10.
+- **No threshold moves because its stated reason did.** The 48 px touch floor and the `textScaler`
+  1.3 viewport were justified in prose by a child's aim and a child's device. Both stand on
+  platform floors and on adults being the population that most raises system text size; the
+  sentences beside them are corrected in the same change as this amendment, and the correction
+  makes relaxing them harder rather than easier.
