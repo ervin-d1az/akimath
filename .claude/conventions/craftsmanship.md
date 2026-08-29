@@ -482,6 +482,18 @@ credit.
   falsification step on a new test file) and in `f0-pack-contract` (a byte-determinism gate over
   an untracked `contract/`), which is what promoted it to a rule.
 
+  **A third branch, and the nastiest, because the file is tracked and the proof still lies: `git
+  diff` compares the working tree to the *index*, not to `HEAD`.** Anything that writes to the
+  index — `git checkout <commit> -- <paths>`, a stray `git add` — moves what the proof is measured
+  against, so a restore that put the *wrong* content back exits **0** and reads as clean. Measured
+  in `fix-the-puzzle-gates-can-fail`: a tier-1b counterfactual reverted three files with
+  `git checkout c328cf3 -- <paths>`, which stages; the follow-up `git checkout -- <paths>` then
+  restored the working tree *from that index*, and `git diff --quiet` exited 0 with the reverted
+  files still in the tree. It was caught only because `git status --short` showed three staged
+  `M`s. **So: restore with `git checkout HEAD -- <paths>`, and close with `git status --short`
+  empty *and* `git diff --quiet HEAD`** — the second names the commit, which is the thing the
+  restore was supposed to reach.
+
 - **PROC-9** MUST: a mutation score is only evidence if the run's **initial test run** passed.
   Stryker copies the package into a sandbox, so any test that reads a path outside the package
   must discover that path by walking up rather than by counting `..` segments — otherwise the dry
