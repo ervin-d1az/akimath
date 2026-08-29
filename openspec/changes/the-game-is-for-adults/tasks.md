@@ -11,11 +11,12 @@
 > with them the `data-schema`, `api-contract`, `api-client` and `api-transport` delta specs in
 > `specs/`, every one of which is written for a set of one — **do not implement them as they
 > stand.** Section 2's de-duplication of `link.ts`:23 never depended on the narrowing and stands on
-> its own merits. **Section 7 has largely landed elsewhere**, in the change
-> `docs-the-adults-only-decisions-are-answered` of 2026-08-29: 7.1, 7.3, 7.4, 7.6 and 7.7 are done,
-> 7.2 is done for `CLAUDE.md`, and what is left of it is 7.5's shipping-code comments under
-> `app/lib`, 7.8's note to `f3-deletion-web`'s author, and `ARCHITECTURE.md` beyond §1 if that
-> change did not reach it. **0.2 and 0.5 are still open**, and 0.5 is now recorded as entry 8 in
+> its own merits. **Section 7 has largely landed elsewhere** — in the documentation sweep of
+> 2026-08-29 that carried ADR 0004's answers into the documents, which is not an OpenSpec change
+> and so has no id to look up. **Done there:** 7.1, 7.3, 7.4, 7.6, 7.7, `CLAUDE.md`'s half of 7.2,
+> and the whole of `ARCHITECTURE.md` beyond §1 that 7.2 defers to. **Left:** 7.5's shipping-code
+> comments under `app/lib`, which that sweep was told not to touch because this change owns them,
+> and 7.8's note to `f3-deletion-web`'s author. **0.2 and 0.5 are still open**, and 0.5 is now recorded as entry 8 in
 > `docs/decisions/OPEN.md`. Nothing below is deleted: a plan whose costing lost is still the record
 > of what the choice cost.
 
