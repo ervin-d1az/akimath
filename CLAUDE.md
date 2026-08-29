@@ -66,7 +66,7 @@ verbatim path data, stroke widths and caps that a prose digest paraphrases.
 
 ```
 app/                      the Flutter client — the only Dart package
-  lib/api/                 the hand-written API client (ADR 0001). `dart:io`, no dependency
+  lib/api/                 the hand-written API client (ADR 0003, superseding 0001). `dart:io`, no dependency
   lib/design/brand/spec/   pure geometry: no Canvas, no widgets, testable without mocks
   lib/design/brand/        the adapter that paints that spec
   lib/design/tokens/       colors, type, shape. No color literal lives outside tokens/
@@ -78,7 +78,8 @@ packages/core/            @akimath/core — the rederivation machine. ZERO runti
                           no ambient IO; the one adapter writes the golden artifacts
 contract/                 the frozen artifacts: 3 schemas, 37 fixtures, canon.golden.json,
                           openapi.json (OpenAPI 3.0.3, emitted, byte-diffed and oasdiff'd)
-docs/adr/                 ADR 0001 decides the Dart API client, 0002 auth and sync; older ones in ARCHITECTURE.md
+docs/adr/                 0003 decides the Dart API client, superseding 0001; 0002 auth and sync;
+                          older decisions live in ARCHITECTURE.md
 ```
 
 `app/lib/api/` now exists and holds seven of the contract's operations. `packages/contract` holds
@@ -839,6 +840,21 @@ zero. It won one rubric row of six — its output is byte-identical across cold 
 not enough under §2's asymmetric criterion.
 
 `app/lib/api/` is therefore hand-written, is an **F3** directory, and is a PURE-2 adapter that
-holds no decisions. No `build_runner`, and no CI byte-diff job. The ADR carries a supersede
-threshold (600 lines, 15 endpoints, response polymorphism, or auth/pagination/error envelopes),
-so this reopens on evidence rather than on memory.
+holds no decisions. No `build_runner`, and no CI byte-diff job.
+
+**That threshold fired, and `docs/adr/0003-the-dart-client-crossed-its-threshold.md` answered it —
+0001 is superseded and its decision reaffirmed** (2026-08-28). Two of the four conditions were met:
+the client passed 600 lines (**1944 raw / 1236 code** across ten files) and the envelope machinery
+passed the endpoints (**508 : 245**). Neither is a reason to switch, and that is the point 0003
+makes: **three of the four triggers measured size, and size is the one rubric row of six that
+hand-writing already won** — 0001 rejected the generator on correctness and dependency surface, and
+`swagger_dart_code_generator` is *still 4.1.1*, published 2025-12-11, with all four defects present
+in the current source. The optional-versus-nullable collapse reads worse than 0001 recorded:
+`include_if_null` is one **document-wide** switch, so the distinction has nowhere to live.
+Factoring the error envelope — the audit's cheapest move — does **not** move either trigger back:
+the envelope's floor is the seven result unions, 257 lines no de-duplication touches, against 245
+endpoint lines. **The endpoint count means operations in `contract/openapi.json`** — 8 of 9
+modelled, 7 called — because a generator can only act on a document that exists and none describes
+the Neon Auth half. All four conditions are retired and replaced by three that bear on the answer:
+polymorphism entering the contract, a generator that clears the four correctness objections, or a
+second consumer needing the same models. **Line count is no longer a supersede condition.**
