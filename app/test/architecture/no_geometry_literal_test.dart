@@ -107,6 +107,26 @@ const BoxShadow shadow = BoxShadow(
       );
     });
 
+    test('follow the cage painter out of design/painting/', () {
+      // It moved to `design/puzzle/` so the generic painting layer would stop
+      // importing the puzzle layer. A gate whose root does not follow is a
+      // gate that quietly stopped covering a painted outline.
+      expect(
+        selectFilesIn(geometryGateRoots, const <String>[
+          'design/puzzle/cage_edge_painter.dart',
+        ]),
+        hasLength(1),
+      );
+      expect(
+        selectFilesIn(geometryGateRoots, const <String>[
+          'design/puzzle/spec/board_geometry.dart',
+          'design/puzzle/spec/letter_grid_geometry.dart',
+        ]),
+        isEmpty,
+        reason: 'they return positions they computed, not a shadow offset',
+      );
+    });
+
     test('leave the artwork layer alone', () {
       // aki_spec.dart holds 95 of these and every one of them is correct.
       expect(

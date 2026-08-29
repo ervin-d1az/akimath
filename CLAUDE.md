@@ -148,7 +148,7 @@ the offline pack format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **3291 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **3358 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **The streak can say it is about to go, and that it went.** `streakLength` has answered *how
@@ -780,9 +780,10 @@ root is free the same way.
   `design/tokens/` for `Color(0x`, `Color.fromARGB(`, `Color.fromRGBO(` and `Colors.` — the last
   on a word boundary, since `Colors.` is a substring of `BrandColors.`; `Colors.transparent` is
   the one carve-out. `test/architecture/no_geometry_literal_test.dart` scans `design/widgets/`,
-  `design/math/`, `design/painting/` and `features/` for `Offset(`; `design/brand/` is out of
-  scope as the artwork layer, and radii and border widths are not scanned at all. Both report how
-  many files they scanned and fail at zero.)
+  `design/math/`, `design/painting/`, `design/puzzle/` and `features/` for `Offset(`;
+  `design/brand/` is out of scope as the artwork layer, `design/puzzle/spec/` is excluded because
+  a board's geometry *is* offsets, and radii and border widths are not scanned at all. Both report
+  how many files they scanned and fail at zero.)
 
 - **Nothing you can press is under 48 px**, measured on the rendered screen
   rather than asserted about a widget — a `SizedBox(48)` in a `Row` that ran out of room is 31 px

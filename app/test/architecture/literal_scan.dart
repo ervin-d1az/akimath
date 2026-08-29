@@ -181,6 +181,17 @@ const ScanRoot colorGateRoot = ScanRoot(
 /// `design/painting/` is in scope for the same reason: it is where a border
 /// moves when it stops being a `BoxDecoration`, and a painted outline is no
 /// less governed by `BrandShape` than a decorated one.
+///
+/// **`design/puzzle/` joined it when the cage painter moved there**, and its
+/// `spec/` half is the one exclusion. A cage's painter left `design/painting/`
+/// so the generic layer would stop importing the puzzle layer, and a file that
+/// walks out of a gate's root is a file the gate stops seeing — so the root
+/// followed it. `design/puzzle/spec/` stays out for `figurate_layout.dart`'s
+/// reason one directory over: `board_geometry.dart` and
+/// `letter_grid_geometry.dart` answer *where does a cell go* and return
+/// positions they just computed, which is what a board is, and there is no
+/// shadow within reach of either. The exclusion is the directory here rather
+/// than a file because every inhabitant of that directory is that same case.
 const List<ScanRoot> geometryGateRoots = <ScanRoot>[
   ScanRoot(prefix: 'design/widgets/'),
   ScanRoot(
@@ -188,6 +199,10 @@ const List<ScanRoot> geometryGateRoots = <ScanRoot>[
     excluding: <String>['design/math/spec/figurate_layout.dart'],
   ),
   ScanRoot(prefix: 'design/painting/'),
+  ScanRoot(
+    prefix: 'design/puzzle/',
+    excluding: <String>['design/puzzle/spec/'],
+  ),
   ScanRoot(prefix: 'features/'),
 ];
 

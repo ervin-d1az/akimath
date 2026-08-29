@@ -1,4 +1,5 @@
 import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/design/puzzle/spec/cage_outline.dart';
 import 'package:akimath_app/features/puzzle/policy/board_constraints.dart';
 import 'package:akimath_app/features/puzzle/policy/puzzle_entry.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_board_view.dart';
@@ -50,7 +51,10 @@ Future<PuzzleEntry> _pump(
             child: PuzzleBoardView(
               entry: current,
               constraints:
-                  BoardConstraints.cages(cages ?? _oneCage(current.board.size)),
+                  BoardConstraints.cages(
+                    cages ?? _oneCage(current.board.size),
+                    CageOutline.kenKen,
+                  ),
               onTapCell: (Cell cell) => current = current.select(cell),
             ),
           ),
@@ -328,7 +332,7 @@ void main() {
                             rowTargets: <int>[11, 12, 13],
                             columnTargets: <int>[21, 22, 23],
                           )
-                        : const BoardConstraints.cages(<Cage>[]),
+                        : const BoardConstraints.cages(<Cage>[], CageOutline.kenKen),
                     onTapCell: (Cell cell) {},
                   ),
                 ),
@@ -424,7 +428,7 @@ void main() {
                 builder: (BuildContext context, StateSetter setState) =>
                     PuzzleBoardView(
                   entry: entry,
-                  constraints: BoardConstraints.cages(_oneCage(3)),
+                  constraints: BoardConstraints.cages(_oneCage(3), CageOutline.kenKen),
                   onTapCell: (Cell cell) =>
                       setState(() => entry = entry.select(cell)),
                 ),
@@ -454,7 +458,7 @@ void main() {
                 builder: (BuildContext context, StateSetter setState) =>
                     PuzzleBoardView(
                   entry: entry,
-                  constraints: BoardConstraints.cages(_oneCage(3)),
+                  constraints: BoardConstraints.cages(_oneCage(3), CageOutline.kenKen),
                   onTapCell: (Cell cell) =>
                       setState(() => entry = entry.select(cell)),
                 ),

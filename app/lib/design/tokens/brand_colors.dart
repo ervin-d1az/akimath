@@ -54,22 +54,25 @@ abstract final class BrandColors {
   /// Secondary text and descriptors.
   static const Color muted = Color(0xFF8A7FA8);
 
-  /// The grid inside a puzzle board: ink at 18 %.
+  /// The grid inside a puzzle board: ink at 18 %, a step above [rule] because
+  /// a board draws a hundred of these and a card draws two — the same alpha
+  /// reads as heavier on the board and lighter on the card.
   ///
   /// **`reactivos-puzzles.md` reserves the thick outline for the object.** Its
   /// own words: *"El contorno grueso se reserva para el objeto (el tablero).
   /// Dentro, la jerarquía deja de ser grosor y pasa a ser peso, color y
   /// trazo."* So a board's frame is 3 px ink, and everything inside it steps
   /// down — cells to a 1.5 px hairline at this opacity, cages to dashed pink.
+  ///
+  /// **There was a second token for this**, `hairline`, byte-identical and with
+  /// a doc comment describing the same board rule in other words. It had no
+  /// production caller and it was the one `brand_colors_test.dart` asserted
+  /// against, so the alpha of the line both boards actually draw could be moved
+  /// onto the card rule's with the whole suite green — measured, not supposed.
   static const Color gridHairline = Color(0x2E1C1A2E);
 
   /// A hairline divider inside a card. Ink at 16%, never a separate grey.
   static const Color rule = Color(0x291C1A2E);
-
-  /// The line a puzzle board is ruled with. Ink at 18%, a step above [rule]
-  /// because a board draws a hundred of these and a card draws two: the same
-  /// alpha reads as heavier on the board and lighter on the card.
-  static const Color hairline = Color(0x2E1C1A2E);
 
   /// The quiet neutral: the backspace key's fill and a skeleton block's fill.
   /// It is the one surface that must read as present but not as offered.

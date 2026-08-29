@@ -260,7 +260,7 @@ The heaviest stroke on a board SHALL be the board's own frame.
 - **WHEN** a cage boundary is drawn
 - **THEN** it is pink, not ink — a cage drawn in the board's own treatment reads as a second
   object stacked on the first
-  → `app/test/design/painting/cage_edge_painter_test.dart`
+  → `app/test/design/puzzle/cage_edge_painter_test.dart`
 
 ### Requirement: req-inside-the-hierarchy-is-colour-and-stroke · Not thickness
 
@@ -276,11 +276,11 @@ Inside the frame, the levels SHALL differ by colour and stroke rather than by we
 
 - **WHEN** a cage boundary is drawn
 - **THEN** it is dashed, which is the third channel the digest names alongside weight and colour
-  → `app/test/design/painting/cage_edge_painter_test.dart`
+  → `app/test/design/puzzle/cage_edge_painter_test.dart`
 
 #### Scenario: Only the boundary is drawn
 
 - **WHEN** a cell sits inside its cage with every neighbour in the same cage
 - **THEN** nothing is drawn around it, because a cage is a union of cells and a line through its
   middle is not a boundary
-  → `app/test/design/painting/cage_edge_painter_test.dart`
+  → `app/test/design/puzzle/cage_edge_painter_test.dart`

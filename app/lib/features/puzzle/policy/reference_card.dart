@@ -15,6 +15,7 @@
 library;
 
 import '../../../content/model/puzzle.dart';
+import '../../../design/puzzle/spec/cage_outline.dart';
 
 /// A miniature board drawn beside a rule.
 ///
@@ -34,6 +35,7 @@ class ReferenceDiagram {
     this.highlighted = const <int>{},
     this.cage = const <int>{},
     this.cageLabel,
+    this.cageOutline,
   });
 
   /// The side of the grid, in cells.
@@ -53,6 +55,16 @@ class ReferenceDiagram {
 
   /// What that outline's corner says. Null when there is no cage.
   final String? cageLabel;
+
+  /// The outline those cells are drawn in. Null exactly when there is no cage.
+  ///
+  /// Held by a sweep over [allReferenceDiagrams] rather than by an assert here,
+  /// because a `const` constructor may not call `isEmpty` — and because an
+  /// assert is stripped in release (TYP-2). That is what the list is for: a
+  /// diagram that draws a cage and names no outline would draw nothing at all,
+  /// and one that named the wrong one would teach a format the player is not
+  /// looking at, which is the board's own defect on the card.
+  final CageOutline? cageOutline;
 }
 
 /// One line of the sheet and the picture that goes with it.
@@ -77,6 +89,7 @@ const ReferenceDiagram _cageWithSign = ReferenceDiagram(
   size: 3,
   cage: <int>{0, 1},
   cageLabel: '6×',
+  cageOutline: CageOutline.kenKen,
 );
 
 /// A dashed cage carrying a plain sum, which is how Killer says *add*.
@@ -84,6 +97,7 @@ const ReferenceDiagram _cageWithSum = ReferenceDiagram(
   size: 3,
   cage: <int>{0, 1},
   cageLabel: '5',
+  cageOutline: CageOutline.killer,
 );
 
 /// A marked row crossing a marked column: *nothing repeats in a line*.

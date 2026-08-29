@@ -75,7 +75,7 @@ void main() {
 
   group('a cage outlines itself', () {
     test('a single cell is bordered on all four sides', () {
-      final List<CageEdges> edges = cageOutline(_cage(<List<int>>[
+      final List<CageEdges> edges = cageEdges(_cage(<List<int>>[
         <int>[1, 1]
       ]));
 
@@ -88,7 +88,7 @@ void main() {
 
     test('a horizontal pair shares one edge and borders the rest', () {
       final List<CageEdges> edges =
-          cageOutline(_cage(<List<int>>[<int>[0, 0], <int>[0, 1]]));
+          cageEdges(_cage(<List<int>>[<int>[0, 0], <int>[0, 1]]));
 
       expect(edges.first.right, isFalse, reason: 'they touch here');
       expect(edges.last.left, isFalse, reason: 'and here');
@@ -100,7 +100,7 @@ void main() {
     test('an L keeps its inner corner open', () {
       //  ██
       //  █
-      final List<CageEdges> edges = cageOutline(
+      final List<CageEdges> edges = cageEdges(
         _cage(<List<int>>[<int>[0, 0], <int>[0, 1], <int>[1, 0]]),
       );
       final CageEdges corner =
@@ -114,7 +114,7 @@ void main() {
 
     test('two cells that do not touch each get four edges', () {
       final List<CageEdges> edges =
-          cageOutline(_cage(<List<int>>[<int>[0, 0], <int>[2, 2]]));
+          cageEdges(_cage(<List<int>>[<int>[0, 0], <int>[2, 2]]));
 
       expect(edges, hasLength(2));
       expect(
@@ -125,7 +125,7 @@ void main() {
 
     test('a cell enclosed by its own cage draws nothing', () {
       // A plus shape: the centre touches cage cells on all four sides.
-      final List<CageEdges> edges = cageOutline(_cage(<List<int>>[
+      final List<CageEdges> edges = cageEdges(_cage(<List<int>>[
         <int>[0, 1], <int>[1, 0], <int>[1, 1], <int>[1, 2], <int>[2, 1],
       ]));
 
@@ -138,7 +138,7 @@ void main() {
     });
 
     test('the outline is in reading order, whatever the set order', () {
-      final List<CageEdges> edges = cageOutline(_cage(<List<int>>[
+      final List<CageEdges> edges = cageEdges(_cage(<List<int>>[
         <int>[2, 0], <int>[0, 1], <int>[1, 3],
       ]));
 
@@ -149,7 +149,7 @@ void main() {
     });
 
     test('an empty cage outlines nothing', () {
-      expect(cageOutline(<GridCell>{}), isEmpty);
+      expect(cageEdges(<GridCell>{}), isEmpty);
     });
   });
 

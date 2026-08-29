@@ -1,4 +1,5 @@
 import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/design/puzzle/spec/cage_outline.dart';
 import 'package:akimath_app/features/puzzle/policy/board_constraints.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -11,6 +12,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// the sealed hierarchy, so the sixth format is a compile error instead — and
 /// the sweep at the bottom is the half a compiler cannot do: it says every
 /// format shows *something*.
+///
+/// The same split covers a cage's **appearance**: `BoardConstraints.cages`
+/// demands an outline, so a cage cannot reach the board without one, and the
+/// two tests below say the outline each caged format gets is its own.
 
 const List<List<int>> _threeByThree = <List<int>>[
   <int>[1, 2, 3],
@@ -84,6 +89,7 @@ void main() {
       final BoardConstraints shown = boardConstraints(_kenKen());
 
       expect(shown.cages, same(_cages));
+      expect(shown.outline, CageOutline.kenKen);
       expect(shown.rowTargets, isEmpty);
       expect(shown.columnTargets, isEmpty);
       expect(shown.runs, isEmpty);
@@ -96,6 +102,11 @@ void main() {
       final BoardConstraints shown = boardConstraints(_killer());
 
       expect(shown.cages, same(_cages));
+      // **The defect, where it is now decided.** The screen read the cages off
+      // any `CagedPuzzle` and the board widget named `DashSpec.kenKenCage`
+      // itself, so these two formats were the same drawing.
+      expect(shown.outline, CageOutline.killer);
+      expect(shown.outline, isNot(CageOutline.kenKen));
       expect(shown.rowTargets, isEmpty);
       expect(shown.columnTargets, isEmpty);
       expect(shown.runs, isEmpty);
@@ -107,6 +118,7 @@ void main() {
       expect(shown.rowTargets, <int>[11, 12, 13]);
       expect(shown.columnTargets, <int>[21, 22, 23]);
       expect(shown.cages, isEmpty);
+      expect(shown.outline, isNull);
       expect(shown.runs, isEmpty);
     });
 
@@ -115,6 +127,7 @@ void main() {
 
       expect(shown.runs, same(_runs));
       expect(shown.cages, isEmpty);
+      expect(shown.outline, isNull);
       expect(shown.rowTargets, isEmpty);
       expect(shown.columnTargets, isEmpty);
     });
@@ -135,6 +148,46 @@ void main() {
           reason: '${puzzle.runtimeType} draws no margin',
         );
       }
+    });
+  });
+
+  group('cages and their outline travel together', () {
+    test('every format pairs them, or has neither', () {
+      // The other half of `BoardConstraints.cages` demanding an outline: the
+      // compiler owns *a cage cannot be drawn unnamed*, and this owns *nothing
+      // names an outline it has no cage for*. A `const` constructor cannot
+      // assert either, and an assert would be stripped in release anyway
+      // (TYP-2) — so it is a sweep, over a list that has to be non-empty.
+      final List<BoardPuzzle> formats = _everyFormat();
+      expect(formats, isNotEmpty, reason: 'a sweep over nothing sweeps nothing');
+
+      int caged = 0;
+      for (final BoardPuzzle puzzle in formats) {
+        final BoardConstraints shown = boardConstraints(puzzle);
+        if (shown.outline != null) {
+          caged++;
+        }
+        expect(
+          shown.cages.isEmpty,
+          shown.outline == null,
+          reason: '${puzzle.runtimeType} pairs ${shown.cages.length} cages '
+              'with ${shown.outline}',
+        );
+      }
+
+      expect(caged, 2, reason: 'KenKen and Killer are the caged formats');
+    });
+
+    test('and no two caged formats share an outline', () {
+      // A sixth caged format has to pick a constant here. Copying a sibling's
+      // is the defect this change fixed, so it is the one thing said out loud.
+      final Set<CageOutline> outlines = <CageOutline>{
+        for (final BoardPuzzle puzzle in _everyFormat())
+          if (boardConstraints(puzzle).outline case final CageOutline outline)
+            outline,
+      };
+
+      expect(outlines, hasLength(2));
     });
   });
 
