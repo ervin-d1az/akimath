@@ -1,5 +1,6 @@
 import 'package:akimath_app/content/model/puzzle.dart';
-import 'package:akimath_app/design/painting/cage_edge_painter.dart';
+import 'package:akimath_app/design/puzzle/cage_edge_painter.dart';
+import 'package:akimath_app/design/puzzle/spec/cage_outline.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_board_view.dart';
@@ -176,11 +177,30 @@ void _expectItsConstraintsDrawn(WidgetTester tester, String name) {
     ),
   );
 
+  /// Every outline the board's cage painters were actually handed.
+  ///
+  /// **This is where the data is genuine.** Every other assertion about a
+  /// Killer cage is made against a puzzle a test constructor built; these are
+  /// the shipped pack's seven, opened from the home on a real device.
+  Set<CageOutline> outlinesDrawn() => cageOutlines
+      .evaluate()
+      .map((Element e) => (e.widget as CustomPaint).foregroundPainter)
+      .whereType<CageEdgePainter>()
+      .map((CageEdgePainter painter) => painter.outline)
+      .toSet();
+
   switch (tester.widget<PuzzleScreen>(screen).puzzle) {
     case KenKenPuzzle():
       expect(cageOutlines, findsWidgets, reason: '$name drew no cage');
+      expect(outlinesDrawn(), <CageOutline>{CageOutline.kenKen},
+          reason: '$name drew a cage in another format\'s outline');
     case KillerPuzzle():
       expect(cageOutlines, findsWidgets, reason: '$name drew no cage');
+      // The defect this tour could not see: a cage was drawn, so
+      // `findsWidgets` passed, and it was KenKen's `6 4` on all seven of the
+      // pack's Killer boards.
+      expect(outlinesDrawn(), <CageOutline>{CageOutline.killer},
+          reason: '$name drew KenKen\'s dash');
     case MagicSquarePuzzle(
         :final List<int> rowTargets,
         :final List<int> columnTargets,

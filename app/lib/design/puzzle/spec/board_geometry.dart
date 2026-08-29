@@ -82,11 +82,16 @@ Rect cellRect(GridCell cell, {required int size, required Rect box}) {
   );
 }
 
-/// The outline of a cage, one entry per cell that has at least one edge on it.
+/// The boundary of a cage, one entry per cell that has at least one edge on it.
 ///
 /// A neighbour inside the same cage means no edge; anything else — another
 /// cage, or the board's rim — means an edge.
-List<CageEdges> cageOutline(Set<GridCell> cells) {
+///
+/// Named for what it returns rather than for the drawing: `CageOutline` in
+/// `cage_outline.dart` is what a cage *looks like*, and one word meaning both
+/// the edge set and the appearance is how the two came to be decided in
+/// different directories.
+List<CageEdges> cageEdges(Set<GridCell> cells) {
   final List<CageEdges> edges = <CageEdges>[];
   for (final GridCell cell in cells) {
     final CageEdges found = CageEdges(

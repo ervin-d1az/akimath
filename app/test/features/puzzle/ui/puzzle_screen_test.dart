@@ -1,4 +1,6 @@
 import 'package:akimath_app/content/model/puzzle.dart';
+import 'package:akimath_app/design/painting/spec/dash_spec.dart';
+import 'package:akimath_app/design/puzzle/cage_edge_painter.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_board_view.dart';
 import 'package:akimath_app/features/puzzle/ui/puzzle_screen.dart';
@@ -34,6 +36,57 @@ KenKenPuzzle _puzzle() => KenKenPuzzle(
         'La esquina de la jaula dice el resultado.',
       ],
     );
+
+/// The same board, in the format that asks for a sum and names no operation.
+KillerPuzzle _killer() => KillerPuzzle(
+      board: const PuzzleBoard.caged(
+        size: 3,
+        blocked: <Cell>{},
+        given: <Cell>{},
+        solution: _solution,
+      ),
+      cages: <Cage>[
+        Cage(
+          cells: <Cell>[
+            for (int row = 0; row < 3; row++)
+              for (int col = 0; col < 3; col++) Cell(row: row, col: col),
+          ],
+          target: 18,
+        ),
+      ],
+      tutorialSteps: const <String>['Cada fila lleva 1, 2 y 3.'],
+      referenceSheet: const <String>[
+        'Ningún número se repite en su fila ni en su columna.',
+        'La esquina de la jaula dice la suma.',
+      ],
+    );
+
+/// Every dash pattern the board's cage painters were handed, spelled out.
+///
+/// Spelled rather than compared as objects: `DashSpec` carries no `toString`,
+/// so a set of instances reports as `Instance of 'DashSpec'` on both sides and
+/// a red run says nothing about which pattern was drawn.
+Set<String> _cageDashes(WidgetTester tester) => tester
+    .widgetList<CustomPaint>(find.descendant(
+      of: find.byType(PuzzleBoardView),
+      matching: find.byType(CustomPaint),
+    ))
+    .map((CustomPaint paint) => paint.foregroundPainter)
+    .whereType<CageEdgePainter>()
+    .map((CageEdgePainter painter) => _spell(painter.outline.dash))
+    .toSet();
+
+String _spell(DashSpec dash) =>
+    '${dash.on} on / ${dash.off} off, ${dash.cap.name} cap';
+
+Future<void> _pumpPuzzle(WidgetTester tester, BoardPuzzle puzzle) async {
+  tester.view
+    ..physicalSize = const Size(390, 844)
+    ..devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(MaterialApp(home: PuzzleScreen(puzzle: puzzle)));
+  await tester.pumpAndSettle();
+}
 
 /// Pumps the screen and hands back **a reading of the solve counter**, not a
 /// copy of it.
@@ -414,6 +467,32 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(closed, isTrue);
+    });
+  });
+
+  group('a cage is drawn in its own format\'s outline', () {
+    // The defect: both call sites named `DashSpec.kenKenCage` themselves, so
+    // Killer — which routes through the same widget — drew KenKen's `6 4`
+    // dash. `DashSpec.killerCage` reached no screen, and the only test that
+    // read its round cap read a constant rather than a painter. Measured here
+    // before the fix: `6.0 on / 4.0 off, butt cap`.
+    testWidgets('a KenKen board draws the KenKen dash',
+        (WidgetTester tester) async {
+      await _pumpPuzzle(tester, _puzzle());
+
+      expect(_cageDashes(tester), <String>{_spell(DashSpec.kenKenCage)});
+    });
+
+    testWidgets('a Killer board draws the Killer dash, which reads as dots',
+        (WidgetTester tester) async {
+      await _pumpPuzzle(tester, _killer());
+
+      expect(_cageDashes(tester), <String>{_spell(DashSpec.killerCage)});
+      expect(
+        _cageDashes(tester).single,
+        contains('round cap'),
+        reason: 'the round cap is what makes a `2 5` pattern read as dots',
+      );
     });
   });
 }

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../content/model/puzzle.dart';
 import '../../../design/icons/brand_icon.dart';
-import '../../../design/painting/cage_edge_painter.dart';
-import '../../../design/painting/spec/dash_spec.dart';
+import '../../../design/puzzle/cage_edge_painter.dart';
 import '../../../design/puzzle/spec/board_geometry.dart';
+import '../../../design/puzzle/spec/cage_outline.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
@@ -131,7 +131,7 @@ class _RuleRow extends StatelessWidget {
 ///
 /// **It constructs no geometry**, for the reason `PuzzleBoardView` gives:
 /// `no_geometry_literal_test` scans this directory for `Offset(`, and the cage
-/// outline comes from `cageOutline` in `design/puzzle/spec/`. Nothing here is
+/// outline comes from `cageEdges` in `design/puzzle/spec/`. Nothing here is
 /// pressable, so it is not a touch target and the 48px floor does not apply —
 /// which is why a real board cannot be shrunk into this slot.
 class ReferenceDiagramView extends StatelessWidget {
@@ -148,7 +148,7 @@ class ReferenceDiagramView extends StatelessWidget {
       for (final int index in diagram.cage)
         GridCell(index ~/ diagram.size, index % diagram.size),
     };
-    final List<CageEdges> outline = cageOutline(cage);
+    final List<CageEdges> outline = cageEdges(cage);
     final GridCell? anchor = cage.isEmpty ? null : cageLabelAnchor(cage);
 
     return ExcludeSemantics(
@@ -219,7 +219,8 @@ class _DiagramCell extends StatelessWidget {
     // board the player is not looking at.
     final PuzzleCellVisual visual = resolvePuzzleCell(_kind, selected: false);
     final String? label = diagram.labels[index];
-    final CageEdges? outline = edges;
+    final CageEdges? boundary = edges;
+    final CageOutline? cage = diagram.cageOutline;
     final String? cageLabel = diagram.cageLabel;
 
     return DecoratedBox(
@@ -231,14 +232,12 @@ class _DiagramCell extends StatelessWidget {
         ),
       ),
       child: CustomPaint(
-        foregroundPainter: outline == null
+        // The diagram's own format, stepped down to the hairline it rules its
+        // cells with — the picture teaches the board the player is looking at,
+        // so a KenKen rule shows KenKen's dash and a Killer rule shows the dots.
+        foregroundPainter: boundary == null || cage == null
             ? null
-            : CageEdgePainter(
-                edges: outline,
-                dash: DashSpec.kenKenCage,
-                color: BrandColors.pink,
-                strokeWidth: BrandShape.borderWidthHairline,
-              ),
+            : CageEdgePainter(edges: boundary, outline: cage.miniature),
         child: Stack(
           children: <Widget>[
             if (label != null)
