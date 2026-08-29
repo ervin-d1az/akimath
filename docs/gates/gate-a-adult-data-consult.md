@@ -50,14 +50,18 @@ its own ADR, a sibling change landing alongside this brief.
 
 **Read the next paragraph before anything else, because the rest of this document turns on it.**
 
-**"Adults only" is a term of service and an account gate. It is not a technical impossibility, and
-no version of this app can make it one.**
+**"Adults only" is a term of service and an account gate, and it cannot be made a technical
+impossibility.** An age assurance built on a date somebody types can always be lied to; that is true
+of any version of this app, including versions nobody has built yet. Separately, and as a fact about
+the code rather than about what is possible, **nothing gates play today.**
 
 - *Verified, 2026-08-29, by reading the code.* The age gate
   (`app/lib/features/auth/policy/age_gate.dart`) has exactly two destinations and stands in front of
   exactly **one** door: the form that creates an account. Its only caller is the account screen
-  inside the profile tab. **Nothing gates play.** A device that never opens an account never meets
-  the gate, never transmits anything, and plays indefinitely against a file bundled inside the app.
+  inside the profile tab. A device that never opens an account never meets the gate, never transmits
+  anything, and plays indefinitely against a file bundled inside the app. *Whether a future version
+  puts a gate in front of first run is a product decision nobody has taken; it would change how easy
+  minor use is and it would not change the paragraph above.*
 - So a person below the age line can still install AkiMath and use it. What they cannot do is create
   an account — and therefore cannot cause a single row to be written on our side, because the
   account is the only thing that reaches the server at all.
@@ -181,10 +185,14 @@ Four things worth naming, because they narrow the questions:
 - **IP address and user-agent are recorded and cannot be switched off.** The setting is not
   configurable in the managed service, and every session row carries both; all seven sessions in the
   database on 2026-08-26 had both populated. This is written up in `docs/adr/0002`. The old brief
-  could point to a structural mitigation — a device below the threshold never obtained a session, so
-  no minor's IP was ever recorded — and **that mitigation survives the decision and gets stronger**,
-  because the threshold rises. What it never covered is the adult, and the adult is now every user
-  we have. **This is the one datum here with no retention period of ours**: Q-A7's two figures cover
+  could point to a structural mitigation: a device below the threshold never obtained a session, so
+  no minor's IP was recorded. **The decision improves that mitigation and then runs out of people
+  for it to protect.** It improves it because the threshold rises — *verified 2026-08-29*, a 13-to-17
+  device is routed to the account form today and its sessions do record an IP, and after the change
+  it will not be. And it runs out because **every session row that exists already belongs to an
+  adult**, so the mitigation has never once been the thing standing between a real row and a real
+  person. The population it protects is hypothetical; the population it never covered is everyone we
+  have. **This is the one datum here with no retention period of ours**: Q-A7's two figures cover
   attempts and diagnosis events, and the retention job sweeps only our own tables. Whether these
   rows need a period, and whose job it is to set one, is Q-A7's third sub-question and it is
   entirely untouched by the adults-only decision.
@@ -243,8 +251,17 @@ from the database constraint that exists — `players.age_band`, frozen 2026-08-
 under_13 · 13_17 · adult
 ```
 
-Under adults-only, two of those three can never be written again by a device that respects the gate,
-and the set collapses toward a single meaningful distinction: eligible, or refused.
+Under adults-only, two of those three can never be written again, and the set collapses toward a
+single meaningful distinction: eligible, or refused.
+
+**Two of the three values go dead whether or not anybody narrows the constraint**, and that is worth
+stating because it means this question costs less to answer than the old brief said it did.
+*Verified 2026-08-29:* `age_band` is written by exactly one `INSERT`, on exactly one code path — the
+one that links a player to an account — and **nothing anywhere UPDATEs it**. A refused person never
+reaches that path, so `under_13` and `13_17` simply stop being reachable. The old brief warned that
+changing the set also means moving the live row; **that was wrong**, and it is corrected here rather
+than left to be discovered: the single live row is `adult`, which survives every version of the
+narrowing.
 
 **Three sub-questions, and the second is the one the old brief never had to ask:**
 
@@ -260,9 +277,9 @@ and the set collapses toward a single meaningful distinction: eligible, or refus
 > **Default encoded:** three bands, boundaries at 13 and 18, date discarded on the device.
 > **What changes:** a `CHECK` constraint in the database and one screen's options. It is deliberately
 > a `CHECK` rather than an enumerated type: replacing a `CHECK` is one forward-only statement, while
-> an enumerated value can never be removed once it exists. One live row uses `adult`
-> (*counted 2026-08-26*), so a change to the set also means moving that row — a cost, but a small and
-> knowable one.
+> an enumerated value can never be removed once it exists. **No live row has to move**, per the
+> paragraph above, so the whole cost of your answer here is one forward-only statement and one
+> screen's options.
 
 ---
 
@@ -339,7 +356,10 @@ everything referencing it. **It does not erase the identity-provider account** �
 the password hash and the account name survive a user asking us to delete their data, and they
 survive because identity lives in the provider's own schema and this service holds no credential
 that could remove it. That scope is written into the frozen contract rather than left implicit, and
-it is disclosed to the user in the erasure screen's own copy before they confirm.
+it is disclosed to the user **before they confirm** — *verified 2026-08-29*: the sentence sits in the
+confirmation copy under *"¿Borrar tus datos?"*, above the field where the player types the word that
+opens the destructive press, and it says in as many words that the address stays registered with
+whoever keeps the accounts.
 
 3. **Is a deletion that leaves the email address and the password hash standing a complete answer to
    a *cancelación* request**, given the user is told in advance that it is not?
@@ -358,8 +378,9 @@ it is disclosed to the user in the erasure screen's own copy before they confirm
 ### Q-A7 · Are 400 days and 30 days defensible for an adult's data, and where must the policy be written?
 
 *Verified 2026-08-29.* The system retains **exercise attempts for 400 days** and **diagnostic events
-for 30 days**, then deletes them automatically. Both figures live in exactly one module and a test
-keeps them there.
+for 30 days**, then deletes them automatically. Both figures live in exactly one module
+(`packages/server/src/retention.ts`) and a test beside it enumerates the source files to keep them
+there, so the number a page publishes and the number a job enforces cannot come apart.
 
 **The figures have not moved. Their justification has.** The 400 was chosen so that *a child*
 returning after a year still has their progress; it is now so that *a player* does. The 30 is a
@@ -449,7 +470,9 @@ inventory is unusually short and a template would describe collection we do not 
 ADR 0002 (2026-08-19) removed guest synchronisation outright, so there is no path by which an
 unlinked device reaches our server. That answered the *design* question and it has never answered
 the legal one. The adults-only decision does not answer it either — it closes the account door and
-leaves the front door open, because **no age check stands in front of play** (§1, verified).
+leaves the front door open, because **no age check stands in front of play today** (§1, verified).
+And it stays open in substance even if one is added later, because a typed date can be answered
+with a false one.
 
 So: a ten-year-old installs AkiMath, plays it every day, and generates a record of everything they
 have answered — on their own phone, in storage our software created, in a shape our software chose,
@@ -583,7 +606,7 @@ count, which is 2026-08-26 and carried forward.
 
 | Question | Becomes | In | Status |
 |---|---|---|---|
-| Q-A1 eligibility age | one named constant | the auth screens | **Shipped at the wrong value.** `AgeGate.consentAge = 13`, in one place; the adults-only change moves it to 18 |
+| Q-A1 eligibility age | one named constant | the auth screens | **Shipped at the wrong value, and it is live behaviour rather than copy.** `AgeGate.consentAge = 13`, in one place; a 13-to-17 device reaches the account form today and its sessions record an IP. The adults-only change moves the constant to 18 |
 | Q-A2 what is recorded about age | the `age_band` values, and whether a date may be stored | `f1-schema-freeze`, the auth screens | **Shipped and frozen.** A `CHECK` constraint with three values, one live row using `adult` |
 | Q-A4 assurance mechanism | the age-gate screen | the auth screens | **Shipped.** Neutral date entry, reduced to a band on the device, the date discarded |
 | Q-A5 platform age signal | where the eligibility answer comes from; possibly a dependency, which needs its own review | the auth screens, `f3-store-artifacts` | **Not started.** No platform age API is called |
@@ -635,8 +658,11 @@ What it does not touch, in the plainest terms available:
 - **The identity-provider account survives our erasure path.** A person who asks us to delete their
   data keeps an email address and a password hash at the provider. Adults have that right too.
 - **Every sign-in records an IP address and a user-agent, under no retention period we set.** We
-  cannot switch it off. The old brief could at least say no minor's IP was recorded; that mitigation
-  survives and it never covered the adults, who are now everybody.
+  cannot switch it off. The old brief could at least say no minor's IP was recorded — but every
+  session that has ever existed belongs to an adult, so that mitigation has never protected a real
+  row, and the decision hands it a smaller hypothetical population rather than solving anything.
+  **This one is not lighter after the decision. It is the same size and it is now a larger share of
+  what is left.**
 - **There is no *aviso de privacidad* and no *términos*.** Neither document exists. The app draws no
   row pointing at them, because a row to an empty page is a worse lie than an absent one.
 - **There is no public deletion page**, so the only erasure route requires installing the app.
