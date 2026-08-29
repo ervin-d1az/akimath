@@ -305,3 +305,33 @@ final List<LiteralPattern> storePatterns = <LiteralPattern>[
     r'(?<![A-Za-z0-9_$])SeriesCursorStore(?![A-Za-z0-9_$])',
   ),
 ];
+
+/// Anywhere a wire submission could be built, minus where it is declared.
+///
+/// **`api/` is out because that is the class itself**: the two constructor
+/// declarations in `api/sync.dart` match their own construction pattern, and a
+/// root that reported them would name the definition as a violation. Everything
+/// else under `app/lib/` is in, because the rule is about how many places
+/// decide what a journalled answer looks like on the wire, and that number is
+/// one wherever the file happens to sit.
+const List<ScanRoot> submissionBuildingRoots = <ScanRoot>[
+  ScanRoot(prefix: '', excluding: <String>['api/']),
+];
+
+/// Building an `AttemptSubmission`, by either door or by a generative
+/// constructor somebody makes public again.
+///
+/// Two patterns rather than one so the report says which form it found. The
+/// bare form should match nothing at all today — the generative constructor is
+/// private — and it is here so that undoing *that* is caught by the same gate
+/// as duplicating the mapping.
+final List<LiteralPattern> submissionConstructionPatterns = <LiteralPattern>[
+  LiteralPattern(
+    'AttemptSubmission(',
+    r'(?<![A-Za-z0-9_$])AttemptSubmission\s*\(',
+  ),
+  LiteralPattern(
+    'AttemptSubmission.for…(',
+    r'(?<![A-Za-z0-9_$])AttemptSubmission\s*\.\s*for[A-Za-z0-9_$]*\s*\(',
+  ),
+];

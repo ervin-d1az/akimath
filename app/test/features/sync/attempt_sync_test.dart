@@ -159,6 +159,27 @@ void main() {
       expect(sent.first.itemId, isNull);
     });
 
+    test('and every field of one, exactly as the wire takes it', () async {
+      // **The whole body, not a spot check.** This is the one assertion made
+      // on what actually left the device, so it is what stands between a
+      // journalled answer and a batch the server refuses — and a 400 is not a
+      // retry here, it is `journalAfter` dropping up to two hundred answers.
+      // Spot-checking two of six keys let the mapping be written twice without
+      // anything noticing: a field renamed, dropped or filled from the wrong
+      // side of the journal is invisible to `packRef?.packId`.
+      await journalOne();
+
+      await sync.flush('token');
+
+      expect(server.batches.single.single.toJson(), <String, Object?>{
+        'packRef': <String, Object?>{'packId': 'pk_1', 'index': 7},
+        'sessionId': 'sesión',
+        'answer': '13',
+        'clientTs': '2026-08-20T18:00:00.000Z',
+        'elapsedMs': 4000,
+      });
+    });
+
     test('and no verdict travels with it', () async {
       // The frozen schema has nowhere to put one, and the server regrades from
       // the same inputs anyway.

@@ -110,15 +110,15 @@ class AttemptSync {
     final List<JournalledAttempt> sending = List<JournalledAttempt>.of(journal);
     final SyncResult result = await (_submit ?? _overASocket)(
       accessToken: accessToken,
+      // **`toSubmission` and never a copy of it.** The journal's shape and the
+      // wire's are two things on purpose, and which field of one becomes which
+      // field of the other is the policy module's decision — written twice, it
+      // is a frozen-schema change that looks like one site and is two, and the
+      // assertion pinning "the answer never travels online" reads whichever
+      // copy it was written against. `one_way_to_build_a_submission_test.dart`
+      // is what keeps this from being re-inlined.
       attempts: <AttemptSubmission>[
-        for (final JournalledAttempt held in sending)
-          AttemptSubmission.forPackItem(
-            ref: PackRef(packId: held.packId, index: held.index),
-            sessionId: held.sessionId,
-            answer: held.answer,
-            at: held.at,
-            elapsed: held.elapsed,
-          ),
+        for (final JournalledAttempt held in sending) held.toSubmission(),
       ],
     );
 
