@@ -17,6 +17,7 @@
 /// disagree, the fixtures are right and both are wrong until they agree.
 library;
 
+import 'arithmetic_glyphs.dart';
 import 'item.dart';
 
 /// Every kind the frozen format declares, in the order `stimulus/index.ts`
@@ -92,26 +93,12 @@ Stimulus _arithmetic(Map<String, dynamic> payload, String itemId) {
   ]);
 }
 
-/// The frozen operator set, and the glyph each one is drawn with.
+/// The one seam where an operator's frozen *name* becomes the mark drawn.
 ///
-/// **They are not the same character for subtraction.** `ARITHMETIC_OPERATORS`
-/// froze the ASCII hyphen `-`; the compositor draws U+2212 MINUS SIGN, which is
-/// the typographically correct mark and the one every other operator in the
-/// pack already uses. Translating here is the alternative to either shipping a
-/// hyphen to a learner or reopening a frozen artifact over a code point.
-///
-/// A closed map rather than a pass-through: an operator the contract does not
-/// name must not reach `OperatorNode.of`, which throws `ArgumentError` — the
-/// wrong type for malformed content, and one nothing upstream catches.
-const Map<String, String> _operatorGlyphs = <String, String>{
-  '+': '+',
-  '-': '−',
-  '×': '×',
-  '÷': '÷',
-};
-
+/// The vocabulary itself is `arithmetic_glyphs.dart`, shared with the authored
+/// reader so the two cannot disagree about what a subtraction looks like.
 String _glyph(String operator, String itemId) {
-  final String? glyph = _operatorGlyphs[operator];
+  final String? glyph = glyphForOperator(operator);
   if (glyph == null) {
     throw FormatException(
       'item "$itemId" uses "$operator", which is not one of the four '

@@ -13,7 +13,7 @@
 library;
 
 import 'diagnosis.dart';
-import '../../design/math/spec/math_node.dart';
+import 'arithmetic_glyphs.dart';
 import 'canon.dart';
 import 'item.dart';
 import 'puzzle.dart';
@@ -278,18 +278,29 @@ class Pack {
     };
   }
 
-  /// An operator token, refused at parse if the compositor cannot draw it.
+  /// An operator token, refused at parse unless the vocabulary names its mark.
   ///
-  /// `OperatorNode.of` throws on a solidus — an inline fraction is not something
-  /// it declines to draw, it is something it cannot express. Without this the
-  /// throw happened in `build`, mid-round, when that item's turn came: past the
-  /// point where "content is validated where it is read" is true, and presented
-  /// to a child as a red screen.
+  /// **This asks [arithmeticGlyphs], not the compositor.** It used to ask
+  /// `OperatorNode.of`, which is the wrong question twice over: the compositor
+  /// draws whatever it is handed and declines only a solidus, so `⋅` — absent
+  /// from Darumadrop, and therefore painted from a fallback font into a box
+  /// measured for Darumadrop — passed, and so did an ASCII hyphen, which drew
+  /// a different mark from the U+2212 the same subtraction gets when it
+  /// arrives as a frozen `arithmetic` payload.
+  ///
+  /// Refused rather than translated: an authored prompt holds the glyph it
+  /// draws, so the asset and the screen say the same thing, and there is one
+  /// translation in the app rather than two.
+  ///
+  /// Refused *here* rather than in `build`, because that is where the throw
+  /// used to happen — mid-round, when the item's turn came, past the point
+  /// where "content is validated where it is read" is true.
   static PromptToken _operator(String glyph) {
-    try {
-      OperatorNode.of(glyph);
-    } on ArgumentError catch (error) {
-      throw FormatException('unusable operator "$glyph": ${error.message}');
+    if (!arithmeticGlyphs.contains(glyph)) {
+      throw FormatException(
+        '"$glyph" is not a mark an expression may draw; the vocabulary is '
+        '${arithmeticGlyphs.join(' ')}',
+      );
     }
     return PromptToken.operator(glyph);
   }
