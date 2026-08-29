@@ -504,7 +504,11 @@ the offline pack format and its OpenAPI half.
   (`npm run typecheck`, `npm test` in `packages/server`), `contract` (the same two in
   `packages/contract`, then `npm run emit`, `git add -A -- contract/` and
   `git diff --cached --exit-code -- contract/` — staged, because a bare `git diff` is blind to
-  an artifact the author never committed), `spec` and `gate`.
+  an artifact the author never committed), `core` (the same two in `packages/core`, then that same
+  staged byte-diff **twice** — over `golden/` after `npm run emit` and over `pack/` after
+  `npm run build:pack` — behind an `npm ci` in `packages/contract`, because core typechecks
+  *through* contract's sources and TypeScript resolves `zod` from their real path rather than
+  through the `file:` symlink), `spec` and `gate`. **`gate` needs all nine**, `core` among them.
   `protected-paths` and `integration` landed with the schema: the first refuses an unattended edit
   to `packages/server/migrations/**` or `schema.sql` unless a pull request carries the
   `allow-protected-edit` label, and the second runs the database suites and the snapshot diff
