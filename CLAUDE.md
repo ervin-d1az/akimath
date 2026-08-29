@@ -303,14 +303,16 @@ the offline pack format and its OpenAPI half.
   `migrations/0001_initial.sql` (seven tables, two roles, and the grants that make `attempts`
   append-only) plus seven forward-only ALTERs, the forward-only runner split pure/adapter as `src/migrate.ts` versus
   `src/adapters/migrate-runner.ts`, `src/retention.ts` (PURE — the only home of the 400-day and
-  30-day figures) and the committed `schema.sql` snapshot. **454 tests — 325 green and 129 skipped
-  for want of a Postgres — 97.00% mutation score with those 129 skipped, 0 clones.** That figure
+  30-day figures) and the committed `schema.sql` snapshot. **466 tests — 331 green and 135 skipped
+  for want of a Postgres — 97.00% mutation score with those 135 skipped, 0 clones.** That figure
   is stable — four runs over one unchanged tree agreed file by file, unlike `packages/contract`
   below — and it is down from the 98.92% previously recorded against a smaller `src/`.
   **The two are not
   straightforwardly comparable**: nothing records whether that one was taken against a database,
-  and the single biggest drag on this one is `packs.ts` at 44.00%, whose `issue-pack` and
-  `offline-packs` suites are both skipped here. The rating work itself is not the drop —
+  and the single biggest drag on this one is `packs.ts` at 48.15%, whose `issue-pack` and
+  `offline-packs` suites are both skipped here — it read 44.00% until `contentIdFor` landed with a
+  unit test that needs no Postgres, which is the whole reason that decision went into the pure
+  module rather than into `shipped-packs.ts`. The rating work itself is not the drop —
   `rating.ts` and `standing.ts` are 100%. Four runtime dependencies, each
   pinned exactly with its DEP-1 audit in `test/dependency-allowlist.test.ts`: `pg`, `hono` +
   `@hono/node-server` (which own the socket — Hono's *router* is deliberately unused, so
@@ -412,7 +414,25 @@ the offline pack format and its OpenAPI half.
   already ships** — eighty items across six families and thirty-five boards. Migration 0006 adds
   `content_id`: the row *names* the content rather than storing it, because the artifact is 158 KB
   and it is the same 158 KB for every player, which is `ARCHITECTURE.md` §4's manifest argument one
-  level up. `GET /packs/{packId}` rebuilds from that name plus the row's own window, so a re-fetch
+  level up. **The name pins the artifact's bytes**, and it did not until 2026-08-29: the column held
+  the bare `starter`, which resolves to whatever the build ships today, so editing an item inside
+  `packages/core/pack/starter.json` — the ordinary content act `npm run build:pack` exists to make
+  easy — silently re-pointed *every outstanding pack*. Within the thirty-day window a device
+  re-fetched, was handed today's item at index *i*, answered it correctly, and was graded against
+  the digest of the **old** item at index *i*: a right answer recorded `ok: false` in a table the
+  request path can neither UPDATE nor DELETE. Constructed rather than argued about, from a two-item
+  reorder, in `test/pack-content-is-pinned.test.ts`. `contentIdFor` in `src/packs.ts` now spells the
+  id `starter@<sha256 of the file>`, so a moved artifact is the fact migration 0006's own comment
+  already anticipated — *an unknown name is a 404 from a server that no longer ships it* — and
+  `getOfflinePack` needed **no new branch and no migration**, because a bare `text` column can hold
+  a longer string. The client reads that 404 as *ask for a new pack* (`pack_refresh.dart`), so the
+  degradation is a fresh pack rather than a stranded device, and an attempt already earned against
+  the body a device still holds syncs correctly — grading reads the digest and the salt off the row
+  and never touches content. The rating is told the difficulty is **unknown** rather than handed
+  whatever item now sits at that index. `readShippedPacks()` is keyed by that versioned id, which is
+  what a row holds; `POST /packs` is the one caller that starts from a name and asks for the current
+  version of one.
+  `GET /packs/{packId}` rebuilds from that id plus the row's own window, so a re-fetch
   is byte-identical and neither instant is digested. A copy shares the content's salt, and that is
   not a leak: the salt ships inside every pack and every player gets the same content. The
   generator that made twenty subtractions is **gone** — after 0005 both kinds were equally
@@ -481,7 +501,12 @@ the offline pack format and its OpenAPI half.
   watching `npm run emit`, not a log. The Flutter side needs nothing: `avoid_print` is active via
   `flutter_lints` and `app/lib` has zero prints **by rule**.
   **The database suites need a Postgres and skip without one** — set `TEST_DATABASE_URL` and they
-  run; leave it unset and 129 of the 454 report as skipped rather than passing quietly.
+  run; leave it unset and 135 of the 466 report as skipped rather than passing quietly. **At
+  vitest's default parallelism the run is flaky on a loaded machine** — 38 to 102 failures, every
+  one of them `Hook timed out in 10000ms` inside the `beforeEach` that calls `freshDatabase()`, and
+  never an assertion. It predates any one change: excluding the newest test file reproduces it.
+  `npm run test:db -- --maxWorkers=3` is green and quick, and CI's service container has not
+  reported it.
 - **The offline pack format, frozen.** `packages/contract` (`@akimath/contract`) holds the
   pack schema, the answer canonicalizer, the HMAC digest and the puzzle validators — all
   pure, with the emit script as the one adapter. `contract/` holds what it emits: the

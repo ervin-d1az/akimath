@@ -1,8 +1,9 @@
 import { templateRefOf } from "@akimath/core";
 import { describe, expect, it } from "vitest";
 
-import { readShippedPacks } from "../src/adapters/shipped-packs.js";
+import { shippedPackNamed } from "./support/shipped.js";
 import {
+  contentIdFor,
   issuedCopy,
   noSuchPackResponse,
   packExpiry,
@@ -10,7 +11,7 @@ import {
 } from "../src/packs.js";
 
 describe("a shipped pack issued as a copy of itself", () => {
-  const shipped = readShippedPacks().get("starter")!.pack;
+  const shipped = shippedPackNamed("starter").pack;
   const issuedAt = new Date("2026-11-01T00:00:00.000Z");
   const expiresAt = new Date("2026-12-01T00:00:00.000Z");
   const copy = () => issuedCopy({ content: shipped, issuedAt, expiresAt });
@@ -83,5 +84,28 @@ describe("a shipped pack issued as a copy of itself", () => {
 
   it("and the same inputs make the same copy", () => {
     expect(JSON.stringify(copy())).toBe(JSON.stringify(copy()));
+  });
+});
+
+describe("the id a row records for the content it is a copy of", () => {
+  const artifact = "a".repeat(64);
+  const edited = "b".repeat(64);
+
+  it("names the content and pins the bytes it was copied from", () => {
+    // A name alone is not an identity: `starter` resolves to whatever the build
+    // ships today, and an outstanding row would follow it wherever it went.
+    expect(contentIdFor("starter", artifact)).toBe(`starter@${artifact}`);
+  });
+
+  it("so editing the artifact under one name makes two ids", () => {
+    // The whole point. Two ids means the stale one resolves to nothing, and a
+    // pack this build can no longer describe is the 404 it already answers.
+    expect(contentIdFor("starter", artifact)).not.toBe(contentIdFor("starter", edited));
+  });
+
+  it("and two names over identical bytes are still two ids", () => {
+    // Which content a row is a copy of stays a fact about the row, so a second
+    // shipped pack that happened to be byte-identical is not silently the first.
+    expect(contentIdFor("starter", artifact)).not.toBe(contentIdFor("refresher", artifact));
   });
 });

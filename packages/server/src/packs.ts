@@ -45,6 +45,33 @@ export function packExpiry(issuedAt: Date): Date {
   return new Date(issuedAt.getTime() + PACK_LIFETIME_MS);
 }
 
+/**
+ * What `offline_packs.content_id` records: a name **and** the bytes it named.
+ *
+ * **A name on its own is not an identity.** The column used to hold `starter`,
+ * which resolves to whatever the build ships today — so editing an item inside
+ * `packages/core/pack/starter.json`, the ordinary content act `npm run
+ * build:pack` exists to make easy, re-pointed every outstanding row. A device
+ * re-fetching within the thirty-day window got today's item at index *i* and
+ * was graded against the digest of the *old* item at index *i*: a right answer
+ * recorded `ok: false` in a table the request path can neither UPDATE nor
+ * DELETE. Measured, not reasoned about — `test/pack-content-is-pinned.test.ts`
+ * constructs it from a two-item reorder.
+ *
+ * Pinning the bytes turns "the artifact changed" into the fact migration 0006
+ * already anticipated for this column — *an unknown name is a 404 from a server
+ * that no longer ships it* — so `getOfflinePack` needs no new branch and the
+ * client's own answer to a 404 is to ask for a new pack.
+ *
+ * `artifactDigest` is a digest of the file as it was read, so bytes that are
+ * equal parse equal: this can refuse a pack the content did not really change
+ * under, and can never accept one it did. A pack is worth thirty days and a
+ * fresh one costs one request, so that is the direction to be wrong in.
+ */
+export function contentIdFor(name: string, artifactDigest: string): string {
+  return `${name}@${artifactDigest}`;
+}
+
 /** The frozen `OfflinePack`, once the row has an id. */
 export function offlinePackResponse(packId: string, issued: IssuedPack): Response {
   return {

@@ -21,6 +21,25 @@ const SRC = fileURLToPath(new URL("../src", import.meta.url));
 const THE_DEFINITION = "adapters/request-database.ts";
 const THE_CALLER = "adapters/http-server.ts";
 
+/**
+ * The owner connection, which is the wider door and had no gate at all.
+ *
+ * `asOwner` runs work as the login role that **owns the schema**, with no
+ * transaction and no `SET LOCAL ROLE`. It is strictly more powerful than
+ * `inErasureRole`: the owner holds DELETE on every table, where `retention_job`
+ * holds it on the ones it was granted. So
+ * `database.asOwner((client) => deletePlayerForAccount(client, id))` from a
+ * handler would have erased a player through the request path while leaving
+ * **both** assertions below green — `inErasureRole` still named in two files,
+ * `DELETE FROM` still in one.
+ *
+ * It is off the interface handlers hold now, so that call no longer compiles.
+ * This is the second half, because a type is one edit from being widened and
+ * `vitest` does not typecheck: exactly one file under `src/` may say the name,
+ * and it is the one that defines it. There is no sanctioned caller.
+ */
+const THE_OWNER_DOOR = "adapters/request-database.ts";
+
 function sourcesUnder(directory: string, prefix = ""): readonly string[] {
   return readdirSync(directory).flatMap((entry) => {
     const path = join(directory, entry);
@@ -70,6 +89,10 @@ describe("there is one way to delete a player", () => {
     expect([...naming(/\binErasureRole\b/)].sort()).toEqual([THE_CALLER, THE_DEFINITION].sort());
   });
 
+  it("and the owner connection is named in exactly one: the file that defines it", () => {
+    expect([...naming(/\basOwner\b/)]).toEqual([THE_OWNER_DOOR]);
+  });
+
   it("the prose is stripped before the scan, and the stripping works", () => {
     // The control for `codeOf`. Without it the two assertions below pass for a
     // reason unrelated to the code they are about.
@@ -77,6 +100,10 @@ describe("there is one way to delete a player", () => {
     expect(codeOf("// DELETE FROM x\nconst a = 1;")).not.toMatch(/DELETE\s+FROM/i);
     expect(codeOf(' * no DELETE from anywhere\nconst a = 1;')).not.toMatch(/DELETE\s+FROM/i);
     expect(codeOf('client.query("DELETE FROM players");')).toMatch(/DELETE\s+FROM/i);
+    // The same control for the owner door, whose definition explains itself at
+    // length in prose that names the very thing the scan reads for.
+    expect(codeOf("/** why asOwner is not for handlers */\nconst a = 1;")).not.toMatch(/\basOwner\b/);
+    expect(codeOf("readonly asOwner: () => void;")).toMatch(/\basOwner\b/);
   });
 
   it("and nothing else in the request path writes a DELETE", () => {
