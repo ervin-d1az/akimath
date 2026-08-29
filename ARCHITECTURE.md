@@ -18,6 +18,17 @@ judgment on the open questions in §11.
 
 ## 1 · The decision that gated the rest: one repo, not two
 
+> **AMENDED 2026-08-29 — read [ADR 0004](docs/adr/0004-the-game-is-for-adults.md) first.** The
+> clarification below is reversed: **AkiMath is for adults only**, and *"children can play it too"*
+> is no longer the product's intent. `players.age_band` stops routing between two populations and
+> starts refusing, and *"governed by its youngest member"* is no longer the ground the
+> no-data-collecting-dependency rule stands on — 0004 §*Consequences* 4 puts that question to a
+> human rather than answering it. **§11 decision #1 is untouched**: it is about markets, not
+> audience, and the two are merged only in `CLAUDE.md`'s wording. What 0004 does **not** change:
+> adults have data-protection rights, so the privacy notice, the deletion path and the retention
+> figures all survive. The text below is left verbatim as the record of what was decided on
+> 2026-08-17.
+>
 > **Audience, clarified 2026-08-17.** The product is for **adults**, and children can play it too.
 > Every constraint in this document that exists "because children" still holds without exception — a
 > mixed audience is governed by its youngest member — but the product is **not child-directed**, and
