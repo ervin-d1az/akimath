@@ -21,7 +21,7 @@ import 'support/launch.dart';
 /// than a defect.
 ///
 /// **It asks for a device past the first run, and a cleared one.** This suite is
-/// about the door, not the onboarding — and `TU CUENTA` offering *"Crear
+/// about the door, not the onboarding — and the profile offering *"Crear
 /// cuenta"* is a claim about a device holding no session and no player id, which
 /// `launchOnTheHome` establishes rather than inherits.
 void main() {
@@ -34,7 +34,14 @@ void main() {
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
 
-    expect(find.text('TU CUENTA'), findsOneWidget);
+    // **The door, not a heading.** This read `expect(find.text('TU CUENTA'),
+    // findsOneWidget)` and no screen in `lib/` has ever drawn those words since
+    // `Perfil` absorbed `Avance` and the account section lost its eyebrow — so
+    // this case could not pass, and nothing said so because `flutter test` does
+    // not reach `integration_test/`. What the line was for is the claim that a
+    // device holding no session is offered a way to make an account, and the
+    // door below is that claim.
+    expect(find.text('Crear cuenta'), findsOneWidget);
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
 
