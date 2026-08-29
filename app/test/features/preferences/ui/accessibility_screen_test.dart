@@ -33,7 +33,7 @@ Future<SettingsStore<AccessibilitySettings>> pump(
 }
 
 void main() {
-  group('4.5 Accesibilidad', () {
+  group('Accesibilidad', () {
     testWidgets('has the header the design gives it, and a way back',
         (WidgetTester tester) async {
       int backs = 0;

@@ -29,7 +29,7 @@ void main() {
     });
 
     test('and no answer at all is loading, which is not a MeResult', () {
-      // `4.11 Cargando` is the absence of a result, so it cannot come from the
+      // `Cargando` is the absence of a result, so it cannot come from the
       // union — which is exactly why this mapping is a function and not a
       // `switch` written inline on a screen.
       expect(accountStateFor(null), AccountState.loading);

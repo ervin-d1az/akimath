@@ -17,10 +17,10 @@ enum StreakNotice {
   /// The home, directly.
   none,
 
-  /// `4.12 Racha en riesgo`.
+  /// `Racha en riesgo`.
   atRisk,
 
-  /// `4.13 Racha perdida`.
+  /// `Racha perdida`.
   lost,
 }
 

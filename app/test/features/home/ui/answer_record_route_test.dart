@@ -233,7 +233,7 @@ void main() {
   });
 
   group('the teaching item stays out of the figures', () {
-    testWidgets('solving 0.3 Primer reto writes nothing to the record',
+    testWidgets('solving Primer reto writes nothing to the record',
         (WidgetTester tester) async {
       // **The device's own store, not an injected one.** The rule is that
       // nothing reaches a recorder from here at all, so the thing to assert is

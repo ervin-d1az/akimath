@@ -11,7 +11,7 @@ import 'settings_choice_row.dart';
 import 'settings_detail_scaffold.dart';
 import 'settings_toggle_row.dart';
 
-/// `4.5 Accesibilidad` — the text size, two switches, and the pair of marks.
+/// `Accesibilidad` — the text size, two switches, and the pair of marks.
 ///
 /// **The colour-blind card has no switch, and that is the design read rather
 /// than a shortcut.** `4.5` draws one, on, beside its own note that the mode

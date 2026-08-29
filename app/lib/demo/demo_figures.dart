@@ -13,7 +13,7 @@ import '../design/widgets/spec/mastery_level.dart';
 /// day a real figure arrives its caller stops reading this and the constant
 /// goes.
 ///
-/// **Four of them went that way.** `4.1 Perfil` used to print `RATING 1 248`,
+/// **Four of them went that way.** `Perfil` used to print `RATING 1 248`,
 /// `+ 36 esta semana`, `78 % ACIERTOS` and `6,8 s PROMEDIO` **beside a real
 /// `0 RETOS` and `RACHA 0`** — invented figures contradicting real ones on the
 /// same screen. Accuracy and mean time now come from the record
@@ -27,7 +27,7 @@ import '../design/widgets/spec/mastery_level.dart';
 /// Values are taken from the design documents so the screens match what was
 /// drawn, rather than from anyone's imagination.
 abstract final class DemoFigures {
-  /// `0.5 Calibración` and `1.3 Guardar tu avance` each draw `1 248`.
+  /// `Calibración` and `Guardar tu avance` each draw `1 248`.
   ///
   /// **Named for its readers, because `4.1` stopped being one.** Rating never
   /// runs in Dart, and the server's own answer is a rating *per skill* — so a

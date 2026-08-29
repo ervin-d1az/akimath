@@ -9,7 +9,7 @@ import 'notifications_screen.dart';
 import 'settings_detail_routes.dart';
 import 'sound_screen.dart';
 
-/// `4.2 Ajustes` — the settings root, pushed from `Perfil`'s gear.
+/// `Ajustes` — the settings root, pushed from `Perfil`'s gear.
 ///
 /// **Pushed, not rooted.** Declared rule 1 names the bar's homes as *inicio,
 /// mapa, progreso y perfil*; Ajustes is not one, and the group badge over

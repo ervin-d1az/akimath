@@ -26,7 +26,7 @@ SkillMasteredScreen mastered({
 );
 
 void main() {
-  group('4.14 Habilidad dominada', () {
+  group('Habilidad dominada', () {
     testWidgets('names the skill in the headline and in the card', (
       WidgetTester tester,
     ) async {

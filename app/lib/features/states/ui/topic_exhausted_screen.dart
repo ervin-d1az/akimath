@@ -9,7 +9,7 @@ import '../../../design/widgets/pressable_surface.dart';
 import '../policy/mastery_copy.dart';
 import '../policy/topic_suggestion.dart';
 
-/// `4.15 Se acabó el tema por hoy` — today's items for one skill are spent.
+/// `Se acabó el tema por hoy` — today's items for one skill are spent.
 ///
 /// **Nothing routes to this screen.** Running out needs a per-skill daily
 /// allowance, and there is none: a series is five items taken in pack order by

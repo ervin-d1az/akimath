@@ -26,7 +26,7 @@ void main() {
     });
   });
 
-  group('4.6 SoundSettings', () {
+  group('SoundSettings', () {
     test('the defaults are the state the design draws', () {
       const SoundSettings drawn = SoundSettings.defaults;
 

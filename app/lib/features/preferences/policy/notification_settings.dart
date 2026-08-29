@@ -37,7 +37,7 @@ ReminderTime? reminderTimeNamed(String label) {
   return null;
 }
 
-/// What `4.4 Notificaciones` holds.
+/// What `Notificaciones` holds.
 ///
 /// **PURE** — four values and no IO. The store beside it decides where they
 /// live; this decides what they are.

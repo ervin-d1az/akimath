@@ -2,7 +2,7 @@ import 'package:meta/meta.dart';
 
 import '../../../design/math/spec/es_mx_number.dart';
 
-/// What `4.9 Sin conexión` can say about the pack already on the device.
+/// What `Sin conexión` can say about the pack already on the device.
 ///
 /// **PURE** — two counts in, words out. No widget, no socket, no clock.
 ///

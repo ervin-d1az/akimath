@@ -19,11 +19,11 @@ typedef _BannerAction = ({String label, VoidCallback press});
 /// screen that grows a branch each time and never grows the one nobody
 /// remembers.
 ///
-/// `4.11 Cargando` is **skeletons and no spinner**. The plan says
+/// `Cargando` is **skeletons and no spinner**. The plan says
 /// *"esqueletos, sin ruedita"* and forbids repurposing `LoadingDots`;
 /// `test/design/no_spinner_test.dart` keeps that true.
 ///
-/// `4.9 Sin conexión` is a **notice**, not an error — yellow, not coral:
+/// `Sin conexión` is a **notice**, not an error — yellow, not coral:
 /// *"Sin conexión no es un error del usuario: va en amarillo."*
 ///
 /// **A server error opens `4.10`, and offline does not open `4.9`.** The two
@@ -186,7 +186,7 @@ extension on AccountStateView {
   }
 }
 
-/// `4.11 Cargando` — content-shaped placeholders, never a spinner.
+/// `Cargando` — content-shaped placeholders, never a spinner.
 ///
 /// A skeleton says *"something this shape is coming"*; a spinner says
 /// *"wait"* and nothing else. The shapes here are the address and the line

@@ -27,7 +27,7 @@ Future<SettingsStore<SoundSettings>> pump(
 }
 
 void main() {
-  group('4.6 Sonido y vibración', () {
+  group('Sonido y vibración', () {
     testWidgets('has the header the design gives it, and a way back',
         (WidgetTester tester) async {
       int backs = 0;

@@ -11,7 +11,7 @@ import '../../../design/widgets/spec/keypad_layout.dart';
 import '../policy/credential_rules.dart';
 import '../policy/digit_entry.dart';
 
-/// `1.3 Verificar correo`.
+/// `Verificar correo`.
 ///
 /// **The code is typed on the 3×4 pad** (D14), never on the system keyboard.
 ///

@@ -31,7 +31,7 @@ void main() {
     });
   });
 
-  group('4.5 AccessibilitySettings', () {
+  group('AccessibilitySettings', () {
     test('the defaults are the state the design draws', () {
       const AccessibilitySettings drawn = AccessibilitySettings.defaults;
 

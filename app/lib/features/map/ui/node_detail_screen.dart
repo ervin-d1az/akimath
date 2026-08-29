@@ -12,7 +12,7 @@ import '../policy/skill_copy.dart';
 import '../policy/skill_map.dart';
 import 'mastery_skin.dart';
 
-/// `2.7 Detalle de nodo` — one topic, opened from the map.
+/// `Detalle de nodo` — one topic, opened from the map.
 ///
 /// **Two cards of the design are deliberately absent, and that is the whole
 /// judgement on this screen.**

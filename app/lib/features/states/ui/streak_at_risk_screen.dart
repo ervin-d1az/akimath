@@ -6,7 +6,7 @@ import '../../../design/widgets/centered_state_view.dart';
 import '../../../design/widgets/streak_badge.dart';
 import 'state_chip.dart';
 
-/// `4.12 Racha en riesgo` — late in the day with nothing solved.
+/// `Racha en riesgo` — late in the day with nothing solved.
 ///
 /// **Yellow, never coral.** A streak about to lapse is nobody's mistake, and
 /// the declared rules are explicit that coral is error and that losing ground

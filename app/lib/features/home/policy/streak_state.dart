@@ -38,10 +38,10 @@ enum StreakState {
   steady,
 
   /// A live run, nothing today, and the day far enough gone that saying so is
-  /// help rather than nagging. `4.12 Racha en riesgo`.
+  /// help rather than nagging. `Racha en riesgo`.
   atRisk,
 
-  /// The run ended before yesterday. `4.13 Racha perdida`.
+  /// The run ended before yesterday. `Racha perdida`.
   broken,
 }
 

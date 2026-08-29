@@ -7,7 +7,7 @@ import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/centered_state_view.dart';
 import 'state_chip.dart';
 
-/// `4.10 Error de servidor` — the server did not answer, and it is ours.
+/// `Error de servidor` — the server did not answer, and it is ours.
 ///
 /// **No Aki.** The design annotates this screen *"sin Aki: no le toca"*, and
 /// the declared rules say the same thing twice: she is absent while solving and

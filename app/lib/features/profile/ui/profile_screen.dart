@@ -16,7 +16,7 @@ import '../../states/ui/account_state_view.dart';
 import '../policy/history_view.dart';
 import '../policy/profile_readout.dart';
 
-/// `4.1 Perfil` — the identity, the headline pair, the tile row and the history
+/// `Perfil` — the identity, the headline pair, the tile row and the history
 /// the server reports, in the order the design draws them.
 ///
 /// **It absorbed `Avance`, which no document ever drew.** That root existed
@@ -91,8 +91,8 @@ class ProfileScreen extends StatelessWidget {
 
   /// The returning player's door, beside the new player's.
   ///
-  /// **Two errands, two controls.** The only way into `1.1 Iniciar sesión` used
-  /// to be a text link at the bottom of `1.2 Crear cuenta`, past the age gate —
+  /// **Two errands, two controls.** The only way into `Iniciar sesión` used
+  /// to be a text link at the bottom of `Crear cuenta`, past the age gate —
   /// so coming back to an account meant being asked when you were born. Drawn
   /// as the secondary weight because exactly one control on a screen is *the*
   /// action, and for a signed-out profile that is still making an account.
@@ -373,7 +373,7 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _history() {
     if (historyState == HistoryState.loading) {
-      // `4.11 Cargando` — content-shaped placeholders, never a spinner. A
+      // `Cargando` — content-shaped placeholders, never a spinner. A
       // skeleton says "something this shape is coming"; a spinner says "wait".
       return const Column(
         key: Key('history-loading'),

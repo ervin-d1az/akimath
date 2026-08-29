@@ -27,7 +27,7 @@ VolumeStep? volumeStepAtLevel(int level) {
   return null;
 }
 
-/// What `4.6 Sonido y vibración` holds.
+/// What `Sonido y vibración` holds.
 ///
 /// **PURE.** Nothing plays any of it: there is no audio engine in
 /// `pubspec.yaml`, and the keypad does not ask for a haptic. Both are DEP-1

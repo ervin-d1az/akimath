@@ -8,7 +8,7 @@ import '../../../design/widgets/candy_surface.dart';
 import '../../states/policy/account_state.dart';
 import '../policy/erasure.dart';
 
-/// `4.3 Cuenta` — the address, the two acts on it, and the one way out.
+/// `Cuenta` — the address, the two acts on it, and the one way out.
 ///
 /// **All four of the design's rows, and each one only where it can act.** The
 /// row is drawn when its caller hands a callback and is absent when it does

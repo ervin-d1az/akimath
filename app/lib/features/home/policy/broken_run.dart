@@ -8,7 +8,7 @@ library;
 /// The day number the run starting today is on.
 ///
 /// **A separate quantity from `streakLength`, and the sharpest decision in this
-/// feature.** `4.13 Racha perdida` draws `13 → 1` on a screen reached *before*
+/// feature.** `Racha perdida` draws `13 → 1` on a screen reached *before*
 /// the player has solved anything, where `streakLength` correctly returns 0.
 ///
 /// If the right-hand box read the streak, the screen would print `0` under a

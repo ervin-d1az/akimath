@@ -26,7 +26,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// asserted a fresh install it had never produced and silently skipped the half
 /// of itself that says so — a block of assertions testing nothing, in a project
 /// where the suite is the evidence. The same device also carried a day log five
-/// days stale, which stood `4.13 Racha perdida` between the launch and the home
+/// days stale, which stood `Racha perdida` between the launch and the home
 /// and failed four of the six suites at once.
 ///
 /// **Two facts vary, so this type carries two.** A general seeder keyed on
@@ -41,7 +41,7 @@ class DeviceState {
     required this.practised,
   });
 
-  /// Nothing has been kept. A launch opens `0.2 Bienvenida`.
+  /// Nothing has been kept. A launch opens `Bienvenida`.
   static const DeviceState freshInstall = DeviceState._(
     onboardingComplete: false,
     practised: DayLog.empty,

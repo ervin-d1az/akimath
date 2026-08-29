@@ -7,12 +7,12 @@ import '../../../api/me_result.dart';
 ///
 /// It exists because a screen that switches on `MeResult` inline ends up
 /// deciding copy in four places, and the fourth is the one nobody writes:
-/// `4.11 Cargando` is not a `MeResult` at all, it is the absence of one.
+/// `Cargando` is not a `MeResult` at all, it is the absence of one.
 enum AccountState {
   /// No account on this device yet. `4.8`'s shape: an invitation, not a lack.
   none,
 
-  /// A request is in flight. `4.11 Cargando`.
+  /// A request is in flight. `Cargando`.
   loading,
 
   /// Linked, and the server knows the player.
@@ -25,10 +25,10 @@ enum AccountState {
   /// The session was refused. The account is real; this device's token is not.
   rejected,
 
-  /// The server answered something unusable. `4.10 Error de servidor`.
+  /// The server answered something unusable. `Error de servidor`.
   serverError,
 
-  /// Nothing answered. `4.9 Sin conexión` — **not an error's colour.** The
+  /// Nothing answered. `Sin conexión` — **not an error's colour.** The
   /// plan is explicit: *"Sin conexión no es un error del usuario: va en
   /// amarillo."*
   offline,
@@ -88,7 +88,7 @@ enum AccountDoor {
   /// Ask again. Only where a second ask could genuinely answer differently.
   retry,
 
-  /// Open `4.10 Error de servidor`, which carries the retry itself.
+  /// Open `Error de servidor`, which carries the retry itself.
   detail,
 
   /// Leave this account. The way out of a conflict between the account signed

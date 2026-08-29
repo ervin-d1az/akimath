@@ -22,7 +22,7 @@ void main() {
     });
   });
 
-  group('4.4 NotificationSettings', () {
+  group('NotificationSettings', () {
     test('the defaults are the state the design draws', () {
       const NotificationSettings drawn = NotificationSettings.defaults;
 

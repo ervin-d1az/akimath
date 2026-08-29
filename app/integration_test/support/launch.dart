@@ -80,7 +80,7 @@ Future<void> launchOnAFreshInstall(WidgetTester tester) async {
   expect(
     find.byType(WelcomeScreen),
     findsOneWidget,
-    reason: 'a fresh install opens on 0.2 Bienvenida',
+    reason: 'a fresh install opens on Bienvenida',
   );
 
   await tester.tap(find.text('Resolver uno'));
@@ -104,7 +104,7 @@ Future<void> launchOnAFreshInstall(WidgetTester tester) async {
   expect(
     find.byType(CalibrationIntroScreen),
     findsOneWidget,
-    reason: '0.4 Calibración intro follows the teaching item',
+    reason: 'Calibración intro follows the teaching item',
   );
   await tester.tap(find.text('Saltar por ahora'));
 
@@ -112,7 +112,7 @@ Future<void> launchOnAFreshInstall(WidgetTester tester) async {
   expect(
     find.byType(SaveProgressScreen),
     findsOneWidget,
-    reason: '0.7 Guardar progreso is the last screen of the run',
+    reason: 'Guardar progreso is the last screen of the run',
   );
   await tester.tap(find.text('Después'));
 

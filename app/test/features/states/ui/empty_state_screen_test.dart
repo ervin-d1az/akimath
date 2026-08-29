@@ -14,7 +14,7 @@ Future<void> pump(WidgetTester tester, Widget screen) async {
 }
 
 void main() {
-  group('4.8 Vacío', () {
+  group('Vacío', () {
     testWidgets('says what is missing and what fills it', (
       WidgetTester tester,
     ) async {

@@ -6,7 +6,7 @@ import '../../../design/widgets/detail_header.dart';
 import '../policy/credential_rules.dart';
 import 'labelled_field.dart';
 
-/// `1.2 Crear cuenta`.
+/// `Crear cuenta`.
 ///
 /// **No `CÓMO TE LLAMO` field** — Q5, decided: a player has no name, `players`
 /// has no column for one, and `4.1` greets the address. The account is an

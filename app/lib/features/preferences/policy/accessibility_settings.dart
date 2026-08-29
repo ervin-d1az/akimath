@@ -28,7 +28,7 @@ TextSizeStep? textSizeStepAt(int index) =>
         ? null
         : TextSizeStep.values[index];
 
-/// What `4.5 Accesibilidad` holds.
+/// What `Accesibilidad` holds.
 ///
 /// **Three values, and the design's fourth control is deliberately not one.**
 /// *Modo daltonismo* is drawn as a switch whose own note says the mode *"no

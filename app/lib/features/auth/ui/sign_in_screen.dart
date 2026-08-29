@@ -8,7 +8,7 @@ import '../../shell/ui/inline_banner.dart';
 import '../policy/credential_rules.dart';
 import 'labelled_field.dart';
 
-/// `1.1 Iniciar sesión`.
+/// `Iniciar sesión`.
 ///
 /// **The account already exists, so nothing here creates one.** A session comes
 /// straight back and the only step left is the token — there is no code to ask

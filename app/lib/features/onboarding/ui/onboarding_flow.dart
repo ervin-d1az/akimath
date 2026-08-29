@@ -21,22 +21,22 @@ import 'welcome_screen.dart';
 /// in a flag; six do not, and a flag that selects between more than two things
 /// is the shape FUN-2 exists to prevent.
 enum OnboardingStep {
-  /// `0.2 Bienvenida`.
+  /// `Bienvenida`.
   welcome,
 
-  /// `0.3 Primer reto`.
+  /// `Primer reto`.
   teachingItem,
 
-  /// `0.4 Calibración intro`.
+  /// `Calibración intro`.
   calibrationIntro,
 
-  /// `0.5 Calibración reactivo`, repeated for every item in the plan.
+  /// `Calibración reactivo`, repeated for every item in the plan.
   probe,
 
-  /// `0.6 Calibración resultado`. Skipped when there is nothing to report.
+  /// `Calibración resultado`. Skipped when there is nothing to report.
   result,
 
-  /// `0.7 Guardar progreso`, the last screen of the run.
+  /// `Guardar progreso`, the last screen of the run.
   saveProgress,
 }
 

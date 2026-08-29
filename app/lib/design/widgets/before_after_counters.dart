@@ -6,7 +6,7 @@ import 'candy_surface.dart';
 
 /// Two numbers with a page turned between them.
 ///
-/// `4.13 Racha perdida` draws `13 › 1`. The **past is muted, flat and
+/// `Racha perdida` draws `13 › 1`. The **past is muted, flat and
 /// shadowless; the present is yellow, outlined and raised** — and that contrast
 /// is the whole argument of the screen, not a styling choice. Two identical
 /// boxes would draw two equal facts, and one of them is over.

@@ -9,7 +9,7 @@ import 'settings_choice_row.dart';
 import 'settings_detail_scaffold.dart';
 import 'settings_toggle_row.dart';
 
-/// `4.4 Notificaciones` — three switches and the hour the first one lands on.
+/// `Notificaciones` — three switches and the hour the first one lands on.
 ///
 /// **Nothing is sent, and the screen says so.** There is no notification plugin
 /// in `pubspec.yaml` and adding one is a DEP-1 decision rather than a session's,

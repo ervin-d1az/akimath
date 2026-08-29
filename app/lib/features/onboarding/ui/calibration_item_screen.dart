@@ -14,7 +14,7 @@ import '../../round/policy/answer_draft.dart';
 import '../../round/ui/stimulus/stimulus_view.dart';
 import '../policy/calibration.dart';
 
-/// `0.5 Calibración reactivo` — one probe item, and the strip that says how
+/// `Calibración reactivo` — one probe item, and the strip that says how
 /// many are left.
 ///
 /// **It is not the round, and composing `RoundScreen` would make it one.** That

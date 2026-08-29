@@ -28,7 +28,7 @@ Widget listScreen({
     );
 
 void main() {
-  group('4.2 Ajustes', () {
+  group('Ajustes', () {
     testWidgets('has a header and a way back', (WidgetTester tester) async {
       int backs = 0;
       await pump(tester, listScreen(onBack: () => backs++));

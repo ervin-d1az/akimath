@@ -13,11 +13,11 @@ enum AppTab { home, skills, progress, profile }
 
 /// The tab roots that exist in the app today.
 ///
-/// **Three, since the map got a door.** `05 MAPA` and `2.7 Detalle de nodo`
+/// **Three, since the map got a door.** `05 MAPA` and `Detalle de nodo`
 /// landed fully tested with no tab that opened either, which is the one way a
 /// screen can be finished and still not exist for a player. `Avance` went the
 /// other way earlier: no document in the design draws a progress screen, and
-/// every figure ours showed is a figure `4.1 Perfil` puts under the identity,
+/// every figure ours showed is a figure `Perfil` puts under the identity,
 /// so the profile absorbed it.
 ///
 /// **`AppTab.progress` stays in the enum on purpose.** Declared rule 1 names

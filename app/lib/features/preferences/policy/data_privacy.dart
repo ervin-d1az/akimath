@@ -1,4 +1,4 @@
-/// The two things `4.7 Datos y privacidad` offers, and what each one can say
+/// The two things `Datos y privacidad` offers, and what each one can say
 /// today.
 ///
 /// **PURE** — a closed set of copy, so the screen holds no sentences of its own
@@ -8,7 +8,7 @@
 /// of the contracted operations at all — there is no endpoint to call.
 /// Erasing *only* the history is not one either: `DELETE /me` removes the
 /// player and everything under it, which is a different act, already has its
-/// own screen, and is reached from `4.3 Cuenta`. So both cards keep the words
+/// own screen, and is reached from `Cuenta`. So both cards keep the words
 /// the design gives them and neither draws a button, because a control that
 /// produces nothing reads as broken rather than as unbuilt (DR-P2).
 enum DataRequest {

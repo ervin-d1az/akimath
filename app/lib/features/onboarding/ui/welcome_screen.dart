@@ -5,7 +5,7 @@ import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/speech_bubble.dart';
 
-/// `0.2 Bienvenida` — the first thing a new player sees.
+/// `Bienvenida` — the first thing a new player sees.
 ///
 /// **Aki belongs here.** The rule is that she never appears while the learner is
 /// *solving*; this is a greeting, not a solve. She is absent from `0.3` for the

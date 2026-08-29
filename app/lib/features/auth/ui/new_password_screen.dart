@@ -8,7 +8,7 @@ import '../../shell/ui/inline_banner.dart';
 import '../policy/credential_rules.dart';
 import 'labelled_field.dart';
 
-/// `1.5 Contraseña nueva`.
+/// `Contraseña nueva`.
 ///
 /// **`Guardar la contraseña`, not the design's `Guardar y entrar`.** Better
 /// Auth's `reset-password` answers with a status and no session, so the second

@@ -114,7 +114,7 @@ class HomeRoute extends StatefulWidget {
 
   /// Where the device's own record of answered items is kept.
   ///
-  /// **The practice round writes to it and `0.3 Primer reto` does not**, which
+  /// **The practice round writes to it and `Primer reto` does not**, which
   /// is the rule `AnswerRecordStore` states and this route is the only place
   /// that can keep: the teaching item is built by `FirstRunGate` with no round
   /// callbacks at all, so there is nothing to record into rather than a rule
@@ -505,7 +505,7 @@ class _HomeRouteState extends State<HomeRoute> {
     }
   }
 
-  /// Shows `4.9 Sin conexión` when the launch's request went nowhere.
+  /// Shows `Sin conexión` when the launch's request went nowhere.
   ///
   /// **The trigger is evidence, not a guess.** The only network fact this route
   /// ever learns is what its pack request came back as, and `PackAsk` decides

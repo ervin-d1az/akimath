@@ -7,7 +7,7 @@ import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/centered_state_view.dart';
 import '../policy/offline_bag.dart';
 
-/// `4.9 Sin conexión` — no signal, and a pack already in the bag.
+/// `Sin conexión` — no signal, and a pack already in the bag.
 ///
 /// **Yellow, never coral.** The declared rules are explicit: *"Sin conexión no
 /// es un error del usuario: va en amarillo."* Nothing here is anybody's

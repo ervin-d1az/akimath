@@ -17,7 +17,7 @@ import 'brand_button.dart';
 /// business on a server error either — an apology from the dog reads as the dog
 /// being at fault.
 ///
-/// Serves `4.8 Vacío`, `4.9 Sin conexión`, `4.10 Error de servidor`,
+/// Serves `Vacío`, `Sin conexión`, `Error de servidor`,
 /// `4.12`–`4.15`, and four onboarding screens.
 class CenteredStateView extends StatelessWidget {
   const CenteredStateView({
@@ -46,7 +46,7 @@ class CenteredStateView extends StatelessWidget {
   /// One element between Aki and the headline.
   ///
   /// **A slot rather than a caller's `Column`, because the ordering carries
-  /// meaning.** `4.12 Racha en riesgo` puts the run at stake *above* the
+  /// meaning.** `Racha en riesgo` puts the run at stake *above* the
   /// sentence about losing it: the figure is why the screen lands, and reading
   /// it after the headline turns it into a footnote. A caller assembling its
   /// own column above this widget would work and would put the decision
@@ -58,7 +58,7 @@ class CenteredStateView extends StatelessWidget {
 
   /// The way out. A state with no action is a dead end, so this is where the
   /// pressure to provide one lives; it is still optional, because
-  /// `4.11 Cargando` genuinely has nothing to offer yet.
+  /// `Cargando` genuinely has nothing to offer yet.
   final Widget? primary;
   final Widget? secondary;
 

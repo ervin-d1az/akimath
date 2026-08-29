@@ -3,7 +3,7 @@ import 'package:meta/meta.dart';
 import '../../../design/math/spec/es_mx_number.dart';
 import '../../states/policy/account_state.dart';
 
-/// What `4.1 Perfil` prints, decided before anything is drawn.
+/// What `Perfil` prints, decided before anything is drawn.
 ///
 /// **PURE** — figures in, strings out. No widget, no clock, no storage.
 ///

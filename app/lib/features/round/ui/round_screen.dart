@@ -125,7 +125,7 @@ class RoundScreen extends StatefulWidget {
   /// for.
   ///
   /// **Optional, and that is how the teaching item stays out of the figures.**
-  /// `0.3 Primer reto` is built without one, the same construction that keeps
+  /// `Primer reto` is built without one, the same construction that keeps
   /// it out of the day log: there is nothing to record into rather than a rule
   /// somebody has to remember.
   final void Function(Verdict verdict, Duration elapsed)? onGraded;

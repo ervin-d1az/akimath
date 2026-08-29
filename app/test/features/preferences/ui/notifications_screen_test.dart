@@ -28,7 +28,7 @@ Future<SettingsStore<NotificationSettings>> pump(
 }
 
 void main() {
-  group('4.4 Notificaciones', () {
+  group('Notificaciones', () {
     testWidgets('has the design\'s header and a way back',
         (WidgetTester tester) async {
       int backs = 0;

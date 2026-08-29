@@ -7,7 +7,7 @@ import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
 
-/// `0.7 Guardar progreso` — the invitation to make an account, after playing.
+/// `Guardar progreso` — the invitation to make an account, after playing.
 ///
 /// **It asks rather than gates.** Nothing before this screen has needed an
 /// account and nothing after it does either: unlinked play is entirely offline

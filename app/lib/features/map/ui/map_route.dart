@@ -84,7 +84,7 @@ class MapRoute extends StatefulWidget {
   final PractisedStepStore? practisedSteps;
 
   /// Where the device's own record of answered items is kept — the one source
-  /// of the accuracy and the mean time `4.1 Perfil` draws.
+  /// of the accuracy and the mean time `Perfil` draws.
   ///
   /// **A practice run is a run.** The home wires this for a series; the map did
   /// not, so five items answered from a topic moved neither figure and the
@@ -339,7 +339,7 @@ class _MapRouteState extends State<MapRoute> {
 
   /// A block the size of the graph that is coming.
   ///
-  /// **A skeleton and never a spinner** — `4.11 Cargando` is annotated
+  /// **A skeleton and never a spinner** — `Cargando` is annotated
   /// *esqueletos, sin ruedita*, and a block says what is coming and where.
   Widget _loading() => Padding(
         padding: const EdgeInsets.all(BrandShape.space4),
