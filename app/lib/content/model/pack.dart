@@ -3,13 +3,23 @@
 /// Pure: parsing is a function from a decoded map to a value, and expiry takes
 /// `now` as a parameter. Reading the file is `PackReader`'s job, beside this.
 ///
-/// **This is the app's offline fixture format, not the frozen contract pack.**
-/// `contract/pack.schema.json` carries an HMAC `digest` instead of a plaintext
-/// answer — that is the membership verifier `ARCHITECTURE.md` §4 describes, and
-/// reading it needs an HMAC implementation, which needs a dependency this
-/// project has not decided on. Until then a pack carries its answers in the
-/// clear, which is safe precisely because nothing ships: the pack is authored,
-/// bundled and played entirely on one device.
+/// **This reads the app's authored format; `issued_pack.dart` reads the frozen
+/// one, and the two produce this same type.** `contract/pack.schema.json`
+/// carries an HMAC `digest` instead of a plaintext answer — the membership
+/// verifier `ARCHITECTURE.md` §4 describes — and `content/answer_digest.dart`
+/// verifies it against `package:crypto`, whose DEP-1 audit is recorded in
+/// `app/test/architecture/dependency_allowlist_test.dart`. This file's own format
+/// carries its answers in the clear, which is safe precisely because it never
+/// travels: the bundled pack is authored, shipped in the binary and played on
+/// one device.
+///
+/// This doc said the opposite until 2026-08-29 — that reading the frozen
+/// format *"needs a dependency this project has not decided on"* — while the
+/// file beside it had been reading exactly that format for weeks (CMT-2).
+///
+/// The two formats spell an expression differently, and that is the seam
+/// `arithmetic_glyphs.dart` exists to hold: the frozen payload names an
+/// operator, the authored prompt names the glyph it draws.
 library;
 
 import 'diagnosis.dart';

@@ -7,10 +7,15 @@ import 'model/pack.dart';
 
 /// Reads a pack out of the app bundle.
 ///
-/// **The one adapter in `content/`.** It does the two things the model cannot:
-/// touches an `AssetBundle`, and decodes a string. Every decision about what a
-/// pack *is* lives in `Pack.fromJson`, which is pure — so this class has
-/// nothing to test beyond "it read the right file and handed the bytes on".
+/// **The one file in `content/` that performs IO.** It does the two things the
+/// model cannot: touches an `AssetBundle`, and decodes a string. Nothing else
+/// under `content/` reads a file, a socket, a clock or an environment. It is
+/// not the only file outside the `content/model/` pure root — `answer_digest`
+/// is out there too, and labels itself an adapter for its import alone, which
+/// is why the claim here is about IO and is checkable by grep. Every decision
+/// about what a pack *is* lives in `Pack.fromJson`, which is pure — so this
+/// class has nothing to test beyond "it read the right file and handed the
+/// bytes on".
 ///
 /// It makes **no network request**, and cannot: an `AssetBundle` serves what was
 /// compiled into the app. That is `req-offline-pack-play` satisfied by
