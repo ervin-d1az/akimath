@@ -12,6 +12,10 @@ the palette boundary is a red build (`no_color_literal_test.dart`), the shadow a
 builds, and where a rule is only a reviewer's read the file usually says so in its own doc comment.
 Four findings below, and it took real looking to get to four.
 
+> **Findings 1 and 4 are fixed** on `fix-a-cage-has-one-owner` (2026-08-29). They are kept below as
+> written, because the record of what was wrong is what makes the fix reviewable; each carries a
+> resolution note at its end. Findings 2 and 3 stand.
+
 **The single most expensive thing in the module is that a puzzle cage's appearance has no owner.**
 It is decided in four files across four directories — three of them named for something other than
 puzzles — and the file that was written to be the one place it is decided
@@ -80,6 +84,21 @@ The two costs compound, and the second explains the first: the spec and its call
 widgets take a `CageOutline` chosen by puzzle kind rather than naming a `DashSpec` and a stroke
 width each. `painting/` keeps `dash_spec.dart` and `dashed_border_painter.dart`, which are genuinely
 generic and have callers all over `features/`.
+
+**Resolved (2026-08-29), broadly as directed.** Both files moved under `design/puzzle/` as `spec/`
+and adapter, so the generic painting layer no longer imports the puzzle layer. `CageOutline` gained
+the colour and the stroke and became the one owner; `CageEdgePainter` takes an outline and names no
+appearance of its own. The pairing of a board's cages with their outline is one exhaustive switch,
+`cagePlanFor` in `features/puzzle/policy/cage_appearance.dart`, so a sixth caged format is a compile
+error rather than a borrowed dash. Two things the direction did not anticipate: `board_geometry`'s
+`cageOutline` **function** was renamed `cageEdges`, because one word for both the edge set and the
+appearance is how the two came to be decided in different directories; and `radius`/`inset` were
+**dropped** rather than moved — the per-edge painter
+`fix-cage-outline-is-the-boards-weight` introduced honours neither, so carrying them was this
+finding one size smaller. Their figures are quoted in the new file's doc comment.
+The defect was confirmed before the fix and after it: a `PuzzleScreen` holding a `KillerPuzzle`
+reported `6.0 on / 4.0 off, butt cap`, and now reports `2.0 on / 5.0 off, round cap`. Screenshots of
+both boards on an iPhone 17 settle that it reads as dots.
 
 ---
 
@@ -171,6 +190,10 @@ colour the board actually draws with and that test stays green — the gate read
 uses.
 
 **Direction.** Delete one of the two and point the test at the survivor.
+
+**Resolved (2026-08-29), as directed.** `hairline` is deleted and the test reads `gridHairline`.
+The cost was measured rather than inferred first: dropping `gridHairline` to the card rule's `0x29`
+left all 3337 tests green, and the same mutation now fails that test by name.
 
 ---
 
