@@ -19,11 +19,6 @@
 >
 > Nothing below has been re-verified since 2026-08-26, and nothing in it is legal advice.
 
-> **DO NOT SEND — 2026-08-29.** [ADR 0004](../adr/0004-the-game-is-for-adults.md) makes AkiMath
-> adults-only, which changes the question this brief asks. It narrows to a residual adult-data
-> consult rather than closing; 0004 §*Consequences* 2 says which questions survive. Rewriting this
-> document is a separate change and has not happened.
-
 **For:** a lawyer specialised in personal-data protection in Mexico, with children's data experience.
 **From:** Ervin Diaz, AkiMath.
 **Opened:** 2026-08-16. **Corrected against the running system:** 2026-08-26 — §7 says what changed
