@@ -4,6 +4,17 @@ Written for the recommended answers. Where a section says a human decides, the r
 reasoning and not a decision, and D3 in particular is written knowing that one of its three options
 would make half of this plan wrong on purpose.
 
+> **AMENDED 2026-08-29 — D1 and D2 are overtaken, and D3 is answered.** The column survives and is
+> **not collapsed**: ADR 0004's amendment §3 leaves the `CHECK` naming all three bands, so D1's
+> conclusion holds by a different route and D2's question — whether `ageBand` stays a required
+> field over a one-member enum — does not arise, because the enum is not narrowing. D2's answer (a)
+> is nonetheless what ships: the device still declares and the row still records what the player
+> answered. **D3 is answered as option 1**, refuse at link time. D4 through D8 are untouched, and
+> D4's oasdiff verdict is now unexercised rather than wrong — there is no narrowing to classify.
+> Nothing below is rewritten. This change exists to stop a repository arguing from a premise that
+> died, and quietly editing a losing recommendation into a winning one is the same failure in the
+> other direction.
+
 ## D1 — The column survives, collapsed to one value
 
 Two coherent answers, and the weaker one is more tempting than it looks.

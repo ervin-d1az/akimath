@@ -340,6 +340,17 @@ available.
 
 ## What changes
 
+> **AMENDED 2026-08-29 — the schema and contract half of this list is overruled.** ADR 0004's
+> amendment §3 leaves the `age_band` `CHECK` exactly as it is: no migration `0009`, no collapse of
+> `AGE_BANDS`, no re-emitted `contract/openapi.json`, and neither label on the pull request. The
+> reason is the one this proposal's own impact map measured — one `INSERT` writes the band, nothing
+> `UPDATE`s it, and under Reading A a refused minor never links, so `under_13` and `13_17` go dead
+> by construction — plus one this proposal did not weigh: narrowing the set would delete the only
+> vocabulary a recorded refusal could ever use, which is still an open question. **The rest of the
+> list stands**, and section 2's de-duplication of `link.ts`:23 never depended on the narrowing.
+> The costing below is left verbatim; a recommendation that lost is still the record of what it
+> would have cost.
+
 - **`0009_the_only_band_is_adult.sql`** — one forward-only migration replacing the CHECK. No
   backfill, no data migration, no edit to `0001`.
 - **`AGE_BANDS` collapses to `["adult"]`** in `packages/contract`, and `contract/openapi.json` is
