@@ -220,7 +220,7 @@ answer time lets it request hard and answer easy.
 `{itemId, prompt: PromptToken[], keypad}`. `templateId`, `templateVersion`,
 and `seed` never appear in the response. The client answers with `itemId`.
 (`options` was listed here until 2026-08-17 and contradicted this section's own
-resolution — a field offering a child a set of answers to pick from is a
+resolution — a field offering a player a set of answers to pick from is a
 different product. `contract/openapi.json` now says so, and a test sweeps the
 emitted document for all four names.)
 
@@ -266,7 +266,7 @@ invariant true by construction rather than by discipline.
   there is none — `plugin_configs` offers only `magicLink`, `organization` and
   `phoneNumber`, all false, with no email-OTP plugin at all. **Turning magic-link
   on reopens it** while the version is below 1.6.22; see ADR 0002's amendment. `advanced.ipAddress.disableIpTracking` is **not exposed** by the managed
-  service, which is why ADR 0002 keeps children off it altogether rather than
+  service, which is why ADR 0002 keeps minors off it altogether rather than
   trusting a setting that does not exist.
 - **`pg` over TCP, not the Neon serverless driver.** Neon documents TCP for
   long-lived processes, and the HTTP driver cannot run the design's central
@@ -279,7 +279,9 @@ invariant true by construction rather than by discipline.
   used to say *"Better Auth's `anonymous()` only supplies a session"*; the provider
   chosen since, **Neon Auth**, does not expose that plugin, cannot turn off the IP
   and user-agent it records on every session, and runs a version inside
-  GHSA-qq9h-g4jm-xgf3's range. So a child's device gets no session at all: the
+  GHSA-qq9h-g4jm-xgf3's range. So a minor's device gets no session at all — under
+  ADR 0004 that now covers every minor rather than only under-13s, and by refusal
+  rather than by routing, which widens the protection without changing it. The
   client mints `player_id` as a UUIDv7 on first launch and plays entirely offline,
   and **zero rows until first sync** becomes zero rows for as long as nobody links.
   Linking is an adult's act and the first server contact. It is **not**
@@ -291,7 +293,15 @@ invariant true by construction rather than by discipline.
   `players` row is created and `age_band` is NOT NULL with no default. It is the
   device's declaration and never read off the account: linking is an adult's act, but
   the player being linked need not be an adult, and taking `adult` from the credential
-  would route a child out of the protections `age_band` exists to select.
+  would make the row record the credential rather than the answer.
+
+  > **AMENDED 2026-08-29 ([ADR 0004](docs/adr/0004-the-game-is-for-adults.md)).** That last clause
+  > read *"would route a child out of the protections `age_band` exists to select"*, and after 0004
+  > nothing routes — there is one population and the gate refuses. **The conclusion is unchanged
+  > and stronger**: the band must still come from the device's own answer rather than off the
+  > credential, because it is now the *only* record that the question was asked at all. 0004's
+  > amendment §3 also leaves the frozen `CHECK` naming all three bands, so the column keeps a
+  > vocabulary it will never issue again.
 
   **The session travels as `Authorization: Bearer <jwt>`**, and the contract says so —
   `securitySchemes.session`, declared once at the document root so an operation cannot
@@ -319,7 +329,7 @@ invariant true by construction rather than by discipline.
   still there.
 - **Puzzle autosave: the client saves, the server writes once.** The in-progress
   board lives locally, one `POST` on completion. Cross-device resume is lost; v1
-  is one device per child.
+  is one device per player.
 
 ---
 
@@ -353,7 +363,7 @@ multi-agent work. The two are the same answer.
 **SwarmForge's constitution is a prompt, not an access control list.** It is
 prepended to context. Nothing stops an agent from editing a compliance manifest,
 `PrivacyInfo.xcprivacy`, a migration, or `contract/openapi.json`. With agents
-writing auth and minors' data against a `CLAUDE.md`, that is not a quality risk —
+writing auth and personal data against a `CLAUDE.md`, that is not a quality risk —
 it is the route to a data incident.
 
 Enforcement has to live where agents cannot reach it:
@@ -482,9 +492,9 @@ the outline on. Second: week 8 with nothing playable on the phone.
 **R2 · Silent drift between TS grading and Dart grading.** `draft.md` claims "zero
 equivalence logic in Dart" and that is false: per-item hashing forces porting
 `Canon`, `projectForSpec`, HMAC, ten-plus rejection rules, and `CHAR_MAP`. When it
-drifts, a child sees "incorrecto" offline and "correcto" on sync — with no
+drifts, a player sees "incorrecto" offline and "correcto" on sync — with no
 third-party telemetry to catch it and no broken build to announce it. It is the
-worst bug the system can have: it punishes a child for a parsing bug.
+worst bug the system can have: it punishes a player for a parsing bug.
 *Early signal:* `contract/fixtures/` does not exist, or exists without **rejection**
 rows (`""`, `"1/0"`, `"x+1"`, U+0660, U+2212, ZWSP, combining marks). Without those
 the fixture only tests one direction.
@@ -495,7 +505,10 @@ verified uniqueness × diagnostic copy in es-MX. It is the one body of work that
 *Early signal:* F1 ends with any map node under three templates; or the uniqueness
 rule library has under 20 rules.
 
-**R4 · Minors compliance arrives after the schema is frozen.** Three concrete
+**R4 · Compliance arrives after the schema is frozen.** *Titled "Minors compliance" until
+2026-08-29; [ADR 0004](docs/adr/0004-the-game-is-for-adults.md) made the product adults-only, which
+removes the amended-COPPA driver named below and removes none of the three items — an adult is owed
+a deletion path, a truthful deletion test and a written retention policy exactly as much.* Three concrete
 items in no current plan: the **web deletion URL** Play demands; that Better Auth
 keeps the hash in `account` and the email in `verification`, so the proposed
 deletion test would go green over data still sitting there; and that amended COPPA
@@ -520,7 +533,7 @@ Answered 2026-08-14. Each one closes a branch the earlier sections left open.
 | 2 | Account in the first playable build | **No.** The app plays against a JSON pack in `assets/`: no network, no account, no Neon. The server later replaces the pack source without changing the client model. |
 | 3 | Infrastructure spend | **Neon Free, with a separate `akimath-ci` project.** Free is 100 CU-hours per project per month and reachability alone during waking hours is ~105, so CI and a dev swarm must not share prod's meter. `attempts` retained 400 days, `diag_events` 30. |
 | 4 | Answer input | **Free entry in every family.** Keeps "the answer never travels to the client" true online. Labelled distractors exist server-side only, as a lookup against what the user actually typed — that is what feeds the error screen. `options` stays out of the response type. |
-| 5 | Leaderboard | **No.** Own percentile against your cohort (`GET /v1/me/standing`), a batch-recomputed `rating_distribution`, hard k-anonymity — cohort under 100 returns `percentile: null`. No minor ever writes a display name, so there is no moderation, reporting, or retention surface. |
+| 5 | Leaderboard | **No.** Own percentile against your cohort (`GET /v1/me/standing`), a batch-recomputed `rating_distribution`, hard k-anonymity — cohort under 100 returns `percentile: null`. Nobody ever writes a display name, so there is no moderation, reporting, or retention surface. |
 | 6 | Open source | **No.** Everything private, `publish_to: none`. This was the only condition that would have reversed §1, and the only one under which melos regains value. |
 
 Two consequences worth carrying forward. Because of #4, the keypad is declared
@@ -531,7 +544,8 @@ before it exists.
 
 ---
 
-*None of the above is legal advice. The consult with someone specialized in
-children's data protection belongs **before F1**, not before F2 — `players`,
-`age_band`, deletion semantics, and the retention policy are schema decisions made
-there.*
+*None of the above is legal advice. The consult belongs **before F1**, not before F2 — `players`,
+`age_band`, deletion semantics, and the retention policy are schema decisions made there. It is a
+**personal-data** consult and its brief is `docs/gates/gate-a-adult-data-consult.md`; this sentence
+named children's data protection until 2026-08-29, when [ADR 0004](docs/adr/0004-the-game-is-for-adults.md)
+narrowed the question without closing it and the children's-data brief beside it was superseded.*
