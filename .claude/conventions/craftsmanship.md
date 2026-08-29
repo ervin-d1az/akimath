@@ -4,7 +4,7 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Thirty-six rule IDs — counting `FUN-1a` as the carve-out it
+This book starts small on purpose. Thirty-nine rule IDs — counting `FUN-1a` as the carve-out it
 is rather than as a rule — every one of them describing code that is already on disk today, not
 a pattern we hope to have. It grows by **PROC-6** and no other way.
 
@@ -160,6 +160,40 @@ The one structural pattern the repo already commits to, on both sides of the sta
   assertion is one `ls` from being falsified. When you **read** one while working nearby, grep for
   it before relying on it; if it is not there, the missing gate is part of the change that needed
   it, because the next author will believe the comment too.
+
+- **CMT-4** MUST: **a comment that claims who the callers of a shared decision are is a claim to
+  `grep` for, and the durable form of it is a gate rather than a sentence.** CMT-3's sibling: that
+  one is about a comment claiming a *test*, this one about a comment claiming a *property of code
+  in other files* — "anything that does X calls this", "the only two producers are". Both retire
+  the question that would have found the gap, and this one does it across a package boundary,
+  where nobody is reading.
+
+  Found in `fix-one-storedanswer-not-three`, on the highest-consequence rule in the repository.
+  `packages/contract`'s `storedAnswer` exists to hold one decision — how an exact answer is written
+  down, shape and spelling together — and closed with *"anything that turns a `(numerator,
+  denominator)` into a stored answer calls this — the builder, and the server when it issues a
+  pack — so the two cannot disagree again."* There were **three** implementations. Two did not call
+  it: `packages/core/src/pack/lift.ts` decided the shape from a `/` in the raw field, and
+  `packages/server/src/attempts.ts` wrote the `denominator === 1n` branch out longhand. The named
+  second caller — the server *issuing* a pack — copies a pre-built artifact and derives no answer,
+  so it did not exist. Three more comments repeated it, including one in a test.
+
+  That is bug #50's exact shape, and #50 is *why* the function was moved into the contract: it
+  shipped a whole answer of −9 digested as `-9/1` beside a field saying `integer`, made every
+  generated item in the built pack ungradeable, disabled the distractor-equals-answer guard in the
+  same stroke, and turned no suite red. The comments are what stopped anyone finding the copies,
+  because they said there was nothing to look for.
+
+  Two obligations, the same shape as CMT-3's. When you **write** such a claim, name the gate file
+  that holds it (`test/one-way-to-spell-an-answer.test.ts`) rather than asserting the property in
+  prose, so it is one `ls` from being falsified — and if no gate exists, writing one is part of the
+  change that needed the claim. When you **read** one while working nearby, grep for the callers
+  before believing it. The repository already had the idiom for the gate — `one-way-to-log.test.ts`
+  and `one-way-to-erase.test.ts` — and nobody had pointed it at a decision that spans packages.
+
+  **A corollary worth its own line: a claim about callers needs one gate per package that could
+  grow one.** A package cannot scan a sibling it does not depend on, and each suite has to be able
+  to go red on its own regression.
 
 ## WIRE — What crosses between the stacks
 
