@@ -372,8 +372,8 @@ void main() {
 
   group('POST /attempts over a real socket', () {
     List<AttemptSubmission> batch() => <AttemptSubmission>[
-      AttemptSubmission(
-        packRef: const PackRef(packId: '018f4e3c-0000-7000-8000-0000000000d1', index: 0),
+      AttemptSubmission.forPackItem(
+        ref: const PackRef(packId: '018f4e3c-0000-7000-8000-0000000000d1', index: 0),
         sessionId: '018f4e3c-0000-7000-8000-0000000000d2',
         answer: '13',
         at: DateTime.utc(2026, 8, 19, 9, 15),

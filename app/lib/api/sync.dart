@@ -46,24 +46,66 @@ class PackRef {
 /// digesting — which is what makes "the answer never travels" true by
 /// construction rather than by this client's restraint.
 ///
-/// **Exactly one source.** `itemId` for something the server issued,
-/// `packRef` for something from a pack. Neither and both are a 400, and the
-/// constructor refuses to build either, so a malformed batch cannot leave the
-/// device and come back as an error a player waits for.
+/// **Exactly one source, and naming neither or both does not compile.**
+/// [AttemptSubmission.forIssuedItem] for something the server issued,
+/// [AttemptSubmission.forPackItem] for something from a pack; the generative
+/// constructor is private, and each door sets the other field itself. Neither
+/// and both are a 400, and a 400 is not merely an error a player waits for:
+/// `journalAfter` reads a malformed batch as one there is no point resending,
+/// so up to two hundred answers go with it.
+///
+/// **This was an `assert` until 2026-08-29, which is the same guarantee in a
+/// mechanism `flutter build --release` deletes** — every test saw a refusal no
+/// shipping binary made. Unreachable then, because both call sites name a
+/// pack; the first caller of the issued half inherits the hole, and that is
+/// the one `GET /items/next` needs.
+///
+/// **[elapsed] is a weaker promise and stays one.** The wire bounds it at
+/// 0…3_600_000 ms, no constructor can make an out-of-range `Duration`
+/// unrepresentable, and the assert below therefore holds in a debug build
+/// only. `AttemptSync.record` clamps the negative half where the value is
+/// produced, which is the enforcement that ships.
 @immutable
 class AttemptSubmission {
-  AttemptSubmission({
+  AttemptSubmission._({
     this.itemId,
     this.packRef,
     required this.sessionId,
     required this.answer,
     required this.at,
     required this.elapsed,
-  }) : assert(
-          (itemId == null) != (packRef == null),
-          'an attempt names exactly one source: itemId or packRef',
-        ),
-        assert(!elapsed.isNegative, 'time on task cannot be negative');
+  }) : assert(!elapsed.isNegative, 'time on task cannot be negative');
+
+  /// An answer to an item from a pack, addressed by `(packId, index)`.
+  AttemptSubmission.forPackItem({
+    required PackRef ref,
+    required String sessionId,
+    required String answer,
+    required DateTime at,
+    required Duration elapsed,
+  }) : this._(
+          packRef: ref,
+          sessionId: sessionId,
+          answer: answer,
+          at: at,
+          elapsed: elapsed,
+        );
+
+  /// An answer to an item the server issued one at a time, addressed by its
+  /// own id.
+  AttemptSubmission.forIssuedItem({
+    required String itemId,
+    required String sessionId,
+    required String answer,
+    required DateTime at,
+    required Duration elapsed,
+  }) : this._(
+          itemId: itemId,
+          sessionId: sessionId,
+          answer: answer,
+          at: at,
+          elapsed: elapsed,
+        );
 
   /// An item the server issued. Null when this came from a pack.
   final String? itemId;

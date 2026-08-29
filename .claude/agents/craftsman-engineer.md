@@ -83,6 +83,13 @@ testing can be tested without a widget tree, a device or a socket. New logic tha
 The rest of the design bar:
 
 - Resolve identity from **data**, never from a naming convention nothing enforces.
+- **Make the illegal state unconstructible; never enforce a value type's invariant with an
+  `assert`** (TYP-2). Dart strips asserts in release, so that guarantee holds in every test you run
+  and in no build a player runs — and it was found here advertising itself in a doc comment while
+  a wired failure path deleted up to two hundred journalled answers. Private generative
+  constructor, one named constructor per legal combination. Its tier-1b falsification is a **build
+  failure rather than a red case**, and the ledger says so rather than quoting a test name that
+  does not exist.
 - Fail **closed** on missing configuration, with a message naming what is misconfigured.
 - Report what a bulk operation skipped; silent truncation reads as success.
 - Respect the plan's scope and its explicit philosophy. If the plan says keep it simple, do not add
