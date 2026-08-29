@@ -162,3 +162,41 @@ is slower than a widget test and the first-run flag is written asynchronously, s
 of the shipped series is `sub-2`, whose answer is `−7`: the minus key's id is `negate` and the
 fraction bar's is `fraction`, neither of which is the character on the key face. Any driver that
 assumed otherwise would have worked on four items out of five.
+
+---
+
+## 8 · No document states an app-store age rating
+
+**Today.** Nothing anywhere declares one. A sweep of `docs/`, `openspec/` and `app/` before this
+entry was written found no passage naming an age rating, a content-rating questionnaire answer, or
+an IARC tier — not in `f3-store-artifacts`, which owns the Data Safety declaration and the privacy
+manifest, and not in either Gate A brief. The product became **adults-only** on 2026-08-29
+(`docs/adr/0004-the-game-is-for-adults.md`) and an adults-only product has a rating to declare, so
+this is a **gap rather than a stale value**: there is no wrong answer written down to correct.
+
+**Why that is the interim.** It was nobody's until 2026-08-29. Before then the audience was mixed
+and the store question was folded into Google Play's Families programme, which the adults-only
+decision retires — `docs/gates/gate-a-adult-data-consult.md` §5 marks that assumption retired and
+says plainly that what the stores require of an adults-only app is a **store** question rather than
+a legal one. Retiring the question it was inside of is what left it with no owner, and the sibling
+plan that swept for it recorded it as a gap it could not fill.
+
+**Who owns it.** Ervin, researching it separately as of 2026-08-29. That is recorded here rather
+than as an answer because it is what was said, and no date, target tier or deliverable has been
+named. Do not infer one.
+
+**What it does not block.** Not the refusal, and not this decision's shape. `docs/adr/0004`'s
+amendment §1 chose **Reading A** — the app asks at link time and refuses there — so the app makes
+its own claim whatever the store says. The option that *did* depend on a rating is the one where
+the store declares eligibility and the app does not ask, and the sibling plan's `design.md` D3
+already showed that option is unavailable precisely because no rating exists. It stays unavailable
+until this entry closes.
+
+**Cost of leaving it.** Zero today and a hard stop at the first submission: neither store lets an
+app through without a content rating, so this closes before anything ships or nothing ships. The
+sharper risk is subtler — a rating declared in a console by whoever happens to be submitting,
+recorded nowhere, contradicting `req-no-remote-messaging` or the Data Safety rows
+`f3-store-artifacts` will assert. **Whatever the answer is, it lands in a file this repository can
+read**, which is the whole reason it is written down here.
+
+**Found by:** the sweep that carried ADR 0004's answers into the documents, 2026-08-29.
