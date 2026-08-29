@@ -732,9 +732,16 @@ jobs:
       - name: The planning config parses
         env:
           OPENSPEC_TELEMETRY: '0'
+        # `openspec list` takes no --no-interactive; passing one exits 1 on an
+        # unknown option *before* the config is read, so the grep below never
+        # matched and this guard could not fail — which is the exact defect the
+        # comment above describes, written into the guard against it. Measured
+        # 2026-08-29 against openspec 1.9.0. Both directions are proved in the
+        # pull request that fixed it.
         run: |
-          if openspec list --no-interactive 2>&1 | grep -q 'could not parse'; then
-            openspec list --no-interactive 2>&1 | grep 'could not parse' >&2
+          out="$(openspec list 2>&1)" || true
+          if printf '%s' "$out" | grep -q 'could not parse'; then
+            printf '%s\n' "$out" | grep 'could not parse' >&2
             echo "::error::openspec/config.yaml does not parse, so every rule in it is being ignored." >&2
             exit 1
           fi
