@@ -4,13 +4,13 @@ import '../../../design/tokens/tokens.dart';
 import '../policy/data_privacy.dart';
 import 'settings_detail_scaffold.dart';
 
-/// `4.7 Datos y privacidad` — what the app would hand over, and what it cannot
+/// `Datos y privacidad` — what the app would hand over, and what it cannot
 /// hand over yet.
 ///
 /// **The cards are drawn and the buttons are not.** `Pedir mi archivo` has no
 /// endpoint behind it, and `Borrar historial` has none either — `DELETE /me`
 /// erases the player and everything under it, which is a different act with
-/// its own screen on `4.3 Cuenta`. A button that produces nothing is the
+/// its own screen on `Cuenta`. A button that produces nothing is the
 /// control DR-P2 rules out, and it is a worse lie than an absent one because
 /// the player *does* something and is told nothing.
 ///

@@ -19,7 +19,7 @@ Future<void> pump(WidgetTester tester, {VoidCallback? onBack}) async {
 }
 
 void main() {
-  group('4.7 Datos y privacidad', () {
+  group('Datos y privacidad', () {
     testWidgets('has the header the design gives it, and a way back',
         (WidgetTester tester) async {
       int backs = 0;

@@ -8,7 +8,7 @@ import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/centered_state_view.dart';
 import '../policy/mastery_copy.dart';
 
-/// `4.14 Habilidad dominada` — a skill finished, and what it opened.
+/// `Habilidad dominada` — a skill finished, and what it opened.
 ///
 /// **Nothing routes to this screen, and nothing can.** Mastery needs a skill
 /// with a completion behind it: `GET /me/standing` answers `skills: []` for

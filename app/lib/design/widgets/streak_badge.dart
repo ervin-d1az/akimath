@@ -6,7 +6,7 @@ import 'candy_surface.dart';
 
 /// The run, said out loud: a flame, a number and what it counts.
 ///
-/// `4.12 Racha en riesgo` draws it above the headline, and it is the reason the
+/// `Racha en riesgo` draws it above the headline, and it is the reason the
 /// screen lands — the figure at stake is the first thing on it. Yellow and
 /// raised, because it is the thing being protected and not a warning: coral is
 /// error, and a streak about to lapse is nobody's mistake.

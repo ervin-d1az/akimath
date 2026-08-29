@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// The day `4.13 Racha perdida` was last shown.
+/// The day `Racha perdida` was last shown.
 ///
 /// **A seam with two sides**, the same shape `DayLogStore` has: the interface
 /// so a test can hand in memory, and the `shared_preferences` implementation
@@ -13,7 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// `DayLog` is built on, and the encoded form carries no `:` for the same
 /// reason.
 ///
-/// There is deliberately no record for `4.12 Racha en riesgo`: that screen is
+/// There is deliberately no record for `Racha en riesgo`: that screen is
 /// owed on every launch of a day that is still at risk, so storing anything
 /// about it would be storing a fact nobody reads.
 abstract interface class StreakNoticeStore {

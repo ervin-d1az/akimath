@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Waiting is drawn as the shape of what is coming, never as a wheel.
 ///
-/// `4.11 Cargando` is annotated *"esqueletos, sin ruedita"*, and the plan is
+/// `Cargando` is annotated *"esqueletos, sin ruedita"*, and the plan is
 /// blunt about the corollary: **"Do not invent a spinner anywhere."** It also
-/// rules out repurposing `LoadingDots`, which belongs to `0.1 Splash` and to
+/// rules out repurposing `LoadingDots`, which belongs to `Splash` and to
 /// no product screen.
 ///
 /// The reason is not taste. A skeleton says *something this shape is coming*
@@ -45,7 +45,7 @@ void main() {
     'LinearProgressIndicator',
   ];
 
-  /// `0.1 Splash` owns these dots and nothing else may.
+  /// `Splash` owns these dots and nothing else may.
   const String dotsOwner = 'lib/features/splash/splash_screen.dart';
 
   test('reports what it scanned, and scanning nothing is a failure', () {
@@ -70,7 +70,7 @@ void main() {
     expect(
       offenders,
       isEmpty,
-      reason: 'waiting is skeletons — see 4.11 Cargando, "esqueletos, sin ruedita"',
+      reason: 'waiting is skeletons — see Cargando, "esqueletos, sin ruedita"',
     );
   });
 
@@ -86,7 +86,7 @@ void main() {
     expect(
       users..sort(),
       <String>['lib/design/widgets/loading_dots.dart', dotsOwner],
-      reason: 'LoadingDots belongs to 0.1 Splash',
+      reason: 'LoadingDots belongs to Splash',
     );
   });
 }

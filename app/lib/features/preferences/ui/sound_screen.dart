@@ -8,7 +8,7 @@ import 'settings_detail_scaffold.dart';
 import 'settings_toggle_row.dart';
 import 'volume_bars.dart';
 
-/// `4.6 Sonido y vibración` — a volume, two sounds and a haptic.
+/// `Sonido y vibración` — a volume, two sounds and a haptic.
 ///
 /// **Three switches, and the fourth one nobody drew is the point.** There is no
 /// sound for a wrong answer, and the design says so in a footer rather than by

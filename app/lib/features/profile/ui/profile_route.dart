@@ -551,7 +551,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
   /// the destructive door is `Eliminar mi cuenta`, two rows down, behind a
   /// typed `BORRAR`.
   ///
-  /// **It pops to the root rather than back one screen.** `4.3 Cuenta` is a
+  /// **It pops to the root rather than back one screen.** `Cuenta` is a
   /// screen about an account this device no longer has, and the row above it in
   /// `4.2` opens nothing without a session — landing on either would be leaving
   /// the player somewhere that has stopped being true.

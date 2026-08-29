@@ -5,7 +5,7 @@ import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
 
-/// `0.4 Calibración intro` — what the probe is, before it starts.
+/// `Calibración intro` — what the probe is, before it starts.
 ///
 /// **Never the word *prueba*.** The design says so in its own label, and the
 /// reason is the product rather than the wording: a player who reads this as a

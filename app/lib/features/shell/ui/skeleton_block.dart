@@ -4,7 +4,7 @@ import '../../../design/tokens/tokens.dart';
 
 /// A content-shaped placeholder.
 ///
-/// **Never a spinner.** `4.11 Cargando` is annotated *esqueletos, sin ruedita*,
+/// **Never a spinner.** `Cargando` is annotated *esqueletos, sin ruedita*,
 /// and `LoadingDots` is explicitly not to be repurposed for a product screen.
 /// A skeleton says *what is coming* and where; a spinner says only *wait*.
 ///

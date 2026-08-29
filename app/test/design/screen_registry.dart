@@ -1196,7 +1196,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
       ),
     ),
   ),
-  // ── 4.1 Perfil · the two shapes the figures give it ───────────────────────
+  // ── Perfil · the two shapes the figures give it ───────────────────────
   RegisteredScreen(
     label: 'perfil · solo lo comprobable',
     // The build that ships: no rating, no accuracy, no mean time. The headline
@@ -1369,7 +1369,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   // ── f5-skill-map ─────────────────────────────────────────────────────────
-  // `05 Mapa de habilidades` and `2.7 Detalle de nodo`. The map is registered
+  // `05 Mapa de habilidades` and `Detalle de nodo`. The map is registered
   // with **all four states on it**, which is what makes the locked arm
   // load-bearing: `readSkillMap` never produces one from the shipped pack —
   // nothing gates anything — so this entry is the only thing that draws the

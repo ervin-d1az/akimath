@@ -15,7 +15,7 @@ Future<void> pump(WidgetTester tester, Widget screen) async {
 }
 
 void main() {
-  group('4.10 Error de servidor', () {
+  group('Error de servidor', () {
     testWidgets('takes the blame and says where the progress is', (
       WidgetTester tester,
     ) async {

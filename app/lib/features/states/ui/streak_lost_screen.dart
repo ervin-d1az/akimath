@@ -7,7 +7,7 @@ import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/centered_state_view.dart';
 import '../../home/policy/broken_run.dart';
 
-/// `4.13 Racha perdida` — the run reset, and the page turns.
+/// `Racha perdida` — the run reset, and the page turns.
 ///
 /// Annotated *"se pasa la página"*: no consolation, no reproach, one forward
 /// action. Aki stays in her calm pose, because there is no sad one and there

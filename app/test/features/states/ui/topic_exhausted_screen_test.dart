@@ -32,7 +32,7 @@ TopicExhaustedScreen exhausted({
 );
 
 void main() {
-  group('4.15 Se acabó el tema', () {
+  group('Se acabó el tema', () {
     testWidgets('says what ran out and when there is more', (
       WidgetTester tester,
     ) async {

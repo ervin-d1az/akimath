@@ -9,7 +9,7 @@ import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/stat_tile.dart';
 import '../policy/calibration.dart';
 
-/// `0.6 Calibración resultado` — where the probe leaves you.
+/// `Calibración resultado` — where the probe leaves you.
 ///
 /// **Two of the three things the design draws here do not exist, and the
 /// difference is on the screen rather than hidden.**

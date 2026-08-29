@@ -8,7 +8,7 @@ import '../../shell/ui/inline_banner.dart';
 import '../policy/credential_rules.dart';
 import 'labelled_field.dart';
 
-/// `1.4 Recuperar · correo`.
+/// `Recuperar · correo`.
 ///
 /// **The confirmation is conditional, and that is not hedging.** Better Auth
 /// answers `forget-password` the same way whether or not an account exists at

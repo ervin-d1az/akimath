@@ -32,7 +32,7 @@ void main() {
     // The bar exists because a second root does.
     expect(find.text('Inicio'), findsOneWidget);
     // **`Mapa` is the third**, and it is on the bar rather than merely built:
-    // `05 MAPA` and `2.7 Detalle de nodo` were merged fully tested with nothing
+    // `05 MAPA` and `Detalle de nodo` were merged fully tested with nothing
     // that opened either.
     expect(find.text('Mapa'), findsOneWidget);
     // **`Perfil`, not `Ajustes`.** Declared rule 1 names the bar's homes as

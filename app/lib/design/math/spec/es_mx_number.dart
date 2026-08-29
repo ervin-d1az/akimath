@@ -116,7 +116,7 @@ abstract final class EsMxNumber {
 
   /// A runway, in the two units a reader plans against.
   ///
-  /// `4.12 Racha en riesgo` prints one of these. It differs from
+  /// `Racha en riesgo` prints one of these. It differs from
   /// [durationCoarse] in exactly the way its screen needs: *3 h* is not enough
   /// to decide whether there is time, and *226 min* is not a figure anybody
   /// reads.

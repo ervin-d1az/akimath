@@ -62,7 +62,7 @@ class SeriesResult {
   final int? stumbleIndex;
 }
 
-/// `2.5 Resumen de serie` — the screen that makes a series a thing you finish.
+/// `Resumen de serie` — the screen that makes a series a thing you finish.
 ///
 /// Before this existed the round wrapped modulo its item list and played
 /// forever, which is an exercise rather than a game.

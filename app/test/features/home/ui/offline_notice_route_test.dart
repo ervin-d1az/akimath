@@ -21,7 +21,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
-/// Whether `4.9 Sin conexión` is ever *reached*, and whether it lies when it is.
+/// Whether `Sin conexión` is ever *reached*, and whether it lies when it is.
 ///
 /// **The screen shipped with no caller.** It renders, it is in the design
 /// registry, and nothing routed to it — the `pack.puzzles.first` shape. It was

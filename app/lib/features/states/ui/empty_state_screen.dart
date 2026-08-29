@@ -6,7 +6,7 @@ import '../../../design/widgets/brand_button.dart';
 import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/centered_state_view.dart';
 
-/// `4.8 Vacío` — the skills list before there is a skill in it.
+/// `Vacío` — the skills list before there is a skill in it.
 ///
 /// **Nothing routes to this screen, and that is deliberate.** The design fills
 /// it with dashed rows reading *"Aquí irá tu primera habilidad"*, which promise

@@ -24,7 +24,7 @@ OfflineScreen bag({
 );
 
 void main() {
-  group('4.9 Sin conexión', () {
+  group('Sin conexión', () {
     testWidgets('counts the bag in the headline and in the tally', (
       WidgetTester tester,
     ) async {

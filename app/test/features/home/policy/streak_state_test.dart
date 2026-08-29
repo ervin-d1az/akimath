@@ -189,7 +189,7 @@ void main() {
 
   group('the run 4.13 draws is never yesterday\'s', () {
     test('broken implies the newest recorded day is older than yesterday', () {
-      // **The invariant behind a caption.** `4.13 Racha perdida` captions its
+      // **The invariant behind a caption.** `Racha perdida` captions its
       // left counter, and the design's own caption is *AYER* — recorded in
       // `openspec/changes/archive/2026-08-20-f7-estados-de-racha/proposal.md`
       // as *"the design draws `AYER 13 → HOY 1`"*. It can never be true:

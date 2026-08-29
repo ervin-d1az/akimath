@@ -1,6 +1,6 @@
 import '../../../design/math/spec/es_mx_number.dart';
 
-/// The annotation chip on `4.10 Error de servidor`.
+/// The annotation chip on `Error de servidor`.
 ///
 /// **PURE** — a status and an instant in, a line or nothing out. No clock of
 /// its own: the caller reads the time, because a function that called

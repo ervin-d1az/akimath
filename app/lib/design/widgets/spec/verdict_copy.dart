@@ -5,7 +5,7 @@ import 'verdict.dart';
 /// **PURE** — a switch over the sealed encoding, no widget and no context.
 ///
 /// **One home, because a legend that teaches a word no screen shows is worse
-/// than no legend.** `4.5 Ajustes` used to caption the two marks *Acierto* and
+/// than no legend.** `Ajustes` used to caption the two marks *Acierto* and
 /// *Se torció* while the screens a player actually meets said *¡Bien hecho!*
 /// and *Casi* — so the key taught two words the app never uses, to explain two
 /// marks by a metaphor ("se torció" — *it got twisted*) about a tail curl the

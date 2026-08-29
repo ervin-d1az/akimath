@@ -11,7 +11,7 @@ import 'package:akimath_app/features/shell/ui/tab_stack.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Whether a player can **reach** the two rows `4.3 Cuenta` draws.
+/// Whether a player can **reach** the two rows `Cuenta` draws.
 ///
 /// **`AccountScreen` has drawn them since it landed and nothing passed the
 /// callbacks**, so both were absent by the screen's own rule — a row is drawn

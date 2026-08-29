@@ -19,7 +19,7 @@ enum AgeGateOutcome { createAccount, refused }
 ///
 /// `req-no-account-without-a-declaration`: the band is resolved **before any
 /// session is obtained**, so it is in hand before the first byte of player data
-/// leaves the phone. `1.2 Crear cuenta` is the one door this stands in front of.
+/// leaves the phone. `Crear cuenta` is the one door this stands in front of.
 ///
 /// **This is a posture, not a barrier** (ADR 0004 §4). A self-declared date is
 /// not verified by anything — no document, no payment instrument, no platform

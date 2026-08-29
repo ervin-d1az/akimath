@@ -11,10 +11,10 @@ import 'package:akimath_app/features/profile/ui/profile_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Whether a returning player can **reach** `1.1 Iniciar sesión` from the
+/// Whether a returning player can **reach** `Iniciar sesión` from the
 /// profile without being asked when they were born.
 ///
-/// **This exists because the only entrance was inside `1.2 Crear cuenta`.** A
+/// **This exists because the only entrance was inside `Crear cuenta`.** A
 /// player who already had an account had to press *Crear cuenta*, answer
 /// *¿Cuándo naciste?*, reach the sign-up form and find a text link at the
 /// bottom of it. Reported twice from a device, unprompted, as *"it's hard to

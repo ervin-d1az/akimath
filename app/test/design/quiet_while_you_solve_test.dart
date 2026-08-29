@@ -29,9 +29,9 @@ import 'screen_registry.dart';
 const List<String> _solvingSurfaces = <String>[
   // The item, in every family it can be drawn in.
   'round',
-  // `0.3 Primer reto` — a fixed teaching item, and still an item.
+  // `Primer reto` — a fixed teaching item, and still an item.
   'first item',
-  // `0.5 Calibración reactivo`. The design draws a 52px Aki in its header,
+  // `Calibración reactivo`. The design draws a 52px Aki in its header,
   // beside the skip control; this rule is why she is not there. A probe is
   // still solving, and the strip that says how many are left is the one
   // number a solving surface may show.

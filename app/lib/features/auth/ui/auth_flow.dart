@@ -41,10 +41,10 @@ class LinkedAccount {
 /// sign-up form made the second one four screens long — reported from a device
 /// as *"it's hard to find"*.
 enum AuthEntry {
-  /// `1.3 ¿Cuándo naciste?` first, then `1.2 Crear cuenta`.
+  /// `1.3 ¿Cuándo naciste?` first, then `Crear cuenta`.
   createAccount,
 
-  /// Straight to `1.1 Iniciar sesión`.
+  /// Straight to `Iniciar sesión`.
   signIn,
 }
 

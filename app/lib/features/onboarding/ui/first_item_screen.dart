@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../../../content/model/item.dart';
 import '../../round/ui/round_screen.dart';
 
-/// `0.3 Primer reto` — the item that teaches how an answer is typed.
+/// `Primer reto` — the item that teaches how an answer is typed.
 ///
 /// It is the round, with one item and a different ending: answering it continues
 /// the first run rather than offering another. That is why it composes

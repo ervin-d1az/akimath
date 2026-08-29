@@ -4,7 +4,7 @@ import '../policy/sound_settings.dart';
 import 'preference_values.dart';
 import 'settings_store.dart';
 
-/// `4.4 Notificaciones`, kept on the device.
+/// `Notificaciones`, kept on the device.
 ///
 /// **One key per field, not one encoded blob.** A blob would need a codec, and
 /// a codec that cannot parse loses four answers to one bad character; a field
@@ -54,7 +54,7 @@ class PrefsNotificationSettingsStore
   }
 }
 
-/// `4.5 Accesibilidad`, kept on the device.
+/// `Accesibilidad`, kept on the device.
 class PrefsAccessibilitySettingsStore
     implements SettingsStore<AccessibilitySettings> {
   const PrefsAccessibilitySettingsStore({
@@ -90,7 +90,7 @@ class PrefsAccessibilitySettingsStore
   }
 }
 
-/// `4.6 Sonido y vibración`, kept on the device.
+/// `Sonido y vibración`, kept on the device.
 class PrefsSoundSettingsStore implements SettingsStore<SoundSettings> {
   const PrefsSoundSettingsStore({
     PreferenceValues values = const PreferenceValues(),

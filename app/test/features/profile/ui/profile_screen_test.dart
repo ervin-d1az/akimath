@@ -95,7 +95,7 @@ HistoryEntry entry(String title, String score) => HistoryEntry(
     );
 
 void main() {
-  group('4.1 Perfil — who you are, and what you have done', () {
+  group('Perfil — who you are, and what you have done', () {
     testWidgets('the identity row comes first', (WidgetTester tester) async {
       await pump(
         tester,

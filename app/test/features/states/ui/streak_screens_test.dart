@@ -19,7 +19,7 @@ Future<void> pump(WidgetTester tester, Widget screen) async {
 }
 
 void main() {
-  group('4.12 Racha en riesgo', () {
+  group('Racha en riesgo', () {
     testWidgets('names the stake, the ask and the runway', (WidgetTester tester) async {
       await pump(
         tester,
@@ -97,7 +97,7 @@ void main() {
     });
   });
 
-  group('4.13 Racha perdida', () {
+  group('Racha perdida', () {
     testWidgets('turns the page from what was to what is', (WidgetTester tester) async {
       await pump(tester, StreakLostScreen(brokenRun: 13, onStart: () {}));
 

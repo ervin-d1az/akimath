@@ -13,7 +13,7 @@ import '../policy/local_stats.dart';
 /// with the same label.
 ///
 /// **The first run does not record, and nothing here enforces that — the caller
-/// does.** `0.3 Primer reto` is a teaching item: it records no day and shows no
+/// does.** `Primer reto` is a teaching item: it records no day and shows no
 /// streak, and it should not move accuracy either, because the figure is about
 /// how the player is doing and the tutorial is about how the app works. The
 /// mechanism is the one `DayLogStore` already uses — the round is built without
