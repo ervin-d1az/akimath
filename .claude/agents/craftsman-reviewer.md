@@ -117,7 +117,7 @@ For every candidate finding:
   separation aimed at a two-line token file is noise that costs the author more than it saves.
 - **Check the carve-outs before accusing.** The most common false positives here:
   - **Spanish that is supposed to be Spanish.** Only user-facing copy is es-MX; a Spanish string in
-    a `Text(...)` a child reads is correct. Spanish in an identifier, comment, test name or commit
+    a `Text(...)` a player reads is correct. Spanish in an identifier, comment, test name or commit
     message is the violation.
   - **Pre-existing patterns the change merely sat next to.** Only new and touched code is judged;
     never demand a mass rename of identifiers the author did not otherwise touch.
@@ -140,7 +140,7 @@ later:
 
 - **A new third-party dependency.** `app/pubspec.yaml` or a `package.json` gaining an entry is
   Blocking unless the task explicitly asked and the author wrote down whether the package phones
-  home — the audience includes children under 13.
+  home — DEP-1 is a category refusal, and it stopped citing the audience on 2026-08-29 (ADR 0004).
 - **A protected path touched without being asked**: `app/pubspec.yaml`, any `package.json`,
   `app/android/**/AndroidManifest.xml`, `PrivacyInfo.xcprivacy`, migrations,
   `contract/openapi.json` (`ARCHITECTURE.md` §7, R5).
