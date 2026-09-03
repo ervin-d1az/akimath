@@ -373,11 +373,14 @@ const List<ScanRoot> packChoiceRoots = <ScanRoot>[
 /// Asking whether a pack may still be played, and turning what the server
 /// issued into a pack at all.
 ///
-/// Two patterns rather than one because they close different halves. The window
-/// question is the one that was answered twice and differently; reading an
-/// issued pack is the only way a `Pack` reaches this app from the server, so
-/// pinning its single caller makes `pack_in_play.dart` the door rather than
-/// merely the tidiest route through.
+/// Two patterns rather than one because they close different halves, and
+/// **neither is the whole**. The window question is the one that was answered
+/// twice and differently. Reading an issued pack is the only way a `Pack`
+/// reaches this app from the server, so pinning its single caller keeps *the
+/// parse* in one place — it does not make every server pack pass the window
+/// question, because `packFrom` and `packInPlay` are independent exports and a
+/// caller could reach for the first alone. What covers that is the routes' own
+/// cases, not this scan.
 final List<LiteralPattern> packChoicePatterns = <LiteralPattern>[
   LiteralPattern('isExpiredAt(', r'(?<![A-Za-z0-9_$])isExpiredAt\s*\('),
   LiteralPattern('readIssuedPack(', r'(?<![A-Za-z0-9_$])readIssuedPack\s*\('),

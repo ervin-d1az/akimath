@@ -25,9 +25,12 @@ import 'source_tree.dart';
 /// the window, not on a third one forgetting to. A new route that writes
 /// `_issued ?? bundled` and never mentions `isExpiredAt` stays green here, and
 /// the bundled pack is one `PackReader.load()` away from anybody. The
-/// `readIssuedPack` half narrows that as far as a text scan can — an issued
-/// pack cannot be turned into a playable one anywhere else — and the rest is a
-/// reviewer's read.
+/// `readIssuedPack` half narrows that only as far as a text scan can: it keeps
+/// *the parse* in one place, and it does not make every server pack pass the
+/// window question, because `packFrom` and `packInPlay` are independent exports
+/// of the module. What covers the forgetting is each route's own case — the
+/// map's `a lapsed pack draws no map` and the home's `an expired pack is
+/// refused` — and the rest is a reviewer's read.
 void main() {
   const String theOneOwner = 'features/sync/policy/pack_in_play.dart';
 
