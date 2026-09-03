@@ -430,9 +430,8 @@ class _MapRouteState extends State<MapRoute> {
           valueListenable: _contents,
           builder: (BuildContext context, _MapReading latest, Widget? _) {
             // The topic stays on the figures it was opened with while a re-read
-            // is in flight, and while the pack behind it has stopped being
-            // playable — this screen is above the one that says so, and the way
-            // back is the control it already draws.
+            // is in flight: a number a moment out of date is better than a
+            // screen that empties under the player.
             final _MapContents contents =
                 latest is _MapDrawn ? latest.contents : opened;
             final int at = contents.map.nodes
@@ -446,8 +445,15 @@ class _MapRouteState extends State<MapRoute> {
                     ? openedPrevious
                     : (at > 0 ? contents.map.nodes[at - 1] : null),
                 onBack: () => Navigator.of(detailContext).pop(),
-                onPractise: () =>
-                    unawaited(_practise(detailContext, contents, node)),
+                // **The door closes with the pack, and the figures do not.**
+                // A `_MapPending` is a re-read in flight and the numbers above
+                // are a moment stale; anything else means the root has stopped
+                // playing this pack, and a topic pushed above it must not go on
+                // offering a run through it. Absent rather than dead, which is
+                // what `onPractise` is nullable for (DR-P2).
+                onPractise: latest is _MapPending || latest is _MapDrawn
+                    ? () => unawaited(_practise(detailContext, contents, node))
+                    : null,
               ),
             );
           },

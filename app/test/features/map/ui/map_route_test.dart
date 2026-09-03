@@ -855,6 +855,41 @@ void main() {
     });
   });
 
+  testWidgets('a topic already open stops offering practice when the pack '
+      'lapses under it', (WidgetTester tester) async {
+    // **The hole the root's own refusal leaves.** `2.7` is pushed above the map
+    // rather than drawn inside it, so it keeps the figures it was opened with
+    // while a re-read is in flight — which is right for a number and wrong for
+    // a door. Practising from here plays the pack the root has just stopped
+    // playing, which is the finding one screen further in.
+    DateTime moment = DateTime.utc(2026, 8, 20);
+    await _pump(
+      tester,
+      pack: _pack(),
+      visibility: RootVisibility.behind,
+      now: () => moment,
+    );
+    await tester.tap(find.text('Cuentas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Practicar 5 retos'), findsOneWidget);
+
+    // The window closes while the player is standing on the topic, and they
+    // switch tabs and come back — the one signal this root gets to re-read.
+    moment = DateTime.utc(2100);
+    await _pumpAgain(
+      tester,
+      pack: _pack(),
+      visibility: RootVisibility.showing,
+      now: () => moment,
+    );
+
+    // Absent rather than dead: a control that cannot act reads as broken, and
+    // `onPractise` is nullable for exactly this (DR-P2). The way back is the
+    // control the screen already draws.
+    expect(find.text('Practicar 5 retos'), findsNothing);
+    expect(find.text('Volver al mapa'), findsOneWidget);
+  });
+
   // PROC-13. `_contents` was a `late final` future read once in a field
   // initialiser, so the map drew launch-time percentages for ever: play a
   // series on Inicio, come back to Mapa, and nothing had moved. `IndexedStack`
