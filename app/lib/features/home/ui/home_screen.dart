@@ -13,10 +13,13 @@ import '../../round/ui/stimulus/stimulus_view.dart';
 
 /// `Inicio actualizado`, reduced to what F2 can source.
 ///
-/// **The subtractions each have a return phase, and none is a cut** (D5):
-/// the rating pill comes back at **F3**, because the rating is the server's
-/// exclusive authority and no server exists (Q3, D17); the `PUZZLE DEL DÍA`
-/// card at **F6**; the bottom nav at **F5**, when a second root exists.
+/// **The subtractions each had a return phase, and none was a cut** (D5). Two
+/// of the three have come back: the puzzle section is drawn here, one card per
+/// puzzle the pack carries, and the bottom nav is drawn by the shell now that
+/// three roots exist. The rating pill is the one still absent, and it is no
+/// longer waiting on a server — `GET /me/standing` answers a rating **per
+/// skill**, so no single number over a list of Glicko ratings is a fact about a
+/// player, and the slot stays empty rather than being averaged into existence.
 ///
 /// **The streak pill is not a subtraction** — it ships here and is the only
 /// pill on the F2 home, because a streak is a *local calendar fact* computed on
@@ -69,11 +72,21 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // **It scrolls** (design D2). Two bands, Aki, the card and the button do
-    // not fit 844 px at `textScaler` 1.3, and shrinking them until they do
-    // would be making the screen worse for exactly the readers who chose large
-    // text. The order puts the button above the fold at 1.0, so nobody has to
-    // scroll to start.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Expanded(child: _bands()),
+        _startAction(),
+      ],
+    );
+  }
+
+  /// Everything the screen has to say, and it scrolls (design D2).
+  ///
+  /// Two bands, Aki, the card and the puzzle section do not fit 844 px at
+  /// `textScaler` 1.3, and shrinking them until they do would be making the
+  /// screen worse for exactly the readers who chose large text.
+  Widget _bands() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(
         horizontal: BrandShape.space4,
@@ -92,14 +105,45 @@ class HomeScreen extends StatelessWidget {
             ..._puzzleSection(),
             const SizedBox(height: BrandShape.space4),
           ],
-          if (todaysFamilies.isNotEmpty) ...<Widget>[
-            FamilyRow(families: todaysFamilies),
-            const SizedBox(height: BrandShape.space4),
-          ],
-          // Last, so nothing sits below the thing the screen is asking for.
-          BrandButton.primary(label: 'Empezar la serie', onPressed: onStart),
-          const SizedBox(height: BrandShape.space3),
+          if (todaysFamilies.isNotEmpty) FamilyRow(families: todaysFamilies),
         ],
+      ),
+    );
+  }
+
+  /// The thing the screen is asking for, below everything and outside the
+  /// scroll.
+  ///
+  /// **Below, because nothing may compete with it** — that is why it was put
+  /// last, and it still is: it is the bottom-most thing drawn, and now
+  /// unconditionally so rather than only while the bands happen to be short.
+  ///
+  /// **Outside, because being last stopped meaning being reachable.** It was
+  /// the final child of [_bands] until 2026-09-02, when the first playthrough
+  /// against a deployed server opened the home on a 402×874 device and found no
+  /// visible way to start the series it was asking about
+  /// (`docs/qa/2026-09-02-first-production-playthrough.md`, finding 5). Nobody
+  /// moved it and nobody made it taller: the puzzle section grew from one
+  /// deferred card to one card per shipped format, and a position that
+  /// guaranteed reachability while the list was short guarantees nothing about
+  /// a list whose length is the pack's. A sibling of the scroll view is
+  /// reachable at every pack length, which is what the original reason wanted
+  /// and what its wording could not survive.
+  ///
+  /// `test/features/home/ui/primary_action_is_reachable_test.dart` holds it, at
+  /// every viewport `screen_registry.dart` names and at pack lengths this pack
+  /// does not have.
+  Widget _startAction() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        BrandShape.space4,
+        BrandShape.space3,
+        BrandShape.space4,
+        BrandShape.space3,
+      ),
+      child: BrandButton.primary(
+        label: 'Empezar la serie',
+        onPressed: onStart,
       ),
     );
   }
