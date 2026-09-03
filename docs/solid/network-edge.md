@@ -4,6 +4,16 @@
 `app/lib/features/sync/`, `app/lib/demo/`.
 **Base:** `main` at `653a17b`, 2026-08-27. Documentation only — no production code was changed.
 
+> **Superseded in one part, 2026-09-02.** `app/lib/demo/` **no longer exists**, so this audit's
+> scope line and its *"`demo_figures.dart` is not dead"* finding below are a record of what was
+> true at that base and not of the tree today. The finding was correct then and the reason it
+> stopped being correct is that the switch it rested on did not work: three of the four readers sat
+> behind `DemoFigures.enabled` and `series_summary_screen.dart`'s `_ratingTile()` did not, so a
+> build with the switch off still printed an invented `+ 12 RATING`. The quarantine was deleted
+> rather than flipped (`fix-only-what-the-product-can-prove`), the three screens draw only measured
+> figures, and `app/test/design/only_what_it_can_prove_test.dart` is what holds them there. The rest
+> of this document is untouched by that change.
+
 ---
 
 ## Verdict

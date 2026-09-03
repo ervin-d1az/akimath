@@ -43,10 +43,15 @@ import 'screen_registry.dart';
 /// match: `RATING POR TEMA` walks straight through an equality check, and the
 /// eyebrow is what a screen would reach for either way.
 ///
-/// The three are the three that shipped. They are not a guess at what a future
-/// invention would be called, and this list is not the gate's reach — a new
-/// invented figure under a new label is caught by [_quarantineIsGone] below,
-/// which forbids the file that would hold it.
+/// The three are the three that shipped, and they are the whole of what this
+/// half reads for. **A new invented figure under a new label is not covered**,
+/// by construction: nothing forces one through `lib/demo/`, so
+/// `const int _points = 1248;` drawn under `PUNTOS` from inside a screen would
+/// pass both halves of this file. That is a known limit and it is written here
+/// rather than papered over — the check below is a resurrection guard for one
+/// deleted file, not a net over labels nobody has invented yet. Whoever adds a
+/// figure adds its needle, and the reason this file is greppable at all is so
+/// that reviewing a new one is a `grep` rather than a memory.
 const Map<String, String> _cannotBeStated = <String, String>{
   'RATING': 'rating never runs in Dart, and the server answers one per skill',
   'QUÉ MEJORÓ': 'nothing tracks mastery per skill; the device never sees a '
@@ -178,7 +183,11 @@ void main() {
 /// is a claim about the product that is not true*. A `false` switch leaves
 /// three render paths and five constants in the tree, each with a doc comment
 /// describing a figure nobody draws, one flip away from shipping again — and
-/// the flip was the thing that failed. This is what keeps it deleted.
+/// the flip was the thing that failed.
+///
+/// **This keeps that one file deleted, and claims nothing wider.** It cannot
+/// see an invented figure written straight into a screen; only the needle sweep
+/// above can, and only for a label it already knows.
 void _quarantineIsGone() {
   test('no directory holds figures the product cannot compute', () {
     final Directory quarantine = Directory('${_appRoot().path}/lib/demo');
@@ -186,9 +195,8 @@ void _quarantineIsGone() {
     expect(
       quarantine.existsSync(),
       isFalse,
-      reason: 'lib/demo/ is back; an invented figure has somewhere to live '
-          'again, and the label it is drawn under may be one this gate does '
-          'not read for',
+      reason: 'lib/demo/ is back, and the quarantine it held is the shape '
+          'that shipped an invented figure once already',
     );
   });
 

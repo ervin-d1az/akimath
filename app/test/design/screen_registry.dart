@@ -522,7 +522,7 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
-    label: 'guardar progreso · primer run',
+    label: 'guardar progreso · sin días',
     // **The shape that ships, and the registry did not walk it.** The entries
     // either side pass 1 and 90 days; `OnboardingFlow` always passes 0 —
     // neither the teaching item nor the probe records a day — so the row a
