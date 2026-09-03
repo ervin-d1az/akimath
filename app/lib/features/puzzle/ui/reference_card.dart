@@ -12,7 +12,7 @@ import '../../../design/widgets/icon_button_tile.dart';
 import '../../../design/widgets/spec/puzzle_cell_visual.dart';
 import '../policy/reference_card.dart';
 
-/// `3.3 Hoja de referencia` — a titled card a player glances at mid-board.
+/// `Hoja de referencia` — a titled card a player glances at mid-board.
 ///
 /// **The rules are the pack's** (`referenceRows`), which is what lets a sixth
 /// format arrive as content. The pictures beside them are the format's, drawn

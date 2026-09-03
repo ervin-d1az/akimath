@@ -25,7 +25,7 @@ import 'reference_card.dart';
 /// **The reference sheet travels with the puzzle** and is shown on demand
 /// rather than on arrival: the rules of a KenKen are three lines, and three
 /// lines in front of a board is a wall between a player and the thing they came
-/// for. Opened, it is `3.3 Hoja de referencia` — a titled card *over* the
+/// for. Opened, it is `Hoja de referencia` — a titled card *over* the
 /// board rather than a paragraph pushed in above it, which is what the design
 /// draws and what keeps the grid from resizing under a player's hand.
 class PuzzleScreen extends StatefulWidget {
@@ -151,8 +151,9 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
               // **The pad goes with the board.** A key left live under an open
               // sheet lands a digit on a grid nobody can see — and `_apply`
               // would report `onPractised` and `onSolved` from behind the card.
-              // The design covers the pad area too: `3.3` runs from 150 to the
-              // bottom of the screen. Same reading as the sopa's word list.
+              // The design covers the pad area too: `Hoja de referencia` runs
+              // from 150 to the bottom of the screen. Same reading as the
+              // sopa's word list.
               if (!_rulesOpen)
                 Keypad(
                   layout: KeypadLayout.puzzle,

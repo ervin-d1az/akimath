@@ -21,6 +21,15 @@ in halves that nothing imports at runtime, and the gates that hold the two invar
 else rests on — zero runtime dependencies, no ambient IO — are AST walks with working controls
 rather than conventions.
 
+> **Finding 1 is fixed**, in `#149` (2026-08-29). It is kept below as written, because the record
+> of what was wrong is what makes the fix reviewable, and it carries a resolution note at its end —
+> including the correction that **its own safety explanation defends the wrong hazard**. **Read
+> finding 1's present tense as the state it audited, not as today's**: a document asserting a
+> live defect that
+> is no longer live is the same defect as a comment claiming behaviour the code does not have
+> (CMT-2). Findings 2 through 7 have not been re-checked since 2026-08-27 and are recorded here as
+> audited, which is a different claim from *still true*.
+
 The most expensive thing here is that **the decision `storedAnswer` exists to hold in one place —
 *how an exact answer is written down, shape and spelling together* — has three implementations
 across the seam, while four comments say it has one.** That is bug #50's exact shape, and #50 is
@@ -100,6 +109,44 @@ a canonical *string*. Add `storedAnswerOf(canonical: string): StoredAnswer` besi
 so `lift.ts` has a door, and have `attempts.ts` call `storedAnswer(...).canonical`. Then the
 sentence at `canon.ts:186` becomes true, and `public_surface.test.ts` can name the three callers
 that exist.
+
+**Resolved (2026-08-29) in #149, as directed, plus a gate the direction did not ask for.**
+`storedAnswerOf(canonical: string)` is the second door and `lift.ts` goes through it, keeping its
+own refusal and its own message because the door validates; `attempts.ts` calls
+`storedAnswer(...)` and no longer writes the `denominator === 1n` branch by hand. The structural
+half is that the shape is now **derived from** the spelling rather than computed beside it —
+`storedAs` reads the denominator group out of the grammar `canonicalize` accepts by, and both
+doors compose it — so the two halves cannot come apart again the way #50's did. The false
+sentences went with it: `canon.ts` and `public_surface.test.ts:97-99` both named the server
+issuing a pack, and both now name the three callers that exist.
+
+**Latent, and measured to be latent before anything moved.** The three implementations were
+compared over 81 `(numerator, denominator)` pairs and the whole of `CANON_INPUTS`, and **they
+agreed** — so no digest changed, no artifact moved, and nobody should go looking for a pack whose
+grading shifted. What this finding cost was change amplification, not a wrong answer on a device.
+The resolution also settled the question the duplication had left open: **`4/1` stays a
+fraction**, because pack content may state it that way and folding it would restate an authored
+answer.
+
+**The finding's own safety explanation is true and points at the wrong hazard, which is worth
+keeping visible.** It says `lift.ts` was *"correct today only because `requireStoredCanonical` has
+already refused anything where the two differ"*, and read literally — raw field versus
+`canonical.value` — that is exactly what `canon.ts:171` does: `folded.value === stored` or
+`not_canonical`. But raw-equals-canonical is not the hazard this finding is about. The subject is
+**two implementations disagreeing about shape**, and the guard is silent on shape.
+`requireStoredCanonical("4/1")` and `requireStoredCanonical("-9/1")` both return `ok: true`
+(measured 2026-09-02), and `-9/1` is bug #50's own string: through `storedAnswer(-9n, 1n)` it is an
+`integer` spelled `-9`, through `lift.ts`'s `includes("/")` on the string it is a `fraction`. The
+guard lets both readings through because it was never asked the question. Nothing was choosing
+between them, and #149 chose — **`4/1` stays a fraction** — which is why the fix derives the shape
+from the spelling instead of leaning on a guard that was never load-bearing here. A finding that
+credits the wrong mechanism is how the real one gets removed by somebody tidying up.
+
+**The fourth copy is a red build now**, which the direction did not ask for and which is the part
+worth carrying forward: `one-way-to-spell-an-answer.test.ts`, in both `packages/core` and
+`packages/server`, walks the AST for two prohibitions — naming both shape words is deciding a
+shape by hand, calling `renderCanonicalAnswer` is spelling one. Two gates because the halves were
+copied separately, and each went red on `main` against the copy its own package held.
 
 ---
 

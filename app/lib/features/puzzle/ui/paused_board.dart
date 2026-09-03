@@ -7,7 +7,7 @@ import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/stat_tile.dart';
 import '../policy/pause.dart';
 
-/// `3.6 Pausa` — the board covered, not erased.
+/// `Pausa` — the board covered, not erased.
 ///
 /// **It covers the board rather than blurring it.** The design annotates the
 /// screen *"tablero tapado, no borroso"*, which is also what BRD-2a requires:
@@ -16,8 +16,8 @@ import '../policy/pause.dart';
 /// and not a restore.
 ///
 /// **There is no clock on it, and that is the design's own decision as much as
-/// the rulebook's.** `3.6` is drawn with a cell count and a format name;
-/// `3.5 Puzzle resuelto`, one screen away, shows `11:24 TIEMPO`. `PauseSummary`
+/// the rulebook's.** `Pausa` is drawn with a cell count and a format name;
+/// `Puzzle resuelto`, one screen away, shows `11:24 TIEMPO`. `PauseSummary`
 /// has nowhere to put a duration, so this screen cannot print one.
 ///
 /// **Nothing here survives the app closing**, which is why the second control

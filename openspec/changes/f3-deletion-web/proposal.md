@@ -14,9 +14,19 @@ there is no such route: no page, no operation, no host.
 
 Four concrete faults today:
 
-1. **A promise is published and unbuilt.** `docs/gates/gate-a-childrens-data-consult.md`:97
-   tells counsel that everything in §2.1 is deleted *"both inside the app and from a public web
-   page that works without installing the app."* Half of that sentence is true.
+1. **Counsel has been told the page does not exist, and it is on the consult as an open item.**
+   `docs/gates/gate-a-adult-data-consult.md` §3.1, the closing bullet of what is collected:
+   *"The public deletion page does not exist yet. Erasure is available inside the app. The page
+   that works without installing the app is designed and unbuilt (`f3-deletion-web`), which also
+   means the retention figures in Q-A7 are published nowhere user-facing today."* Q-A6 carries it
+   again as *"also open, and unbuilt"*. **This fault read the other way round when it was
+   written**, and both halves of that citation have since moved: the 2026-08-16 children's brief
+   promised counsel that everything its §2.1 lists is deleted *"both inside the app and from a
+   public web page that works without installing the app"*, the promise was withdrawn on
+   2026-08-26 for the plain statement quoted above, and the brief itself was superseded on
+   2026-08-29 by the adults-only one and stamped *do not send*. Cited by section rather than by
+   line, because the line number this list carried was already three lines stale on the day it
+   was written.
 2. **The service cannot find an account by its email address.** `players` holds `auth_user_id`
    and no address; `grep -rn neon_auth packages/server/migrations/` returns **nothing but a
    comment**. The one thing a web form can offer is the one thing the server cannot resolve.

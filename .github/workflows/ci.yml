@@ -1,38 +1,47 @@
 # AkiMath CI — ARCHITECTURE.md §8, narrowed to the code that exists today.
 #
-# Only `gate` is meant to be a required status check. Jobs 3 and 5 are filtered
-# by path, and a job skipped by an `if:` reports no status at all — registering
-# `dart` or `ts` as required would leave every documentation-only pull request
-# waiting forever for a check that will never report. `gate` runs on every event
+# Only `gate` is meant to be a required status check. Six jobs are filtered by
+# path — `dart`, `ts`, `contract`, `integration`, `core` and `spec`, everything
+# except `changes`, `protected-paths`, `secrets` and `gate` — and a job skipped
+# by an `if:` reports no status at all, so registering any of the six as
+# required would leave every pull request that misses its path waiting forever
+# for a check that will never report. (This said "jobs 3 and 5", which named
+# `dart` and `contract` when it was written and nothing in particular once
+# `protected-paths` was inserted above them. Jobs are named here, not counted.)
+# `gate` runs on every event
 # (`if: always()`) and reads the results of everything it needs, so it is the one
 # check that always reports and always tells the truth.
 #
-# It is not registered yet. The `protect-main` ruleset (id 20882493) currently
-# carries only `deletion`, `non_fast_forward` and `pull_request` (re-verified
-# 2026-08-15), so `gate` is advisory: a red CI does not stop a merge into main
-# today. Registering it is a two-step change and THE ORDER MATTERS.
+# It **is** registered, and this comment said otherwise for seventeen days. The
+# `protect-main` ruleset (id 20882493) carries a `required_status_checks` rule
+# naming exactly one context, `gate`, alongside `deletion`, `non_fast_forward`
+# and `pull_request` — verified 2026-09-02 against
+# `GET /repos/ervin-d1az/akimath/rulesets/20882493`, whose `updated_at` is
+# 2026-08-16, the day after the note that said it had not happened. So a red CI
+# **does** stop a merge into `main`, and the checks report a few seconds after a
+# push: `gh pr merge` refusing with *"the base branch policy prohibits the
+# merge"* is that timing, not a permission.
 #
-#   1. Commit and push this file to `dev` first, so the workflow runs at least
-#      once and `gate` becomes a context GitHub knows about.
-#   2. Then Settings › Rules › protect-main, or
-#      `PUT /repos/ervin-d1az/akimath/rulesets/20882493` with the existing rules
-#      plus:
-#        {"type":"required_status_checks","parameters":{
-#           "strict_required_status_checks_policy":false,
-#           "required_status_checks":[{"context":"gate"}]}}
-#      The rules array is replace-all, so send the existing three back with it.
+# What stood here was a two-step registration procedure addressed to a human.
+# It is deleted rather than corrected: it told a maintainer to go and switch on
+# a gate that is already on, and its first step said to push to `dev`, which
+# stopped being the trunk at pull request #6. Nobody needs a runbook for work
+# that is done, and a stale one is how something else gets switched off.
 #
-# Doing step 2 without step 1 leaves every pull request into `main` waiting on a
-# check that has never reported. This is a human decision — it changes what can
-# merge — so it is left to Ervin rather than made by an agent.
+# Absent, deliberately, and for two different reasons:
+#   compliance       — no PrivacyInfo.xcprivacy, no merged manifest to grep;
+#                      the code it would guard does not exist
+#   mutation         — the recorded reason ("Stryker is scoped to packages/core,
+#                      which does not exist") is dead: all three TypeScript
+#                      packages carry a stryker.config.json and an `npm run
+#                      mutation`. It is still absent, and that is now a decision
+#                      nobody has taken rather than a blocker — the known
+#                      obstacle is that packages/contract cannot produce a
+#                      reproducible figure as configured (CLAUDE.md records the
+#                      band and the sandbox path that causes it)
 #
-# Not implemented yet, deliberately, because the code they guard does not exist:
-#   protected-paths  — contract/ now exists and is exactly the kind of path this
-#                      job should guard, but there is still no generated
-#                      app/lib/api/; adding it belongs with f3-store-artifacts
-#   compliance       — no PrivacyInfo.xcprivacy, no merged manifest to grep
-#   integration      — no Neon project, no database
-#   mutation         — Stryker is scoped to packages/core, which does not exist
+# `protected-paths` and `integration` are no longer on that list: both are jobs
+# in this file, at the migrations guard and the postgres:18 service container.
 
 name: CI
 

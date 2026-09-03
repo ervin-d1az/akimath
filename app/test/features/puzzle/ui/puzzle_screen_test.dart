@@ -391,7 +391,7 @@ void main() {
       // **And the pad goes with it.** A key left live under the sheet lands a
       // digit on a board nobody can see, and can complete one — `_apply`
       // reports `onSolved` from behind the card. The design covers the pad
-      // area too (3.3 runs top 150 to bottom 14).
+      // area too (Hoja de referencia runs top 150 to bottom 14).
       expect(find.byType(KeypadKeyView), findsNothing);
     });
 
