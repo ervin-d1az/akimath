@@ -1,0 +1,61 @@
+# Deploy the API to Fly.
+#
+# **Only from `main`, and `main` is already gated.** The `protect-main` ruleset
+# makes `gate` a required check, so nothing reaches this workflow without having
+# passed the everyday suite — which is why this file does not re-run it. A
+# deploy job that re-tests is a second, slower copy of a gate that already said
+# yes, and it drifts from the first one.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    # The image is built from `packages/` alone. A change to the Flutter client,
+    # the docs or the specs cannot alter it, so it must not spend a deploy.
+    paths:
+      - 'packages/**'
+      - 'fly.toml'
+      - '.dockerignore'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Two deploys of the same app race for the same machine. The later push is the
+  # one worth having, so the earlier run is cancelled rather than queued.
+  group: deploy-api
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: api
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # **No token, no run.** Without this the job fails red on every push for
+    # anyone who has not set the secret, which teaches people to ignore a red
+    # deploy — the same reasoning as `retention.yml`'s `RETENTION_ENABLED`.
+    if: vars.DEPLOY_ENABLED == 'true'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        # `--remote-only` builds on Fly's builders. The runner has Docker, but
+        # building here would push a 54 MB image up from a cold cache on every
+        # run for no benefit.
+        run: flyctl deploy --remote-only --app akimath-api
+      - name: It answers
+        # **The deploy command returning 0 is not evidence the app runs.** The
+        # first deploy of this app exited 0 with a machine that crash-looped ten
+        # times and never opened a port. This asks the running service.
+        run: |
+          for i in $(seq 1 10); do
+            code="$(curl -s -o /dev/null -m 30 -w '%{http_code}' https://akimath-api.fly.dev/health || true)"
+            if [ "$code" = "200" ]; then echo "health 200 on attempt $i"; exit 0; fi
+            echo "attempt $i: $code"; sleep 6
+          done
+          echo "::error::/health never answered 200 after the deploy." >&2
+          exit 1
