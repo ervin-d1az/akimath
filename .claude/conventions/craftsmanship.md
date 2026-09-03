@@ -4,7 +4,7 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Forty rule IDs — counting `FUN-1a` and `CMT-2a` as the
+This book starts small on purpose. Forty-one rule IDs — counting `FUN-1a` and `CMT-2a` as the
 carve-out and the special case they are rather than as rules — every one of them describing code
 that is already on disk today, not a pattern we hope to have. It grows by **PROC-6** and no
 other way.
@@ -741,6 +741,31 @@ credit.
   a data path can die silently.** `onGenerateRoute`, a route's `builder`, a `late final` field, a
   `Future` created in `initState` — each captures its inputs, and each keeps handing back the
   first ones for ever. Grep for the capture, not for the symptom.
+
+- **PROC-15** MUST: **a callback that reports *upward* is started off the frame that triggered
+  it.** PROC-13's mirror image: that rule is about a value arriving from a parent, this one is
+  about a fact travelling back. A child may not mark an ancestor dirty while the ancestor is
+  building, and `initState` and `didUpdateWidget` are both inside that build — so a root that
+  calls `widget.onSomethingChanged?.call(…)` from either one throws
+  `setState() or markNeedsBuild() called during build`.
+
+  **`unawaited` is not deferral, and that is the half that surprises people.** An `async` body
+  runs *synchronously up to its first `await`*, so `unawaited(_link(session))` still executes
+  everything before that await inside the build. Measured in
+  `fix-pack-waits-for-a-linked-player`: `ProfileRoute._link`'s first statement moves the account
+  state, that state started reporting to `RootScaffold`, and seven cases in
+  `session_survives_a_relaunch_test.dart` went red at once — none of them about the account.
+
+  The remedy is one hop: start the work on a `Future.microtask`, re-check `mounted` inside it, and
+  say in the doc comment that the deferral is load-bearing rather than incidental
+  (`ProfileRoute._linkOffThisFrame`). Prefer deferring the *work* over deferring the
+  *notification*: a network call had no business starting inside a build in the first place, and
+  a notification posted a frame late is a second thing to reason about.
+
+  **The trigger to watch for**: adding a `ValueChanged` to a widget that already assigns the field
+  it reports, when any caller of that assignment is reachable from `initState` or
+  `didUpdateWidget`. Funnel the assignments through one setter first — that is what makes the new
+  callback one edit instead of seven, and it is what makes this rule checkable by reading.
 
 - **PROC-14** MUST: **read the exception before you name the defect.** `flutter_test` fails a case
   when *any* rendering exception is thrown during layout, whatever that case asserts — so one
