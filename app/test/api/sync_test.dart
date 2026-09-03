@@ -1,4 +1,5 @@
 import 'package:akimath_app/api/sync.dart';
+import 'package:akimath_app/api/time_on_task.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const String _pack = '018f4e3c-0000-7000-8000-0000000000c1';
@@ -92,7 +93,7 @@ void main() {
       }
     });
 
-    test('time on task is milliseconds, and never negative', () {
+    test('time on task is milliseconds, and travels unaltered inside the bound', () {
       expect(
         AttemptSubmission.forPackItem(
           ref: const PackRef(packId: _pack, index: 0),
@@ -103,15 +104,51 @@ void main() {
         ).toJson()['elapsedMs'],
         67000,
       );
+      // The ceiling itself is in range, so it is not clamped to something else.
       expect(
-        () => AttemptSubmission.forPackItem(
+        AttemptSubmission.forPackItem(
+          ref: const PackRef(packId: _pack, index: 0),
+          sessionId: _session,
+          answer: '1',
+          at: DateTime.utc(2026),
+          elapsed: maxReportableTimeOnTask,
+        ).toJson()['elapsedMs'],
+        maxReportableTimeOnTask.inMilliseconds,
+      );
+    });
+
+    test('a negative one is floored rather than refused', () {
+      // **This replaces a `throwsA(isA<AssertionError>())`, it does not delete
+      // it.** The assert was stripped by `flutter build --release`, so the
+      // guarantee it advertised held in every test and in no shipping binary
+      // (TYP-2). Losing the last test of an invariant on the way to
+      // strengthening it is the PROC-11 regression that rule warns about.
+      expect(
+        AttemptSubmission.forPackItem(
           ref: const PackRef(packId: _pack, index: 0),
           sessionId: _session,
           answer: '1',
           at: DateTime.utc(2026),
           elapsed: const Duration(milliseconds: -1),
-        ),
-        throwsA(isA<AssertionError>()),
+        ).toJson()['elapsedMs'],
+        0,
+      );
+    });
+
+    test('and one measured past the bound saturates at it', () {
+      // An item left open for an afternoon — a phone in a pocket, a call
+      // taken. Before 2026-09-02 this sent 12_000_000, the server refused the
+      // whole body with a 400, and `journalAfter` read that as a batch to drop:
+      // up to two hundred real answers deleted over one timer.
+      expect(
+        AttemptSubmission.forPackItem(
+          ref: const PackRef(packId: _pack, index: 0),
+          sessionId: _session,
+          answer: '1',
+          at: DateTime.utc(2026),
+          elapsed: const Duration(hours: 3, minutes: 20),
+        ).toJson()['elapsedMs'],
+        maxReportableTimeOnTask.inMilliseconds,
       );
     });
 

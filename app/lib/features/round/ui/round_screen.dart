@@ -270,6 +270,9 @@ class _RoundScreenState extends State<RoundScreen> {
     // `content/answer_digest.dart`. The authored pack's items take the same
     // path they always did.
     final Verdict verdict = gradeItem(_item, _draft.text);
+    // Wall clock, so a backgrounded app keeps counting. What time on task
+    // *should* mean across that gap is an open product question; until it is
+    // answered, `api/time_on_task.dart` keeps the figure sendable.
     final Duration elapsed = finishedAt.difference(_startedAt);
     widget.onAnswered?.call(_item, _draft.text, elapsed);
     widget.onGraded?.call(verdict, elapsed);

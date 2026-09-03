@@ -1,5 +1,6 @@
 import 'package:akimath_app/api/me_result.dart';
 import 'package:akimath_app/api/sync.dart';
+import 'package:akimath_app/api/time_on_task.dart';
 import 'package:akimath_app/features/sync/policy/attempt_journal.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -48,6 +49,30 @@ void main() {
       expect(sent['packRef'], <String, Object?>{'packId': _pack, 'index': 3});
       expect(sent.containsKey('itemId'), isFalse);
       expect(sent['elapsedMs'], 4200);
+    });
+
+    test('a row stored before the bound existed still sends a value in range', () {
+      // **Why the ceiling is applied on the way to the wire and not on the way
+      // into the journal.** `AttemptSync.record` cannot reach a row that is
+      // already on a player's disk, and a device that answered an item left
+      // open for an afternoon has one — written by a build with no bound at
+      // all. Clamping only at record time would leave that device losing every
+      // batch it ever sends, which is the whole defect.
+      final JournalledAttempt legacy = JournalledAttempt.fromJson(<String, Object?>{
+        'packId': _pack,
+        'index': 3,
+        'sessionId': _session,
+        'answer': '13',
+        'at': '2026-08-19T09:00:00.000Z',
+        'elapsedMs': 12000000,
+      });
+
+      expect(legacy.elapsed, const Duration(milliseconds: 12000000),
+          reason: 'the journal keeps what it was given; only the wire is bounded');
+      expect(
+        legacy.toSubmission().toJson()['elapsedMs'],
+        maxReportableTimeOnTask.inMilliseconds,
+      );
     });
 
     test('and it carries no verdict, because the server decides that', () {

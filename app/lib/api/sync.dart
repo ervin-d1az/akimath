@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import 'instant.dart';
+import 'time_on_task.dart';
 
 /// Which item in which pack, as `attempts_one_source` spells it.
 ///
@@ -60,11 +61,16 @@ class PackRef {
 /// pack; the first caller of the issued half inherits the hole, and that is
 /// the one `GET /items/next` needs.
 ///
-/// **[elapsed] is a weaker promise and stays one.** The wire bounds it at
-/// 0…3_600_000 ms, no constructor can make an out-of-range `Duration`
-/// unrepresentable, and the assert below therefore holds in a debug build
-/// only. `AttemptSync.record` clamps the negative half where the value is
-/// produced, which is the enforcement that ships.
+/// **[elapsed] is brought inside the wire's bound by the constructor, and was
+/// an assert until 2026-09-02.** No constructor can make an out-of-range
+/// `Duration` unrepresentable, so the invariant cannot be a constructor
+/// *shape* — but it can be a constructor *effect*, and that is a guarantee
+/// `flutter build --release` keeps. The assert only ever caught the negative
+/// half, and only in debug: what shipped was an item left open for more than an
+/// hour — a phone in a pocket — sending an `elapsedMs` the server refuses, and
+/// a refused batch is a *deleted* batch. `reportableTimeOnTask` in
+/// `time_on_task.dart` holds the bound and says why the ceiling is what
+/// travels.
 @immutable
 class AttemptSubmission {
   AttemptSubmission._({
@@ -73,8 +79,8 @@ class AttemptSubmission {
     required this.sessionId,
     required this.answer,
     required this.at,
-    required this.elapsed,
-  }) : assert(!elapsed.isNegative, 'time on task cannot be negative');
+    required Duration elapsed,
+  }) : elapsed = reportableTimeOnTask(elapsed);
 
   /// An answer to an item from a pack, addressed by `(packId, index)`.
   AttemptSubmission.forPackItem({
@@ -125,6 +131,9 @@ class AttemptSubmission {
 
   /// Time on task, which is not the same as how long the request took. The
   /// server cannot derive it: a pack item has no `issued_at` of its own.
+  ///
+  /// Inside `0…maxReportableTimeOnTask` whatever was handed in, because the
+  /// constructor put it there.
   final Duration elapsed;
 
   Map<String, Object?> toJson() => <String, Object?>{

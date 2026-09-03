@@ -117,11 +117,33 @@ The one structural pattern the repo already commits to, on both sides of the sta
   write the illegal call, record the compiler's own words and the nonzero exit status, and say in
   the ledger that no test name is being quoted because there is none to quote.
 
-  **Where the invariant genuinely cannot be a constructor shape, say so at the declaration.** An
-  out-of-range `Duration` is representable whatever the constructor does, so `elapsed`'s bound in
-  that same class is still an assert — and the doc comment now names it as the weaker promise and
-  names the adapter that clamps the value where it is produced. A file holding both kinds of
-  guarantee and distinguishing neither is a CMT-2 defect waiting for its next reader.
+  **Where the invariant cannot be a constructor *shape*, ask whether it can be a constructor
+  *effect* before settling for an assert.** This paragraph said the opposite until 2026-09-02, and
+  the code it blessed shipped the defect. `elapsed`'s bound in that same class is the example: an
+  out-of-range `Duration` is representable whatever the constructor does, so no combination of
+  fields can be refused — from which this rule concluded *still an assert*, and never reached the
+  option that was there all along. A constructor cannot make the value unwritable; it can make it
+  unobservable. `AttemptSubmission._` now normalises through `reportableTimeOnTask`, which
+  `flutter build --release` keeps.
+
+  What the assert cost is the measure of the mistake. It guarded only the negative half, and the
+  half it did not guard was the reachable one: `round_screen.dart` measures an item on the wall
+  clock and nothing pauses it when the app is backgrounded, so a phone in a pocket for an
+  afternoon sends an `elapsedMs` past the frozen `maximum` of 3_600_000, the server refuses the
+  whole body with a 400, and `journalAfter` reads a 400 as a batch there is no point resending —
+  up to two hundred answered items deleted by an unpaused timer, with nothing on screen and
+  nothing in a log. Measured in `fix-a-long-item-cannot-drop-a-batch`.
+
+  Two things that generalise from it. **Normalise rather than throw when the value can arrive from
+  storage**: a refusing constructor would have wedged every later flush on one row already on a
+  player's disk, and the reachable-row case is also why the clamp belongs at the wire and not at
+  the point of measurement — a record-time clamp cannot reach what an older build already wrote.
+  And **the bound and its reason live in one pure module the contract's parity test can read**
+  (`app/lib/api/time_on_task.dart` against `contract/openapi.json`), never as a literal inside the
+  constructor, so the re-derivation cannot drift from the document.
+
+  A file holding both kinds of guarantee and distinguishing neither is a CMT-2 defect waiting for
+  its next reader.
 
 ## NAM — Naming
 
