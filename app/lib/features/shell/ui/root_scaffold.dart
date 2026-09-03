@@ -8,6 +8,7 @@ import '../../../design/tokens/tokens.dart';
 import '../../account/data/session_store.dart';
 import '../../account/policy/session.dart';
 import '../../account/policy/session_restore.dart';
+import '../../account/policy/token_renewal.dart';
 import '../../home/ui/home_route.dart';
 import '../../map/ui/map_route.dart';
 import '../../profile/ui/profile_route.dart';
@@ -31,7 +32,14 @@ class RootScaffold extends StatefulWidget {
     this.sessions = const PrefsSessionStore(),
     this.deriveToken,
     this.authBaseUrl = Endpoints.authBaseUrl,
+    this.now = DateTime.now,
   });
+
+  /// What time it is, injected the way `ProfileRoute.now` is.
+  ///
+  /// The shell dates the token it holds, and a shell that read the clock
+  /// directly could only be tested by waiting ten minutes.
+  final DateTime Function() now;
 
   /// Where Neon Auth is, defaulting to the build's own `--dart-define`.
   ///
@@ -62,7 +70,7 @@ class RootScaffold extends StatefulWidget {
 class _RootScaffoldState extends State<RootScaffold> {
   AppTab _current = AppTab.home;
 
-  /// The account this device is signed in to.
+  /// The account this device is signed in to, and when its token was minted.
   ///
   /// **Here rather than in a root**, because it outlives any one of them and
   /// the next root to need it should not have to ask the profile. `IndexedStack`
@@ -73,12 +81,55 @@ class _RootScaffoldState extends State<RootScaffold> {
   /// or two later — [_restoreTheStoredSession] — so a root reading it once at
   /// construction reads *signed out* and never hears otherwise. That is
   /// PROC-13's territory and `TabStack` is what makes the later value arrive.
-  LinkedSession? _session;
+  ///
+  /// **The pair is one field so the two cannot come apart.** A mint time that
+  /// belonged to a token the shell no longer holds would date the wrong thing,
+  /// and the answer it produced would be wrong in the silent direction. A
+  /// record makes writing one without the other impossible, which is TYP-2's
+  /// construction at the scale this fact actually has: the *renewer* is the
+  /// only reader, so widening `LinkedSession` for it would tell twenty-seven
+  /// construction sites about a fact one of them uses.
+  ({LinkedSession session, DateTime tokenMintedAt})? _held;
+
+  LinkedSession? get _session => _held?.session;
+
+  /// The check that keeps the token from going stale under a long sitting.
+  ///
+  /// **A check on a schedule, not a renewal on a schedule.** It runs a pure
+  /// function and almost always does nothing; a mint happens only when
+  /// `tokenRenewal` says the token is spent. That distinction is the whole
+  /// budget for this feature — every root reacts to a token it has not seen
+  /// before, so renewing on a timer would re-link the player and blank the
+  /// profile's history every tick.
+  Timer? _watch;
+
+  /// Whether a mint is already in flight.
+  ///
+  /// Two ticks, or a tick landing on a slow provider, would otherwise ask for
+  /// two tokens for one spent one. It is cleared in a `whenComplete` rather
+  /// than on the success path: a guard that latches on a failure is this defect
+  /// back with no recovery but a relaunch, which is what
+  /// *'a provider that keeps failing is asked again, not once'* pins.
+  bool _minting = false;
+
+  /// How often the token is looked at. Not how long a token lives — that is
+  /// `tokenReuseWindow`, and this only has to be fine enough that a spent token
+  /// is noticed promptly.
+  static const Duration _checkEvery = Duration(minutes: 1);
 
   @override
   void initState() {
     super.initState();
     unawaited(_restoreTheStoredSession());
+    _watch = Timer.periodic(_checkEvery, (Timer _) => _renewIfSpent());
+  }
+
+  @override
+  void dispose() {
+    // A periodic check that outlives its widget is a timer the framework
+    // reports and a `setState` against a disposed State.
+    _watch?.cancel();
+    super.dispose();
   }
 
   /// Comes up signed in where the device has a credential the provider honours.
@@ -96,19 +147,78 @@ class _RootScaffoldState extends State<RootScaffold> {
     if (stored == null || !mounted) {
       return;
     }
+    await _tradeTheCredentialForAToken(stored);
+  }
+
+  /// Replaces the token when the one in hand has had its allowance.
+  ///
+  /// **The defect this exists for was measured, not inferred.** A token minted
+  /// at launch was accepted by `POST /players/link` at 03:29:05 and refused by
+  /// `POST /attempts` at 03:49:30 — the same token, twenty minutes on. Nothing
+  /// renewed it inside a process, so **a player who played for longer than the
+  /// token lived stopped syncing until they restarted the app**, with nothing
+  /// on screen to say so (`docs/qa/2026-09-02-first-production-playthrough.md`
+  /// §2). Nothing was lost in the observed run — the attempt journal keeps a
+  /// batch a refused session could not send, and it flushed on the next launch
+  /// — so what this closes is the journal filling to its two-hundred cap over a
+  /// long enough unsynced stretch, and every hour of play that silently reaches
+  /// no server.
+  ///
+  /// **The operation was already on disk and simply unreached.** The provider
+  /// cookie is persisted and a launch already trades it for a fresh token; this
+  /// is that same trade, mid-process. Nothing here mints, signs or refreshes a
+  /// JWT — that is Neon Auth's job and calling it again is the only move
+  /// CLAUDE.md's *"never hand-write authentication crypto"* permits.
+  void _renewIfSpent() {
+    final ({LinkedSession session, DateTime tokenMintedAt})? held = _held;
+    // **No credential means nothing to mint from**, which is a capability and
+    // not a decision. `LinkedSession.provider` is still nullable, and a session
+    // built without one — a test's, or any future path that does not carry the
+    // cookie — has to be left exactly as it is rather than signed out.
+    final StoredSession? credential = held?.session.storable;
+    if (held == null || credential == null || _minting) {
+      return;
+    }
+    if (tokenRenewal(mintedAt: held.tokenMintedAt, now: widget.now()) ==
+        TokenRenewal.reuse) {
+      return;
+    }
+    _minting = true;
+    unawaited(_tradeTheCredentialForAToken(credential)
+        .whenComplete(() => _minting = false));
+  }
+
+  /// The trade itself, and the one place its three answers are read.
+  ///
+  /// **`sessionRestore` is reused rather than a fourth reading invented.** A
+  /// renewal fails in exactly the ways a launch does and they mean exactly the
+  /// same things: refused says the provider has disowned this credential, and
+  /// unreachable says nothing about it at all. Writing a second switch here is
+  /// how the two would come to disagree about the plane.
+  Future<void> _tradeTheCredentialForAToken(StoredSession stored) async {
     final AuthResult<String> answer = await _askForAToken(stored.provider);
     if (!mounted) {
       return;
     }
     switch (sessionRestore(stored: stored, providerAnswer: answer)) {
       case SessionRestored(session: final LinkedSession restored):
-        setState(() => _session = restored);
+        // **No disk write.** What is storable is the address, the band and the
+        // cookie, and a renewal moves none of them — the token was never on
+        // disk and is the only thing that changed.
+        setState(() => _held = (
+              session: restored,
+              tokenMintedAt: widget.now(),
+            ));
       case SessionForgotten():
-        await widget.sessions.forget();
+        // **Signed out here, not only deleted.** At launch there was no session
+        // to drop and clearing the file was the whole job; mid-process, leaving
+        // the shell holding a session the provider has disowned is exactly the
+        // store-and-memory drift `_holdAndRemember` exists to prevent.
+        await _holdAndRemember(null);
       case SessionKept():
         // Offline, or a provider having a bad minute. The credential stays and
-        // the app comes up signed out for this launch only — deleting it here
-        // is the failure `sessionRestore` exists to prevent.
+        // so does whatever session is in hand — deleting either here is the
+        // failure `sessionRestore` exists to prevent.
         break;
     }
   }
@@ -167,7 +277,13 @@ class _RootScaffoldState extends State<RootScaffold> {
   /// than leaving it. Anything else would let the next launch restore an
   /// account this device is no longer signed in to — possibly somebody else's.
   Future<void> _holdAndRemember(LinkedSession? session) async {
-    setState(() => _session = session);
+    // **Dated `now`, because this is the moment the token arrived.** The only
+    // caller handing one over is the auth flow's `onLinked`, which has just
+    // derived it — so "now" is right to within the frame it took to get here,
+    // and a session that skipped this would be dated by whatever it replaced.
+    setState(() => _held = session == null
+        ? null
+        : (session: session, tokenMintedAt: widget.now()));
     final StoredSession? storable = session?.storable;
     if (storable == null) {
       await widget.sessions.forget();
