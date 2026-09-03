@@ -54,9 +54,17 @@ re-decided at every launch site.
 
 *n/a* is a cell that cannot be filled — a solved board is not an answered item and leaves no
 attempt row, a probe in pack order names no single family's ladder, a fixed teaching item comes
-from no pack. *said* is a real "no" with its reason written down: `home_route.dart:667`,
-`onboarding_flow.dart:210`, `first_item_screen.dart:16`, and `practised_steps.dart:6` for
-`_practise`'s cursor.
+from no pack. **The probe's attempt-journal `n/a` is the one those three clauses did not reach,
+and it now needs to**, because the answer-record cell beside it stopped being `no`: a reader who
+accepts *the probe is practice, graded by the same `gradeItem`* will ask why those answers never
+reach the server. Verified rather than inferred — `AttemptSync.record`
+(`attempt_sync.dart:72-75`) returns early when `readIssuedItemId(itemId)` is null, and the probe
+reads the **bundled** pack through `OnboardingFlow.reader`, whose items carry no `packId#index`
+for the server to resolve. Journalling one would file a batch that can only come back a 404, and
+`journalAfter` drops that. The first run also holds no session, so there would be nothing to
+flush with; the address is the structural half. *said* is a real "no" with its reason written
+down: `home_route.dart:667`, `onboarding_flow.dart:210`, `first_item_screen.dart:16`, and
+`practised_steps.dart:6` for `_practise`'s cursor.
 
 **That left one unexplained cell, and it was live.** The probe graded ten items with
 `gradeItem` and reported none of them, so those ten were absent from the accuracy `4.1 Perfil`

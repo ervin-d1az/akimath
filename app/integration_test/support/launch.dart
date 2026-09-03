@@ -104,9 +104,10 @@ Future<void> launchOnAFreshInstall(WidgetTester tester) async {
 /// **The answers are wrong on purpose, and it does not matter that they are.**
 /// The claim under test is that an answered probe item reaches the device's
 /// record at all; which verdict it carries is `gradeItem`'s and is already held
-/// by the widget suite against known items. A single `9` is submittable against
-/// every family the pack's first ten hold, which is what keeps this walk from
-/// depending on the content of `assets/packs/starter.json`.
+/// by the widget suite against known items. A single `9` is submittable on the
+/// item pad whatever the prompt says, which is what keeps this walk from
+/// depending on the content of `assets/packs/starter.json` — verified for the
+/// items this suite actually reaches, and no further.
 ///
 /// Leaves `0.6 Calibración resultado` on screen — reachable because [answers]
 /// is at least one, which is what `hasSomethingToReport` requires.
