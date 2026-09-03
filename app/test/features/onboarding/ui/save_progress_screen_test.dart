@@ -1,6 +1,4 @@
-import 'package:akimath_app/demo/demo_figures.dart';
 import 'package:akimath_app/design/brand/aki.dart';
-import 'package:akimath_app/design/math/spec/es_mx_number.dart';
 import 'package:akimath_app/design/theme.dart';
 import 'package:akimath_app/features/onboarding/ui/save_progress_screen.dart';
 import 'package:akimath_app/features/shell/ui/app_shell.dart';
@@ -61,12 +59,30 @@ void main() {
     expect(find.text('DÍAS'), findsOneWidget);
   });
 
-  testWidgets('the rating tile is the quarantined figure',
+  testWidgets('the design\'s middle tile is absent, because nothing fills it',
       (WidgetTester tester) async {
+    // `0.7` draws `RATING 1 248` between the two measured tiles. Rating never
+    // runs in Dart and `GET /me/standing` answers one per skill, so it was an
+    // invented constant until 2026-09-02 and it is now simply not drawn.
     await _pump(tester, onCreateAccount: () {});
 
-    expect(find.text(EsMxNumber.integer(DemoFigures.rating)), findsOneWidget);
-    expect(find.text('RATING'), findsOneWidget);
+    expect(find.textContaining('RATING'), findsNothing);
+  });
+
+  testWidgets('the row shrinks to the figures there are, down to one',
+      (WidgetTester tester) async {
+    // **The shape that ships.** `OnboardingFlow` always passes `days: 0` —
+    // neither the teaching item nor the probe records a day — so this is what
+    // a first-time player sees, and it was a two-tile row only because the
+    // second tile was invented. One tile is as legitimate as three, the same
+    // reading `4.1`'s tile row already makes; a `0 DÍAS` beside it would be
+    // the `RACHA 1` defect in its other direction.
+    await _pump(tester, challenges: 11, days: 0, onCreateAccount: () {});
+
+    expect(find.text('RETOS'), findsOneWidget);
+    expect(find.text('11'), findsOneWidget);
+    expect(find.textContaining('DÍA'), findsNothing);
+    expect(find.textContaining('RATING'), findsNothing);
   });
 
   testWidgets('it says what happens if the player does nothing',

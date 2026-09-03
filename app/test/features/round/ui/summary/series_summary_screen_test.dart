@@ -1,5 +1,4 @@
 import 'package:akimath_app/content/model/diagnosis.dart';
-import 'package:akimath_app/demo/demo_figures.dart';
 import 'package:akimath_app/design/brand/aki.dart';
 import 'package:akimath_app/design/math/spec/es_mx_number.dart';
 import 'package:akimath_app/design/widgets/baseline_meter.dart';
@@ -134,11 +133,15 @@ void main() {
     });
   });
 
-  group('the three tiles', () {
-    testWidgets('rating, total time and the streak', (WidgetTester tester) async {
+  group('the two tiles', () {
+    testWidgets('the total time and the streak, and nothing else',
+        (WidgetTester tester) async {
+      // The design draws three and the third was the rating — see the group
+      // below for why it went. Counting the tiles is what stops a fourth
+      // arriving unnoticed.
       await _pump(tester);
 
-      expect(find.byType(StatTile), findsNWidgets(3));
+      expect(find.byType(StatTile), findsNWidgets(2));
       expect(find.text('EN TOTAL'), findsOneWidget);
       expect(_tile(tester, 'RACHA'), '3');
     });
@@ -156,49 +159,56 @@ void main() {
     });
   });
 
-  group('the one invented figure is the rating, and it comes from DemoFigures',
-      () {
-    testWidgets('the tile shows exactly the quarantined constant',
+  group('nothing on it is a figure the product cannot produce', () {
+    testWidgets('the three blocks the design draws from nothing are absent',
         (WidgetTester tester) async {
       // **Q3/D17 kept a rating off this screen until 2026-08-20**, on the rule
-      // that F2 shows no figure a later sync could contradict. The demo took an
-      // openly-invented one from `DemoFigures` instead — which is a different
-      // thing from computing one: `CLAUDE.md` says rating never runs in Dart,
-      // and this assertion is what goes red the day something here tries.
+      // that F2 shows no figure a later sync could contradict. A quarantined
+      // constant was drawn instead, which is a different thing from computing
+      // one and still the same thing to a player: on 2026-09-02 two
+      // structurally different series printed an identical `+ 12 RATING` and
+      // `Fracciones 68 % · Multiplicar 96 %` against the live API, neither
+      // having held a fraction or a multiplication.
+      //
+      // The mastery bars are asserted by widget type as well as by label: the
+      // heading could go while the meters stayed, and a bar with no eyebrow
+      // over it is the same invented figure without the word.
       await _pump(tester);
 
-      expect(DemoFigures.seriesRatingDelta, 12);
-      expect(_tile(tester, 'RATING'), contains('12'));
+      expect(find.textContaining('RATING'), findsNothing);
+      expect(find.textContaining('QUÉ MEJORÓ'), findsNothing);
+      expect(find.byType(BaselineMeter), findsNothing);
+      expect(find.textContaining('QUÉ SIGUE'), findsNothing);
     });
 
-    testWidgets('it does not move with the score', (WidgetTester tester) async {
-      // A rating that changed with `correct` would be a *derived* figure, which
-      // is the thing that must not exist on this side. Invented is honest;
-      // computed is a claim.
-      await _pump(tester, correct: 0);
-      final String none = _tile(tester, 'RATING');
-      await _pump(tester, correct: 5);
-
-      expect(_tile(tester, 'RATING'), none);
-    });
-
-    testWidgets('the mastery bars are the design\'s two, and invented together',
+    testWidgets('and the two tiles left are the measured ones',
         (WidgetTester tester) async {
-      await _pump(tester);
+      // The other half. A screen that satisfied the assertion above by drawing
+      // no tiles at all would be a different defect, and this is what tells
+      // the two apart — the same pair `03 Acierto` and `04 Error` show.
+      await _pump(tester, elapsed: const Duration(seconds: 47), streakDays: 3);
 
-      expect(find.text('QUÉ MEJORÓ'), findsOneWidget);
-      expect(find.byType(BaselineMeter), findsNWidgets(2));
-      for (final DemoSkillBar bar in DemoFigures.seriesSkills) {
-        expect(find.text(bar.skill), findsOneWidget);
-        expect(find.text(EsMxNumber.percent(bar.percent)), findsOneWidget);
-      }
+      expect(_tile(tester, 'EN TOTAL'), EsMxNumber.seconds(47, places: 1));
+      expect(_tile(tester, 'RACHA'), '3');
     });
 
-    testWidgets('and one recommendation, not a list', (WidgetTester tester) async {
-      await _pump(tester);
+    testWidgets('a clean series ends on the streak, with nothing under it',
+        (WidgetTester tester) async {
+      // The shortest the screen gets: no slip, so no coral card either, and
+      // the two invented blocks used to be all that stood between the tiles
+      // and the button. A heading over nothing is what `4.1` refuses with
+      // `HISTORIAL` (DR-P2), and this pins that nothing was left behind.
+      await _pump(tester, correct: 5, outcomes: const <Verdict>[
+        Verdict.correct,
+        Verdict.correct,
+        Verdict.correct,
+        Verdict.correct,
+        Verdict.correct,
+      ]);
 
-      expect(find.text(DemoFigures.seriesNext), findsOneWidget);
-      expect(find.text(DemoFigures.seriesNextNote), findsOneWidget);
+      expect(find.text('QUÉ SE TORCIÓ'), findsNothing);
+      expect(find.byType(StatTile), findsNWidgets(2));
+      expect(find.text('Volver al inicio'), findsOneWidget);
     });
   });
 

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../content/model/diagnosis.dart';
-import '../../../../demo/demo_figures.dart';
 import '../../../../design/brand/aki.dart';
 import '../../../../design/math/spec/es_mx_number.dart';
 import '../../../../design/tokens/tokens.dart';
-import '../../../../design/widgets/baseline_meter.dart';
 import '../../../../design/widgets/brand_button.dart';
 import '../../../../design/widgets/candy_surface.dart';
 import '../../../../design/widgets/spec/verdict.dart';
@@ -15,11 +13,10 @@ import '../../../../design/widgets/verdict_ring.dart';
 
 /// How a finished series went.
 ///
-/// **Everything here except the rating and the mastery bars is measured.** The
-/// round graded every item and held the clock, so the per-item outcomes, the
-/// total time and the streak are facts it hands over. The two that are not
-/// come from `DemoFigures`, which is the one quarantined home for an invented
-/// number — rating never runs in Dart, and nothing tracks mastery per skill.
+/// **Every figure on it is measured.** The round graded each item and held the
+/// clock, so the per-item outcomes, the total time and the streak are facts it
+/// hands over, and there is nothing else. Three things the design draws are
+/// deliberately absent — see [SeriesSummaryScreen].
 class SeriesResult {
   const SeriesResult({
     required this.correct,
@@ -73,10 +70,28 @@ class SeriesResult {
 /// be on. A summary is not a solve. The design departure is deliberate and the
 /// committed test is the reason.
 ///
-/// **It scrolls.** The design lays five blocks out in a fixed flex column that
-/// happens to fit at `textScaler` 1.0; at 1.3 it does not, and the overflow
-/// gate checks both. The button stays outside the scroll view so the way out is
-/// never below the fold.
+/// **Three of the design's blocks are absent, and each for the same reason.**
+/// `2.5` draws a `+12 RATING` tile, a `QUÉ MEJORÓ` pair of mastery bars and a
+/// `QUÉ SIGUE · UNA SOLA COSA` recommendation. Nothing produces any of them:
+/// rating never runs in Dart and `GET /me/standing` answers one *per skill*,
+/// nothing tracks mastery per skill at all — the device never sees a
+/// `skill_id` — and a recommendation needs `GET /items/next`, which answers
+/// 501. They were drawn from invented constants until 2026-09-02, when two
+/// structurally different series printed the byte-identical `+ 12 RATING` and
+/// `Fracciones 68 % · Multiplicar 96 %` in front of a real player, neither
+/// having contained a fraction or a multiplication. **Absent, not zeroed and
+/// not greyed out** (DR-P2), the same reading `HISTORIAL` takes on `4.1`;
+/// `only_what_it_can_prove_test.dart` is what keeps them absent until
+/// something computes them.
+///
+/// **It scrolls, and it still needs to with three blocks gone.** The design
+/// lays five out in a fixed flex column that happens to fit at `textScaler`
+/// 1.0 and does not at 1.3, and the overflow gate checks both. Removing the
+/// invented three took the fixed part of the column well under the fold — but
+/// the block that remains is the one with no ceiling: `QUÉ SE TORCIÓ` renders
+/// the pack's own prose, as many steps as a `Diagnosis` carries, so the height
+/// is content the screen does not control. The button stays outside the scroll
+/// view so the way out is never below the fold.
 class SeriesSummaryScreen extends StatelessWidget {
   const SeriesSummaryScreen({
     super.key,
@@ -165,15 +180,7 @@ class SeriesSummaryScreen extends StatelessWidget {
           _headline(),
           const SizedBox(height: BrandShape.space3),
           _tiles(),
-          if (DemoFigures.enabled) ...<Widget>[
-            const SizedBox(height: BrandShape.space3),
-            _whatImproved(),
-          ],
           ..._whatWentWrong(),
-          if (DemoFigures.enabled) ...<Widget>[
-            const SizedBox(height: BrandShape.space3),
-            _whatIsNext(),
-          ],
         ],
       ),
     );
@@ -216,7 +223,12 @@ class SeriesSummaryScreen extends StatelessWidget {
     );
   }
 
-  /// Three tiles, as the design draws them: the rating, the time, the streak.
+  /// Two tiles: the time and the streak.
+  ///
+  /// **The design draws three and the third was the rating.** It is gone rather
+  /// than blank — the same pair `03 Acierto` and `04 Error` already show, and
+  /// for the same recorded reason: nothing here may be a figure a later sync
+  /// could contradict.
   ///
   /// **`RACHA` and not the design's `DÍAS`.** `4.1` already labels *days
   /// practised* `DÍAS`, and that is a different figure from a streak; one word
@@ -225,12 +237,12 @@ class SeriesSummaryScreen extends StatelessWidget {
   /// **Each figure scales down inside its tile.** Three natural-width tiles
   /// overflowed 390 px by 98, and `FittedBox` keeps a long figure inside its own
   /// tile rather than pushing the next one off the edge — which is what has to
-  /// hold at `textScaler` 1.3.
+  /// hold at `textScaler` 1.3. Two have more room than three had, and the
+  /// wrapping stays: an hour-long series is still the widest figure a tile here
+  /// can hold.
   Widget _tiles() {
     return Row(
       children: <Widget>[
-        Expanded(child: _ratingTile()),
-        const SizedBox(width: BrandShape.space2),
         Expanded(
           child: _tile(
             'EN TOTAL',
@@ -243,44 +255,6 @@ class SeriesSummaryScreen extends StatelessWidget {
     );
   }
 
-  /// The one invented figure on the screen, from the file that holds them.
-  ///
-  /// **Not `StatTile.delta`, and that is a workaround.** That factory renders
-  /// its two runs unfitted, so at `textScaler` 1.3 `+ 12` overflows a third of
-  /// this row by 3 px and the overflow gate goes red. The fix belongs inside
-  /// the factory — every other figure on this screen is already wrapped — and
-  /// `design/widgets/` was not this change's to edit. `deltaParts` is public
-  /// precisely so no caller concatenates a sign by hand, which is what keeps
-  /// U+2212 correct here.
-  Widget _ratingTile() {
-    final DeltaParts parts =
-        EsMxNumber.deltaParts(DemoFigures.seriesRatingDelta);
-    return StatTile(
-      label: 'RATING',
-      variant: StatTileVariant.compact,
-      value: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: <Widget>[
-            if (parts.sign.isNotEmpty) ...<Widget>[
-              // 15 against the digits' 24: the sign is a modifier on the
-              // number, not a second number beside it.
-              Text(parts.sign, style: BrandText.action(size: 15)),
-              const SizedBox(width: BrandShape.space1),
-            ],
-            Text(
-              parts.digits,
-              style: BrandText.numeral(StatTileVariant.compact.valueSize),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _tile(String label, String figure) {
     return StatTile(
       label: label,
@@ -289,43 +263,6 @@ class SeriesSummaryScreen extends StatelessWidget {
         child: StatValue(figure, size: StatTileVariant.compact.valueSize),
       ),
       variant: StatTileVariant.compact,
-    );
-  }
-
-  /// `QUÉ MEJORÓ` — two invented mastery bars.
-  Widget _whatImproved() {
-    return _card(
-      label: 'QUÉ MEJORÓ',
-      children: <Widget>[
-        for (final DemoSkillBar bar in DemoFigures.seriesSkills) ...<Widget>[
-          const SizedBox(height: BrandShape.space2),
-          _skillBar(bar),
-        ],
-      ],
-    );
-  }
-
-  Widget _skillBar(DemoSkillBar bar) {
-    return Row(
-      children: <Widget>[
-        // Flexible rather than the design's fixed 96 px: at `textScaler` 1.3 a
-        // longer skill name would overflow a box it cannot grow out of.
-        Expanded(
-          flex: 2,
-          child: Text(bar.skill, style: BrandText.action(size: 13)),
-        ),
-        const SizedBox(width: BrandShape.space2),
-        Expanded(
-          flex: 3,
-          child: BaselineMeter(
-            fill: bar.level,
-            fraction: bar.percent / 100,
-            baseline: bar.before / 100,
-          ),
-        ),
-        const SizedBox(width: BrandShape.space2),
-        Text(EsMxNumber.percent(bar.percent), style: BrandText.numeral(15)),
-      ],
     );
   }
 
@@ -372,32 +309,5 @@ class SeriesSummaryScreen extends StatelessWidget {
         ),
       ),
     ];
-  }
-
-  /// `QUÉ SIGUE · UNA SOLA COSA` — one invented recommendation.
-  Widget _whatIsNext() {
-    return _card(
-      label: 'QUÉ SIGUE · UNA SOLA COSA',
-      children: <Widget>[
-        const SizedBox(height: BrandShape.space2),
-        Text(DemoFigures.seriesNext, style: BrandText.sectionTitle(size: 22)),
-        const SizedBox(height: BrandShape.space1),
-        Text(DemoFigures.seriesNextNote, style: BrandText.caption()),
-      ],
-    );
-  }
-
-  Widget _card({required String label, required List<Widget> children}) {
-    return CandySurface(
-      borderRadius: BrandShape.radiusCard,
-      padding: const EdgeInsets.all(BrandShape.space3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(label, style: BrandText.eyebrow()),
-          ...children,
-        ],
-      ),
-    );
   }
 }

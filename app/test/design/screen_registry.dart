@@ -522,6 +522,23 @@ final List<RegisteredScreen> registeredScreens = <RegisteredScreen>[
     ),
   ),
   RegisteredScreen(
+    label: 'guardar progreso · primer run',
+    // **The shape that ships, and the registry did not walk it.** The entries
+    // either side pass 1 and 90 days; `OnboardingFlow` always passes 0 —
+    // neither the teaching item nor the probe records a day — so the row a
+    // real first-time player sees is a single full-width tile, which no gate
+    // had measured. It became one tile rather than two when the invented
+    // `RATING` beside it went.
+    build: () => AppShell(
+      child: SaveProgressScreen(
+        challenges: 11,
+        days: 0,
+        onCreateAccount: _nothing,
+        onLater: _nothing,
+      ),
+    ),
+  ),
+  RegisteredScreen(
     label: 'guardar progreso · sin flujo de cuenta',
     // A build with no account flow wired. It offers nothing it cannot do, and
     // the widest figures it can hold: three days' worth of digits in every
