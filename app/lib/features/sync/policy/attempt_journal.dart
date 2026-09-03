@@ -176,3 +176,25 @@ List<JournalledAttempt> journalAfter(
       .where((JournalledAttempt held) => !gone.contains(held.key))
       .toList(growable: false);
 }
+
+/// Whether the server now holds rows it did not hold before this answer.
+///
+/// **Narrower than [journalAfter]'s own `landed`, and deliberately not called
+/// by that name.** That one asks *is there any point resending this batch* and
+/// says yes for a 400 and for a 404 — both of which reached the server and
+/// **wrote nothing**. So the journal going empty does not mean the server
+/// learned anything, and anything reading back what the server holds cannot
+/// use the journal's length to decide whether to look again.
+///
+/// Exactly one answer of the six is a recording, which is the point: a refused
+/// session recorded nothing, so nothing downstream re-reads on one — the
+/// silence a dead token is owed holds by construction here rather than by a
+/// guard somebody has to remember.
+bool attemptsWereRecorded(SyncResult result) => switch (result) {
+      SyncDone() => true,
+      SyncMalformed() => false,
+      SyncNoSuchItem() => false,
+      SyncRejected() => false,
+      SyncFailed() => false,
+      SyncUnreachable() => false,
+    };

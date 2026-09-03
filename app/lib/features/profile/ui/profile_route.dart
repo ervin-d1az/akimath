@@ -15,6 +15,8 @@ import '../../home/policy/day_log.dart';
 import '../../round/policy/streak_policy.dart';
 import '../../stats/data/answer_record_store.dart';
 import '../../stats/policy/local_stats.dart';
+import '../../sync/data/recorded_batch_store.dart';
+import '../policy/history_refresh.dart';
 import '../policy/history_view.dart';
 import '../policy/profile_readout.dart';
 import '../../account/data/player_id_store.dart';
@@ -55,6 +57,7 @@ class ProfileRoute extends StatefulWidget {
     this.answerRecord,
     this.seriesCursor = const SeriesCursorStore(),
     this.fetchHistory,
+    this.recordedBatches = const PrefsRecordedBatchStore(),
     this.auth,
     this.whoAmI,
     this.visibility = RootVisibility.showing,
@@ -147,6 +150,21 @@ class ProfileRoute extends StatefulWidget {
   /// on `!timersPending`.
   final Future<HistoryResult> Function(String accessToken)? fetchHistory;
 
+  /// How many batches of attempts the server has recorded for this device.
+  ///
+  /// **The seam that tells this root a sync landed**, and the whole of the
+  /// answer to a defect measured on 2026-09-02: history was asked at
+  /// `03:51:04.581` and the batch of five landed at `03:51:04.697`, so Perfil
+  /// drew no `HISTORIAL` section for a session the server held, and only a
+  /// relaunch showed it.
+  ///
+  /// **A store rather than a callback, because the writer is a sibling.**
+  /// `AttemptSync` belongs to Inicio and to Mapa; this root builds neither and
+  /// an `IndexedStack` keeps all three alive, so the device is the only thing
+  /// they share. Both sides default to the same key, which is what makes the
+  /// seam work in the app with nothing in the shell wiring it.
+  final RecordedBatchStore recordedBatches;
+
   @override
   State<ProfileRoute> createState() => _ProfileRouteState();
 }
@@ -162,6 +180,11 @@ class _ProfileRouteState extends State<ProfileRoute> {
   /// figure a player who has answered nothing gets — so nothing waits on it.
   LocalStats _stats = LocalStats.of(const <AnsweredItem>[]);
   HistoryResult? _history;
+
+  /// The tally of recorded batches as it stood when this root last asked the
+  /// server what it holds. Null until it has asked at all — which is not the
+  /// same fact as having asked when the tally was zero.
+  int? _recordedWhenAsked;
 
   @override
   void initState() {
@@ -193,7 +216,35 @@ class _ProfileRouteState extends State<ProfileRoute> {
     if (widget.visibility == RootVisibility.showing &&
         before == RootVisibility.behind) {
       _readWhatTheDeviceKnows();
+      unawaited(_askAgainIfABatchLanded());
     }
+  }
+
+  /// Re-reads the server's half, but only where a sync gave it something new.
+  ///
+  /// **The visit is the moment; the tally is the reason.** A root that asked
+  /// on every visit would send a request per tab switch for ever and get back
+  /// the answer it already had — and one that asks on every *rebuild* would be
+  /// worse still, since the shell rebuilds all three roots on each switch.
+  /// `historyOutdated` is the decision and it is pure; this only fetches the
+  /// count it needs.
+  ///
+  /// **It covers the case measured on the device**, where the batch lands after
+  /// the launch's ask and the player then opens Perfil. What it does not cover
+  /// is a batch recorded while the player is already *sitting* on Perfil and
+  /// never switches away — narrow, because the two roots that flush are the two
+  /// they would have to be on to produce one, and it self-heals on the next
+  /// visit rather than persisting.
+  Future<void> _askAgainIfABatchLanded() async {
+    final int recorded = await widget.recordedBatches.read();
+    if (!mounted ||
+        !historyOutdated(
+          recordedWhenAsked: _recordedWhenAsked,
+          recordedNow: recorded,
+        )) {
+      return;
+    }
+    await _askForHistory();
   }
 
   @override
@@ -238,11 +289,20 @@ class _ProfileRouteState extends State<ProfileRoute> {
     }
   }
 
+  /// Asks the server what this account has played, and marks how current the
+  /// answer will be.
+  ///
+  /// **The tally is read before the request goes out, and that direction is
+  /// deliberate.** A batch recorded while this request is in flight would
+  /// otherwise be counted as already read; taking the count first means such a
+  /// batch shows up as a difference on the next visit and costs one extra
+  /// request instead of a missing section.
   Future<void> _askForHistory() async {
     final LinkedSession? session = widget.session;
     if (session == null) {
       return;
     }
+    _recordedWhenAsked = await widget.recordedBatches.read();
     final HistoryResult result =
         await (widget.fetchHistory ?? _historyOverASocket)(session.accessToken);
     if (!mounted) {

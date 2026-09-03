@@ -5,6 +5,7 @@ import '../../api/endpoints.dart';
 import '../../content/model/issued_pack.dart';
 import '../account/policy/player_id.dart';
 import 'data/attempt_journal_store.dart';
+import 'data/recorded_batch_store.dart';
 import 'policy/attempt_journal.dart';
 
 /// What the device remembers until the server has it.
@@ -26,16 +27,27 @@ import 'policy/attempt_journal.dart';
 class AttemptSync {
   AttemptSync({
     AttemptJournalStore? store,
+    RecordedBatchStore? recordedBatches,
     Future<SyncResult> Function({
       required String accessToken,
       required List<AttemptSubmission> attempts,
     })? submit,
     Random? random,
   })  : _store = store ?? const PrefsAttemptJournalStore(),
+        _recordedBatches = recordedBatches ?? const PrefsRecordedBatchStore(),
         _submit = submit,
         _random = random ?? Random.secure();
 
   final AttemptJournalStore _store;
+
+  /// The tally a reader of the server watches.
+  ///
+  /// **Written here rather than announced to a listener**, because the reader
+  /// is a sibling root: Inicio and Mapa build an `AttemptSync` each and Perfil
+  /// builds neither, so the only thing all three share is the device. The
+  /// default is the same key on both sides, which is what makes the seam work
+  /// in the app with nobody wiring it.
+  final RecordedBatchStore _recordedBatches;
   final Future<SyncResult> Function({
     required String accessToken,
     required List<AttemptSubmission> attempts,
@@ -127,6 +139,16 @@ class AttemptSync {
     // seen.
     final List<JournalledAttempt> now = await _store.read();
     await _store.write(journalAfter(sending, now, result));
+
+    // **Only where the server actually wrote rows**, which is a narrower set
+    // than the one that empties the journal — a 400 and a 404 both reach the
+    // server and record nothing. `attemptsWereRecorded` is that distinction and
+    // this is its one caller: without it, `GET /me/history` is asked once at
+    // launch and never again, so a player who finishes a series watches their
+    // own history stay empty until they restart the app.
+    if (attemptsWereRecorded(result)) {
+      await _recordedBatches.countOne();
+    }
     return result;
   }
 
