@@ -12,13 +12,25 @@ import '../policy/local_stats.dart';
 /// `4.1` is drawing; it has to survive a restart or it is a different number
 /// with the same label.
 ///
-/// **The first run does not record, and nothing here enforces that — the caller
-/// does.** `Primer reto` is a teaching item: it records no day and shows no
-/// streak, and it should not move accuracy either, because the figure is about
-/// how the player is doing and the tutorial is about how the app works. The
-/// mechanism is the one `DayLogStore` already uses — the round is built without
-/// a store, so there is nothing to record into. Wiring this in means passing a
-/// recorder to the practice round and **not** to `FirstItemScreen`.
+/// **The teaching item does not record, and nothing here enforces that — the
+/// caller does.** `Primer reto` records no day and shows no streak, and it
+/// should not move accuracy either, because the figure is about how the player
+/// is doing and the tutorial is about how the app works. The mechanism is the
+/// one `DayLogStore` already uses — the round is built without a store, so
+/// there is nothing to record into. Wiring this in means passing a recorder to
+/// the practice round and **not** to `FirstItemScreen`.
+///
+/// **This clause read *"the first run does not record"* until the probe was
+/// wired, and by then it was false of half the first run.** When it was
+/// written the run was two screens; `0.4`–`0.6` landed the next day, and the
+/// probe serves the pack's own first ten items, grades them with the same
+/// `gradeItem` the round uses, and advances the same cursor `4.1` prints as
+/// `RETOS`. It therefore records, from `OnboardingFlow` — so the surfaces that
+/// stay out are named one at a time rather than by naming a phase of the app.
+///
+/// **Which surface owes which recorder is still nowhere in one piece.** Six
+/// play surfaces wire five recorders by hand; `docs/solid/shell-and-entry.md`'s
+/// finding 1 is that gap, and this comment is not the cure for it.
 abstract interface class AnswerRecordStore {
   /// The window as it stands, oldest first. Returns an empty record rather than
   /// throwing when there is nothing to read or what is there cannot be read.

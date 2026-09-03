@@ -114,11 +114,17 @@ class HomeRoute extends StatefulWidget {
 
   /// Where the device's own record of answered items is kept.
   ///
-  /// **The practice round writes to it and `Primer reto` does not**, which
-  /// is the rule `AnswerRecordStore` states and this route is the only place
-  /// that can keep: the teaching item is built by `FirstRunGate` with no round
-  /// callbacks at all, so there is nothing to record into rather than a rule
-  /// somebody has to remember.
+  /// **The practice round writes to it and `Primer reto` does not**, which is
+  /// the rule `AnswerRecordStore` states: the teaching item is built with no
+  /// round callbacks at all, so there is nothing to record into rather than a
+  /// rule somebody has to remember.
+  ///
+  /// **This route is not the only place that keeps it.** `MapRoute` records a
+  /// topic's practice and `OnboardingFlow` records the calibration probe, and
+  /// this comment claimed the opposite while the second of those was missing
+  /// entirely (CMT-4). Nothing gates the claim, which is
+  /// `docs/solid/shell-and-entry.md`'s finding 1: grep `AnswerRecordStore`
+  /// across `lib/` rather than believing a sentence.
   ///
   /// Injected for the reason [dayLog] is — a `testWidgets` must never reach a
   /// plugin.

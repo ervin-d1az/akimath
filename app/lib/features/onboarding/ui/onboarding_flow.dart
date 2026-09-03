@@ -5,8 +5,11 @@ import 'package:flutter/widgets.dart';
 import '../../../content/model/item.dart';
 import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
+import '../../../design/widgets/spec/verdict.dart';
 import '../../home/data/series_cursor_store.dart';
 import '../../shell/ui/app_shell.dart';
+import '../../stats/data/answer_record_store.dart';
+import '../../stats/policy/local_stats.dart';
 import '../policy/calibration.dart';
 import 'calibration_intro_screen.dart';
 import 'calibration_item_screen.dart';
@@ -69,6 +72,7 @@ class OnboardingFlow extends StatefulWidget {
     this.onCreateAccount,
     this.reader = const PackReader(),
     this.seriesCursor = const SeriesCursorStore(),
+    this.answerRecord = const PrefsAnswerRecordStore(),
   });
 
   /// Called once the run is over. The caller records the flag and shows the
@@ -98,6 +102,22 @@ class OnboardingFlow extends StatefulWidget {
   /// pack's first, so it was solved in the tutorial and met twice more one tap
   /// later.
   final SeriesCursorStore seriesCursor;
+
+  /// The device's own record of answered items, which `4.1` reads as
+  /// `ACIERTOS` and `PROMEDIO`.
+  ///
+  /// **The probe writes to it for the reason [seriesCursor] does: the probe
+  /// serves real items and grades them.** Those two figures and `RETOS` are one
+  /// account of the same practice, and until this existed the probe moved the
+  /// third and neither of the first two — a player who answered ten probe items
+  /// read `10 RETOS` beside no accuracy at all, while `LocalStats.accuracy`
+  /// documents an absent figure as *"the player has answered nothing"*.
+  ///
+  /// **The teaching item still writes to nothing**, and by the same
+  /// construction as its day log: `FirstItemScreen` builds its `RoundScreen`
+  /// with no `onGraded`, so there is nothing to record into. It teaches how the
+  /// app works; the probe measures how the player is doing.
+  final AnswerRecordStore answerRecord;
 
   @override
   State<OnboardingFlow> createState() => _OnboardingFlowState();
@@ -148,6 +168,17 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             : OnboardingStep.calibrationIntro,
       );
 
+  /// Remembers one probe answer the way a practice round's is remembered.
+  ///
+  /// Not awaited, the same as `HomeRoute`'s: a profile figure is not worth
+  /// holding up the next item for, and the store already reports a write it
+  /// could not make.
+  void _recordAnswer(Verdict verdict, Duration elapsed) => unawaited(
+        widget.answerRecord.record(
+          AnsweredItem(verdict: verdict, elapsed: elapsed),
+        ),
+      );
+
   void _afterProbe(CalibrationOutcome outcome) {
     // **What was answered, not what was planned.** The cursor counts items
     // *served*, so a probe left after four advances by four and the other six
@@ -195,6 +226,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         OnboardingStep.probe => CalibrationItemScreen(
             items: _probe,
             onFinished: _afterProbe,
+            // **As each item is answered, not once at the end.** The outcome
+            // carries totals, and it deliberately carries no list of verdicts:
+            // `ProbeStrip` is built so that nothing on `0.5` can say how the
+            // player is doing, and handing `0.6` a per-item verdict would be
+            // the same leak by another door. Recording as it goes also keeps
+            // what a player answered before closing the app.
+            onGraded: _recordAnswer,
           ),
         OnboardingStep.result => AppShell(
             child: CalibrationResultScreen(
