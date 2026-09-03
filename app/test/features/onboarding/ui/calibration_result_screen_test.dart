@@ -1,4 +1,3 @@
-import 'package:akimath_app/demo/demo_figures.dart';
 import 'package:akimath_app/design/brand/aki.dart';
 import 'package:akimath_app/design/math/spec/es_mx_number.dart';
 import 'package:akimath_app/design/theme.dart';
@@ -72,17 +71,30 @@ void main() {
     expect(find.text('4:05'), findsOneWidget);
   });
 
-  testWidgets('the rating is the quarantined one, and nothing derives it',
+  testWidgets('the rating card the design draws is absent, not blank',
       (WidgetTester tester) async {
-    // There is no rating system: `user_skills` is written by nothing and
-    // `GET /me/standing` answers an empty list for every player alive. The
-    // figure the design draws here therefore comes from `DemoFigures` and from
-    // nowhere else — in particular not from the count above it.
+    // `0.6` draws `RATING 1 248` under the headline and there is no rating
+    // system to fill it: rating never runs in Dart, and `GET /me/standing`
+    // answers one *per skill*, so no single number is a fact about a player.
+    // It was an invented constant until 2026-09-02. Absent rather than a dash
+    // or a zero (DR-P2) — a card with nothing in it promises a figure that has
+    // no date on it.
     await _pump(tester);
 
-    expect(DemoFigures.enabled, isTrue, reason: 'the demo draws it today');
-    expect(find.text(EsMxNumber.integer(DemoFigures.rating)), findsOneWidget);
-    expect(find.text('RATING'), findsOneWidget);
+    expect(find.textContaining('RATING'), findsNothing);
+    expect(find.text('AQUÍ EMPIEZAS'), findsOneWidget);
+  });
+
+  testWidgets('and the two figures under it are still the measured ones',
+      (WidgetTester tester) async {
+    // The control for the assertion above: a screen that drew nothing at all
+    // would satisfy it. `_sixOfTen` answered six of ten in 2:14, and both
+    // figures came off the device.
+    await _pump(tester);
+
+    expect(find.text('ACIERTOS'), findsOneWidget);
+    expect(find.text('TIEMPO'), findsOneWidget);
+    expect(find.text(EsMxNumber.ratio(4, 6)), findsOneWidget);
   });
 
   testWidgets('and it says, in the design\'s words, that it is not a mark',

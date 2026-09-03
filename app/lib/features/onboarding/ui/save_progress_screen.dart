@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 
-import '../../../demo/demo_figures.dart';
 import '../../../design/brand/aki.dart';
 import '../../../design/math/spec/es_mx_number.dart';
 import '../../../design/tokens/tokens.dart';
@@ -17,7 +16,8 @@ import '../../../design/widgets/candy_surface.dart';
 /// written: without an account the day log and the streak live in
 /// `shared_preferences` on this handset and go with the app.
 ///
-/// Two of the three tiles are measured and one is not — see [_tiles].
+/// The design draws three tiles; this screen draws the ones with a source —
+/// see [_tiles].
 class SaveProgressScreen extends StatelessWidget {
   const SaveProgressScreen({
     super.key,
@@ -87,15 +87,23 @@ class SaveProgressScreen extends StatelessWidget {
     );
   }
 
-  /// The design's three tiles: two measured, one invented.
+  /// The design's three tiles, minus the ones with nothing behind them.
   ///
-  /// `RETOS` and the day count are facts about this handset. `RATING` is
-  /// `DemoFigures.rating` and nothing derives it — there is no rating system,
-  /// so the middle tile disappears with the quarantine file.
+  /// `RETOS` and the day count are facts about this handset. The design's
+  /// middle tile is `RATING 1 248` and it is **absent**: rating never runs in
+  /// Dart and `GET /me/standing` answers one per skill, so there is no number
+  /// to put there — it was an invented constant until 2026-09-02. The row is
+  /// as long as the facts are, which is the shape `4.1`'s tile row already has:
+  /// *"one tile is as legitimate as three — it is the shipping build"*.
   ///
-  /// The third is **yellow**, which is what the design fills; the filled tile
-  /// is the one the screen is about, the same hierarchy `4.1` draws between its
-  /// two headline cards.
+  /// **On the run that ships, that is exactly one tile.** `OnboardingFlow`
+  /// always passes `days: 0` — neither the teaching item nor the probe records
+  /// a day — so a first-time player sees a single full-width `RETOS`, and a
+  /// player who reaches this screen with days behind them sees two.
+  ///
+  /// The day tile is **yellow**, which is what the design fills; the filled
+  /// tile is the one the screen is about, the same hierarchy `4.1` draws
+  /// between its two headline cards.
   Widget _tiles() => IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,16 +115,6 @@ class SaveProgressScreen extends StatelessWidget {
                 background: BrandColors.surface,
               ),
             ),
-            if (DemoFigures.enabled) ...<Widget>[
-              const SizedBox(width: BrandShape.space2),
-              Expanded(
-                child: _tile(
-                  label: 'RATING',
-                  value: EsMxNumber.integer(DemoFigures.rating),
-                  background: BrandColors.surface,
-                ),
-              ),
-            ],
             // **Absent at zero, not a tile reading zero.** Nothing in the
             // first run records a day, so the home behind this screen reads
             // none — and a figure contradicted one tap later is the `RACHA 1`

@@ -4,7 +4,7 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Forty rule IDs — counting `FUN-1a` and `CMT-2a` as the
+This book starts small on purpose. Forty-one rule IDs — counting `FUN-1a` and `CMT-2a` as the
 carve-out and the special case they are rather than as rules — every one of them describing code
 that is already on disk today, not a pattern we hope to have. It grows by **PROC-6** and no
 other way.
@@ -248,6 +248,38 @@ The one structural pattern the repo already commits to, on both sides of the sta
   **A corollary worth its own line: a claim about callers needs one gate per package that could
   grow one.** A package cannot scan a sibling it does not depend on, and each suite has to be able
   to go red on its own regression.
+
+- **CMT-5** MUST: **a comment that claims a switch turns something off is a claim to check every
+  reader against, and a kill switch with one reader that bypasses it is not a switch.** The third
+  sibling of CMT-3 and CMT-4: those are a comment claiming a *test* and a comment claiming a
+  *caller set*; this is a comment claiming a *control*. It fails worse than either, because the
+  claim invites an action — somebody flips the flag, believes the thing is off, and ships.
+
+  Found in `fix-only-what-the-product-can-prove`. `app/lib/demo/demo_figures.dart` held every
+  figure the product could not compute behind `DemoFigures.enabled`, whose doc comment read *"a
+  build that flips this to false shows only what the product can prove, which is what shipping
+  looks like."* Of the four readers, **three** sat behind `if (DemoFigures.enabled)` and the
+  fourth — `series_summary_screen.dart`'s `_ratingTile()` — was called unconditionally from
+  `_tiles()`. Flipping the switch would have removed `QUÉ MEJORÓ` and `QUÉ SIGUE` and left
+  `+ 12 RATING` on the screen, which is the single figure the recorded decision most forbids:
+  `CLAUDE.md` keeps a rating off the verdict screens *"so nothing on them is a figure sync could
+  later contradict"*. It shipped that way against the live API on 2026-09-02, printing an identical
+  `+ 12` for two structurally different series.
+
+  Three obligations. When you **write** a switch, its doc comment names the gate that holds every
+  reader to it, not the intention — one `ls` from being falsified, the same close CMT-3 and CMT-4
+  ask for. When you **read** one, grep its readers before believing it; the count is cheap and the
+  belief is not. And when the switch's only job is to hide something unfinished, prefer **deleting
+  the thing** to switching it off: a `false` constant leaves the render paths, the values and their
+  doc comments in the tree, one flip from returning, and `CLAUDE.md` already makes that argument
+  about the pack generator it removed — *code nothing calls is a claim about the product that is
+  not true*.
+
+  **The durable form is a rendered gate, not a source scan.** What the switch was standing in for
+  here is now `app/test/design/only_what_it_can_prove_test.dart`, which pumps every registered
+  screen and fails on a figure nothing produces. A scan for the constant would have been green
+  with `_ratingTile` exactly as it was, because the bypassing reader *did* name the file it
+  bypassed the switch of.
 
 ## WIRE — What crosses between the stacks
 

@@ -1,27 +1,26 @@
 import 'package:flutter/widgets.dart';
 
-import '../../../demo/demo_figures.dart';
 import '../../../design/brand/aki.dart';
 import '../../../design/math/spec/es_mx_number.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/brand_button.dart';
-import '../../../design/widgets/candy_surface.dart';
 import '../../../design/widgets/stat_tile.dart';
 import '../policy/calibration.dart';
 
 /// `Calibración resultado` — where the probe leaves you.
 ///
-/// **Two of the three things the design draws here do not exist, and the
-/// difference is on the screen rather than hidden.**
+/// **Two of the three things the design draws here do not exist, and both are
+/// absent rather than approximated.**
 ///
 /// - The **count and the time are real**. Every item was graded on the device
 ///   by the same `gradeItem` the round uses, and the clock was the probe's own.
-/// - The **rating is invented** and comes from `DemoFigures`, the one
-///   quarantined home for a figure the product cannot compute. There is no
-///   rating system — rating is F4, `user_skills` is written by nothing, and
-///   `GET /me/standing` answers `skills: []` for every player alive — so
-///   nothing here derives it from the count beside it, and deleting the demo
-///   figures deletes this card.
+/// - The **rating card is absent.** The design draws `RATING 1 248` under the
+///   headline. Rating never runs in Dart, and `GET /me/standing` answers a
+///   rating **per skill** — no single number over a list of Glicko ratings is a
+///   fact about a player, which is the same reason `Perfil`'s rating slot is
+///   empty rather than averaged into existence. It was drawn from an invented
+///   constant until 2026-09-02. Absent, not a dash and not a zero (DR-P2): a
+///   figure with no source cannot be shown as a figure waiting for one.
 /// - The **skill map is absent.** The design draws four nodes, two lit, one at
 ///   `38%` and one dashed. Every one of those is a placement, a placement needs
 ///   a placement algorithm, and there is none. A tree drawn from nothing would
@@ -30,7 +29,9 @@ import '../policy/calibration.dart';
 ///
 /// The design's own sentence — *"No es calificación. Es de dónde salimos"* —
 /// is what keeps the count from reading as the grade `0.4` promised it is not,
-/// and it sits directly under the figures for that reason.
+/// and it sits directly under the figures for that reason. With the rating gone
+/// it is the last line on the screen and it is still true of what is left: the
+/// count is where you started, not a mark.
 class CalibrationResultScreen extends StatelessWidget {
   const CalibrationResultScreen({
     super.key,
@@ -101,16 +102,6 @@ class CalibrationResultScreen extends StatelessWidget {
                           style: BrandText.sectionTitle(size: 44),
                         ),
                       ),
-                      if (DemoFigures.enabled) ...<Widget>[
-                        const SizedBox(height: BrandShape.space4),
-                        // `scaleDown` because the card is a row of a label and
-                        // a four-digit numeral, and a wide figure in a fixed
-                        // row is what overflowed `4.1`'s tiles sideways.
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: _ratingCard(),
-                        ),
-                      ],
                       const SizedBox(height: BrandShape.space4),
                       _measured(),
                       const SizedBox(height: BrandShape.space4),
@@ -132,31 +123,6 @@ class CalibrationResultScreen extends StatelessWidget {
       ),
     );
   }
-
-  /// The design's rating card, drawn from the quarantine.
-  ///
-  /// It is a row rather than a tile because the design sets the label beside
-  /// the figure here and under it everywhere else.
-  Widget _ratingCard() => CandySurface(
-        borderRadius: BrandShape.radiusCardSmall,
-        shadowOffset: BrandShape.shadowButton,
-        padding: const EdgeInsets.symmetric(
-          horizontal: BrandShape.space5,
-          vertical: BrandShape.space2,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Text('RATING', style: BrandText.eyebrow(size: 12)),
-            const SizedBox(width: BrandShape.space2),
-            Text(
-              EsMxNumber.integer(DemoFigures.rating),
-              style: BrandText.numeral(34),
-            ),
-          ],
-        ),
-      );
 
   /// The two figures the probe actually produced.
   ///

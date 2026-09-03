@@ -252,7 +252,9 @@ throwing entry point that looks live, and five tests that constrain nothing.
   past its description, and two of the six no longer have the round as their primary caller.
 - **`features/round/ui/`** holds no policy. `RoundScreen` keeps an index, a draft and two clocks and
   delegates every decision; `VerdictScreen` and `SeriesSummaryScreen` are functions of the summary
-  types handed to them, with `DemoFigures` quarantining the two invented numbers. `StimulusView` is
+  types handed to them, with `DemoFigures` quarantining the two invented numbers (**gone since
+2026-09-02** — `app/lib/demo/` was deleted rather than switched off, and the summary now draws
+neither number; see `docs/solid/network-edge.md`'s superseding note). `StimulusView` is
   the one dispatch over `Stimulus`, shared with the home's preview card, and the five family views
   below it take `int`s and indices — none of them imports `content/` at all, which is why a change to
   a payload shape stops at the reader.
