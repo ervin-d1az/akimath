@@ -1,4 +1,4 @@
-/// What `3.3 Hoja de referencia` shows, decided without a widget.
+/// What `Hoja de referencia` shows, decided without a widget.
 ///
 /// **The words are the pack's and the pictures are ours.** A board whose rules
 /// were hard-coded here could not have a second kind — that reasoning has been

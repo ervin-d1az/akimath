@@ -60,7 +60,7 @@ void main() {
     test('reads as a count and never as a clock', () {
       // `quiet_while_you_solve_test` forbids anything that reads as a clock on
       // a solving surface, and a paused board is mid-solve — the design draws
-      // 3.6 with a cell count and a format and no elapsed time at all. This
+      // Pausa with a cell count and a format and no elapsed time at all. This
       // holds the type to it: there is nowhere to put a duration.
       final PauseSummary summary =
           pauseSummary(_kenKen(), PuzzleEntry.of(_board()));

@@ -1,4 +1,4 @@
-/// What `3.6 Pausa` says about the board underneath it.
+/// What `Pausa` says about the board underneath it.
 ///
 /// **PURE** — a puzzle and an entry in, four readings out. No clock, and that
 /// is the whole shape of this type rather than an omission.
@@ -6,11 +6,11 @@
 /// `CLAUDE.md`'s *nothing watches you while you work* forbids anything reading
 /// as a clock on a solving surface, and a paused board is mid-solve: the player
 /// has not finished, and telling them how long they have been at it is exactly
-/// the pressure the rule exists to keep off. The design agrees — `3.6` is drawn
-/// with a cell count and a format name and no elapsed time, while `3.5 Puzzle
-/// resuelto`, one screen away, does show `11:24 TIEMPO`. So there is nowhere in
-/// this type to put a duration, and a screen cannot print one it was never
-/// handed.
+/// the pressure the rule exists to keep off. The design agrees — `Pausa` is
+/// drawn with a cell count and a format name and no elapsed time, while
+/// `Puzzle resuelto`, one screen away, does show `11:24 TIEMPO`. So there is
+/// nowhere in this type to put a duration, and a screen cannot print one it was
+/// never handed.
 library;
 
 import '../../../content/model/puzzle.dart';
