@@ -5,6 +5,8 @@ import 'package:akimath_app/api/history.dart';
 import 'package:akimath_app/api/me.dart';
 import 'package:akimath_app/api/standing.dart';
 import 'package:akimath_app/api/sync.dart';
+import 'package:akimath_app/api/time_on_task.dart';
+import 'package:akimath_app/features/sync/policy/attempt_journal.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The frozen contract, read rather than restated.
@@ -268,21 +270,39 @@ void main() {
     // One function per source rather than one taking a flag: the two
     // constructions are now two constructors, and a boolean selecting between
     // them would be the one shape FUN-2 bans.
-    Map<String, Object?> sentByPack() => AttemptSubmission.forPackItem(
+    Map<String, Object?> sentByPack({
+      Duration elapsed = const Duration(milliseconds: 4200),
+    }) => AttemptSubmission.forPackItem(
       ref: const PackRef(packId: '018f4e3c-0000-7000-8000-0000000000c1', index: 0),
       sessionId: '018f4e3c-0000-7000-8000-0000000000c2',
       answer: '13',
       at: DateTime.utc(2026, 8, 19, 9, 15),
-      elapsed: const Duration(milliseconds: 4200),
+      elapsed: elapsed,
     ).toJson();
 
-    Map<String, Object?> sentByIssuedItem() => AttemptSubmission.forIssuedItem(
+    Map<String, Object?> sentByIssuedItem({
+      Duration elapsed = const Duration(milliseconds: 4200),
+    }) => AttemptSubmission.forIssuedItem(
       itemId: '018f4e3c-0000-7000-8000-0000000000c3',
       sessionId: '018f4e3c-0000-7000-8000-0000000000c2',
       answer: '13',
       at: DateTime.utc(2026, 8, 19, 9, 15),
-      elapsed: const Duration(milliseconds: 4200),
+      elapsed: elapsed,
     ).toJson();
+
+    /// A row read back off disk, which is the path a device that recorded one
+    /// before this bound existed still travels. `toSubmission` is the one
+    /// mapping (`test/architecture/one_way_to_build_a_submission_test.dart`),
+    /// so this is what the shipping flush actually sends.
+    Map<String, Object?> sentFromTheJournal(Duration elapsed) =>
+        JournalledAttempt(
+          packId: '018f4e3c-0000-7000-8000-0000000000c1',
+          index: 0,
+          sessionId: '018f4e3c-0000-7000-8000-0000000000c2',
+          answer: '13',
+          at: DateTime.utc(2026, 8, 19, 9, 15),
+          elapsed: elapsed,
+        ).toSubmission().toJson();
 
     test('the gate read a real schema', () {
       expect(required, isNotEmpty);
@@ -327,12 +347,52 @@ void main() {
     });
 
     test('and time on task stays inside the bound the schema sets', () {
+      // **The probe is past the bound on purpose.** This case read `4200` ms
+      // against a maximum of 3_600_000 until 2026-09-02, which is PROC-11's
+      // fifth bullet: the assertion was sound and the fixture made it
+      // insensitive, so a test named for the bound could not fail on any input
+      // the app produces.
+      final Map<String, Object?> elapsed =
+          properties['elapsedMs']! as Map<String, Object?>;
+      final int maximum = elapsed['maximum']! as int;
+      const Duration leftInAPocket = Duration(hours: 3, minutes: 20);
+
+      expect(elapsed['minimum'], 0);
+      expect(leftInAPocket.inMilliseconds, greaterThan(maximum),
+          reason: 'the probe has to be out of range or this proves nothing');
+
+      for (final Map<String, Object?> body in <Map<String, Object?>>[
+        sentByPack(elapsed: leftInAPocket),
+        sentByIssuedItem(elapsed: leftInAPocket),
+        sentFromTheJournal(leftInAPocket),
+      ]) {
+        expect(body['elapsedMs'], lessThanOrEqualTo(maximum));
+        expect(body['elapsedMs'], greaterThanOrEqualTo(elapsed['minimum']! as int));
+      }
+    });
+
+    test('the bound the client saturates at is the bound the document sets', () {
+      // The client holds the number as a `Duration`, which is a re-derivation
+      // and therefore something that can drift — the same arrangement, and the
+      // same remedy, as `instant.dart` against the frozen `date-time`.
       final Map<String, Object?> elapsed =
           properties['elapsedMs']! as Map<String, Object?>;
 
-      expect(elapsed['minimum'], 0);
-      expect(elapsed['maximum'], isA<int>());
-      expect(sentByPack()['elapsedMs'], lessThanOrEqualTo(elapsed['maximum']! as int));
+      expect(maxReportableTimeOnTask.inMilliseconds, elapsed['maximum']);
+      expect(reportableTimeOnTask(Duration.zero).inMilliseconds, elapsed['minimum']);
+    });
+
+    test('and so does one measured backwards across a clock change', () {
+      final Map<String, Object?> elapsed =
+          properties['elapsedMs']! as Map<String, Object?>;
+
+      for (final Map<String, Object?> body in <Map<String, Object?>>[
+        sentByPack(elapsed: const Duration(milliseconds: -1)),
+        sentByIssuedItem(elapsed: const Duration(milliseconds: -1)),
+        sentFromTheJournal(const Duration(milliseconds: -1)),
+      ]) {
+        expect(body['elapsedMs'], elapsed['minimum']);
+      }
     });
   });
 
