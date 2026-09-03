@@ -1,0 +1,13 @@
+# The API image needs `packages/` and nothing else. Everything here is either
+# irrelevant to it (the Flutter client, the plans, the emitted artifacts) or
+# actively harmful in a build context (node_modules from a different platform,
+# a local .env, git history).
+*
+!packages
+packages/**/node_modules
+packages/**/dist
+packages/**/.env*
+packages/**/coverage
+packages/**/reports
+packages/**/.stryker-tmp
+packages/**/tmp
