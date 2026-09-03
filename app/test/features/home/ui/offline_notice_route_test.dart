@@ -11,6 +11,7 @@ import 'package:akimath_app/features/home/data/day_log_store.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
+import 'package:akimath_app/features/states/policy/account_state.dart';
 import 'package:akimath_app/features/states/ui/offline_screen.dart';
 import 'package:akimath_app/features/sync/attempt_sync.dart';
 import 'package:akimath_app/features/sync/data/attempt_journal_store.dart';
@@ -134,6 +135,11 @@ AttemptSync _quietSync() => AttemptSync(
 Widget _home({
   required Future<IssueResult> Function(String accessToken) issuePack,
   LinkedSession? session = _session,
+  // **Linked by default, because every case here is about the *answer* to a
+  // pack request.** A session with no player yet asks for nothing at all — the
+  // race `pack_waits_for_a_player_test.dart` holds — so leaving this at its
+  // production default would make every case below vacuously green.
+  AccountState account = AccountState.linked,
   String source = _twoItemPack,
   IssuedPackStore? issuedPacks,
   Future<FetchPackResult> Function({
@@ -148,6 +154,7 @@ Widget _home({
       dayLog: InMemoryDayLogStore(),
       sync: _quietSync(),
       session: session,
+      account: account,
       issuePack: issuePack,
       fetchPack: fetchPack,
       issuedPacks: issuedPacks ?? InMemoryIssuedPackStore(),
