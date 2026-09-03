@@ -28,10 +28,10 @@ import '../../puzzle/ui/word_search_screen.dart';
 import '../../../api/api_client.dart';
 import '../../../api/endpoints.dart';
 import '../../account/policy/session.dart';
-import '../../../content/model/issued_pack.dart';
 import '../../shell/ui/skeleton_block.dart';
 import '../../sync/attempt_sync.dart';
 import '../../sync/data/issued_pack_store.dart';
+import '../../sync/policy/pack_in_play.dart';
 import '../../sync/policy/pack_refresh.dart';
 import '../../stats/data/answer_record_store.dart';
 import '../../stats/policy/local_stats.dart';
@@ -381,20 +381,13 @@ class _HomeRouteState extends State<HomeRoute> {
 
   /// Reads an issued pack and starts playing it.
   ///
-  /// **A pack this app cannot read is a pack it does not play.** The bundled
-  /// one is still there, and refusing where it is read is the rule
-  /// `PackReader` already keeps.
+  /// **A pack this app cannot read is a pack it does not play**, and that is
+  /// `packFrom`'s rule rather than this screen's — the map adopts a pack too,
+  /// and the two had written the same `try`/`on FormatException` out by hand.
   void _adopt(IssuedPack issued) {
-    try {
-      final Pack pack = readIssuedPack(
-        Map<String, dynamic>.from(issued.pack),
-        packId: issued.packId,
-        issuedAt: issued.issuedAt,
-        expiresAt: issued.expiresAt,
-      );
+    final Pack? pack = packFrom(issued);
+    if (pack != null) {
       setState(() => _issued = pack);
-    } on FormatException {
-      // Nothing to say to a player about a request they did not make.
     }
   }
 
@@ -566,10 +559,10 @@ class _HomeRouteState extends State<HomeRoute> {
   /// be wrong twice — a figure about nothing, over a button that returns
   /// immediately from `_startSeries`'s own guard.
   Future<Pack?> _playablePack() async {
-    Pack? pack = _issued;
-    if (pack == null) {
+    Pack? bundled;
+    if (_issued == null) {
       try {
-        pack = await _pack;
+        bundled = await _pack;
       } catch (_) {
         // Deliberately broad, and silent: `build` is already showing the
         // message for an unreadable pack, and a second thing wrong on the same
@@ -577,9 +570,19 @@ class _HomeRouteState extends State<HomeRoute> {
         return null;
       }
     }
-    if (pack.isExpiredAt(widget.now().toUtc())) {
+    // Two of the three refusals are `packInPlay`'s, so this and `build` cannot
+    // disagree about them — nor can Mapa, which asks the same function.
+    final PackInPlay inPlay = packInPlay(
+      issued: _issued,
+      bundled: bundled,
+      now: widget.now(),
+    );
+    if (inPlay is! PackReady) {
       return null;
     }
+    // The third is this route's own: the cursor is what the *series* has
+    // served, and no other root serves one.
+    final Pack pack = inPlay.pack;
     return seriesPlan(pack.items, from: _itemsServed).isEmpty ? null : pack;
   }
 
@@ -593,22 +596,29 @@ class _HomeRouteState extends State<HomeRoute> {
             child: _HomeMessage('No se pudo abrir el paquete de retos.'),
           );
         }
-        // **The issued pack wins where there is one.** Same six families, same
-        // boards; the difference is that every item has a `(packId, index)` the
-        // server can grade, which is what makes a round worth journalling. The
-        // bundled pack is what an unlinked device plays, for ever and by
-        // design.
-        final Pack? pack = _issued ?? snapshot.data;
-        if (pack == null) {
-          return const AppShell(child: _HomeSkeleton());
-        }
-        if (pack.isExpiredAt(widget.now().toUtc())) {
-          return const AppShell(
-            child: _HomeMessage(
-              'Estos retos ya vencieron. Conéctate para recibir nuevos.',
-            ),
+        // **Which pack is in play is not this screen's to decide.** The issued
+        // one wins where there is one — same six families, same boards, and
+        // every item carrying a `(packId, index)` the server can grade — and a
+        // pack past its window is not played at all. Both halves live in
+        // `packInPlay`, because Mapa answers the same question and used to
+        // answer it differently: it drew a full map of topics over a pack this
+        // screen was already refusing.
+        final PackInPlay inPlay = packInPlay(
+          issued: _issued,
+          bundled: snapshot.data,
+          now: widget.now(),
+        );
+        if (inPlay is! PackReady) {
+          return AppShell(
+            child: switch (inPlay) {
+              PackLapsed() => _HomeMessage(inPlay.message),
+              // The bundled pack is still loading, which is the ordinary first
+              // frame of a launch.
+              PackPending() || PackReady() => const _HomeSkeleton(),
+            },
           );
         }
+        final Pack pack = inPlay.pack;
 
         // **The plan the player is about to be served**, not the pack in
         // general. `_startSeries` calls `seriesPlan` with the same cursor, so

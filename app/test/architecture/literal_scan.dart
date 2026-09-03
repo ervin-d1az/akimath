@@ -350,3 +350,38 @@ final List<LiteralPattern> submissionConstructionPatterns = <LiteralPattern>[
     r'(?<![A-Za-z0-9_$])AttemptSubmission\s*\.\s*for[A-Za-z0-9_$]*\s*\(',
   ),
 ];
+
+/// Anywhere the pack in play could be chosen, minus where the two things it is
+/// chosen with are declared.
+///
+/// `content/model/pack.dart` declares `isExpiredAt` and
+/// `content/model/issued_pack.dart` declares `readIssuedPack`; a root that
+/// included them would report the definitions as violations. **The cost of the
+/// exclusion, stated so it reads as a limit rather than being found as a bug**:
+/// a call to either from inside those two files would go unseen. Neither makes
+/// one today.
+const List<ScanRoot> packChoiceRoots = <ScanRoot>[
+  ScanRoot(
+    prefix: '',
+    excluding: <String>[
+      'content/model/pack.dart',
+      'content/model/issued_pack.dart',
+    ],
+  ),
+];
+
+/// Asking whether a pack may still be played, and turning what the server
+/// issued into a pack at all.
+///
+/// Two patterns rather than one because they close different halves, and
+/// **neither is the whole**. The window question is the one that was answered
+/// twice and differently. Reading an issued pack is the only way a `Pack`
+/// reaches this app from the server, so pinning its single caller keeps *the
+/// parse* in one place — it does not make every server pack pass the window
+/// question, because `packFrom` and `packInPlay` are independent exports and a
+/// caller could reach for the first alone. What covers that is the routes' own
+/// cases, not this scan.
+final List<LiteralPattern> packChoicePatterns = <LiteralPattern>[
+  LiteralPattern('isExpiredAt(', r'(?<![A-Za-z0-9_$])isExpiredAt\s*\('),
+  LiteralPattern('readIssuedPack(', r'(?<![A-Za-z0-9_$])readIssuedPack\s*\('),
+];
