@@ -43,10 +43,17 @@ The client already has the right shape for this elsewhere: `pack_refresh.dart` r
 
 ## 2. The access token is never refreshed inside a process
 
-`LinkedSession.accessToken` is minted once and `provider` is null for every session the running
-app builds — `session.dart` says so in as many words. The provider cookie **is** on disk, and
-`session_restore.dart` already mints a fresh token from it at launch. Nothing does that
-mid-process.
+`LinkedSession.accessToken` is minted once and nothing ever mints another while the process
+lives.
+
+**A correction, because the first draft of this section got the reason wrong.** It said
+`provider` is null for every session the running app builds, citing `session.dart`, which says
+exactly that. The comment is stale: both of the "one-line edits" it names have landed, and
+`auth_flow.dart:502` and `profile_route.dart:465` each pass `provider` into the `LinkedSession`
+on `main`. So the credential was never missing — it was present, and unused. The measured
+defect is unchanged; what was wrong was the explanation of why it survived, and it was wrong
+because a comment was read where the code should have been. That comment is the whole reason
+this looks unfixable at a glance, which is why correcting it belongs in the fix.
 
 ```
 03:29:05  POST /players/link  200  caller:session     (token minted at launch)
