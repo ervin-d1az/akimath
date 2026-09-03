@@ -40,10 +40,17 @@ RUN npm run build --prefix contract \
 # runtime stage copies; resolution is read at import time, so this is all it
 # takes. Verified before it was written here: both packages resolve, 32 and 41
 # exports.
-RUN npm pkg set --prefix contract \
-      'exports..types=./dist/src/index.d.ts' 'exports..default=./dist/src/index.js' \
- && npm pkg set --prefix core \
-      'exports..types=./dist/src/index.d.ts' 'exports..default=./dist/src/index.js'
+# **Not `npm pkg set`.** It reads dots as path separators, so `exports..types`
+# writes a key that is not `"."` and Node then refuses the whole manifest:
+# `"exports" cannot contain some keys starting with '.' and some not`. That
+# failure is why the first deploy crash-looped. This rewrites the `"."` entry
+# and leaves every subpath — core's `./pack/starter.json` among them — alone.
+RUN node -e 'const fs=require("fs"); \
+  for (const p of ["contract","core"]) { \
+    const f=p+"/package.json", j=JSON.parse(fs.readFileSync(f)); \
+    j.exports={...j.exports, ".":{types:"./dist/src/index.d.ts",default:"./dist/src/index.js"}}; \
+    fs.writeFileSync(f, JSON.stringify(j,null,2)+"\n"); \
+  }'
 
 # **A runtime install, not a copy of the build's.** `npm ci --omit=dev` resolves
 # a tree with no tsx, vitest, stryker or typescript in it — the image ships the
