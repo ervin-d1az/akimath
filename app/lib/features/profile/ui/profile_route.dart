@@ -49,6 +49,7 @@ class ProfileRoute extends StatefulWidget {
     super.key,
     this.session,
     this.onSessionChanged,
+    this.onAccountChanged,
     this.now = DateTime.now,
     this.authBaseUrl = Endpoints.authBaseUrl,
     this.playerIds,
@@ -110,6 +111,15 @@ class ProfileRoute extends StatefulWidget {
 
   /// Reports a sign-in, or a sign-out when the account is erased.
   final ValueChanged<LinkedSession?>? onSessionChanged;
+
+  /// Reports where the account stands, every time this route learns it.
+  ///
+  /// **Because this route is the only one that links, and it is not the only
+  /// one that needs the answer.** The home may not ask for a pack until the
+  /// server holds a player, and the link that writes that row happens here —
+  /// so without this the home is waiting on a fact nobody tells it. The shell
+  /// holds what comes back, for the reason it holds the session.
+  final ValueChanged<AccountState>? onAccountChanged;
 
   /// Where Neon Auth is, defaulting to the build's own `--dart-define`.
   ///
@@ -331,8 +341,23 @@ class _ProfileRouteState extends State<ProfileRoute> {
     if (session == null || session.accessToken == before?.accessToken) {
       return;
     }
-    unawaited(_link(session));
+    unawaited(_linkOffThisFrame(session));
   }
+
+  /// Starts the link after the frame that asked for it, never inside it.
+  ///
+  /// **`unawaited` is not deferral.** An `async` body runs synchronously up to
+  /// its first `await`, and [_link]'s first statement moves the account state —
+  /// which now reports upward, and both callers of [_linkIfNeeded] are
+  /// build-phase callbacks. Marking the shell dirty from inside its own build
+  /// is the assertion `setState() called during build`, and it fired the moment
+  /// the report was added.
+  Future<void> _linkOffThisFrame(LinkedSession session) =>
+      Future<void>.microtask(() async {
+        if (mounted) {
+          await _link(session);
+        }
+      });
 
 
 
@@ -348,6 +373,19 @@ class _ProfileRouteState extends State<ProfileRoute> {
   /// loading, which is not a `MeResult` at all.
   AccountState _accountState = AccountState.none;
 
+  /// Moves it, and tells the shell it moved.
+  ///
+  /// **One place, so a state set somewhere new cannot silently stay private.**
+  /// Seven expressions assigned this field and only this route read it, which
+  /// was fine while it drove a banner and nothing else. It is not private any
+  /// more: whether the server holds a player is what decides when the *home*
+  /// may ask for a pack, and a caller that assigned the field directly would
+  /// leave the home waiting for ever on a link that had already landed. That is
+  /// the same argument [accountDoorFor] makes about states with no door.
+  void _setAccountState(AccountState state) {
+    setState(() => _accountState = state);
+    widget.onAccountChanged?.call(state);
+  }
 
   /// Attaches this device's player, then asks the server who that is.
   ///
@@ -364,7 +402,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
   /// twice. The lookup stays for the retry path, where a failed one can be
   /// asked again.
   Future<void> _link(LinkedSession session) async {
-    setState(() => _accountState = AccountState.loading);
+    _setAccountState(AccountState.loading);
 
     final String playerId =
         await (widget.playerIds ?? const PrefsPlayerIdStore()).readOrMint();
@@ -377,7 +415,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
       return;
     }
     if (linked is! LinkConflict) {
-      setState(() => _accountState = linkStateFor(linked));
+      _setAccountState(linkStateFor(linked));
       return;
     }
     await _refineConflict(session, playerId);
@@ -395,7 +433,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
     if (!_stillOn(session)) {
       return;
     }
-    setState(() => _accountState =
+    _setAccountState(
         conflictStateFor(probe: probe, devicePlayerId: playerId));
   }
 
@@ -432,13 +470,13 @@ class _ProfileRouteState extends State<ProfileRoute> {
   }
 
   Future<void> _askWhoIAm(String accessToken) async {
-    setState(() => _accountState = AccountState.loading);
+    _setAccountState(AccountState.loading);
 
     final MeResult result = await _whoAmI(accessToken);
     if (!mounted) {
       return;
     }
-    setState(() => _accountState = accountStateFor(result));
+    _setAccountState(accountStateFor(result));
   }
 
   /// One lookup, used by the retry here and by the sign-in door's band.
@@ -486,7 +524,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
             // Forgotten here as well as there. Leaving the address on screen
             // after the row is gone would be the app disagreeing with the
             // server about whether this device is linked.
-            setState(() => _accountState = AccountState.none);
+            _setAccountState(AccountState.none);
             widget.onSessionChanged?.call(null);
           },
         ),
@@ -617,7 +655,7 @@ class _ProfileRouteState extends State<ProfileRoute> {
   /// the player somewhere that has stopped being true.
   void _signOut() {
     Navigator.of(context).popUntil((Route<Object?> route) => route.isFirst);
-    setState(() => _accountState = AccountState.none);
+    _setAccountState(AccountState.none);
     widget.onSessionChanged?.call(null);
   }
 

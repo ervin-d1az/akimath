@@ -36,6 +36,7 @@ import '../../sync/policy/pack_refresh.dart';
 import '../../stats/data/answer_record_store.dart';
 import '../../stats/policy/local_stats.dart';
 import '../../states/data/streak_notice_store.dart';
+import '../../states/policy/account_state.dart';
 import '../../states/policy/streak_notice.dart';
 import '../../states/ui/streak_at_risk_screen.dart';
 import '../../states/policy/offline_bag.dart';
@@ -64,6 +65,7 @@ class HomeRoute extends StatefulWidget {
     this.seriesCursor = const SeriesCursorStore(),
     this.streakNotices,
     this.session,
+    this.account = AccountState.none,
     this.sync,
     this.issuePack,
     this.fetchPack,
@@ -92,6 +94,21 @@ class HomeRoute extends StatefulWidget {
   /// offline (ADR 0002) and journalling it would file a batch nothing could
   /// ever accept.
   final LinkedSession? session;
+
+  /// Where the account stands with the server, as the profile last found it.
+  ///
+  /// **A session is not a player, and issuing needs the player.** `POST /packs`
+  /// resolves it from the session and 404s when the account holds none — so a
+  /// launch that asks on the session alone races `POST /players/link`, which
+  /// the profile fires off the very same event this route reacts to. Measured
+  /// against the deployed server on 2026-09-02: the two started 15 ms apart,
+  /// issuing lost, and the device played the bundled pack for the rest of the
+  /// process with nothing it produced syncable.
+  ///
+  /// Held by `RootScaffold` for the reason the session is — the profile links
+  /// and the home plays, and their common ancestor is the only place that can
+  /// hold what both of them need. [packAccountFor] is what reads it.
+  final AccountState account;
 
   /// What remembers an answered item until the server has it.
   ///
@@ -296,23 +313,51 @@ class _HomeRouteState extends State<HomeRoute> {
     // This is the same reading `ProfileRoute` needed for its history.
     if (widget.session?.accessToken != old.session?.accessToken) {
       unawaited(_flush());
-      // **The answer is dropped here, where `_open` reads it.** A session
-      // appears when a player links on the profile tab, so this route is alive
-      // and invisible; a full-screen notice over another tab is not something
-      // a background request gets to do. The link itself also just proved the
-      // network works, so a blip on the very next request is not a state.
-      unawaited(_askForPack());
     }
+    _askAgainIfTheAccountMoved(old);
   }
 
-  /// Asks for a pack, once, when there is a session to ask on.
+  /// Asks for a pack whenever either half of *who is asking* changes.
   ///
-  /// **Issued per launch and held in memory**, which is a choice worth naming.
-  /// The server says a second pack is harmless — issuing is not idempotent by
-  /// nature and retention sweeps what lapses — so the cheap thing is honest.
-  /// The better thing is to persist the id and rebuild through
-  /// `GET /packs/{packId}`, which the server was built to answer byte for byte;
-  /// the client has no operation for it yet, and that is the next change.
+  /// **One call for two triggers, because both can land in the same frame.**
+  /// The shell holds the session and the account and a single `setState` can
+  /// move both — a restored credential the profile links straight away — and
+  /// two `if`s each firing a request would put two packs in flight with no
+  /// guard between them.
+  ///
+  /// **The account is the trigger this route was missing.** Waiting on the
+  /// session alone is the race: the profile links off that same event, so the
+  /// pack request and the link start together and the pack request loses.
+  ///
+  /// **The answer is dropped here, where `_open` reads it.** A session appears
+  /// while a player is on the profile tab, so this route is alive and
+  /// invisible; a full-screen notice over another tab is not something a
+  /// background request gets to do. The link itself also just proved the
+  /// network works, so a blip on the very next request is not a state.
+  void _askAgainIfTheAccountMoved(HomeRoute old) {
+    if (widget.session?.accessToken == old.session?.accessToken &&
+        widget.account == old.account) {
+      return;
+    }
+    unawaited(_askForPack());
+  }
+
+  /// Asks for a pack, once, when there is a **player** to ask for one.
+  ///
+  /// **A session is not a player, and that distinction is the whole of it.**
+  /// `POST /packs` resolves the player from the session and 404s when the
+  /// account holds none, and the profile writes that row off the very same
+  /// event this route reacts to — so asking on the session alone is a race
+  /// this route loses, silently and for the rest of the process. Measured
+  /// against the deployed server on 2026-09-02: 404 at 02:52:17.602, the link
+  /// 200 at .624, and a five-item series afterwards that reached `attempts` as
+  /// nothing at all. [packAccountFor] is what tells the two apart.
+  ///
+  /// **Held in memory once it lands, and its id on disk.** The server says a
+  /// second pack is harmless — issuing is not idempotent by nature and
+  /// retention sweeps what lapses — but a row per launch per player is waste
+  /// with a cheaper answer: the id is stored and `GET /packs/{packId}` rebuilds
+  /// the same pack byte for byte, which is the `fetch` branch below.
   ///
   /// **A failure is silent and the bundled pack keeps playing.** There is
   /// nothing useful to tell a player about a request they did not make, and the
@@ -333,21 +378,54 @@ class _HomeRouteState extends State<HomeRoute> {
     if (!mounted) {
       return PackAsk.notAsked;
     }
-    switch (packRefresh(
-      hasSession: true,
+    final PackRefresh owed = packRefresh(
+      account: packAccountFor(widget.account),
       storedPackId: stored,
       // The device knows the id and not the window: it stores one and not the
       // other. A lapsed pack costs a round trip to be told so, which is cheaper
       // than a second thing that can disagree with the row.
       expiresAt: null,
       now: widget.now(),
-    )) {
+    );
+    if (owed == PackRefresh.none) {
+      return PackAsk.notAsked;
+    }
+    // **One request at a time, and the latch sits *after* the decision.** The
+    // account moves through more than one state on a first launch — `none`,
+    // then `loading`, then `linked` — and each move asks again, so two passes
+    // can overlap on the store read above and both come out wanting a pack.
+    // Latching the whole method instead would let a pass that decided `none`
+    // shut out the pass that decided `issue`, which loses the trigger rather
+    // than saving a request.
+    if (_requesting) {
+      return PackAsk.notAsked;
+    }
+    _requesting = true;
+    try {
+      return await _carryOut(owed, session: session, storedPackId: stored);
+    } finally {
+      _requesting = false;
+    }
+  }
+
+  /// Whether a pack request is in flight. See [_askForPack] for why.
+  bool _requesting = false;
+
+  /// Performs the request [packRefresh] decided on. It decides nothing itself.
+  Future<PackAsk> _carryOut(
+    PackRefresh owed, {
+    required LinkedSession session,
+    required String? storedPackId,
+  }) async {
+    switch (owed) {
       case PackRefresh.none:
+        // Settled by the caller, which never reaches here with it — repeated
+        // rather than defaulted, so a fourth branch is a compile error.
         return PackAsk.notAsked;
       case PackRefresh.fetch:
         final FetchPackResult fetched = await (widget.fetchPack ?? _fetchOverASocket)(
           accessToken: session.accessToken,
-          packId: stored!,
+          packId: storedPackId!,
         );
         if (fetched is FetchPackDone && mounted) {
           _adopt(fetched.issued);

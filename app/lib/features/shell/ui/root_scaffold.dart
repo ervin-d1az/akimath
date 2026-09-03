@@ -12,6 +12,7 @@ import '../../account/policy/token_renewal.dart';
 import '../../home/ui/home_route.dart';
 import '../../map/ui/map_route.dart';
 import '../../profile/ui/profile_route.dart';
+import '../../states/policy/account_state.dart';
 import '../policy/visible_tabs.dart';
 import 'nav_bar.dart';
 import 'tab_stack.dart';
@@ -116,6 +117,19 @@ class _RootScaffoldState extends State<RootScaffold> {
   /// `tokenReuseWindow`, and this only has to be fine enough that a spent token
   /// is noticed promptly.
   static const Duration _checkEvery = Duration(minutes: 1);
+
+  /// Where the account stands with the server, as the profile last found it.
+  ///
+  /// **Here for the reason the session is, and it is a second fact.** A session
+  /// says the provider knows this player; it says nothing about whether *our*
+  /// server holds a player row under the account, and `POST /packs` needs the
+  /// second. The profile is what writes that row and the home is what needs to
+  /// know it landed, so their common ancestor is the only place it can live.
+  ///
+  /// Without it the home asked on the session alone and raced the link it
+  /// depends on — measured against the deployed server on 2026-09-02, the two
+  /// requests started 15 ms apart and the pack lost.
+  AccountState _account = AccountState.none;
 
   @override
   void initState() {
@@ -359,11 +373,17 @@ class _RootScaffoldState extends State<RootScaffold> {
         // run against the same day log the home reads, and the home pushed
         // none of it — so without this the streak on Inicio is whatever it was
         // when the player last left it (PROC-13).
+        // **And where the account stands, which is a different fact.** A
+        // session is not a player: `POST /packs` resolves the player from the
+        // session and 404s when the account holds none, and the profile writes
+        // that row off the same event this route would react to. Handing the
+        // session alone is the race the deployed server caught on 2026-09-02.
         AppTab.home => HomeRoute(
             visibility: _current == AppTab.home
                 ? RootVisibility.showing
                 : RootVisibility.behind,
             session: _session,
+            account: _account,
           ),
         // **It is told when it is being looked at.** Every root stays mounted,
         // so the profile's `initState` runs once per launch — and it reads
@@ -376,6 +396,11 @@ class _RootScaffoldState extends State<RootScaffold> {
             session: _session,
             onSessionChanged: (LinkedSession? session) =>
                 unawaited(_holdAndRemember(session)),
+            // **The only root that links is not the only root that needs to
+            // know it linked.** The home may not ask for a pack until the
+            // server holds a player, and this is where it learns that.
+            onAccountChanged: (AccountState account) =>
+                setState(() => _account = account),
           ),
         // **Told when it is being looked at, for the reason the profile is.**
         // The map's figures come from the series cursor, which a series played

@@ -9,6 +9,7 @@ import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/content/model/pack.dart';
 import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/features/account/policy/session.dart';
+import 'package:akimath_app/features/states/policy/account_state.dart';
 import 'package:akimath_app/features/home/data/day_log_store.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/round/ui/round_screen.dart';
@@ -296,6 +297,9 @@ void main() {
           accessToken: 'token',
           ageBand: AgeBand.adult,
         ),
+        // The server holds this device's player: `POST /packs` resolves it from
+        // the session and 404s without it, so the home waits for the link.
+        account: AccountState.linked,
         issuePack: (String accessToken) async => IssueDone(
           IssuedPack(
             packId: 'pk_emitido',
@@ -373,6 +377,9 @@ void main() {
           accessToken: 'token',
           ageBand: AgeBand.adult,
         ),
+        // The server holds this device's player: `POST /packs` resolves it from
+        // the session and 404s without it, so the home waits for the link.
+        account: AccountState.linked,
         issuePack: (String accessToken) async => IssueDone(
           IssuedPack(
             packId: 'pk_emitido',
@@ -447,6 +454,9 @@ void main() {
             accessToken: 'token',
             ageBand: AgeBand.adult,
           ),
+          // The server holds this device's player: `POST /packs` resolves it from
+          // the session and 404s without it, so the home waits for the link.
+          account: AccountState.linked,
           issuePack: (String accessToken) async {
             issues.add(accessToken);
             return IssueDone(issued('pk_nuevo${issues.length}'));
