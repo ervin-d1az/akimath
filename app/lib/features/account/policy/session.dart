@@ -47,18 +47,30 @@ class LinkedSession {
   /// Better Auth access token is minted per request from [provider] and expires
   /// in minutes; a device that wrote this down would come up next launch and
   /// boot straight into a refusal.
+  ///
+  /// **A relaunch is not the only thing it does not survive.** One was measured
+  /// good at 03:29:05 and refused at 03:49:30 in the same process, so it does
+  /// not outlive a long sitting either — `policy/token_renewal.dart` is when to
+  /// ask for another and `RootScaffold` is what asks. This value is therefore a
+  /// token *as at some instant*, and the shell keeps that instant beside it.
   final String accessToken;
 
   /// The provider credential [accessToken] was derived from, where the device
   /// has it.
   ///
-  /// **Nullable, because today it does not arrive.** `auth_flow.dart` holds the
-  /// `AuthSession` long enough to call `accessToken(session)` and then drops
-  /// it — `LinkedAccount` carries the token, the band and the address and not
-  /// the cookie — so every session the running app builds has none of this and
-  /// nothing is stored. The two one-line edits that change that are named in
-  /// this change's report; until they land, persistence is code that is right
-  /// and unreached, which is a better state than persistence that is wrong.
+  /// **It arrives on both paths the running app has, and this note used to say
+  /// it did not.** The two one-line edits it named have landed:
+  /// `LinkedAccount` carries the cookie out of `auth_flow.dart` and
+  /// `profile_route.dart`'s `onLinked` puts it on the session, while a restored
+  /// session gets it from [StoredSession.linkedWith]. A stale comment is worse
+  /// than none here, because this one was read as a reason not to attempt the
+  /// mid-process renewal the credential is what makes possible.
+  ///
+  /// **Still nullable, and not by neglect.** Nothing in the type says a session
+  /// must have come from either path, and a session built without a credential
+  /// is legitimate — it simply cannot be renewed or stored, which
+  /// [storable] and the shell's renewal both read as *leave it alone* rather
+  /// than as an error.
   final AuthSession? provider;
 
   /// What is worth keeping between launches, or null when there is nothing.
