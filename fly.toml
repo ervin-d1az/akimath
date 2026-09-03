@@ -1,0 +1,49 @@
+# AkiMath's API on Fly.
+#
+# **`iad`, because that is where the database is.** Neon runs this project in
+# `aws-us-east-1`; every request makes at least one round trip to Postgres and
+# the offline-loop endpoints make several, so the region is not a preference.
+#
+# **The build context is `packages/`, not the repository root.** The server
+# depends on two sibling packages by `file:` path, so the image has to see all
+# three — see `packages/server/Dockerfile`.
+app = "akimath-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "packages/server/Dockerfile"
+
+[env]
+  # The server defaults to 3000; Fly's convention is 8080 and the internal port
+  # below has to agree with whatever this says.
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  # **Scaled to zero on purpose, and this is the honest trade.** There is no
+  # traffic yet, and Neon Free autosuspends after five minutes anyway — measured
+  # cold start 1.8s median, 2.6s at p95 — so an always-on machine would pay to
+  # remove one of two cold starts and leave the larger one. Set
+  # `min_machines_running = 1` the day somebody is actually waiting; it is this
+  # line and a redeploy.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    # `GET /health` is the one route outside the contracted surface, and it is
+    # the only one that answers without a session — which is what makes it
+    # usable as a health check at all.
+    method = "GET"
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+
+[[vm]]
+  # The floor. The process is one Node server with four runtime dependencies;
+  # if it needs more than this, that is a finding rather than a resize.
+  size = "shared-cpu-1x"
+  memory = "512mb"

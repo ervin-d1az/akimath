@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+**/.env*
+**/coverage
+**/reports
+**/.stryker-tmp
+**/tmp
