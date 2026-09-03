@@ -133,7 +133,17 @@ the offline pack format and its OpenAPI half.
   that only calibrated — but `GET /me/standing` answers a rating **per skill** and no single number
   over a list of Glicko ratings is a fact about a player, so the slot stays empty rather than being
   averaged into existence; accuracy comes from the record `features/stats/` keeps of what was
-  actually answered, which needs no server at all. The
+  actually answered, which needs no server at all. **What "actually answered" means was wrong by
+  one surface until 2026-09-02**: the calibration probe graded ten real pack items and recorded
+  none of them, so a player who finished the first run read `10 RETOS` — the probe advances the
+  same series cursor a series does — beside no `ACIERTOS` tile at all, while `LocalStats.accuracy`
+  documents an absent figure as *"the player has answered nothing"*. It was an omission and not a
+  policy, and the fact that settles it is that two of the three device figures were already wired
+  to the probe, `0.7` saying in as many words that probe items are *"challenges this player did"*.
+  The probe now reports each graded item through the same `onGraded` seam the round has. **The
+  teaching item still records nothing** — `0.3` teaches how the app works rather than measuring
+  the player — and nothing about the probe produces a level, a rank or a rating, which is what
+  `0.4`'s *"No se califica"* and `0.6`'s *"No es calificación"* mean by the word. The
   session that makes any of it possible is held by `RootScaffold` — two roots have to agree about
   whether there is an account, and their common ancestor is the only place that can hold it. In
   memory only; `LinkedSession.toString` does not carry the token, because `toString` reaches logs
@@ -148,7 +158,7 @@ the offline pack format and its OpenAPI half.
   the day on submit and the home re-reads it — and is persisted by `shared_preferences`.
   **Verified on a device across two launches of two different binaries** (2026-08-17): a build with
   no write code read a day the previous build had written, with the key confirmed on disk. CocoaPods
-  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **3358 Flutter tests, green — among them `app/lib/api/`, which is
+  is required for the iOS build — `pod` must be installed or `flutter run` cannot link the plugin. **3362 Flutter tests, green — among them `app/lib/api/`, which is
   checked against `contract/openapi.json` by `test/api/contract_parity_test.dart` the way the
   server's half is.**
   **The streak can say it is about to go, and that it went.** `streakLength` has answered *how
@@ -614,10 +624,12 @@ flutter test
 # Tier 2, on a booted simulator. **`flutter test` does not reach
 # `integration_test/`**, which is how three of these suites sat broken for
 # weeks against copy that had changed under them. Run them when a screen or a
-# flow moves. Six suites, eleven cases: the playthrough, the shell's three
+# flow moves. Seven suites, twelve cases: the playthrough, the shell's three
 # roots, every board format opened from the home, the press travel measured in
 # the shipping build, the two streak notices reached by seeding the day log,
-# and the account tour, which skips itself without endpoints.
+# what the first run leaves on the device — the only suite that answers a probe
+# item, since the shared launch skips `0.5` on purpose — and the account tour,
+# which skips itself without endpoints.
 #   xcrun simctl list devices booted        # take the id
 #   flutter test integration_test -d <id>
 #   # the account tour needs the endpoints, and skips itself without them:

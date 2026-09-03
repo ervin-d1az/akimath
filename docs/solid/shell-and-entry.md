@@ -14,11 +14,20 @@ repository. What is missing is a module that owns **"a round happened."** Five p
 across three features each hand-wire five recorders — the day log, the series cursor, the
 practised-step record, the answer record and the attempt journal — and nothing but a doc
 comment says which surface owes which. The most expensive thing in this module is that
-matrix: it has already been got wrong once in a shipped build (`MapRoute` recorded neither
-accuracy nor attempts), one cell is still unexplained today (the calibration probe grades ten
-items and records none of them), and the next play surface will be a sixth column that
-somebody has to fill in from memory. `HomeRoute` is not the problem — see finding 3 for where
-it does overreach, which is narrower and cheaper than its length suggests.
+matrix: it has already been got wrong **twice** in a shipped build — `MapRoute` recorded
+neither accuracy nor attempts, and the calibration probe graded ten items and recorded none of
+them — and the next play surface will be a sixth column that somebody has to fill in from
+memory. `HomeRoute` is not the problem — see finding 3 for where it does overreach, which is
+narrower and cheaper than its length suggests.
+
+**Update, `fix-the-calibration-counts-where-it-should`:** the probe's cell was the one this
+audit could not read as decision or omission, and it was an **omission**. The probe already
+advanced the series cursor, which is what `4.1` prints as `RETOS`, and `0.7` says in its own
+comment that probe items are *"challenges this player did"* — so two of the three device
+figures were wired and one was not. `CalibrationItemScreen` now reports each graded item and
+`OnboardingFlow` records it, the same seam `RoundScreen`/`HomeRoute` already use. **Finding 1
+itself is untouched**: the fix wires a sixth surface by hand, which is exactly what the finding
+says is too easy to forget.
 
 ---
 
@@ -40,27 +49,49 @@ re-decided at every launch site.
 | `home_route.dart:786` `_startSeries` | yes (795) | yes (797) | n/a | yes (811) | yes (798) |
 | `home_route.dart:673` `_startPuzzle` | yes (689) | n/a | n/a | n/a | n/a, said (667) |
 | `map_route.dart:464` `_practise` | yes (473) | no, said | yes (515) | yes (501) | yes (487) |
-| `onboarding_flow.dart:195` probe | no, said (210) | yes (157) | n/a | **no** | n/a |
+| `onboarding_flow.dart:195` probe | no, said (210) | yes (157) | n/a | yes, since `fix-the-calibration-counts-where-it-should` | n/a |
 | `first_item_screen.dart:72` teaching item | no, said (16) | n/a | n/a | n/a | n/a |
 
 *n/a* is a cell that cannot be filled — a solved board is not an answered item and leaves no
 attempt row, a probe in pack order names no single family's ladder, a fixed teaching item comes
-from no pack. *said* is a real "no" with its reason written down: `home_route.dart:667`,
-`onboarding_flow.dart:210`, `first_item_screen.dart:16`, and `practised_steps.dart:6` for
-`_practise`'s cursor.
+from no pack. **The probe's attempt-journal `n/a` is the one those three clauses did not reach,
+and it now needs to**, because the answer-record cell beside it stopped being `no`: a reader who
+accepts *the probe is practice, graded by the same `gradeItem`* will ask why those answers never
+reach the server. Verified rather than inferred — `AttemptSync.record`
+(`attempt_sync.dart:72-75`) returns early when `readIssuedItemId(itemId)` is null, and the probe
+reads the **bundled** pack through `OnboardingFlow.reader`, whose items carry no `packId#index`
+for the server to resolve. Journalling one would file a batch that can only come back a 404, and
+`journalAfter` drops that. The first run also holds no session, so there would be nothing to
+flush with; the address is the structural half. *said* is a real "no" with its reason written
+down: `home_route.dart:667`, `onboarding_flow.dart:210`, `first_item_screen.dart:16`, and
+`practised_steps.dart:6` for `_practise`'s cursor.
 
-**That leaves one unexplained cell, and it is live.** The probe grades ten items with
-`gradeItem` (`calibration_item_screen.dart:105`) and `CalibrationItemScreen` takes no
-`AnswerRecordStore` at all (`:34`), so those ten are absent from the accuracy `4.1 Perfil`
-prints. Whether that is a decision or an omission is not readable from the code — which is
-the whole finding: nothing in the codebase can be consulted to tell them apart.
+**That left one unexplained cell, and it was live.** The probe graded ten items with
+`gradeItem` and reported none of them, so those ten were absent from the accuracy `4.1 Perfil`
+prints. Whether that was a decision or an omission was not readable from the code — which was
+the whole finding: nothing in the codebase could be consulted to tell them apart.
 
-**Cost, already paid once.** `map_route.dart:86-100` is the receipt, in the code's own words:
+**It has since been settled as an omission, by the one fact that discriminates.** The probe
+*already* moved a Perfil figure — `_afterProbe` advances the series cursor and
+`profile_route._readChallenges` reads it into `RETOS` — and `0.7` states the intent
+(`onboarding_flow.dart`, `challenges: 1 + _outcome.answered`, *"Both were graded on the
+device, so both are challenges this player did"*). A decision that probe answers are practice
+had been taken and written down; only two of the three figures were wired to it. The two
+arguments for the other reading do not survive the source: `calibrationPlan(pack) =>
+pack.take(10)` is pack order, so the probe has no difficulty skew to misrepresent (it serves
+the very items the home would have), and the server's *"a session that only calibrated"*
+(`history.ts:103`, `rating.ts:114`) is item-difficulty calibration in the rating engine, not
+this probe — and what it withholds is an **unmeasured** quantity, where accuracy here was
+measured on the device by the same `gradeItem` the round uses.
+
+**Cost, now paid twice.** `map_route.dart:86-100` is the first receipt, in the code's own
+words:
 *"The home wires this for a series; the map did not, so five items answered from a topic moved
 neither figure"* and *"a topic run reached the server as nothing: no attempt row, no history
 entry, no rating."* Two of five recorders, missed on a root that shipped, found on a device.
-The same shape of miss is live in the probe today. Adding a sixth surface means reading four
-files to reconstruct a table that exists nowhere.
+The probe was the same shape of miss, one recorder rather than two, and it is now fixed one
+surface at a time — which is the point rather than a resolution. Adding a sixth surface still
+means reading four files to reconstruct a table that exists nowhere.
 
 **Same root, second symptom: `features/home/` is a shared kernel wearing a screen's name.**
 Seven files outside `home/` import from it — `map/ui/map_route.dart:14-18`,

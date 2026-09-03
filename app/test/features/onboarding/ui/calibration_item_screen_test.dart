@@ -2,6 +2,7 @@ import 'package:akimath_app/content/model/item.dart';
 import 'package:akimath_app/design/theme.dart';
 import 'package:akimath_app/design/tokens/tokens.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/features/onboarding/policy/calibration.dart';
 import 'package:akimath_app/features/onboarding/ui/calibration_item_screen.dart';
 import 'package:akimath_app/features/round/ui/verdict/verdict_screen.dart';
@@ -31,11 +32,15 @@ DateTime Function() _clockOf(List<DateTime> instants) {
   return () => instants[next < instants.length ? next++ : instants.length - 1];
 }
 
+/// One verdict the screen reported, with the time that item took.
+typedef _Graded = ({Verdict verdict, Duration elapsed});
+
 Future<void> _pump(
   WidgetTester tester, {
   required List<Item> items,
   required void Function(CalibrationOutcome) onFinished,
   DateTime Function()? now,
+  void Function(Verdict verdict, Duration elapsed)? onGraded,
 }) async {
   tester.view
     ..physicalSize = const Size(390, 844)
@@ -47,6 +52,7 @@ Future<void> _pump(
       home: CalibrationItemScreen(
         items: items,
         onFinished: onFinished,
+        onGraded: onGraded,
         now: now ?? DateTime.now,
       ),
     ),
@@ -120,8 +126,10 @@ void main() {
       tester,
       items: _probe(3),
       onFinished: (CalibrationOutcome outcome) => reported = outcome,
-      // Two instants, because the probe reads the clock twice: when it opens
-      // and when it reports. It measures nothing per item, and shows neither.
+      // Two instants: the probe opening and the submit that ends it. It reads
+      // the clock once per submit as well — `_clockOf` hands the last instant
+      // back for ever, so the span this asserts is still the whole probe, which
+      // is the only duration `0.6` draws.
       now: _clockOf(<DateTime>[
         DateTime.utc(2026, 8, 20, 9, 40),
         DateTime.utc(2026, 8, 20, 9, 40, 44),
@@ -192,6 +200,63 @@ void main() {
 
     expect(handled, isTrue, reason: 'the back request went unhandled');
     expect(reported?.answered, 1);
+  });
+
+  testWidgets('every answered item is reported graded, with its own duration',
+      (WidgetTester tester) async {
+    // **The probe is practice, and the device's record of practice is what
+    // `4.1` divides into `ACIERTOS` and `PROMEDIO`.** The teaching item is the
+    // one first-run surface that stays out of those figures, because it teaches
+    // the app rather than measuring the player; a probe item is a real pack
+    // item graded by the same `gradeItem` the round uses, and the flow already
+    // counts it as a challenge served.
+    final List<_Graded> graded = <_Graded>[];
+    await _pump(
+      tester,
+      items: _probe(3),
+      onFinished: (_) {},
+      onGraded: (Verdict verdict, Duration elapsed) =>
+          graded.add((verdict: verdict, elapsed: elapsed)),
+      // Four instants — the probe opening, then one per submit — spaced so no
+      // two items took the same time. **That is what makes the third figure a
+      // measurement**: a screen that timed every item from the probe's start
+      // would report 2, 5 and 9 seconds here, all distinct and all wrong.
+      now: _clockOf(<DateTime>[
+        DateTime.utc(2026, 8, 20, 9, 40),
+        DateTime.utc(2026, 8, 20, 9, 40, 2),
+        DateTime.utc(2026, 8, 20, 9, 40, 5),
+        DateTime.utc(2026, 8, 20, 9, 40, 9),
+      ]),
+    );
+
+    await _answer(tester, '1');
+    await _answer(tester, '9');
+    await _answer(tester, '3');
+
+    expect(graded, <_Graded>[
+      (verdict: Verdict.correct, elapsed: const Duration(seconds: 2)),
+      (verdict: Verdict.wrong, elapsed: const Duration(seconds: 3)),
+      // The last item ends the probe, and ending it is not a reason to drop it.
+      (verdict: Verdict.correct, elapsed: const Duration(seconds: 4)),
+    ]);
+  });
+
+  testWidgets('leaving reports the items answered and none of the rest',
+      (WidgetTester tester) async {
+    final List<_Graded> graded = <_Graded>[];
+    await _pump(
+      tester,
+      items: _probe(3),
+      onFinished: (_) {},
+      onGraded: (Verdict verdict, Duration elapsed) =>
+          graded.add((verdict: verdict, elapsed: elapsed)),
+    );
+
+    await _answer(tester, '9');
+    await tester.tap(find.text('Saltar'));
+    await tester.pumpAndSettle();
+
+    expect(graded.map((_Graded g) => g.verdict), <Verdict>[Verdict.wrong]);
   });
 
   testWidgets('the strip is one colour, so it cannot leak how you are doing',

@@ -36,6 +36,7 @@ class CalibrationItemScreen extends StatefulWidget {
     super.key,
     required this.items,
     required this.onFinished,
+    this.onGraded,
     this.now = DateTime.now,
   });
 
@@ -49,6 +50,30 @@ class CalibrationItemScreen extends StatefulWidget {
   /// Which of the two happened is readable from the outcome: `answered` against
   /// `asked`.
   final void Function(CalibrationOutcome outcome) onFinished;
+
+  /// Reports the verdict **this device decided** for one item, and how long
+  /// that item took. Called once per answer, in the order they were given.
+  ///
+  /// **The same seam `RoundScreen.onGraded` has, and it exists here for the
+  /// same reason: a probe item is practice.** Every one of them is a real pack
+  /// item — `calibrationPlan` is the pack's own first ten, which is why the
+  /// flow advances the series cursor past them so the home does not serve them
+  /// twice — and it is graded by the same `gradeItem` the round uses. `0.7`
+  /// already counts them as *"challenges this player did"*, and `4.1` divides
+  /// the device's record of practice into `ACIERTOS` and `PROMEDIO`.
+  ///
+  /// **What this is not is a grade for the item.** `0.4` promises *"No se
+  /// califica"*, and the app's own vocabulary for that word is `0.6`'s *"No es
+  /// calificación. Es de dónde salimos"* — no level and no rank comes out of
+  /// the probe. It is the same distinction `ProbeStrip` keeps: nothing on this
+  /// screen may say how the player is doing, and this callback draws nothing.
+  ///
+  /// **Optional, and that is how a screen stays out of the figures.**
+  /// `Primer reto` is a `RoundScreen` built without one — the tutorial teaches
+  /// the app rather than measuring the player. Nothing here enforces which
+  /// surface owes what; the caller decides, which is the wiring
+  /// `docs/solid/shell-and-entry.md`'s finding 1 is about.
+  final void Function(Verdict verdict, Duration elapsed)? onGraded;
 
   /// The clock, injected — measured quietly and never drawn here.
   final DateTime Function() now;
@@ -68,11 +93,21 @@ class _CalibrationItemScreenState extends State<CalibrationItemScreen> {
   /// first read inside the submit handler measures a negative duration.
   late DateTime _startedAt;
 
+  /// When the item now on screen appeared — not when the probe did.
+  ///
+  /// **The two are different questions and each has one caller.** `0.6` reports
+  /// how long the whole probe took, and the answer record wants how long *an
+  /// item* takes, because that is what `PROMEDIO` averages. One field answering
+  /// both would report the second item as having taken as long as the first two
+  /// together, and the tenth as having taken the whole probe.
+  late DateTime _itemStartedAt;
+
   @override
   void initState() {
     super.initState();
     assert(widget.items.isNotEmpty, 'a probe needs at least one item to ask');
     _startedAt = widget.now();
+    _itemStartedAt = _startedAt;
   }
 
   Item get _item => widget.items[_index];
@@ -96,34 +131,41 @@ class _CalibrationItemScreenState extends State<CalibrationItemScreen> {
     });
   }
 
-  /// Grades the answer, keeps the count, and moves on without a verdict.
+  /// Grades the answer, reports it, and moves on without showing a verdict.
   ///
   /// **The last answer does not advance the index.** Reporting is the caller's
   /// cue to replace this screen, and an index one past the end would be a
   /// `RangeError` in whatever frame ran first.
   void _submit() {
-    if (gradeItem(_item, _draft.text) == Verdict.correct) {
+    final DateTime finishedAt = widget.now();
+    final Verdict verdict = gradeItem(_item, _draft.text);
+    if (verdict == Verdict.correct) {
       _correct += 1;
     }
+    // **Reported before the early return below.** Ending the probe is not a
+    // reason to drop the answer that ended it.
+    widget.onGraded?.call(verdict, finishedAt.difference(_itemStartedAt));
     if (_index == widget.items.length - 1) {
-      _report(answered: widget.items.length);
+      _report(answered: widget.items.length, at: finishedAt);
       return;
     }
     setState(() {
       _index += 1;
       _draft = AnswerDraft.empty;
+      _itemStartedAt = finishedAt;
     });
   }
 
   /// Leaves the probe with whatever has been answered so far.
-  void _leave() => _report(answered: _index);
+  void _leave() => _report(answered: _index, at: widget.now());
 
-  void _report({required int answered}) => widget.onFinished(
+  void _report({required int answered, required DateTime at}) =>
+      widget.onFinished(
         CalibrationOutcome(
           asked: widget.items.length,
           answered: answered,
           correct: _correct,
-          elapsed: widget.now().difference(_startedAt),
+          elapsed: at.difference(_startedAt),
         ),
       );
 

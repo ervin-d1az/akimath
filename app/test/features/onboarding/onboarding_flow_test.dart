@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:akimath_app/content/pack_reader.dart';
 import 'package:akimath_app/design/widgets/icon_button_tile.dart';
 import 'package:akimath_app/design/widgets/keypad.dart';
+import 'package:akimath_app/design/widgets/spec/verdict.dart';
 import 'package:akimath_app/features/home/data/series_cursor_store.dart';
 import 'package:akimath_app/features/home/ui/home_route.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
@@ -14,6 +15,8 @@ import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_run_gate.dart';
 import 'package:akimath_app/features/onboarding/ui/save_progress_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
+import 'package:akimath_app/features/stats/data/answer_record_store.dart';
+import 'package:akimath_app/features/stats/policy/local_stats.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -359,6 +362,56 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(await const SeriesCursorStore().read(), 0);
+    });
+
+    testWidgets('the probe reaches the accuracy figures and the tutorial does '
+        'not', (WidgetTester tester) async {
+      // **The other half of the cursor above.** The probe already advances the
+      // count `4.1` prints as `RETOS`, and `0.7` says why in as many words —
+      // *"Both were graded on the device, so both are challenges this player
+      // did"*. Two of the three device figures were wired and one was not, so a
+      // player who answered ten probe items read `10 RETOS` beside no
+      // `ACIERTOS` tile at all — and `LocalStats.accuracy` documents null as
+      // *"the player has answered nothing"*, which was false for them.
+      //
+      // The teaching item stays out, and this is the case that can tell the two
+      // apart: `_walkTeachingItem` answers `7 + 6` **correctly** and the probe
+      // item is answered **wrong**, so a record that leaked the tutorial would
+      // read `[correct, wrong]` rather than `[wrong]`.
+      await _pump(tester);
+      await _walkTeachingItem(tester);
+
+      await tester.tap(find.text('Va, empecemos'));
+      await tester.pumpAndSettle();
+      for (final String id in <String>['9', 'submit']) {
+        await _press(tester, id);
+      }
+      await tester.pumpAndSettle();
+
+      final List<AnsweredItem> record =
+          await const PrefsAnswerRecordStore().read();
+      expect(
+        record.map((AnsweredItem answer) => answer.verdict),
+        <Verdict>[Verdict.wrong],
+      );
+      expect(LocalStats.of(record).accuracyPercent, 0);
+    });
+
+    testWidgets('a probe nobody answered leaves the figures with no source',
+        (WidgetTester tester) async {
+      // The control, and the reason `accuracy` is nullable: a player who
+      // skipped the probe has answered nothing that counts, and `0 %` would
+      // tell them they are already failing.
+      await _pump(tester);
+      await _walkTeachingItem(tester);
+
+      await tester.tap(find.text('Saltar por ahora'));
+      await tester.pumpAndSettle();
+
+      final List<AnsweredItem> record =
+          await const PrefsAnswerRecordStore().read();
+      expect(record, isEmpty);
+      expect(LocalStats.of(record).accuracyPercent, isNull);
     });
 
     testWidgets('a build with no account flow draws no green button on 0.7',

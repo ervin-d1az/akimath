@@ -4,9 +4,10 @@ The reviewable rulebook for this repository. Every rule has a stable ID so a rev
 against a diff (`PURE-1`, `CMT-1`, …). One repo, two languages: rules apply to Dart under `app/`
 and to TypeScript under `packages/` unless the rule says otherwise.
 
-This book starts small on purpose. Thirty-nine rule IDs — counting `FUN-1a` as the carve-out it
-is rather than as a rule — every one of them describing code that is already on disk today, not
-a pattern we hope to have. It grows by **PROC-6** and no other way.
+This book starts small on purpose. Forty rule IDs — counting `FUN-1a` and `CMT-2a` as the
+carve-out and the special case they are rather than as rules — every one of them describing code
+that is already on disk today, not a pattern we hope to have. It grows by **PROC-6** and no
+other way.
 
 **The count is maintained by hand and had drifted to thirty-two**, three behind, which is the
 same shape as a gate that cannot fail: a number nobody checks. It is checkable in one line —
@@ -147,6 +148,37 @@ The one structural pattern the repo already commits to, on both sides of the sta
   with nothing solved; and where `FirstItemScreen` said *"it measures nothing"* above a screen whose
   verdict displayed `RACHA 1`. A reviewer reading a comment believes it, which is exactly why a false
   one is worse than none: it retires the question.
+
+- **CMT-2a** MUST: **scope a claim to the thing it is true of, and name that thing — a claim
+  scoped to a container goes stale when the container grows.** CMT-2's subtler half, and the
+  difference matters because the ordinary remedy does not apply: these comments are not
+  describing code they sit above, and they were **exact on the day they were written**. Nobody
+  edited them and nobody edited the code under them; the *subject widened* under a sentence that
+  named it by its shape at the time, and a comment cannot notice that.
+
+  Two, found together in `fix-the-calibration-counts-where-it-should`, both load-bearing:
+
+  - `app/lib/features/stats/data/answer_record_store.dart` opened *"The first run does not
+    record"*. True on 2026-08-20, when the first run was `0.2` and `0.3`. `0.4`–`0.7` landed on
+    **2026-08-21**, and the sentence went on asserting a rule about four screens it had never
+    been written about — which is how the calibration probe came to grade ten real pack items and
+    record none of them, with the one question a reviewer would ask already answered in prose.
+    The rule it *meant* is *the teaching item does not record*, and that names the thing.
+  - `app/lib/features/home/ui/home_route.dart` said the route was *"the only place that can
+    keep"* that rule. Exact when written, false as soon as `MapRoute` recorded, and false twice
+    over afterwards. That is also CMT-4, and the two rules meet here: a claim about callers
+    scoped to *"this route"* is a container claim about a set that only ever grows.
+
+  `docs/solid/shell-and-entry.md`'s finding 6 lists three more of the same shape —
+  *"today only the in-memory side of it exists"*, *"`AppBottomNav` arrives with the second root
+  at F5"*, *"the shell has always accepted and never been given"* — each a sentence about the
+  state of a growing thing rather than about a fact.
+
+  **The test:** if a sentence would be falsified by *adding* a screen, a caller, a file or a
+  phase — rather than by editing the code it describes — rewrite it to name what it is true of.
+  Where a count is the point, make it a gate that counts rather than a sentence that states
+  (PROC-10). And when you widen a container, grep the words that name one: *"the first run"*,
+  *"the only"*, *"today"*, *"not yet"*, *"arrives with"*.
 
 - **CMT-3** MUST: **a comment that claims a test or a gate exists is a claim to `grep` for, and it
   is checked the moment it is read.** This is CMT-2's nastiest special case, because it does not
