@@ -10,11 +10,18 @@
 /// A suite about the first run calls [launchOnAFreshInstall], which produces one
 /// and fails if the welcome does not appear. A suite about anything else calls
 /// [launchOnTheHome] and says so, rather than adapting to the handset.
+///
+/// **Three doors now, and the third is the probe.** [launchAndPlayTheProbe]
+/// exists because the first one skips `0.5` on purpose, so nothing on a device
+/// had ever answered a probe item — which is how the probe came to grade ten
+/// items and record none of them with every suite green.
 library;
 
 import 'package:akimath_app/design/widgets/keypad.dart';
 import 'package:akimath_app/features/home/ui/home_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/calibration_intro_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/calibration_item_screen.dart';
+import 'package:akimath_app/features/onboarding/ui/calibration_result_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/first_item_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/save_progress_screen.dart';
 import 'package:akimath_app/features/onboarding/ui/welcome_screen.dart';
@@ -72,6 +79,76 @@ Future<void> pressKey(WidgetTester tester, String id) async {
 ///
 /// Leaves the home on screen.
 Future<void> launchOnAFreshInstall(WidgetTester tester) async {
+  await _walkToTheProbeIntro(tester);
+
+  await tester.tap(find.text('Saltar por ahora'));
+
+  await _settleUntil(tester, find.byType(SaveProgressScreen));
+  expect(
+    find.byType(SaveProgressScreen),
+    findsOneWidget,
+    reason: 'Guardar progreso is the last screen of the run',
+  );
+  await tester.tap(find.text('Después'));
+
+  await _reachTheHome(tester);
+}
+
+/// Starts the app on a fresh install and **plays** [answers] items of the probe.
+///
+/// The third door, and the only one that reaches `0.5`. Playing the probe is
+/// what [launchOnAFreshInstall] deliberately refuses to do for every other
+/// suite, so a suite about what a probe *records* needs its own way in rather
+/// than a flag on that one.
+///
+/// **The answers are wrong on purpose, and it does not matter that they are.**
+/// The claim under test is that an answered probe item reaches the device's
+/// record at all; which verdict it carries is `gradeItem`'s and is already held
+/// by the widget suite against known items. A single `9` is submittable against
+/// every family the pack's first ten hold, which is what keeps this walk from
+/// depending on the content of `assets/packs/starter.json`.
+///
+/// Leaves `0.6 Calibración resultado` on screen — reachable because [answers]
+/// is at least one, which is what `hasSomethingToReport` requires.
+Future<void> launchAndPlayTheProbe(
+  WidgetTester tester, {
+  required int answers,
+}) async {
+  await _walkToTheProbeIntro(tester);
+
+  await tester.tap(find.text('Va, empecemos'));
+  await _settleUntil(tester, find.byType(CalibrationItemScreen));
+  expect(
+    find.byType(CalibrationItemScreen),
+    findsOneWidget,
+    reason: 'Calibración reactivo follows the intro; on screen instead: '
+        '${_onScreen(tester)}',
+  );
+
+  for (int answered = 0; answered < answers; answered++) {
+    await pressKey(tester, '9');
+    await pressKey(tester, 'submit');
+    await tester.pumpAndSettle();
+  }
+
+  // Left rather than finished: the shipped probe is ten items long and this
+  // suite is about what the answered ones record, not about answering ten.
+  await tester.tap(find.text('Saltar'));
+  await _settleUntil(tester, find.byType(CalibrationResultScreen));
+  expect(
+    find.byType(CalibrationResultScreen),
+    findsOneWidget,
+    reason: 'a probe with answers behind it reports them; on screen instead: '
+        '${_onScreen(tester)}',
+  );
+}
+
+/// `0.2 → 0.3 → 0.4`, asserted on the way past.
+///
+/// Every screen is checked here so a run that silently skipped one fails at the
+/// skip instead of leaving a suite to discover the consequence three screens
+/// later.
+Future<void> _walkToTheProbeIntro(WidgetTester tester) async {
   await establish(DeviceState.freshInstall);
   app.main();
   await tester.pumpAndSettle(_launchBudget);
@@ -106,17 +183,6 @@ Future<void> launchOnAFreshInstall(WidgetTester tester) async {
     findsOneWidget,
     reason: 'Calibración intro follows the teaching item',
   );
-  await tester.tap(find.text('Saltar por ahora'));
-
-  await _settleUntil(tester, find.byType(SaveProgressScreen));
-  expect(
-    find.byType(SaveProgressScreen),
-    findsOneWidget,
-    reason: 'Guardar progreso is the last screen of the run',
-  );
-  await tester.tap(find.text('Después'));
-
-  await _reachTheHome(tester);
 }
 
 /// Starts the app on a device whose first run is behind it.
