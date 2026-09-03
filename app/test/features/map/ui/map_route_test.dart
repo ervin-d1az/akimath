@@ -233,6 +233,7 @@ Future<void> _pump(
     required String accessToken,
     required String packId,
   })? fetchPack,
+  DateTime Function()? now,
 }) async {
   // **The hardware goes on the view, not into a `MediaQuery` below
   // `MaterialApp`.** A wrapper under `home` sits *below* the app's `Navigator`,
@@ -256,6 +257,7 @@ Future<void> _pump(
     session: session,
     issuedPacks: issuedPacks,
     fetchPack: fetchPack,
+    now: now,
   );
 }
 
@@ -276,6 +278,7 @@ Future<void> _pumpAgain(
     required String accessToken,
     required String packId,
   })? fetchPack,
+  DateTime Function()? now,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -289,6 +292,7 @@ Future<void> _pumpAgain(
         session: session,
         issuedPacks: issuedPacks,
         fetchPack: fetchPack,
+        now: now ?? DateTime.now,
       ),
     ),
   );
@@ -337,6 +341,20 @@ void main() {
 
     expect(find.byType(SkillMapScreen), findsNothing);
     expect(find.textContaining('no se pudo'), findsOneWidget);
+  });
+
+  testWidgets('a lapsed pack draws no map, so no topic offers a practice run',
+      (WidgetTester tester) async {
+    // Arrange: the bundled pack's own window, closed. No server and no session
+    // are involved — this is the file on the device having run out.
+    await _pump(tester, pack: _pack().replaceAll('2099-01-01', '2020-01-01'));
+
+    // The absence alone would also pass for a pack that could not be read,
+    // which is a different defect with a different message — so the sentence
+    // is what makes the absence mean *lapsed*. Inicio has refused this pack
+    // since it landed; Mapa drew every topic with a live `Practicar 5 retos`.
+    expect(find.byType(SkillMapScreen), findsNothing);
+    expect(find.textContaining('vencieron'), findsOneWidget);
   });
 
   testWidgets('the map reads the cursor, so a played series shows up on it',
@@ -569,6 +587,33 @@ void main() {
       );
       // The address the server grades by, not the position in the run.
       expect(held.map((JournalledAttempt a) => a.index), <int>[1, 2]);
+    });
+
+    testWidgets('and it is stamped with the route\'s clock, not the ambient one',
+        (WidgetTester tester) async {
+      // **The one field in the sync path no test could pin.** This route read
+      // `DateTime.now()` straight into the attempt while `HomeRoute` threaded
+      // `widget.now` through six call sites, so the moment that travels to the
+      // server was decided by whichever wall clock the process happened to
+      // have. Asserting the *value* rather than that a timestamp exists is what
+      // makes the injection real: a bare `DateTime.now()` cannot produce this.
+      final DateTime moment = DateTime.utc(2026, 8, 20, 9, 30);
+      final InMemoryAttemptJournalStore journal =
+          InMemoryAttemptJournalStore();
+      await _pump(
+        tester,
+        pack: _issuedShapedPack(),
+        sync: AttemptSync(store: journal),
+        now: () => moment,
+      );
+
+      await tester.tap(find.text('Series'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Practicar 5 retos'));
+      await tester.pumpAndSettle();
+      await _answerOne(tester);
+
+      expect((await journal.read()).single.at, moment);
     });
 
     testWidgets('an authored item reaches it as nothing at all, and says so '

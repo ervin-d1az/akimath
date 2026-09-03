@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../api/api_client.dart';
 import '../../../api/endpoints.dart';
-import '../../../content/model/issued_pack.dart';
 import '../../../content/model/item.dart';
 import '../../../content/model/pack.dart';
 import '../../../content/pack_reader.dart';
@@ -24,6 +23,7 @@ import '../../stats/data/answer_record_store.dart';
 import '../../stats/policy/local_stats.dart';
 import '../../sync/attempt_sync.dart';
 import '../../sync/data/issued_pack_store.dart';
+import '../../sync/policy/pack_in_play.dart';
 import '../data/practised_step_store.dart';
 import '../policy/practice_series.dart';
 import '../policy/skill_map.dart';
@@ -50,8 +50,20 @@ class MapRoute extends StatefulWidget {
     this.session,
     this.issuedPacks,
     this.fetchPack,
+    this.now = DateTime.now,
     this.visibility = RootVisibility.showing,
   });
+
+  /// The clock this root reads, so a test hands one in rather than waiting.
+  ///
+  /// **It arrived with `packInPlay`.** Whether the pack in play may still be
+  /// played is a question about a moment, and a root that summoned its own
+  /// could not be asked it — which is how this one came to draw a full map of
+  /// topics over a pack Inicio was already refusing. The practice run's
+  /// timestamp reads it too: that one used to be a bare `DateTime.now()`
+  /// straight into an attempt, one line below a comment about what travels to
+  /// the server.
+  final DateTime Function() now;
 
   /// Whether this root is the one on screen.
   ///
@@ -128,7 +140,7 @@ class MapRoute extends StatefulWidget {
 }
 
 class _MapRouteState extends State<MapRoute> {
-  /// What the map is drawn from, or null until the first reading lands.
+  /// What the last reading left this root with.
   ///
   /// **A notifier and not a plain field, because `2.7` is pushed.** The detail
   /// screen sits on a route above this one rather than inside it, so no
@@ -137,11 +149,14 @@ class _MapRouteState extends State<MapRoute> {
   /// trap, and it is exactly where a player looks after practising: the map
   /// underneath had moved while the topic they had just practised still read
   /// its launch-time figure.
-  final ValueNotifier<_MapContents?> _contents =
-      ValueNotifier<_MapContents?>(null);
-
-  /// Whether the last reading refused the pack.
-  bool _packRefused = false;
+  ///
+  /// **One closed value, and not a bool beside a nullable.** It was a
+  /// `_MapContents?` and a `bool _packRefused`, which spell four states for
+  /// three that mean anything — and the fourth screen this root owes, a pack
+  /// whose window has closed, would have been a third field. Four arms in one
+  /// type is a `switch` the compiler completes instead.
+  final ValueNotifier<_MapReading> _contents =
+      ValueNotifier<_MapReading>(const _MapPending());
 
   /// Where a practice run records the day.
   ///
@@ -224,13 +239,41 @@ class _MapRouteState extends State<MapRoute> {
   /// them make.
   ///
   /// **What it drew survives a re-read that has not landed yet.** Assigning
-  /// only on success is what keeps the graph on screen while the second
-  /// reading is in flight, instead of flashing the skeleton every time the
-  /// player taps `Mapa`.
+  /// only when the reading resolves is what keeps the graph on screen while the
+  /// second reading is in flight, instead of flashing the skeleton every time
+  /// the player taps `Mapa`.
+  ///
+  /// **Which pack is in play is not this root's to decide** — `packInPlay`
+  /// answers it for Inicio too, which is the whole point: this file used to
+  /// resolve `_issued ?? bundled` by hand and never ask whether the window had
+  /// closed, so a lapsed pack drew a full map of topics with a live
+  /// `Practicar 5 retos` on every one of them while Inicio refused to play it.
   Future<void> _read() async {
     try {
       await _fetchIssuedPack();
-      final Pack pack = _issued ?? await widget.reader.load();
+      // The bundled pack is read only when there is no issued one to replace
+      // it, which is what the app has always done: an asset read nobody needs
+      // is an asset read that can also throw.
+      final Pack? bundled = _issued == null ? await widget.reader.load() : null;
+      if (!mounted) {
+        return;
+      }
+      final PackInPlay inPlay = packInPlay(
+        issued: _issued,
+        bundled: bundled,
+        now: widget.now(),
+      );
+      if (inPlay is! PackReady) {
+        _contents.value = switch (inPlay) {
+          PackLapsed() => _MapLapsed(inPlay.message),
+          // Nothing to draw from yet, which a reader gets to here only by
+          // holding neither pack. Waiting is the honest screen.
+          PackPending() || PackReady() => const _MapPending(),
+        };
+        return;
+      }
+
+      final Pack pack = inPlay.pack;
       final int served = await widget.seriesCursor.read();
       final Map<String, int> practised = await _practisedSteps.read();
       final DayLog log = await _dayLog.read();
@@ -238,14 +281,15 @@ class _MapRouteState extends State<MapRoute> {
         return;
       }
       _log = log;
-      setState(() => _packRefused = false);
-      _contents.value = _MapContents(
-        pack: pack,
-        itemsServed: served,
-        map: readSkillMap(
-          items: pack.items,
+      _contents.value = _MapDrawn(
+        _MapContents(
+          pack: pack,
           itemsServed: served,
-          practisedSteps: practised,
+          map: readSkillMap(
+            items: pack.items,
+            itemsServed: served,
+            practisedSteps: practised,
+          ),
         ),
       );
       // Anything at all, the way `FutureBuilder.hasError` took anything at all:
@@ -255,7 +299,7 @@ class _MapRouteState extends State<MapRoute> {
       if (!mounted) {
         return;
       }
-      setState(() => _packRefused = true);
+      _contents.value = const _MapUnreadable();
     }
   }
 
@@ -285,18 +329,10 @@ class _MapRouteState extends State<MapRoute> {
     if (fetched is! FetchPackDone || !mounted) {
       return;
     }
-    try {
-      _issued = readIssuedPack(
-        Map<String, dynamic>.from(fetched.issued.pack),
-        packId: fetched.issued.packId,
-        issuedAt: fetched.issued.issuedAt,
-        expiresAt: fetched.issued.expiresAt,
-      );
-      // **A pack this app cannot read is a pack it does not play**, which is
-      // the rule `PackReader` already keeps. The bundled one is still there.
-    } on FormatException {
-      // Nothing to say to a player about a request they did not make.
-    }
+    // Null when this app cannot read it, which leaves the bundled pack playing
+    // — `packFrom` is where that rule lives, so the home cannot keep a
+    // different one.
+    _issued = packFrom(fetched.issued);
   }
 
   Future<FetchPackResult> _fetchOverASocket({
@@ -322,18 +358,23 @@ class _MapRouteState extends State<MapRoute> {
   }
 
   Widget _body(BuildContext context) {
-    if (_packRefused) {
-      return _unreadable();
-    }
-    return ValueListenableBuilder<_MapContents?>(
+    return ValueListenableBuilder<_MapReading>(
       valueListenable: _contents,
-      builder: (BuildContext context, _MapContents? contents, Widget? _) =>
-          contents == null
-              ? _loading()
-              : SkillMapScreen(
-                  map: contents.map,
-                  onOpen: (int index) => _open(context, contents, index),
-                ),
+      builder: (BuildContext context, _MapReading reading, Widget? _) =>
+          switch (reading) {
+        _MapPending() => _loading(),
+        _MapUnreadable() => _message(
+            'El paquete de retos no se pudo leer, así que todavía no hay mapa.',
+          ),
+        // The sentence comes from `packInPlay`, so Inicio and Mapa cannot word
+        // the same refusal differently — or, as they did, one of them not at
+        // all.
+        _MapLapsed(message: final String message) => _message(message),
+        _MapDrawn(contents: final _MapContents contents) => SkillMapScreen(
+            map: contents.map,
+            onOpen: (int index) => _open(context, contents, index),
+          ),
+      },
     );
   }
 
@@ -353,16 +394,15 @@ class _MapRouteState extends State<MapRoute> {
         ),
       );
 
-  /// A pack that will not parse is refused where it is read, and this is where
-  /// a player finds out — the map is one of two places that reads content, and
-  /// a blank graph would read as "you have done nothing" rather than as a
-  /// broken file.
-  Widget _unreadable() => Padding(
+  /// Why there is no map, in the one place a player can see it.
+  ///
+  /// A pack that will not parse is refused where it is read, and one whose
+  /// window has closed is refused by `packInPlay`; either way a blank graph
+  /// would read as "you have done nothing" rather than as a pack this app is
+  /// not playing.
+  Widget _message(String text) => Padding(
         padding: const EdgeInsets.all(BrandShape.space5),
-        child: Text(
-          'El paquete de retos no se pudo leer, así que todavía no hay mapa.',
-          style: BrandText.body(color: BrandColors.muted),
-        ),
+        child: Text(text, style: BrandText.body(color: BrandColors.muted)),
       );
 
   /// Pushes `2.7` for the topic at [index], and keeps it current.
@@ -386,10 +426,15 @@ class _MapRouteState extends State<MapRoute> {
         // under the clock. `ProfileRoute` wraps each of its pushed screens for
         // the same reason.
         builder: (BuildContext detailContext) =>
-            ValueListenableBuilder<_MapContents?>(
+            ValueListenableBuilder<_MapReading>(
           valueListenable: _contents,
-          builder: (BuildContext context, _MapContents? latest, Widget? _) {
-            final _MapContents contents = latest ?? opened;
+          builder: (BuildContext context, _MapReading latest, Widget? _) {
+            // The topic stays on the figures it was opened with while a re-read
+            // is in flight, and while the pack behind it has stopped being
+            // playable — this screen is above the one that says so, and the way
+            // back is the control it already draws.
+            final _MapContents contents =
+                latest is _MapDrawn ? latest.contents : opened;
             final int at = contents.map.nodes
                 .indexWhere((SkillNode node) => node.label == openedNode.label);
             final SkillNode node =
@@ -489,7 +534,11 @@ class _MapRouteState extends State<MapRoute> {
               itemId: item.id,
               sessionId: sessionId,
               answer: answer,
-              at: DateTime.now(),
+              // **The route's clock, not the ambient one.** This read
+              // `DateTime.now()` while `HomeRoute` threaded `widget.now`
+              // through six call sites, so the one field here no test could
+              // pin was the one that travels to the server.
+              at: widget.now(),
               elapsed: elapsed,
             ),
           );
@@ -544,6 +593,42 @@ class _MapRouteState extends State<MapRoute> {
   /// Roughly the graph's own height, so the screen does not jump when the pack
   /// lands.
   static const double _loadingHeight = 360;
+}
+
+/// What a reading left the root with, and therefore what it draws.
+///
+/// **A closed set rather than fields that can contradict each other.** The two
+/// refusals and the two waits are four screens, and expressing them as a
+/// nullable beside a bool made a fifth combination representable and left the
+/// fourth — a pack past its window — with nowhere to go, which is how Mapa came
+/// to draw a live map over one Inicio was refusing.
+sealed class _MapReading {
+  const _MapReading();
+}
+
+/// Nothing has landed yet.
+final class _MapPending extends _MapReading {
+  const _MapPending();
+}
+
+/// The pack could not be read at all.
+final class _MapUnreadable extends _MapReading {
+  const _MapUnreadable();
+}
+
+/// The pack was read and its window has closed, so there is nothing to play.
+final class _MapLapsed extends _MapReading {
+  const _MapLapsed(this.message);
+
+  /// `PackLapsed`'s own sentence, carried rather than restated.
+  final String message;
+}
+
+/// A map, and the pack it was drawn from.
+final class _MapDrawn extends _MapReading {
+  const _MapDrawn(this.contents);
+
+  final _MapContents contents;
 }
 
 /// The three things the map is read from, kept together so one reading resolves
